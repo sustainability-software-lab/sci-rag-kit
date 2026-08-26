@@ -19,11 +19,11 @@ Passages:
 
 $PASSAGES
 
-Respond with JSON only, in exactly this shape:
+Respond with JSON only, in exactly this shape ("passages" lists the passage numbers where the entity appears):
 
 {
   "entities": [
-    {"name": "rice straw", "type": "Feedstock", "description": "one short sentence"}
+    {"name": "rice straw", "type": "Feedstock", "description": "one short sentence", "passages": [1, 2]}
   ],
   "relationships": [
     {"source": "rice straw", "target": "anaerobic digestion", "type": "CONVERTED_BY", "evidence": "quoted phrase", "passage": 1}

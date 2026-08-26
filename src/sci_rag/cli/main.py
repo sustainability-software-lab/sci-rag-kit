@@ -27,6 +27,11 @@ app = typer.Typer(
 )
 db_app = typer.Typer(help="Database schema management.", no_args_is_help=True)
 app.add_typer(db_app, name="db")
+graph_app = typer.Typer(
+    help="Build the knowledge graph: extract entities, then detect communities.",
+    no_args_is_help=True,
+)
+app.add_typer(graph_app, name="graph")
 
 console = Console()
 
@@ -233,6 +238,77 @@ def answer(
         console.print()
 
     asyncio.run(run())
+
+
+@graph_app.command("extract")
+def graph_extract(
+    batch_size: int = typer.Option(10, help="Chunks per extraction call."),
+    reprocess_all: bool = typer.Option(
+        False, "--all", help="Re-read every chunk, not just unprocessed ones."
+    ),
+    max_chunks: int | None = typer.Option(None, help="Stop after this many chunks (for trials)."),
+) -> None:
+    """Extract entities and relationships from ingested chunks (needs an LLM)."""
+    from sci_rag.config import get_settings
+    from sci_rag.db import get_session_factory
+    from sci_rag.domain import load_domain
+    from sci_rag.graph import extract_graph
+    from sci_rag.llm import get_llm
+
+    settings = get_settings()
+    stats_result = asyncio.run(
+        extract_graph(
+            session_factory=get_session_factory(),
+            llm=get_llm(settings, model=settings.resolved_extraction_model),
+            domain=load_domain(settings.domain_dir),
+            batch_size=batch_size,
+            reprocess_all=reprocess_all,
+            max_chunks=max_chunks,
+        )
+    )
+    console.print(
+        f"Processed [bold]{stats_result.chunks_processed}[/bold] chunk(s): "
+        f"[green]{stats_result.entities_created} entities created[/green], "
+        f"{stats_result.entities_updated} enriched, "
+        f"[green]{stats_result.relationships_created} relationships created[/green], "
+        f"[red]{stats_result.batches_failed} batch(es) failed[/red]."
+    )
+    if stats_result.batches_failed:
+        console.print("[yellow]Failed batches stay unprocessed; rerun to retry them.[/yellow]")
+        raise typer.Exit(1)
+
+
+@graph_app.command("communities")
+def graph_communities(
+    min_size: int = typer.Option(3, help="Smallest cluster worth summarizing."),
+) -> None:
+    """Cluster the graph and write LLM summaries (rebuilds all communities)."""
+    from sci_rag.config import get_settings
+    from sci_rag.db import get_session_factory
+    from sci_rag.domain import load_domain
+    from sci_rag.embed import get_embedder
+    from sci_rag.graph import build_communities
+    from sci_rag.llm import get_llm
+
+    settings = get_settings()
+    stats_result = asyncio.run(
+        build_communities(
+            session_factory=get_session_factory(),
+            llm=get_llm(settings),
+            embedder=get_embedder(settings),
+            domain=load_domain(settings.domain_dir),
+            min_size=min_size,
+        )
+    )
+    console.print(
+        f"[green]{stats_result.communities_created} communities[/green] covering "
+        f"{stats_result.entities_clustered} entities."
+        + (
+            f" [yellow]{stats_result.llm_summary_failures} summaries fell back to entity lists.[/yellow]"
+            if stats_result.llm_summary_failures
+            else ""
+        )
+    )
 
 
 @app.command()

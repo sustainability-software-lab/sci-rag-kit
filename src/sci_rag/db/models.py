@@ -111,6 +111,10 @@ class Chunk(Base):
     # Which model produced the vector, so a model upgrade can find stale rows.
     embedding_version: Mapped[str | None] = mapped_column(Text)
 
+    # When the graph extractor last processed this chunk; NULL means "not
+    # yet", which is how incremental extraction finds its work.
+    graph_extracted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     # Kept in sync by Postgres itself; powers the keyword retrieval layer.
     search_tsv: Mapped[str | None] = mapped_column(
         TSVECTOR,
