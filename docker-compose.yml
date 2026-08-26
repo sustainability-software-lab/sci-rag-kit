@@ -1,0 +1,27 @@
+# One-command local database for sci-rag-kit.
+#
+#   docker compose up -d
+#
+# We publish Postgres on host port 5433 (not the usual 5432) so this never
+# collides with a Postgres you may already be running. The default
+# DATABASE_URL in .env.example points here.
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: sci-rag-db
+    environment:
+      POSTGRES_DB: sci_rag
+      POSTGRES_USER: sci_rag
+      POSTGRES_PASSWORD: sci_rag  # local development only; never reuse in the cloud
+    ports:
+      - "5433:5432"
+    volumes:
+      - sci_rag_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sci_rag -d sci_rag"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+volumes:
+  sci_rag_pgdata:
