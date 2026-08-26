@@ -78,7 +78,12 @@ src = ["src", "tests"]
 
 [tool.ruff.lint.flake8-bugbear]
 # typer's Argument/Option in defaults is the canonical typer idiom.
-extend-immutable-calls = ["typer.Argument", "typer.Option"]
+extend-immutable-calls = [
+  "typer.Argument",
+  "typer.Option",
+  # require_scopes returns a fastapi.Depends; calling it in a default is the point.
+  "sci_rag.server.auth.require_scopes",
+]
 
 [tool.ruff.lint]
 select = [

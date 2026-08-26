@@ -489,6 +489,56 @@ def stats() -> None:
         console.print("Embedding versions: " + ", ".join(f"{v}={n}" for v, n in versions))
 
 
+@app.command()
+def serve(
+    host: str | None = typer.Option(None, help="Bind address (default from settings)."),
+    port: int | None = typer.Option(
+        None, help="Port (default from settings; Cloud Run sets PORT)."
+    ),
+) -> None:
+    """Serve the REST API (/v1, docs at /docs) and the MCP server (/mcp)."""
+    import os
+
+    import uvicorn
+
+    from sci_rag.config import get_settings
+    from sci_rag.server import create_app
+
+    settings = get_settings()
+    resolved_port = port or int(os.environ.get("PORT", settings.server_port))
+    resolved_host = host or settings.server_host
+    console.print(
+        f"Serving on [bold]http://{resolved_host}:{resolved_port}[/bold] "
+        f"(docs at /docs, MCP at /mcp)."
+    )
+    uvicorn.run(create_app(settings=settings), host=resolved_host, port=resolved_port)
+
+
+@app.command("mcp")
+def mcp_stdio() -> None:
+    """Run the MCP server over stdio (for local agents like Claude Code).
+
+    Add it to an agent with, for example:
+    claude mcp add sci-rag -- uv run --directory /path/to/your/repo sci-rag mcp
+    """
+    import logging
+    import sys
+
+    import structlog
+
+    # stdout carries the MCP protocol; every log line must go to stderr.
+    logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
+    structlog.configure(
+        logger_factory=structlog.PrintLoggerFactory(sys.stderr),
+    )
+
+    from sci_rag.server import RagService, build_mcp_server
+
+    service = RagService()
+    mcp_server, _tools = build_mcp_server(service)
+    mcp_server.run()
+
+
 def main() -> None:
     app()
 
