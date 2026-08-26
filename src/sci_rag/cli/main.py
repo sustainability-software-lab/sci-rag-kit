@@ -32,6 +32,11 @@ graph_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(graph_app, name="graph")
+eval_app = typer.Typer(
+    help="Measure your RAG honestly: retrieval metrics, layer ablations, judged answers.",
+    no_args_is_help=True,
+)
+app.add_typer(eval_app, name="eval")
 
 console = Console()
 
@@ -309,6 +314,125 @@ def graph_communities(
             else ""
         )
     )
+
+
+def _load_questions(questions_path: Path | None):  # type: ignore[no-untyped-def]
+    from sci_rag.config import get_settings
+    from sci_rag.evals import load_seed_questions
+
+    path = questions_path or (get_settings().domain_dir / "eval_seed_questions.jsonl")
+    questions = load_seed_questions(path)
+    if not questions:
+        console.print(f"[red]No questions found in {path}.[/red]")
+        raise typer.Exit(1)
+    return questions
+
+
+def _print_retrieval_results(results) -> None:  # type: ignore[no-untyped-def]
+    table = Table(title="Retrieval metrics")
+    table.add_column("Config")
+    table.add_column("hit@5", justify="right")
+    table.add_column("hit@10", justify="right")
+    table.add_column("MRR", justify="right")
+    table.add_column("n", justify="right")
+    for result in results:
+        m = result.metrics
+        table.add_row(
+            result.config.name,
+            f"{m['hit_at_5']:.2f}",
+            f"{m['hit_at_10']:.2f}",
+            f"{m['mrr']:.2f}",
+            str(int(m["n"])),
+        )
+    console.print(table)
+
+
+@eval_app.command("retrieval")
+def eval_retrieval(
+    questions_path: Path | None = typer.Option(None, "--questions", help="Seed questions JSONL."),
+    limit: int = typer.Option(10, help="Results retrieved per question."),
+    ablation: bool = typer.Option(
+        False, "--ablation", help="Run every layer-ablation config, not just full_deep."
+    ),
+) -> None:
+    """Score retrieval against your seed questions (and per-layer ablations)."""
+    from sci_rag.db import get_session_factory
+    from sci_rag.evals import DEFAULT_ABLATIONS, run_retrieval_eval
+    from sci_rag.evals.report import (
+        corpus_fingerprint,
+        retrieval_markdown,
+        retrieval_payload,
+        write_report,
+    )
+    from sci_rag.retrieve import Retriever
+
+    questions = _load_questions(questions_path)
+    configs = DEFAULT_ABLATIONS if ablation else DEFAULT_ABLATIONS[:1]
+
+    async def run():  # type: ignore[no-untyped-def]
+        retriever = Retriever()
+        results = await run_retrieval_eval(retriever, questions, configs=configs, limit=limit)
+        fingerprint = await corpus_fingerprint(get_session_factory())
+        return results, fingerprint
+
+    results, fingerprint = asyncio.run(run())
+    _print_retrieval_results(results)
+    json_path, md_path = write_report(
+        kind="retrieval-ablation" if ablation else "retrieval",
+        payload=retrieval_payload(results, fingerprint),
+        markdown=retrieval_markdown(results, fingerprint),
+    )
+    console.print(f"Report written to [bold]{md_path}[/bold] (and {json_path.name}).")
+
+
+@eval_app.command("answers")
+def eval_answers(
+    questions_path: Path | None = typer.Option(None, "--questions", help="Seed questions JSONL."),
+    profile: str = typer.Option("deep", help="Retrieval profile for answer generation."),
+    limit: int = typer.Option(8, help="Sources per answer."),
+    judge_model: str | None = typer.Option(
+        None, help="Judge model id (defaults to the answer model)."
+    ),
+) -> None:
+    """Generate answers for every seed question and grade them with the blind judge."""
+    from sci_rag.answer import AnswerEngine
+    from sci_rag.config import get_settings
+    from sci_rag.db import get_session_factory
+    from sci_rag.evals import run_answer_eval
+    from sci_rag.evals.report import (
+        answers_markdown,
+        answers_payload,
+        corpus_fingerprint,
+        write_report,
+    )
+    from sci_rag.llm import get_llm
+
+    questions = _load_questions(questions_path)
+    settings = get_settings()
+
+    async def run():  # type: ignore[no-untyped-def]
+        engine = AnswerEngine(settings=settings)
+        judge = get_llm(settings, model=judge_model) if judge_model else get_llm(settings)
+        records = await run_answer_eval(engine, judge, questions, profile=profile, limit=limit)
+        fingerprint = await corpus_fingerprint(get_session_factory())
+        return records, fingerprint
+
+    records, fingerprint = asyncio.run(run())
+    from sci_rag.evals import summarize_answer_records
+
+    summary = summarize_answer_records(records)
+    table = Table(title="Answer evaluation (0 to 2 per dimension)")
+    table.add_column("Metric")
+    table.add_column("Mean", justify="right")
+    for key, value in summary.items():
+        table.add_row(key, f"{value:.2f}")
+    console.print(table)
+    json_path, md_path = write_report(
+        kind="answers",
+        payload=answers_payload(records, fingerprint),
+        markdown=answers_markdown(records, fingerprint),
+    )
+    console.print(f"Report written to [bold]{md_path}[/bold] (and {json_path.name}).")
 
 
 @app.command()

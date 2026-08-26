@@ -180,7 +180,7 @@ class AnswerEngine:
             "answer",
             DOMAIN_NAME=self.domain.name,
             QUERY=query,
-            SOURCES=_format_sources(retrieval),
+            SOURCES=format_sources(retrieval),
         )
 
         try:
@@ -231,7 +231,9 @@ class AnswerEngine:
         yield AnswerEvent(type="done", data={"finish_reason": "stop"})
 
 
-def _format_sources(retrieval: RetrievalResult) -> str:
+def format_sources(retrieval: RetrievalResult) -> str:
+    """The numbered source block shown to the answer model (and to the blind
+    grounding judge, which must see exactly what the assistant saw)."""
     blocks: list[str] = []
     for i, item in enumerate(retrieval.items, start=1):
         header = f"[{i}] {item.title}"

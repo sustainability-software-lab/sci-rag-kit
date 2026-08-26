@@ -89,6 +89,8 @@ class Retriever:
         profile: Profile = "deep",
         limit: int = 8,
         scope: RetrievalScope | None = None,
+        include_vector: bool | None = None,
+        include_keyword: bool | None = None,
         include_graph: bool | None = None,
         include_community: bool | None = None,
         include_hyde: bool | None = None,
@@ -107,6 +109,10 @@ class Retriever:
             )
 
         deep = profile == "deep"
+        # Vector and keyword are on in both profiles; explicit flags (used by
+        # the evaluation harness's ablations) override anything.
+        vector_on = include_vector if include_vector is not None else True
+        keyword_on = include_keyword if include_keyword is not None else True
         graph_on = include_graph if include_graph is not None else deep
         community_on = include_community if include_community is not None else deep
         hyde_on = include_hyde if include_hyde is not None else deep
@@ -124,14 +130,19 @@ class Retriever:
         if community_scope_blocked:
             community_on = False
 
-        # Embed the query once; the vector and community layers share this task
-        # (the vector layer is always on, so the task is always created).
-        embedding_task: asyncio.Task[list[float]] = asyncio.create_task(
-            self.query_cache.embed_query(query, use_cache=cache_on)
-        )
+        # Embed the query once; the vector and community layers share this task.
+        embedding_task: asyncio.Task[list[float]] | None = None
+        if vector_on or community_on:
+            embedding_task = asyncio.create_task(
+                self.query_cache.embed_query(query, use_cache=cache_on)
+            )
+
+        async def _shared_embedding() -> list[float]:
+            assert embedding_task is not None
+            return await asyncio.shield(embedding_task)
 
         async def vector_factory() -> list[Key]:
-            vector = await asyncio.shield(embedding_task)
+            vector = await _shared_embedding()
             return await vector_stage(self.session_factory, vector, scope, limits.get("vector", 20))
 
         async def keyword_factory() -> list[Key]:
@@ -150,7 +161,7 @@ class Retriever:
             )
 
         async def community_factory() -> list[Key]:
-            vector = await asyncio.shield(embedding_task)
+            vector = await _shared_embedding()
             return await community_stage(
                 self.session_factory, vector, scope, limits.get("community", 5)
             )
@@ -167,8 +178,8 @@ class Retriever:
             )
 
         plan: list[tuple[str, Callable[[], Awaitable[list[Key]]] | None]] = [
-            ("vector", vector_factory),
-            ("keyword", keyword_factory),
+            ("vector", vector_factory if vector_on else None),
+            ("keyword", keyword_factory if keyword_on else None),
             ("graph", graph_factory if graph_on else None),
             ("community", community_factory if community_on else None),
             ("hyde", hyde_factory if hyde_on else None),
@@ -182,7 +193,7 @@ class Retriever:
         finished = await asyncio.gather(*stage_runs)
 
         # Make sure the shared embedding task never outlives the request.
-        if not embedding_task.done():
+        if embedding_task is not None and not embedding_task.done():
             embedding_task.cancel()
 
         traces: list[StageTrace] = []
