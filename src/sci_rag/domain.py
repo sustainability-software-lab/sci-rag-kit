@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from string import Template
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, Field
@@ -38,6 +39,23 @@ class QueryClassSpec(BaseModel):
     name: str
     keywords: list[str] = Field(default_factory=list)
     hyde_instruction: str = ""
+
+
+class RerankerTuning(BaseModel):
+    """The post-fusion rerank stage. Off until an ablation earns it a place.
+
+    ``adapter`` picks the implementation: "llm" (one JSON call through the
+    configured LLM, no new dependency) or "local" (a sentence-transformers
+    cross-encoder behind the ``rerank`` extra). ``pool`` is how many fused
+    candidates get a second look; ``model`` overrides the local adapter's
+    cross-encoder checkpoint.
+    """
+
+    enabled: bool = False
+    adapter: Literal["llm", "local"] = "llm"
+    pool: int = 20
+    timeout_s: float = 15.0
+    model: str | None = None
 
 
 class RetrievalTuning(BaseModel):
@@ -62,6 +80,7 @@ class RetrievalTuning(BaseModel):
             "hyde": 20,
         }
     )
+    reranker: RerankerTuning = Field(default_factory=RerankerTuning)
 
 
 class DomainConfig(BaseModel):

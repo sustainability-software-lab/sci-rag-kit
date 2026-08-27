@@ -273,9 +273,16 @@ fact by the evaluation judge.
 
 Kept out deliberately, with the seams left visible:
 
-* **Cross-encoder reranking** of the fused pool. RRF alone is strong;
-  add a reranker behind the retrieval facade and let the ablation tables
-  justify it.
+* ~~**Cross-encoder reranking** of the fused pool.~~ Filled in v0.2:
+  `src/sci_rag/retrieve/rerank.py` ships a `Reranker` protocol with an
+  LLM adapter (default, zero new dependencies) and a local
+  cross-encoder adapter behind the `rerank` extra. It stays OFF until
+  the `with_rerank` vs `no_rerank` ablation justifies it on your
+  corpus. GCP users can implement the same protocol against the Vertex
+  AI Ranking API (`discoveryengine.googleapis.com` rank endpoint): score
+  the pool, return the reordered items, and set `retrieval.reranker`
+  in `domain.yaml` to your adapter via a small subclass of the
+  retriever or a fork of `build_reranker`.
 * **Hierarchical communities** (communities of communities) for very
   large graphs.
 * **Automatic license classification** (DOI lookups against registries).

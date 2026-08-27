@@ -59,6 +59,7 @@ class RagService:
         include_graph: bool | None = None,
         include_community: bool | None = None,
         include_hyde: bool | None = None,
+        include_rerank: bool | None = None,
     ) -> RetrievalResult:
         return await self.retriever.retrieve(
             query,
@@ -68,6 +69,7 @@ class RagService:
             include_graph=include_graph,
             include_community=include_community,
             include_hyde=include_hyde,
+            include_rerank=include_rerank,
         )
 
     def answer_stream(
