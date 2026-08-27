@@ -8,16 +8,16 @@
   <img src="https://img.shields.io/badge/python-3.11%20%7C%203.12-blue" alt="Python 3.11 | 3.12">
 </p>
 
-A template repository for building a retrieval-augmented question-answering
-system over a scientific document collection. It implements hybrid GraphRAG
+A template repository for building a retrieval-augmented generation
+systems over scientific document collections. Implements hybrid GraphRAG
 retrieval on PostgreSQL, grounded answer generation with citations, an
-evaluation harness, and serving over REST and MCP. Domain specialization
-(ontology, prompts, evaluation questions) is configuration, not code.
+evaluation harness, and REST API + MCP endpoints. Customizable around any domain
+using flexible configuration files.
 
-The design is documented decision by decision in
+More details on the project structure are documented in
 [docs/methodology.md](docs/methodology.md).
 
-To start a project from it, use GitHub's **Use this template**, run the
+To start a new project, use GitHub's **Use this template**, run the
 quickstart below against the bundled demo corpus, then replace the demo
 domain with your own.
 
