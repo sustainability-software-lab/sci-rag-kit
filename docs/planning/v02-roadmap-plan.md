@@ -35,6 +35,25 @@ Scientific differentiators to adopt: the PaperQA2 evidence pattern (per-chunk re
 5. **Adaptive routing is the honest default posture, presented as evidence.** Implement a cheap query classifier that enables graph/HyDE conditionally, but keep `deep` as the explicit always-everything profile; publish the ablation that justifies routing rather than asserting it.
 6. **Corrections to agent outputs adopted here:** no fabricated performance promises (agents' "nDCG >= 0.85", "700x" style numbers dropped; we publish measured numbers only); UW SSEC is the University of Washington Scientific Software Engineering Center and their workstreams (eval platform, OAuth, federation) get presented in ROADMAP.md as collaboration seams without dates we don't control; BioCirV is the LBL flagship domain. CITATION.cff and attribution were removed at the user's request pending wording; the credibility ladder (Zenodo DOI, JOSS) REQUIRES restoring them, so that is flagged as a user decision at launch, not something I re-add unilaterally.
 
+
+## GitHub scaffolding (backfilled 2026-08-27)
+
+Milestone: [v0.2 Credibility](https://github.com/sustainability-software-lab/sci-rag-kit/milestone/1). Epic: [#5](https://github.com/sustainability-software-lab/sci-rag-kit/issues/5).
+
+| Item | Issue |
+|------|-------|
+| 1 Reranker stage | #6 |
+| 2 Eval statistics | #7 |
+| 3 Report diff CLI | #8 |
+| 4 Judge calibration | #9 |
+| 5 Re-embed CLI | #10 |
+| 6 Delete + graph GC | #11 |
+| 7 Snapshot + runbook | #12 |
+| 8 Adaptive routing | #13 |
+| 9 Benchmark page | #14 |
+| Launch docs | #15 |
+| Community mechanics | #16 |
+
 ## WAVE 1 (execute first): v0.2 "Credibility" + launch package
 
 ### Technical items (each lands with tests, docs, and its ablation/eval evidence)
