@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+import re
 from pathlib import Path
 
 import typer
@@ -48,6 +50,11 @@ corpus_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(corpus_app, name="corpus")
+campaign_app = typer.Typer(
+    help="Discover and build legal, resumable scientific-document campaigns.",
+    no_args_is_help=True,
+)
+app.add_typer(campaign_app, name="campaign")
 
 console = Console()
 
@@ -123,6 +130,13 @@ def _csv(value: str | None) -> tuple[str, ...]:
     if not value:
         return ()
     return tuple(part.strip() for part in value.split(",") if part.strip())
+
+
+def _campaign_slug(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", value.casefold()).strip("-")
+    if not slug:
+        raise typer.BadParameter("campaign name must contain a letter or number")
+    return slug[:80].rstrip("-")
 
 
 def _scope(  # type: ignore[no-untyped-def]
@@ -764,6 +778,89 @@ def embed_reindex(
             f"{outcome.communities_reembedded} community summar(ies) "
             f"in {outcome.batches} batch(es).[/green]"
         )
+
+
+@campaign_app.command("discover")
+def campaign_discover(
+    topic: str | None = typer.Option(
+        None,
+        "--topic",
+        help="Search topic for OpenAlex discovery.",
+    ),
+    doi_file: Path | None = typer.Option(
+        None,
+        "--doi-file",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+        help="Text file with one DOI or DOI URL per line.",
+    ),
+    name: str | None = typer.Option(
+        None,
+        "--name",
+        help="Campaign directory name (derived from the input when omitted).",
+    ),
+    mailto: str = typer.Option(
+        ...,
+        "--mailto",
+        envvar="SCI_RAG_CAMPAIGN_MAILTO",
+        help="Contact email sent to OpenAlex and Crossref.",
+    ),
+    max_results: int = typer.Option(
+        100,
+        "--max-results",
+        min=1,
+        help="Maximum newly discovered topic results.",
+    ),
+    campaign_root: Path = typer.Option(
+        Path("data/campaigns"),
+        "--campaign-root",
+        file_okay=False,
+        help="Parent directory for campaign state.",
+    ),
+) -> None:
+    """Discover a deduplicated DOI list and save resumable state."""
+    if (topic is None) == (doi_file is None):
+        raise typer.BadParameter("Provide exactly one of --topic or --doi-file.")
+
+    derived_name = name or topic or (doi_file.stem if doi_file is not None else "")
+    campaign_dir = campaign_root / _campaign_slug(derived_name)
+
+    from sci_rag.campaigns.discovery import discover_by_dois, discover_by_topic
+    from sci_rag.campaigns.http import PoliteHttpClient
+    from sci_rag.campaigns.state import CampaignState
+
+    state = CampaignState(campaign_dir / "state.jsonl")
+
+    async def run():  # type: ignore[no-untyped-def]
+        async with PoliteHttpClient(mailto=mailto) as client:
+            if topic is not None:
+                return await discover_by_topic(
+                    client,
+                    topic,
+                    max_results=max_results,
+                    state=state,
+                    api_key=os.environ.get("OPENALEX_API_KEY") or None,
+                )
+            assert doi_file is not None
+            return await discover_by_dois(client, doi_file, state=state)
+
+    report = run_async(run())
+    table = Table(title=f"Campaign discovery: {campaign_dir.name}")
+    table.add_column("DOI")
+    table.add_column("Year", justify="right")
+    table.add_column("Title")
+    table.add_column("Source")
+    for work in report.works:
+        table.add_row(work.doi, str(work.year or ""), work.title or "", work.source)
+    console.print(table)
+    console.print(
+        f"[green]{len(report.works)} discovered[/green], "
+        f"[yellow]{report.duplicate_records} duplicate[/yellow], "
+        f"[red]{report.malformed_records} malformed[/red], "
+        f"[cyan]{report.skipped_processed} already processed[/cyan]."
+    )
+    console.print(f"State: [bold]{state.path}[/bold]")
 
 
 @corpus_app.command("enrich")

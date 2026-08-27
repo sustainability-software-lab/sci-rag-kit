@@ -15,6 +15,7 @@ nav:
   - Home: index.md
   - Quickstart: quickstart.md
   - Bring your own domain: bring-your-own-domain.md
+  - Corpus campaigns: campaigns.md
   - Methodology: methodology.md
   - Architecture: architecture.md
   - Evaluation: evaluation.md
