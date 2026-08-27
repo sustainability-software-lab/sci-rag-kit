@@ -13,6 +13,7 @@ relative to where you run the command):
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 
 import typer
@@ -518,6 +519,65 @@ def eval_diff(
     if output is not None:
         output.write_text(markdown, encoding="utf-8")
         console.print(f"Diff written to [bold]{output}[/bold].")
+
+
+@eval_app.command("calibrate")
+def eval_calibrate(
+    labels: Path = typer.Option(..., "--labels", help="Human labels (labels.jsonl)."),
+    report: Path | None = typer.Option(
+        None,
+        "--report",
+        help="Answers report.json (or its run directory) to calibrate against. "
+        "Defaults to the newest answers run under eval_results/.",
+    ),
+    output: Path | None = typer.Option(
+        None, "--output", help="Also write the calibration markdown to this path."
+    ),
+) -> None:
+    """Compare human labels against the judge's scores: Cohen's kappa per dimension.
+
+    Appends a calibration section to the report's markdown (report.md) and
+    writes calibration.json next to it, so the kappa travels with the eval
+    numbers it qualifies.
+    """
+    from sci_rag.evals.calibration import (
+        CalibrationError,
+        calibrate,
+        calibration_markdown,
+        judge_scores_from_report,
+        parse_labels,
+    )
+    from sci_rag.evals.diff import DiffError, load_report
+
+    try:
+        if report is None:
+            candidates = sorted(Path("eval_results").glob("*-answers/report.json"))
+            if not candidates:
+                raise CalibrationError(
+                    "no --report given and no answers run found under eval_results/"
+                )
+            report = candidates[-1]
+            console.print(f"Using newest answers report: [bold]{report}[/bold]")
+        payload = load_report(report)
+        result = calibrate(parse_labels(labels), judge_scores_from_report(payload))
+    except (CalibrationError, DiffError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    markdown = calibration_markdown(result)
+    console.print(markdown)
+    report_path = report / "report.json" if report.is_dir() else report
+    calibration_json = report_path.parent / "calibration.json"
+    calibration_json.write_text(json.dumps(result.as_dict(), indent=2), encoding="utf-8")
+    report_md = report_path.parent / "report.md"
+    if report_md.exists():
+        report_md.write_text(
+            report_md.read_text(encoding="utf-8").rstrip() + "\n\n" + markdown + "\n",
+            encoding="utf-8",
+        )
+        console.print(f"Calibration appended to [bold]{report_md}[/bold].")
+    console.print(f"Calibration data written to [bold]{calibration_json}[/bold].")
+    if output is not None:
+        output.write_text(markdown, encoding="utf-8")
 
 
 @app.command()

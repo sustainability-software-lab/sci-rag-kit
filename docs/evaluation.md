@@ -106,6 +106,47 @@ intact, and spot-check a handful of judged answers by hand afterward
 (read the rationale strings in `report.json`; they are kept for exactly
 this).
 
+## Calibrating the judge
+
+The judged-answers table is only as citable as the judge behind it, so
+the kit ships calibration as a workflow you re-run, not a one-off study:
+
+1. Run an answers eval (`sci-rag eval answers`) and open its
+   `report.json` in `eval_results/`.
+2. Have a human read each generated answer (and its sources) WITHOUT
+   looking at the judge's scores, and record their own 0-2 scores per
+   dimension, one JSON object per line:
+
+   ```
+   {"question_id": "rice-straw-ash", "groundedness": 2,
+    "citation_accuracy": 2, "completeness": 1, "correctness": 2}
+   ```
+
+   `#` comment lines are allowed. Dimensions may be omitted per row.
+3. Compare:
+
+   ```bash
+   uv run sci-rag eval calibrate --labels labels.jsonl --report eval_results/<run>/report.json
+   ```
+
+   You get Cohen's kappa per dimension, exact agreement, and the full
+   3x3 agreement matrices. The section is appended to the run's
+   `report.md` and stored as `calibration.json` next to it, so the kappa
+   travels with the numbers it qualifies.
+
+Report kappa as measured. The Landis-Koch adjective in the output
+("moderate", "substantial", ...) is a standard reading aid, not a
+target; a low kappa on a dimension is a real finding that the judge and
+a human disagree there, and the agreement matrix shows how. Expect
+unstable kappa below roughly 30 labeled answers; more labels, and labels
+from a domain expert, make the number mean more.
+
+The repo ships `domain/eval_calibration_labels.jsonl`: a seed label set
+for the demo corpus, labeled by the kit's authors. It is marked
+non-expert; it demonstrates the workflow and pins the format, and domain
+expert labels (the BioCirV collaboration supplies them for the flagship
+deployment) supersede it for any real claim about judge reliability.
+
 ## Honesty probes
 
 Include at least one question your corpus cannot answer, tagged
@@ -130,7 +171,16 @@ regressions fail loudly.
 1. Establish the baseline: both eval commands, reports saved.
 2. Change one thing (chunk size, a prompt, the ontology, a fusion
    weight).
-3. Re-run, diff the reports against the baseline.
+3. Re-run, then let the diff tool do the comparison:
+
+   ```bash
+   uv run sci-rag eval diff eval_results/<baseline-run> eval_results/<new-run>
+   ```
+
+   It reports which questions moved (improved, regressed, appeared,
+   disappeared) and whether each metric delta clears paired-bootstrap
+   significance, so a lucky rank flip on one question cannot pass as an
+   improvement.
 4. Keep the change only if the numbers (and your reading of the judged
    answers) agree it helped.
 
