@@ -76,15 +76,17 @@ _WALK_SQL = text(
         FROM canonical_walk c
         JOIN kg_entities e ON e.id = c.entity_id
         WHERE e.canonical_entity_id IS NULL
-    ), walk(entity_id, hop) AS (
-        SELECT entity_id, 0 FROM matched
+    ), walk(entity_id, hop, path_confidence) AS (
+        SELECT entity_id, 0, 1.0::double precision FROM matched
         UNION
         SELECT CASE WHEN r.source_entity_id = w.entity_id
                     THEN r.target_entity_id ELSE r.source_entity_id END,
-               w.hop + 1
+               w.hop + 1,
+               LEAST(w.path_confidence, r.confidence)
         FROM kg_relationships r
         JOIN walk w ON w.entity_id IN (r.source_entity_id, r.target_entity_id)
         WHERE w.hop < :max_hops
+          AND r.confidence >= :min_confidence
           AND (
                 :unrestricted
                 OR r.document_id = ANY(:eligible_document_ids)
@@ -97,15 +99,22 @@ _WALK_SQL = text(
                     )
                 )
           )
+    ), candidates AS (
+        SELECT candidate_chunk.id,
+               MIN(w.hop) AS hop,
+               MAX(w.path_confidence) AS path_confidence
+        FROM walk w
+        JOIN kg_entities e ON e.id = w.entity_id AND e.canonical_entity_id IS NULL
+        CROSS JOIN LATERAL unnest(e.chunk_ids) AS entity_chunk_id
+        JOIN chunks candidate_chunk ON candidate_chunk.id = entity_chunk_id
+        WHERE :unrestricted OR candidate_chunk.document_id = ANY(:eligible_document_ids)
+        GROUP BY candidate_chunk.id
     )
-    SELECT candidate_chunk.id, MIN(w.hop) AS hop
-    FROM walk w
-    JOIN kg_entities e ON e.id = w.entity_id AND e.canonical_entity_id IS NULL
-    CROSS JOIN LATERAL unnest(e.chunk_ids) AS entity_chunk_id
-    JOIN chunks candidate_chunk ON candidate_chunk.id = entity_chunk_id
-    WHERE :unrestricted OR candidate_chunk.document_id = ANY(:eligible_document_ids)
-    GROUP BY candidate_chunk.id
-    ORDER BY hop, candidate_chunk.id
+    SELECT id, hop
+    FROM candidates
+    ORDER BY CASE WHEN :confidence_weighted THEN path_confidence END DESC NULLS LAST,
+             hop,
+             id
     LIMIT :limit
     """
 ).bindparams(
@@ -137,6 +146,9 @@ async def graph_stage(
     query: str,
     scope: RetrievalScope,
     limit: int,
+    *,
+    min_confidence: float = 0.0,
+    confidence_weighted: bool = False,
 ) -> list[Key]:
     names = await extract_query_entities(llm, domain, query)
     if not names:
@@ -160,8 +172,10 @@ async def graph_stage(
                 {
                     "names": lowered,
                     "max_hops": MAX_HOPS,
-                    # Alias strings have no per-surface provenance. Until they
-                    # do, a restricted caller may seed only active exact names.
+                    "min_confidence": min_confidence,
+                    "confidence_weighted": confidence_weighted,
+                    # Restricted callers seed only exact names proven in
+                    # eligible chunk content; aliases lack per-surface provenance.
                     "allow_aliases": unrestricted,
                     "unrestricted": unrestricted,
                     "eligible_document_ids": eligible_document_ids,

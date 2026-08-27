@@ -66,8 +66,8 @@ implement it.
 
 `--ablation` re-runs the questions under the registered configurations:
 `full_deep`, `interactive`, `vector_only`, `keyword_only`, `no_graph`,
-`no_hyde`, `no_community`, the paired reranker rows, `auto_routed`,
-and `no_retracted`. Entity resolution changes persisted corpus state, not
+`confidence_weighted`, `no_hyde`, `no_community`, the paired reranker rows,
+`auto_routed`, and `no_retracted`. Entity resolution changes persisted corpus state, not
 retrieval kwargs, so it is intentionally not a row in this same-state table.
 Capture it as two named snapshots instead:
 

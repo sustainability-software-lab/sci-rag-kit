@@ -97,6 +97,7 @@ class Retriever:
         include_community: bool | None = None,
         include_hyde: bool | None = None,
         include_rerank: bool | None = None,
+        graph_confidence_weighted: bool | None = None,
         use_query_cache: bool | None = None,
     ) -> RetrievalResult:
         scope = scope or RetrievalScope()
@@ -152,6 +153,7 @@ class Retriever:
             else self.settings.interactive_stage_timeout_s
         )
         limits = self.domain.config.retrieval.candidate_limits
+        graph_tuning = self.domain.config.retrieval.graph
 
         # Communities aggregate evidence across documents before any scope is
         # known, so a scoped request must not use them (see stage docstring).
@@ -187,6 +189,12 @@ class Retriever:
                 query,
                 scope,
                 limits.get("graph", 20),
+                min_confidence=graph_tuning.min_confidence,
+                confidence_weighted=(
+                    graph_tuning.confidence_weighted
+                    if graph_confidence_weighted is None
+                    else graph_confidence_weighted
+                ),
             )
 
         async def community_factory() -> list[Key]:

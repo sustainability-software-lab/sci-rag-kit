@@ -108,6 +108,11 @@ DEFAULT_ABLATIONS: list[AblationConfig] = [
     AblationConfig(
         "no_graph", "Deep without graph traversal", {"profile": "deep", "include_graph": False}
     ),
+    AblationConfig(
+        "confidence_weighted",
+        "Deep with graph candidates ordered by minimum path confidence",
+        {"profile": "deep", "graph_confidence_weighted": True},
+    ),
     AblationConfig("no_hyde", "Deep without HyDE", {"profile": "deep", "include_hyde": False}),
     AblationConfig(
         "no_community",
