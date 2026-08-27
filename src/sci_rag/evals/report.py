@@ -22,6 +22,18 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sci_rag.db.models import Chunk, Document, KgCommunity, KgEntity, KgRelationship
 from sci_rag.evals.answer_eval import AnswerEvalRecord, summarize_answer_records
 from sci_rag.evals.retrieval_eval import RetrievalEvalResult
+from sci_rag.evals.stats import SMALL_N, bootstrap_ci, format_ci
+
+
+def small_n_warning(n: int) -> list[str]:
+    if 0 < n < SMALL_N:
+        return [
+            "",
+            f"Warning: n={n} questions is a small sample. The 95% intervals are",
+            "wide, and metric differences inside overlapping intervals are noise,",
+            "not findings.",
+        ]
+    return []
 
 
 async def corpus_fingerprint(session_factory: async_sessionmaker[AsyncSession]) -> dict[str, Any]:
@@ -99,6 +111,7 @@ def retrieval_payload(
                 "name": r.config.name,
                 "description": r.config.description,
                 "metrics": r.metrics,
+                "metrics_ci": r.metrics_with_ci,
                 "records": [asdict(record) for record in r.records],
             }
             for r in results
@@ -117,12 +130,24 @@ def retrieval_markdown(results: list[RetrievalEvalResult], fingerprint: dict[str
         "| Config | hit@5 | hit@10 | MRR | nDCG@10 | questions |",
         "|--------|------:|-------:|----:|--------:|----------:|",
     ]
+    max_n = 0
     for result in results:
-        m = result.metrics
+        ci = result.metrics_with_ci
+        n = int(ci.get("n", 0))
+        max_n = max(max_n, n)
+        if n == 0:
+            lines.append(f"| {result.config.name} | - | - | - | - | 0 |")
+            continue
         lines.append(
-            f"| {result.config.name} | {m['hit_at_5']:.2f} | {m['hit_at_10']:.2f} "
-            f"| {m['mrr']:.2f} | {m.get('ndcg_at_10', 0.0):.2f} | {int(m['n'])} |"
+            f"| {result.config.name} | {format_ci(ci['hit_at_5'])} "
+            f"| {format_ci(ci['hit_at_10'])} | {format_ci(ci['mrr'])} "
+            f"| {format_ci(ci['ndcg_at_10'])} | {n} |"
         )
+    lines += small_n_warning(max_n)
+    lines += [
+        "",
+        "Cells are mean [95% bootstrap CI], resampled per question.",
+    ]
     lines += [
         "",
         "Read this table by comparing rows against `full_deep`: a layer earns",
@@ -144,6 +169,28 @@ def retrieval_markdown(results: list[RetrievalEvalResult], fingerprint: dict[str
     return "\n".join(lines)
 
 
+def answer_dimension_values(records: list[AnswerEvalRecord]) -> dict[str, list[float]]:
+    """Per-question judge scores by dimension, for bootstrap CIs."""
+    graded = [r.grounding for r in records if r.grounding is not None]
+    out = {
+        "groundedness": [float(g.groundedness) for g in graded],
+        "citation_accuracy": [float(g.citation_accuracy) for g in graded],
+        "completeness": [float(g.completeness) for g in graded],
+    }
+    correct = [r.correctness for r in records if r.correctness is not None]
+    if correct:
+        out["correctness"] = [float(c.correctness) for c in correct]
+    return out
+
+
+def summarize_answers_ci(records: list[AnswerEvalRecord]) -> dict[str, Any]:
+    return {
+        name: bootstrap_ci(values).as_dict()
+        for name, values in answer_dimension_values(records).items()
+        if values
+    }
+
+
 def answers_payload(records: list[AnswerEvalRecord], fingerprint: dict[str, Any]) -> dict[str, Any]:
     return {
         "kind": "answers",
@@ -151,6 +198,7 @@ def answers_payload(records: list[AnswerEvalRecord], fingerprint: dict[str, Any]
         "git_commit": git_commit(),
         "corpus": fingerprint,
         "summary": summarize_answer_records(records),
+        "summary_ci": summarize_answers_ci(records),
         "records": [asdict(record) for record in records],
     }
 
@@ -165,19 +213,23 @@ def answers_markdown(records: list[AnswerEvalRecord], fingerprint: dict[str, Any
         "Scores are 0 to 2 per dimension. The grounding judge never sees the",
         "reference answer; correctness is graded in a separate reference-only pass.",
         "",
-        "| Metric | Mean |",
-        "|--------|-----:|",
+        "| Metric | Mean [95% CI] |",
+        "|--------|--------------:|",
     ]
+    ci_summary = summarize_answers_ci(records)
     for key in (
-        "groundedness_mean",
-        "citation_accuracy_mean",
-        "completeness_mean",
-        "correctness_mean",
+        "groundedness",
+        "citation_accuracy",
+        "completeness",
+        "correctness",
     ):
-        if key in summary:
-            lines.append(f"| {key.removesuffix('_mean')} | {summary[key]:.2f} |")
+        if key in ci_summary:
+            lines.append(f"| {key} | {format_ci(ci_summary[key])} |")
     lines += [
         f"| graded / total | {int(summary['graded'])} / {int(summary['n'])} |",
+    ]
+    lines += small_n_warning(int(summary["graded"]))
+    lines += [
         "",
         "## Per question",
         "",

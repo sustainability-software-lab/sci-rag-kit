@@ -127,4 +127,4 @@ async def test_smoke_answer_eval_with_blind_judge(demo_corpus, local_embedder, t
     )
     payload = json.loads(json_path.read_text())
     assert payload["corpus"]["documents"] == 5
-    assert "| groundedness | 2.00 |" in md_path.read_text()
+    assert "| groundedness | 2.00 [2.00, 2.00] |" in md_path.read_text()
