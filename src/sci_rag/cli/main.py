@@ -488,6 +488,38 @@ def eval_answers(
     console.print(f"Report written to [bold]{md_path}[/bold] (and {json_path.name}).")
 
 
+@eval_app.command("diff")
+def eval_diff(
+    report_a: Path = typer.Argument(..., help="Baseline report.json (or its run directory)."),
+    report_b: Path = typer.Argument(..., help="Comparison report.json (or its run directory)."),
+    config: str | None = typer.Option(
+        None, "--config", help="Diff only this ablation config (default: every common config)."
+    ),
+    output: Path | None = typer.Option(
+        None, "--output", help="Also write the markdown diff to this path."
+    ),
+) -> None:
+    """Compare two eval runs: per-question rank moves and paired metric deltas.
+
+    Deltas are B minus A. Run it after any retrieval-affecting change to
+    see whether the improvement is real or inside the noise.
+    """
+    from sci_rag.evals.diff import DiffError, diff_markdown, diff_reports, load_report
+
+    try:
+        payload_a = load_report(report_a)
+        payload_b = load_report(report_b)
+        diff = diff_reports(payload_a, payload_b, config=config)
+    except DiffError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    markdown = diff_markdown(diff)
+    console.print(markdown)
+    if output is not None:
+        output.write_text(markdown, encoding="utf-8")
+        console.print(f"Diff written to [bold]{output}[/bold].")
+
+
 @app.command()
 def stats() -> None:
     """What is in the knowledge base right now."""
