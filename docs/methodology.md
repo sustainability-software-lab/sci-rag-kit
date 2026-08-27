@@ -143,7 +143,9 @@ source. Relationships keep the quoted phrase that stated them and a
 calibrated confidence score: 1.0 for direct statements, 0.7 for strong
 implications, and 0.4 for inferences across sentences. Re-extraction merges
 aliases and preserves the highest confidence observed for a repeated typed
-edge.
+edge from the same evidence surface. Edges with different document or chunk
+provenance remain separate so retrieval scope cannot erase otherwise eligible
+relationship evidence.
 
 Extraction can still fragment one concept across several names. Run
 `sci-rag graph resolve-entities --dry-run` to inspect a conservative

@@ -333,7 +333,7 @@ async def _apply_merges(
         .scalars()
         .all()
     )
-    seen: dict[tuple[str, str, str], KgRelationship] = {}
+    seen: dict[tuple[str, str, str, str | None, str | None], KgRelationship] = {}
     for relationship in relationships:
         if relationship.source_entity_id == relationship.target_entity_id:
             await session.delete(relationship)
@@ -342,6 +342,8 @@ async def _apply_merges(
             relationship.source_entity_id,
             relationship.target_entity_id,
             relationship.relation_type,
+            relationship.document_id,
+            relationship.chunk_id,
         )
         incumbent = seen.get(key)
         if incumbent is None:

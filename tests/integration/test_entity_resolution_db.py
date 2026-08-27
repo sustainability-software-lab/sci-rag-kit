@@ -15,6 +15,13 @@ from sci_rag.db import (
     get_session_factory,
 )
 from sci_rag.domain import load_domain
+from sci_rag.graph.extractor import (
+    ExtractedEntity,
+    ExtractedRelationship,
+    ExtractionStats,
+    _insert_relationships,
+    _upsert_entities,
+)
 from sci_rag.graph.resolve import resolve_entities
 from sci_rag.retrieve.stages.graph import graph_stage
 from sci_rag.retrieve.types import RetrievalScope
@@ -75,6 +82,110 @@ async def seed_duplicates() -> dict[str, str]:
     return {"winner": winner.id, "loser": loser.id, "chunk": chunk.id, "rel": relationship.id}
 
 
+async def test_extraction_does_not_reuse_alias_from_different_entity_type(clean_tables) -> None:  # type: ignore[no-untyped-def]
+    document_id = "1" * 32
+    chunk_id = "2" * 32
+    product_id = "3" * 32
+    async with get_session_factory()() as session:
+        session.add_all(
+            [
+                Document(
+                    id=document_id,
+                    title="Char evidence",
+                    content_hash="4" * 64,
+                    license_class="public",
+                ),
+                Chunk(
+                    id=chunk_id,
+                    document_id=document_id,
+                    chunk_index=0,
+                    content="Char is used as a feedstock.",
+                    token_count=6,
+                ),
+                KgEntity(
+                    id=product_id,
+                    name="biochar",
+                    entity_type="Product",
+                    aliases=["char"],
+                    document_ids=[],
+                    chunk_ids=[],
+                ),
+            ]
+        )
+        await session.flush()
+
+        ids = await _upsert_entities(
+            session,
+            [ExtractedEntity("char", "Feedstock", "incoming material", [1])],
+            {1: chunk_id},
+            {1: document_id},
+            fallback_chunk_ids=[chunk_id],
+            fallback_document_ids=[document_id],
+            stats=ExtractionStats(),
+        )
+        await session.commit()
+
+    async with get_session_factory()() as session:
+        product = await session.get(KgEntity, product_id)
+        feedstock = await session.scalar(select(KgEntity).where(KgEntity.name == "char"))
+    assert product is not None and feedstock is not None
+    assert product.document_ids == []
+    assert feedstock.entity_type == "Feedstock"
+    assert ids["char"] == feedstock.id
+
+
+async def test_relationship_extraction_preserves_distinct_evidence_surfaces(clean_tables) -> None:  # type: ignore[no-untyped-def]
+    source_id = "a" * 32
+    target_id = "b" * 32
+    document_ids = ["c" * 32, "d" * 32]
+    chunk_ids = ["e" * 32, "f" * 32]
+    async with get_session_factory()() as session:
+        session.add_all(
+            [
+                Document(
+                    id=document_ids[index],
+                    title=f"Evidence {index}",
+                    content_hash=str(index + 7) * 64,
+                    license_class="public" if index == 0 else "restricted",
+                )
+                for index in range(2)
+            ]
+            + [
+                Chunk(
+                    id=chunk_ids[index],
+                    document_id=document_ids[index],
+                    chunk_index=0,
+                    content=f"Evidence {index}.",
+                    token_count=2,
+                )
+                for index in range(2)
+            ]
+            + [
+                KgEntity(id=source_id, name="source", entity_type="Feedstock"),
+                KgEntity(id=target_id, name="target", entity_type="Product"),
+            ]
+        )
+        await session.flush()
+        relationship = ExtractedRelationship(
+            "source", "target", "PRODUCES", "produces target", 1, 0.8
+        )
+        for document_id, chunk_id in zip(document_ids, chunk_ids, strict=True):
+            await _insert_relationships(
+                session,
+                [relationship],
+                {"source": source_id, "target": target_id},
+                {1: chunk_id},
+                {1: document_id},
+                ExtractionStats(),
+            )
+            await session.flush()
+        await session.commit()
+
+    async with get_session_factory()() as session:
+        relationships = (await session.execute(select(KgRelationship))).scalars().all()
+    assert {relationship.document_id for relationship in relationships} == set(document_ids)
+
+
 async def test_resolution_merges_evidence_repoints_edges_and_audits(clean_tables) -> None:  # type: ignore[no-untyped-def]
     ids = await seed_duplicates()
 
@@ -118,15 +229,41 @@ async def test_resolution_deduplicates_affected_edges_and_invalidates_communitie
     clean_tables,
 ) -> None:  # type: ignore[no-untyped-def]
     ids = await seed_duplicates()
+    restricted_document_id = "4" * 32
+    restricted_chunk_id = "5" * 32
     async with get_session_factory()() as session:
         session.add_all(
             [
+                Document(
+                    id=restricted_document_id,
+                    title="Restricted conversion evidence",
+                    content_hash="6" * 64,
+                    license_class="restricted",
+                ),
+                Chunk(
+                    id=restricted_chunk_id,
+                    document_id=restricted_document_id,
+                    chunk_index=0,
+                    content="Restricted conversion claim.",
+                    token_count=3,
+                ),
                 KgRelationship(
                     id="s" * 32,
                     source_entity_id=ids["winner"],
                     target_entity_id="e" * 32,
                     relation_type="CONVERTED_BY",
                     confidence=0.95,
+                    document_id=restricted_document_id,
+                    chunk_id=restricted_chunk_id,
+                ),
+                KgRelationship(
+                    id="t" * 32,
+                    source_entity_id=ids["loser"],
+                    target_entity_id="e" * 32,
+                    relation_type="CONVERTED_BY",
+                    confidence=0.4,
+                    document_id=restricted_document_id,
+                    chunk_id=restricted_chunk_id,
                 ),
                 KgCommunity(
                     id="m" * 32,
@@ -156,8 +293,10 @@ async def test_resolution_deduplicates_affected_edges_and_invalidates_communitie
             .all()
         )
         community_count = await session.scalar(select(func.count(KgCommunity.id)))
-    assert len(relationships) == 1
-    assert relationships[0].confidence == 0.95
+    assert len(relationships) == 2
+    by_document = {relationship.document_id: relationship for relationship in relationships}
+    assert by_document["d" * 32].confidence == 0.8
+    assert by_document[restricted_document_id].confidence == 0.95
     assert community_count == 0
 
 
