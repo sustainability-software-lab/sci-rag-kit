@@ -12,6 +12,7 @@ from sci_rag.evals.judge import (
 )
 from sci_rag.evals.retrieval_eval import (
     DEFAULT_ABLATIONS,
+    RESOLVED_ENTITIES_CONFIG,
     AblationConfig,
     RetrievalEvalResult,
     is_relevant,
@@ -21,6 +22,7 @@ from sci_rag.evals.seeds import SeedQuestion, load_seed_questions
 
 __all__ = [
     "DEFAULT_ABLATIONS",
+    "RESOLVED_ENTITIES_CONFIG",
     "AblationConfig",
     "AnswerEvalRecord",
     "CorrectnessGrade",

@@ -26,6 +26,7 @@ _PROMPT_FILES = (
     "judge_grounding",
     "judge_correctness",
 )
+_LATEST_SCHEMA_REVISION = "0005"
 
 
 @dataclass
@@ -251,6 +252,17 @@ async def _run_checks(*, probe: bool) -> list[Check]:
             )
             await dispose_engine()
             return checks
+        if revision != _LATEST_SCHEMA_REVISION:
+            checks.append(
+                Check(
+                    "schema",
+                    "fail",
+                    f"migration revision {revision}; expected {_LATEST_SCHEMA_REVISION}",
+                    "uv run sci-rag db upgrade",
+                )
+            )
+            await dispose_engine()
+            return checks
         checks.append(Check("schema", "ok", f"migration revision {revision}"))
 
         column_dim = await conn.scalar(
@@ -358,7 +370,8 @@ async def _run_checks(*, probe: bool) -> list[Check]:
             await conn.scalar(
                 text(
                     "SELECT count(*) FROM kg_entities "
-                    "WHERE chunk_ids = '{}' AND document_ids = '{}'"
+                    "WHERE chunk_ids = '{}' AND document_ids = '{}' "
+                    "AND canonical_entity_id IS NULL"
                 )
             )
             or 0
@@ -372,6 +385,32 @@ async def _run_checks(*, probe: bool) -> list[Check]:
                     "uv run sci-rag graph gc --apply",
                 )
             )
+
+        duplicate_candidates = (
+            await conn.scalar(
+                text(
+                    "WITH surfaces AS ("
+                    "SELECT id, entity_type, lower(regexp_replace(name, '[^[:alnum:]]+', '', 'g')) "
+                    "AS normalized FROM kg_entities WHERE canonical_entity_id IS NULL) "
+                    "SELECT count(*) FROM ("
+                    "SELECT entity_type, normalized FROM surfaces "
+                    "WHERE normalized <> '' GROUP BY entity_type, normalized HAVING count(*) > 1"
+                    ") duplicate_groups"
+                )
+            )
+            or 0
+        )
+        if duplicate_candidates:
+            checks.append(
+                Check(
+                    "entity resolution",
+                    "warn",
+                    f"{duplicate_candidates} exact normalized duplicate group(s)",
+                    "uv run sci-rag graph resolve-entities --dry-run",
+                )
+            )
+        else:
+            checks.append(Check("entity resolution", "ok", "no exact normalized duplicates"))
 
         entities = await conn.scalar(text("SELECT count(*) FROM kg_entities")) or 0
         communities = await conn.scalar(text("SELECT count(*) FROM kg_communities")) or 0

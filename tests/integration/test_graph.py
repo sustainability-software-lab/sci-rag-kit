@@ -15,7 +15,7 @@ from sqlalchemy import func, select
 
 from sci_rag.db import Chunk, KgCommunity, KgEntity, KgRelationship, get_session_factory
 from sci_rag.domain import load_domain
-from sci_rag.graph import build_communities, extract_graph
+from sci_rag.graph import build_communities, extract_graph, resolve_entities
 from sci_rag.ingest import CorpusEntry, ingest_entries
 from sci_rag.llm import LLMClient
 from sci_rag.retrieve import RetrievalScope, Retriever
@@ -224,6 +224,80 @@ async def test_reextraction_merges_aliases_and_keeps_higher_confidence(
     assert rice_straw.aliases == ["paddy straw", "rice residue"]
     assert located_in is not None
     assert located_in.confidence == 0.91
+
+
+async def test_reextraction_through_tombstone_enriches_canonical_entity(
+    clean_tables, corpus, local_embedder, tmp_path
+) -> None:  # type: ignore[no-untyped-def]
+    await _build_graph(corpus, local_embedder, ScriptedLLM())
+    async with get_session_factory()() as session:
+        winner = await session.scalar(select(KgEntity).where(KgEntity.name == "rice straw"))
+        assert winner is not None
+        winner.aliases = [*winner.aliases, "rice residue"]
+        session.add(
+            KgEntity(
+                id="f" * 32,
+                name="Paddy Straw",
+                entity_type="Feedstock",
+                aliases=[],
+            )
+        )
+        await session.commit()
+    report = await resolve_entities(get_session_factory(), dry_run=False, no_llm=True)
+    assert report.merged == 1
+
+    new_path = tmp_path / "new-paddy-evidence.md"
+    new_path.write_text("Rice residue has a newly reported use in biogas systems.")
+    [outcome] = (
+        await ingest_entries(
+            [CorpusEntry(path=new_path, license_class="public", source="incremental")],
+            embedder=local_embedder,
+        )
+    ).outcomes
+    assert outcome.document_id is not None
+    payload = {
+        "entities": [
+            {"name": "rice residue", "type": "Feedstock", "passages": [1]},
+            {"name": "biogas", "type": "Product", "passages": [1]},
+        ],
+        "relationships": [
+            {
+                "source": "rice residue",
+                "target": "biogas",
+                "type": "AFFECTS",
+                "evidence": "newly reported use",
+                "passage": 1,
+            }
+        ],
+    }
+    stats = await extract_graph(
+        session_factory=get_session_factory(),
+        llm=ScriptedLLM(extraction=payload),
+        domain=load_domain(DOMAIN_DIR),
+        rate_limit_s=0,
+    )
+    assert stats.batches_failed == 0
+
+    async with get_session_factory()() as session:
+        winner = await session.scalar(select(KgEntity).where(KgEntity.name == "rice straw"))
+        loser = await session.scalar(select(KgEntity).where(KgEntity.name == "Paddy Straw"))
+        new_chunk = await session.scalar(
+            select(Chunk).where(Chunk.document_id == outcome.document_id)
+        )
+        relationship = await session.scalar(
+            select(KgRelationship).where(
+                KgRelationship.document_id == outcome.document_id,
+                KgRelationship.relation_type == "AFFECTS",
+            )
+        )
+    assert winner is not None and loser is not None and new_chunk is not None
+    assert relationship is not None
+    assert new_chunk.id in winner.chunk_ids
+    assert loser.chunk_ids == []
+    assert relationship.source_entity_id == winner.id
+    async with get_session_factory()() as session:
+        duplicate = await session.scalar(select(KgEntity).where(KgEntity.name == "rice residue"))
+    assert duplicate is None
 
 
 async def test_stats_shows_relationship_confidence_distribution(

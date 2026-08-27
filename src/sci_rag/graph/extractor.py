@@ -24,8 +24,10 @@ from datetime import UTC, datetime
 from typing import Any
 
 import structlog
-from sqlalchemy import Row, select, update
+from sqlalchemy import Row, bindparam, func, or_, select, text, update
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.sql.sqltypes import Text as TextType
 
 from sci_rag.db.models import Chunk, KgEntity, KgRelationship
 from sci_rag.domain import DomainProfile
@@ -36,6 +38,11 @@ log = structlog.get_logger(__name__)
 _MAX_PASSAGE_CHARS = 4000
 _MAX_NAME_LEN = 200
 _MAX_ALIASES = 20
+
+_ALIAS_MATCH = text(
+    "EXISTS (SELECT 1 FROM unnest(kg_entities.aliases) AS alias "
+    "WHERE lower(alias) = ANY(:entity_names))"
+).bindparams(bindparam("entity_names", type_=ARRAY(TextType())))
 
 
 @dataclass
@@ -269,25 +276,39 @@ async def _upsert_entities(
     existing_rows = (
         (
             await session.execute(
-                select(KgEntity).where(KgEntity.name.in_([e.name for e in entities]))
+                select(KgEntity)
+                .where(or_(func.lower(KgEntity.name).in_(names_lower), _ALIAS_MATCH))
+                .order_by(KgEntity.id),
+                {"entity_names": names_lower},
             )
         )
         .scalars()
         .all()
     )
-    # Case-insensitive lookup against whatever is already in the graph.
-    from sqlalchemy import func as sa_func
-
-    more_rows = (
-        (
-            await session.execute(
-                select(KgEntity).where(sa_func.lower(KgEntity.name).in_(names_lower))
-            )
+    existing: dict[tuple[str, str], KgEntity] = {}
+    priorities: dict[tuple[str, str], int] = {}
+    exact_name_rows: dict[str, KgEntity] = {}
+    requested_types: dict[str, set[str]] = {}
+    for entity in entities:
+        requested_types.setdefault(entity.name.lower(), set()).add(entity.entity_type)
+    for matched_row in existing_rows:
+        canonical_row = await _follow_canonical_entity(session, matched_row)
+        exact_key = matched_row.name.lower()
+        if exact_key in requested_types:
+            exact_name_rows.setdefault(exact_key, matched_row)
+        candidates: list[tuple[str, int]] = []
+        if matched_row.entity_type in requested_types.get(exact_key, set()):
+            candidates.append((exact_key, 0 if matched_row.canonical_entity_id is None else 1))
+        candidates.extend(
+            (alias.lower(), 2 if matched_row.canonical_entity_id is None else 3)
+            for alias in (matched_row.aliases or [])
+            if matched_row.entity_type in requested_types.get(alias.lower(), set())
         )
-        .scalars()
-        .all()
-    )
-    existing = {row.name.lower(): row for row in [*existing_rows, *more_rows]}
+        for key, priority in candidates:
+            typed_key = (key, matched_row.entity_type)
+            if priority < priorities.get(typed_key, 4):
+                priorities[typed_key] = priority
+                existing[typed_key] = canonical_row
 
     ids: dict[str, str] = {}
     for entity in entities:
@@ -299,8 +320,16 @@ async def _upsert_entities(
             chunk_ids = fallback_chunk_ids
             document_ids = fallback_document_ids
 
-        row = existing.get(entity.name.lower())
+        typed_name = (entity.name.lower(), entity.entity_type)
+        row = existing.get(typed_name)
         if row is None:
+            if entity.name.lower() in exact_name_rows:
+                log.warning(
+                    "entity_type_conflict",
+                    existing_type=exact_name_rows[entity.name.lower()].entity_type,
+                    extracted_type=entity.entity_type,
+                )
+                continue
             row = KgEntity(
                 name=entity.name,
                 entity_type=entity.entity_type,
@@ -311,7 +340,7 @@ async def _upsert_entities(
             )
             session.add(row)
             await session.flush()
-            existing[entity.name.lower()] = row
+            existing[typed_name] = row
             stats.entities_created += 1
         else:
             merged_chunks = list(dict.fromkeys([*(row.chunk_ids or []), *chunk_ids]))
@@ -336,6 +365,24 @@ async def _upsert_entities(
     return ids
 
 
+async def _follow_canonical_entity(session: AsyncSession, entity: KgEntity) -> KgEntity:
+    """Resolve a persisted entity id to its active survivor, failing on corruption."""
+    seen: set[str] = set()
+    current = entity
+    while current.canonical_entity_id is not None:
+        if current.id in seen:
+            raise RuntimeError(f"entity canonicalization cycle at {current.id}")
+        seen.add(current.id)
+        canonical = await session.get(KgEntity, current.canonical_entity_id)
+        if canonical is None:
+            raise RuntimeError(
+                f"entity {current.id} points to missing canonical entity "
+                f"{current.canonical_entity_id}"
+            )
+        current = canonical
+    return current
+
+
 async def _insert_relationships(
     session: AsyncSession,
     relationships: list[ExtractedRelationship],
@@ -344,6 +391,11 @@ async def _insert_relationships(
     document_id_by_passage: dict[int, str],
     stats: ExtractionStats,
 ) -> None:
+    relationships = [
+        relationship
+        for relationship in relationships
+        if relationship.source.lower() in entity_ids and relationship.target.lower() in entity_ids
+    ]
     if not relationships:
         return
     involved = {entity_ids[r.source.lower()] for r in relationships} | {
@@ -358,14 +410,22 @@ async def _insert_relationships(
         .scalars()
         .all()
     )
-    existing_triples: dict[tuple[str, str, str], KgRelationship] = {
-        (row.source_entity_id, row.target_entity_id, row.relation_type): row
+    existing_triples: dict[tuple[str, str, str, str | None, str | None], KgRelationship] = {
+        (
+            row.source_entity_id,
+            row.target_entity_id,
+            row.relation_type,
+            row.document_id,
+            row.chunk_id,
+        ): row
         for row in existing_rows
     }
     for relationship in relationships:
         source_id = entity_ids[relationship.source.lower()]
         target_id = entity_ids[relationship.target.lower()]
-        triple = (source_id, target_id, relationship.relation_type)
+        document_id = document_id_by_passage.get(relationship.passage)
+        chunk_id = chunk_id_by_passage.get(relationship.passage)
+        triple = (source_id, target_id, relationship.relation_type, document_id, chunk_id)
         existing = existing_triples.get(triple)
         if existing is not None:
             if relationship.confidence > existing.confidence:
@@ -377,8 +437,8 @@ async def _insert_relationships(
             relation_type=relationship.relation_type,
             evidence=relationship.evidence or None,
             confidence=relationship.confidence,
-            document_id=document_id_by_passage.get(relationship.passage),
-            chunk_id=chunk_id_by_passage.get(relationship.passage),
+            document_id=document_id,
+            chunk_id=chunk_id,
         )
         existing_triples[triple] = row
         session.add(row)

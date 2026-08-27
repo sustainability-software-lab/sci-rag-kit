@@ -126,7 +126,7 @@ Five tables, one database:
   phrase, its chunk, and calibrated confidence (1.0 for direct
   statements, 0.7 for strong implications, and 0.4 for cross-sentence
   inferences). Repeated extraction preserves the highest observed
-  confidence for the typed edge.
+  confidence for the typed edge on each document and chunk evidence surface.
 * `kg_communities`: cluster membership, an LLM summary, and the
   summary's embedding.
 

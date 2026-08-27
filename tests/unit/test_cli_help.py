@@ -44,6 +44,7 @@ def test_subcommand_help_screens() -> None:
         ["graph", "--help"],
         ["graph", "extract", "--help"],
         ["graph", "communities", "--help"],
+        ["graph", "resolve-entities", "--help"],
         ["eval", "--help"],
         ["eval", "retrieval", "--help"],
         ["eval", "answers", "--help"],
@@ -63,8 +64,11 @@ def test_documented_flags_exist() -> None:
     extract_help = _plain(runner.invoke(app, ["graph", "extract", "--help"]).output)
     for flag in ("--all", "--batch-size", "--max-chunks"):
         assert flag in extract_help
+    resolve_help = _plain(runner.invoke(app, ["graph", "resolve-entities", "--help"]).output)
+    for flag in ("--dry-run", "--apply", "--no-llm", "--threshold", "--llm-threshold"):
+        assert flag in resolve_help
     eval_help = _plain(runner.invoke(app, ["eval", "retrieval", "--help"]).output)
-    for flag in ("--ablation", "--questions", "--limit"):
+    for flag in ("--ablation", "--condition", "--questions", "--limit", "--snapshot"):
         assert flag in eval_help
     answer_help = _plain(runner.invoke(app, ["answer", "--help"]).output)
     assert "--include-retracted" in answer_help
@@ -98,3 +102,10 @@ def test_ingest_rejects_ambiguous_input() -> None:
     both = runner.invoke(app, ["ingest", "data/raw", "--manifest", "x.jsonl"])
     assert both.exit_code != 0
     assert "exactly one" in _plain(both.output)
+
+
+def test_resolved_entity_eval_requires_a_named_snapshot() -> None:
+    result = runner.invoke(app, ["eval", "retrieval", "--condition", "resolved_entities"])
+
+    assert result.exit_code != 0
+    assert "--snapshot" in _plain(result.output)

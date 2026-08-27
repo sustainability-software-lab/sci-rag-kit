@@ -64,9 +64,23 @@ text by substring matching; that famous shortcut ("the answer contains
 'IRR', so it is grounded") measures nothing and this kit refuses to
 implement it.
 
-`--ablation` re-runs the questions under seven configurations:
+`--ablation` re-runs the questions under the registered configurations:
 `full_deep`, `interactive`, `vector_only`, `keyword_only`, `no_graph`,
-`no_hyde`, `no_community`. Read every row against `full_deep`:
+`no_hyde`, `no_community`, the paired reranker rows, `auto_routed`,
+and `no_retracted`. Entity resolution changes persisted corpus state, not
+retrieval kwargs, so it is intentionally not a row in this same-state table.
+Capture it as two named snapshots instead:
+
+```bash
+sci-rag eval retrieval --snapshot before-resolution
+sci-rag graph resolve-entities --apply
+sci-rag eval retrieval --condition resolved_entities --snapshot after-resolution
+sci-rag eval diff BEFORE.json AFTER.json
+```
+
+The post-resolution command requires a durable merge audit row, preventing an
+unchanged corpus from being mislabeled. Read every layer-ablation row against
+`full_deep`:
 
 * A layer earns its fusion weight when REMOVING it hurts. If `no_graph`
   equals `full_deep` on your corpus, your graph is not contributing yet;

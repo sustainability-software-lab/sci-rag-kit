@@ -153,11 +153,17 @@ async def graph_gc(
     """
     outcome = GcOutcome()
     async with session_factory() as session:
+        lineage_survivors = select(KgEntity.canonical_entity_id).where(
+            KgEntity.canonical_entity_id.is_not(None)
+        )
         evidence_less = (
             (
                 await session.execute(
                     select(KgEntity.id).where(
-                        (KgEntity.chunk_ids == []) & (KgEntity.document_ids == [])
+                        (KgEntity.chunk_ids == [])
+                        & (KgEntity.document_ids == [])
+                        & KgEntity.canonical_entity_id.is_(None)
+                        & KgEntity.id.not_in(lineage_survivors)
                     )
                 )
             )

@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import pytest
 
-from sci_rag.evals.retrieval_eval import DEFAULT_ABLATIONS
+from sci_rag.evals.retrieval_eval import DEFAULT_ABLATIONS, RESOLVED_ENTITIES_CONFIG
 from sci_rag.retrieve.types import RetrievalScope, scope_conditions
 
 # One kwargs dict per restriction dimension.
@@ -85,3 +85,8 @@ def test_no_retracted_ablation_carries_the_filter_scope() -> None:
     config = next(config for config in DEFAULT_ABLATIONS if config.name == "no_retracted")
 
     assert config.scope == RetrievalScope(exclude_retracted=True)
+
+
+def test_entity_resolution_is_an_explicit_snapshot_condition() -> None:
+    assert RESOLVED_ENTITIES_CONFIG.name == "resolved_entities"
+    assert RESOLVED_ENTITIES_CONFIG not in DEFAULT_ABLATIONS

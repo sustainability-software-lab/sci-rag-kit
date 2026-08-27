@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy import text, update
 
 from sci_rag.cli.doctor import _run_checks
-from sci_rag.db import Document, get_engine
+from sci_rag.db import Document, KgEntity, get_engine, get_session_factory
 from sci_rag.ingest import ingest_entries, load_manifest
 
 pytestmark = pytest.mark.integration
@@ -24,7 +24,37 @@ async def _stamp_alembic_revision() -> None:
             text("CREATE TABLE IF NOT EXISTS alembic_version (version_num varchar(32) PRIMARY KEY)")
         )
         await conn.execute(text("DELETE FROM alembic_version"))
-        await conn.execute(text("INSERT INTO alembic_version VALUES ('0001')"))
+        await conn.execute(text("INSERT INTO alembic_version VALUES ('0005')"))
+
+
+async def test_doctor_reports_outdated_schema_before_new_column_queries(clean_tables) -> None:  # type: ignore[no-untyped-def]
+    await _stamp_alembic_revision()
+    async with get_engine().begin() as conn:
+        await conn.execute(text("UPDATE alembic_version SET version_num = '0004'"))
+        await conn.execute(text("ALTER TABLE kg_entities DROP COLUMN canonical_entity_id CASCADE"))
+    try:
+        checks = _by_name(await _run_checks(probe=False))
+        assert checks["schema"].status == "fail"
+        assert "db upgrade" in checks["schema"].fix
+    finally:
+        async with get_engine().begin() as conn:
+            await conn.execute(
+                text("ALTER TABLE kg_entities ADD COLUMN canonical_entity_id VARCHAR(32)")
+            )
+            await conn.execute(
+                text(
+                    "ALTER TABLE kg_entities ADD CONSTRAINT "
+                    "fk_kg_entities_canonical_entity_id FOREIGN KEY (canonical_entity_id) "
+                    "REFERENCES kg_entities(id) ON DELETE SET NULL"
+                )
+            )
+            await conn.execute(
+                text(
+                    "CREATE INDEX ix_kg_entities_canonical_entity_id "
+                    "ON kg_entities (canonical_entity_id)"
+                )
+            )
+            await conn.execute(text("UPDATE alembic_version SET version_num = '0005'"))
 
 
 def _by_name(checks) -> dict[str, object]:  # type: ignore[no-untyped-def]
@@ -71,6 +101,23 @@ async def test_doctor_warns_about_known_retracted_documents(clean_tables, local_
     assert checks["retractions"].status == "warn"
     assert "1" in checks["retractions"].detail
     assert "exclude" in checks["retractions"].fix.lower()
+
+
+async def test_doctor_warns_about_normalized_entity_duplicates(clean_tables) -> None:  # type: ignore[no-untyped-def]
+    await _stamp_alembic_revision()
+    async with get_session_factory()() as session:
+        session.add_all(
+            [
+                KgEntity(name="Rice-straw", entity_type="Feedstock"),
+                KgEntity(name="rice straw", entity_type="Feedstock"),
+            ]
+        )
+        await session.commit()
+
+    checks = _by_name(await _run_checks(probe=False))
+
+    assert checks["entity resolution"].status == "warn"
+    assert "resolve-entities" in checks["entity resolution"].fix
 
 
 async def test_doctor_catches_dimension_mismatch(clean_tables, monkeypatch) -> None:  # type: ignore[no-untyped-def]

@@ -143,7 +143,22 @@ source. Relationships keep the quoted phrase that stated them and a
 calibrated confidence score: 1.0 for direct statements, 0.7 for strong
 implications, and 0.4 for inferences across sentences. Re-extraction merges
 aliases and preserves the highest confidence observed for a repeated typed
-edge.
+edge from the same evidence surface. Edges with different document or chunk
+provenance remain separate so retrieval scope cannot erase otherwise eligible
+relationship evidence.
+
+Extraction can still fragment one concept across several names. Run
+`sci-rag graph resolve-entities --dry-run` to inspect a conservative
+three-tier resolution pass: normalized name and alias overlap first,
+high-similarity same-type names second, and one batched LLM decision for
+the ambiguous band. Nothing is written until `--apply`. A merge unions
+evidence and aliases, repoints relationships, and leaves the old row as a
+`canonical_entity_id` tombstone. Every applied merge has a durable row in
+`entity_resolution_audit`; `--no-llm` provides a deterministic-only pass.
+The doctor reports cheap probable duplicates, and graph GC preserves these
+tombstones. Because community summaries materialize entity membership and
+relationships, an applied merge clears them; rebuild with
+`sci-rag graph communities` after reviewing the resolution receipts.
 
 At query time, a fast LLM call extracts entity names from the question,
 matching graph entities are walked up to **two hops** in either
@@ -151,6 +166,15 @@ direction, and the chunks those entities point to re-enter the candidate
 pool ranked by hop distance. This is what makes multi-hop questions work:
 the connecting entity brings its evidence with it even when the
 question's words never appear in that text.
+
+Alias strings currently do not carry per-surface document provenance, so only
+an unrestricted graph walk may expand them. A restricted walk may seed from an
+exact active or tombstone name only when that literal surface occurs in one of
+the entity's eligible evidence chunks. Resolution tombstones retain their
+original evidence pointers for this check. Retrieved chunks are restricted
+before ranking, and every traversed relationship must itself carry eligible
+document or chunk provenance. Restricted evidence therefore cannot seed,
+extend, or contribute a candidate to the walk.
 
 ### 6.4 Community summaries
 

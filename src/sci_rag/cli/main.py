@@ -504,6 +504,86 @@ def graph_communities(
     )
 
 
+@graph_app.command("resolve-entities")
+def graph_resolve_entities(
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--apply",
+        help="Preview merges by default; --apply writes tombstones and audit receipts.",
+    ),
+    no_llm: bool = typer.Option(
+        False,
+        "--no-llm",
+        help="Skip borderline pairs instead of asking the configured LLM.",
+    ),
+    threshold: float = typer.Option(
+        0.92,
+        "--threshold",
+        min=0.0,
+        max=1.0,
+        help="Minimum same-type similarity for an automatic fuzzy merge.",
+    ),
+    llm_threshold: float = typer.Option(
+        0.80,
+        "--llm-threshold",
+        min=0.0,
+        max=1.0,
+        help="Minimum similarity for a borderline pair to be reviewed by the LLM.",
+    ),
+) -> None:
+    """Resolve duplicate graph entities conservatively and audit every merge."""
+    from sci_rag.config import get_settings
+    from sci_rag.db import get_session_factory
+    from sci_rag.graph import resolve_entities
+    from sci_rag.llm import get_llm
+
+    if llm_threshold > threshold:
+        raise typer.BadParameter("--llm-threshold cannot exceed --threshold")
+    settings = get_settings()
+    llm = None
+    if not no_llm and settings.credentials_mode() != "none":
+        llm = get_llm(settings)
+    try:
+        result = run_async(
+            resolve_entities(
+                get_session_factory(),
+                llm=llm,
+                dry_run=dry_run,
+                no_llm=no_llm,
+                fuzzy_threshold=threshold,
+                ambiguous_threshold=llm_threshold,
+            )
+        )
+    except ValueError as exc:
+        if "llm is required" not in str(exc):
+            raise
+        console.print(
+            "[red]Borderline entity pairs need configured model credentials.[/red] "
+            "Configure Google credentials or rerun with [bold]--no-llm[/bold] "
+            "to leave those pairs separate."
+        )
+        raise typer.Exit(1) from None
+    table = Table(title="Entity resolution" + (" (dry run)" if dry_run else ""))
+    table.add_column("What")
+    table.add_column("Count", justify="right")
+    table.add_row("active entities", str(result.entities_considered))
+    table.add_row("automatic pairs", str(result.automatic_pairs))
+    table.add_row("borderline pairs", str(result.ambiguous_pairs))
+    table.add_row("LLM failures", str(result.llm_failures))
+    table.add_row("planned merges", str(result.planned_merges))
+    table.add_row("entities merged", str(result.merged))
+    console.print(table)
+    if dry_run and result.planned_merges:
+        console.print("Dry run: no rows changed. Re-run with [bold]--apply[/bold] to merge.")
+    elif result.merged:
+        console.print(
+            "[yellow]Stored community summaries were invalidated; rebuild them with "
+            "[bold]sci-rag graph communities[/bold].[/yellow]"
+        )
+    if result.llm_failures:
+        console.print("[yellow]Unclear pairs remained separate; rerun to retry them.[/yellow]")
+
+
 def _load_questions(questions_path: Path | None):  # type: ignore[no-untyped-def]
     from sci_rag.config import get_settings
     from sci_rag.evals import load_seed_questions
@@ -542,13 +622,33 @@ def eval_retrieval(
     ablation: bool = typer.Option(
         False, "--ablation", help="Run every layer-ablation config, not just full_deep."
     ),
+    condition: str | None = typer.Option(
+        None,
+        "--condition",
+        help="Label an established corpus condition (currently: resolved_entities).",
+    ),
     snapshot: str | None = typer.Option(
         None, "--snapshot", help="Record this corpus snapshot name in the report."
     ),
 ) -> None:
     """Score retrieval against your seed questions (and per-layer ablations)."""
-    from sci_rag.db import get_session_factory
-    from sci_rag.evals import DEFAULT_ABLATIONS, run_retrieval_eval
+    if condition not in (None, "resolved_entities"):
+        raise typer.BadParameter(
+            "only resolved_entities is currently supported", param_hint="--condition"
+        )
+    if condition is not None and ablation:
+        raise typer.BadParameter("--condition and --ablation are mutually exclusive")
+    if condition is not None and not snapshot:
+        raise typer.BadParameter("--condition requires --snapshot")
+
+    from sqlalchemy import func, select
+
+    from sci_rag.db import EntityResolutionAudit, get_session_factory
+    from sci_rag.evals import (
+        DEFAULT_ABLATIONS,
+        RESOLVED_ENTITIES_CONFIG,
+        run_retrieval_eval,
+    )
     from sci_rag.evals.report import (
         corpus_fingerprint,
         retrieval_markdown,
@@ -558,7 +658,25 @@ def eval_retrieval(
     from sci_rag.retrieve import Retriever
 
     questions = _load_questions(questions_path)
-    configs = DEFAULT_ABLATIONS if ablation else DEFAULT_ABLATIONS[:1]
+    configs = (
+        [RESOLVED_ENTITIES_CONFIG]
+        if condition == "resolved_entities"
+        else DEFAULT_ABLATIONS
+        if ablation
+        else DEFAULT_ABLATIONS[:1]
+    )
+
+    if condition == "resolved_entities":
+
+        async def count_resolution_audits() -> int:
+            async with get_session_factory()() as session:
+                return (await session.scalar(select(func.count(EntityResolutionAudit.id)))) or 0
+
+        if run_async(count_resolution_audits()) == 0:
+            raise typer.BadParameter(
+                "resolved_entities requires at least one persisted entity-resolution audit row",
+                param_hint="--condition",
+            )
 
     async def run():  # type: ignore[no-untyped-def]
         retriever = Retriever()
@@ -569,7 +687,11 @@ def eval_retrieval(
     results, fingerprint = run_async(run())
     _print_retrieval_results(results)
     json_path, md_path = write_report(
-        kind="retrieval-ablation" if ablation else "retrieval",
+        kind="retrieval-condition"
+        if condition
+        else "retrieval-ablation"
+        if ablation
+        else "retrieval",
         payload=retrieval_payload(results, fingerprint, snapshot=snapshot),
         markdown=retrieval_markdown(results, fingerprint),
     )

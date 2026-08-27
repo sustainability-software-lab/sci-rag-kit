@@ -28,6 +28,7 @@ migrations, `domain/`, and data paths resolve predictably.
 | `sci-rag graph` | Build the knowledge graph: extract entities, then detect communities. |
 | `sci-rag graph extract` | Extract entities and relationships from ingested chunks (needs an LLM). |
 | `sci-rag graph communities` | Cluster the graph and write LLM summaries (rebuilds all communities). |
+| `sci-rag graph resolve-entities` | Resolve duplicate graph entities conservatively and audit every merge. |
 | `sci-rag graph gc` | Garbage-collect the graph: evidence-less entities, dangling relationships, communities whose members no longer resolve. |
 | `sci-rag eval` | Measure your RAG honestly: retrieval metrics, layer ablations, judged answers. |
 | `sci-rag eval retrieval` | Score retrieval against your seed questions (and per-layer ablations). |
@@ -225,6 +226,23 @@ $ sci-rag graph communities [OPTIONS]
 |---|---|---|---|
 | `--min-size` | integer | 3 | Smallest cluster worth summarizing. |
 
+## `sci-rag graph resolve-entities`
+
+Resolve duplicate graph entities conservatively and audit every merge.
+
+```console
+$ sci-rag graph resolve-entities [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--dry-run, --apply` | boolean | true | Preview merges by default; --apply writes tombstones and audit receipts. |
+| `--no-llm` | boolean | false | Skip borderline pairs instead of asking the configured LLM. |
+| `--threshold` | float range | 0.92 | Minimum same-type similarity for an automatic fuzzy merge. |
+| `--llm-threshold` | float range | 0.8 | Minimum similarity for a borderline pair to be reviewed by the LLM. |
+
 ## `sci-rag graph gc`
 
 Garbage-collect the graph: evidence-less entities, dangling relationships, communities whose members no longer resolve.
@@ -262,6 +280,7 @@ $ sci-rag eval retrieval [OPTIONS]
 | `--questions` | path | unset | Seed questions JSONL. |
 | `--limit` | integer | 10 | Results retrieved per question. |
 | `--ablation` | boolean | false | Run every layer-ablation config, not just full_deep. |
+| `--condition` | text | unset | Label an established corpus condition (currently: resolved_entities). |
 | `--snapshot` | text | unset | Record this corpus snapshot name in the report. |
 
 ## `sci-rag eval answers`

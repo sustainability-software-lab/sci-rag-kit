@@ -160,6 +160,15 @@ class KgEntity(Base):
     # Evidence pointers, denormalized for fast graph-to-chunk resolution.
     document_ids: Mapped[list[str]] = mapped_column(ARRAY(String(32)), default=list)
     chunk_ids: Mapped[list[str]] = mapped_column(ARRAY(String(32)), default=list)
+    # A merged row remains as a tombstone so old entity ids and surface
+    # forms keep resolving. Active entities have NULL here.
+    canonical_entity_id: Mapped[str | None] = mapped_column(
+        ForeignKey(
+            "kg_entities.id",
+            ondelete="SET NULL",
+            name="fk_kg_entities_canonical_entity_id",
+        )
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -168,6 +177,31 @@ class KgEntity(Base):
     __table_args__ = (
         UniqueConstraint("name", name="uq_kg_entities_name"),
         Index("ix_kg_entities_entity_type", "entity_type"),
+        Index("ix_kg_entities_canonical_entity_id", "canonical_entity_id"),
+    )
+
+
+class EntityResolutionAudit(Base):
+    """Immutable receipt for one entity merged into another.
+
+    Names and ids are copied instead of foreign-keyed so the audit remains
+    intelligible even if a later corpus lifecycle operation removes rows.
+    """
+
+    __tablename__ = "entity_resolution_audit"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    merged_entity_id: Mapped[str] = mapped_column(String(32))
+    merged_entity_name: Mapped[str] = mapped_column(Text)
+    surviving_entity_id: Mapped[str] = mapped_column(String(32))
+    surviving_entity_name: Mapped[str] = mapped_column(Text)
+    method: Mapped[str] = mapped_column(Text)
+    confidence: Mapped[float] = mapped_column(Float)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_entity_resolution_audit_merged", "merged_entity_id"),
+        Index("ix_entity_resolution_audit_surviving", "surviving_entity_id"),
     )
 
 
