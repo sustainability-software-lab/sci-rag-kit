@@ -530,10 +530,183 @@ def apply_all(
     changes += apply_env_file(answers, root)
     changes += apply_pyproject(answers, root)
     changes += apply_makefile(answers, root)
+    changes += apply_runner(answers, root)
     changes += apply_corpus_scaffold(answers, root)
     changes += apply_license(answers, root, year=year)
     changes += apply_readme(answers, root)
     if allow_git:
         changes += apply_git(answers, root)
     changes += [_log("note", note) for note in answers.coercions]
+    return changes
+
+
+# --- environment manager ----------------------------------------------------
+
+# The surfaces a generated project executes or instructs from. Every one of
+# them is rendered from the runner profile, and the coherence test asserts
+# that none of them mentions a manager the user did not choose.
+#
+# CHANGELOG.md and docs/changelog.md are deliberately absent: they are the
+# upstream template's history, and rewriting a past release note to mention a
+# tool that release never used would be a lie in the service of a test.
+COHERENCE_SURFACES = (
+    "Makefile",
+    "Dockerfile",
+    "README.md",
+    "CONTRIBUTING.md",
+    "AGENTS.md",
+    "domain/README.md",
+    ".github/workflows",
+    ".devcontainer",
+    "docs",
+    "scripts",
+    "src/sci_rag/cli/main.py",
+)
+
+_COHERENCE_SUFFIXES = {".md", ".yml", ".yaml", ".json", ".py", ""}
+_COHERENCE_EXCLUDE = ("docs/planning", "docs/changelog.md", "CHANGELOG.md")
+
+
+# Rendered whole from the profile, so the ordered text pass must skip them.
+# Substituting inside a JSON string value breaks its quoting, which is how a
+# venv+pip devcontainer ended up unparseable.
+_RENDERED_WHOLE = ("Dockerfile", ".devcontainer/devcontainer.json")
+
+
+def coherence_files(root: Path) -> list[Path]:
+    """Every file the runner rewrite has to reach, resolved against a tree."""
+    found: list[Path] = []
+    for surface in COHERENCE_SURFACES:
+        candidate = root / surface
+        if candidate.is_file():
+            found.append(candidate)
+        elif candidate.is_dir():
+            found.extend(
+                path
+                for path in sorted(candidate.rglob("*"))
+                if path.is_file() and path.suffix in _COHERENCE_SUFFIXES
+            )
+    return [
+        path
+        for path in found
+        if not any(part in path.relative_to(root).as_posix() for part in _COHERENCE_EXCLUDE)
+    ]
+
+
+def _rewrite_ci_setup(text: str, answers: ProjectAnswers) -> str:
+    """Swap the workflow's manager bootstrap for the chosen one.
+
+    The setup step is a block rather than a single string (the action plus its
+    inputs), so it is replaced whole rather than by the ordered text pass.
+    """
+    profile = answers.runner
+    block = profile.ci_setup_yaml(python_version=answers.python_version)
+    matrix_block = profile.ci_setup_yaml(python_version="${{ matrix.python-version }}")
+    pattern = re.compile(
+        r"      - uses: astral-sh/setup-uv@v7\n"
+        r"        with:\n"
+        r"          python-version: (?P<version>[^\n]+)\n"
+        r"          enable-cache: true"
+    )
+
+    def replace(match: re.Match[str]) -> str:
+        return matrix_block if "matrix" in match.group("version") else block
+
+    return pattern.sub(replace, text)
+
+
+def _pin_ci_python_matrix(text: str, answers: ProjectAnswers) -> str:
+    """Collapse the workflow matrix to the single answered interpreter.
+
+    The template tests 3.11 and 3.12 because it supports both. A generated
+    project pins one, and for the manifest-first managers the manifest decides
+    it regardless, so the second leg would rebuild the same environment.
+    """
+    return re.sub(
+        r'(?m)^(\s*)python-version: \["3\.11", "3\.12"\]$',
+        lambda m: f'{m.group(1)}python-version: ["{answers.python_version}"]',
+        text,
+    )
+
+
+def _write_dockerfile(answers: ProjectAnswers, root: Path) -> None:
+    _write(
+        root / "Dockerfile",
+        answers.runner.dockerfile(
+            python_version=answers.python_version, project_slug=answers.repo_name
+        ),
+    )
+
+
+def _write_devcontainer(answers: ProjectAnswers, root: Path) -> None:
+    """Point the dev container at the chosen manager.
+
+    The lock file records a resolved digest for the uv feature, so it is
+    removed rather than rewritten with a digest that would be invented.
+    """
+    import json
+
+    path = root / ".devcontainer" / "devcontainer.json"
+    if not path.exists():
+        return
+    profile = answers.runner
+    config = json.loads(path.read_text(encoding="utf-8"))
+    config["name"] = answers.repo_name
+    config["workspaceFolder"] = f"/workspaces/{answers.repo_name}"
+    config["features"] = {profile.devcontainer_feature: {}} if profile.devcontainer_feature else {}
+    config["postCreateCommand"] = profile.devcontainer_post_create(project_slug=answers.repo_name)
+    settings = config.get("customizations", {}).get("vscode", {}).get("settings")
+    if isinstance(settings, dict) and "python.defaultInterpreterPath" in settings:
+        settings["python.defaultInterpreterPath"] = profile.devcontainer_interpreter(
+            project_slug=answers.repo_name
+        )
+    _write(path, json.dumps(config, indent=2) + "\n")
+    (root / ".devcontainer" / "devcontainer-lock.json").unlink(missing_ok=True)
+
+
+def apply_runner(answers: ProjectAnswers, root: Path) -> list[str]:
+    """Render every manager-wired surface for the chosen environment manager.
+
+    The template is already a uv project, so choosing uv is a no-op. For the
+    other three this rewrites the task commands, the CI bootstrap, the
+    container, the dev container, and the docs from one profile, then writes
+    whatever manifest that manager needs.
+    """
+    from sci_rag.scaffold.manifests import write_manifest
+
+    profile = answers.runner
+    changes = write_manifest(answers, root)
+
+    substitutions = profile.substitutions_from_uv(project_slug=answers.repo_name)
+    touched = 0
+    rendered_whole = {(root / name).resolve() for name in _RENDERED_WHOLE}
+    for path in coherence_files(root):
+        if path.resolve() in rendered_whole:
+            continue
+        original = path.read_text(encoding="utf-8", errors="strict")
+        text = original
+        if path.name.endswith(".yml") and path.parent.name == "workflows":
+            text = _pin_ci_python_matrix(_rewrite_ci_setup(text, answers), answers)
+        for old, new in substitutions:
+            text = text.replace(old, new)
+        if text != original:
+            _write(path, text)
+            touched += 1
+
+    # The kit's own matrix generates a project per manager. Carrying it into a
+    # generated project would have that project try to generate projects, and
+    # it is the one file that legitimately names every manager at once.
+    (root / ".github" / "workflows" / "generated-projects.yml").unlink(missing_ok=True)
+
+    _write_dockerfile(answers, root)
+    _write_devcontainer(answers, root)
+    if profile.lockfile != "uv.lock":
+        (root / "uv.lock").unlink(missing_ok=True)
+
+    changes.append(_log("Dockerfile", f"{profile.label} base image"))
+    changes.append(_log(".devcontainer/", profile.devcontainer_feature or "plain python feature"))
+    if touched:
+        changes.append(_log("rendered", f"{touched} files for {profile.label}"))
+    if profile.lockfile and profile.lockfile != "uv.lock":
+        changes.append(_log(profile.lockfile, f"created on first `{profile.sync()}`"))
     return changes
