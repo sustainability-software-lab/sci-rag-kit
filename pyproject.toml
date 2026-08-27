@@ -45,6 +45,12 @@ docling = ["docling>=2.15"]
 tokenizers = ["tiktoken>=0.7"]
 # Local cross-encoder reranking (the LLM reranker needs no extra at all).
 rerank = ["sentence-transformers>=3.0"]
+# Claude for generation, on Vertex AI Model Garden or the direct API.
+# 1.2 is the floor for the effort knob JSON-mode calls use.
+anthropic = ["anthropic[vertex]>=1.2"]
+# Any OpenAI-compatible endpoint. On Google Cloud this is the route to the
+# non-Google Vertex partner models (Grok, Llama, Mistral, DeepSeek).
+openai = ["openai>=1.40"]
 
 [project.scripts]
 sci-rag = "sci_rag.cli.main:app"

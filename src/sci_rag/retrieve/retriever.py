@@ -81,7 +81,7 @@ class Retriever:
     def llm(self) -> LLMClient:
         """Built on first use so no-credential runs work until a layer needs it."""
         if self._llm is None:
-            self._llm = get_llm(self.settings, model=self.settings.resolved_extraction_model)
+            self._llm = get_llm(self.settings, role="extraction")
         return self._llm
 
     async def retrieve(

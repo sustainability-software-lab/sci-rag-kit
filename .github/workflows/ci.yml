@@ -40,7 +40,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
       - name: Install dependencies
-        run: uv sync
+        # The provider extras are light and carry the LLM adapters' tests, so
+        # CI installs them rather than skipping that coverage.
+        run: uv sync --extra anthropic --extra openai
       - name: Lint
         run: |
           uv run ruff check src tests examples scripts

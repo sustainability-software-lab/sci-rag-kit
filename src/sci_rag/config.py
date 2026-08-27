@@ -11,11 +11,23 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+if TYPE_CHECKING:
+    from sci_rag.llm.spec import ModelSpec
+
 CredentialsMode = Literal["api_key", "vertex", "none"]
+
+#: Generation backends the kit ships an adapter for. Embeddings deliberately
+#: stay Google-only; see docs/adr/0006-multi-provider-llms.md.
+LLMProviderName = Literal["google", "anthropic", "openai-compatible"]
+
+#: Where a generation call comes from. Each role resolves to its own model
+#: spec so a cheap model can do high-volume extraction while a stronger one
+#: writes answers, and a *different* one grades them.
+LLMRole = Literal["answer", "extraction", "judge"]
 
 
 class Settings(BaseSettings):
@@ -34,6 +46,16 @@ class Settings(BaseSettings):
     gcp_project: str | None = None
     gcp_location: str = "us-central1"
 
+    # --- Credentials for the non-Google generation providers ----------------
+    # Anthropic on Vertex uses ``gcp_project`` and application-default
+    # credentials; this key is only for the direct Anthropic API.
+    anthropic_api_key: str | None = None
+    # The OpenAI-compatible provider points at Vertex Model Garden by default
+    # (Grok, Llama, Mistral, DeepSeek) using application-default credentials.
+    # Set a base URL to target OpenAI itself or a self-hosted server instead.
+    openai_api_key: str | None = None
+    openai_base_url: str | None = None
+
     # --- Embeddings ---------------------------------------------------------
     # "google" uses gemini-embedding-001 through whichever credential mode is
     # configured. "local-hash" is a deterministic, offline embedder for tests
@@ -46,10 +68,16 @@ class Settings(BaseSettings):
     embedding_dim: int = 1536
 
     # --- Generation (answers, graph extraction, HyDE, summaries) ------------
+    # The provider a bare model id belongs to. Any model setting below may
+    # override it inline as "provider:model".
+    llm_provider: LLMProviderName = "google"
     llm_model: str = "gemini-2.5-flash"
     # Cheap-and-fast model for high-volume extraction calls. Defaults to
     # ``llm_model`` when unset.
     extraction_model: str | None = None
+    # Model for the evaluation judge. Pointing it at a different provider than
+    # ``llm_model`` avoids grading a model's answers with its own family.
+    judge_model: str | None = None
 
     # --- Retrieval stage timeouts (seconds) ---------------------------------
     # "interactive" keeps a user waiting; "deep" is for offline/agent use.
@@ -72,11 +100,30 @@ class Settings(BaseSettings):
     def resolved_extraction_model(self) -> str:
         return self.extraction_model or self.llm_model
 
+    @property
+    def resolved_judge_model(self) -> str:
+        return self.judge_model or self.llm_model
+
+    def model_spec_for(self, role: LLMRole) -> ModelSpec:
+        """The provider and model id a given call site should use."""
+        # Imported here because sci_rag.llm imports this module; the lazy
+        # import keeps the package graph acyclic.
+        from sci_rag.llm.spec import parse_model_spec
+
+        raw = {
+            "answer": self.llm_model,
+            "extraction": self.resolved_extraction_model,
+            "judge": self.resolved_judge_model,
+        }[role]
+        return parse_model_spec(raw, default_provider=self.llm_provider)
+
     def credentials_mode(self) -> CredentialsMode:
         """Which Google credential path is configured, if any.
 
         An explicit API key wins over a Vertex project so that a laptop user
-        with both can predict what happens.
+        with both can predict what happens. This covers embeddings and the
+        Google generation provider; the other providers carry their own
+        credentials.
         """
         if self.google_api_key:
             return "api_key"

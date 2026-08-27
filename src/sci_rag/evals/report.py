@@ -200,12 +200,14 @@ def answers_payload(
     fingerprint: dict[str, Any],
     *,
     snapshot: str | None = None,
+    models: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     return {
         "kind": "answers",
         "generated_at": datetime.now(UTC).isoformat(),
         "git_commit": git_commit(),
         "snapshot": snapshot,
+        "models": models or {},
         "corpus": fingerprint,
         "summary": summarize_answer_records(records),
         "summary_ci": summarize_answers_ci(records),
@@ -213,13 +215,27 @@ def answers_payload(
     }
 
 
-def answers_markdown(records: list[AnswerEvalRecord], fingerprint: dict[str, Any]) -> str:
+def answers_markdown(
+    records: list[AnswerEvalRecord],
+    fingerprint: dict[str, Any],
+    *,
+    models: dict[str, str] | None = None,
+) -> str:
     summary = summarize_answer_records(records)
     lines = [
         "# Answer evaluation (blind judge)",
         "",
         f"Corpus: {fingerprint.get('documents')} documents, {fingerprint.get('chunks')} chunks.",
         "",
+    ]
+    if models:
+        lines += [
+            "Answered by `{}`; graded by `{}`.".format(
+                models.get("answer", "unknown"), models.get("judge", "unknown")
+            ),
+            "",
+        ]
+    lines += [
         "Scores are 0 to 2 per dimension. The grounding judge never sees the",
         "reference answer; correctness is graded in a separate reference-only pass.",
         "",

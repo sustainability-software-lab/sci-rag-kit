@@ -487,7 +487,7 @@ def graph_extract(
     stats_result = run_async(
         extract_graph(
             session_factory=get_session_factory(),
-            llm=get_llm(settings, model=settings.resolved_extraction_model),
+            llm=get_llm(settings, role="extraction"),
             domain=load_domain(settings.domain_dir),
             batch_size=batch_size,
             reprocess_all=reprocess_all,
@@ -739,7 +739,8 @@ def eval_answers(
     profile: str = typer.Option("deep", help="Retrieval profile for answer generation."),
     limit: int = typer.Option(8, help="Sources per answer."),
     judge_model: str | None = typer.Option(
-        None, help="Judge model id (defaults to the answer model)."
+        None,
+        help="Judge model spec, 'model' or 'provider:model'. Overrides SCI_RAG_JUDGE_MODEL.",
     ),
     snapshot: str | None = typer.Option(
         None, "--snapshot", help="Record this corpus snapshot name in the report."
@@ -763,12 +764,18 @@ def eval_answers(
 
     async def run():  # type: ignore[no-untyped-def]
         engine = AnswerEngine(settings=settings)
-        judge = get_llm(settings, model=judge_model) if judge_model else get_llm(settings)
+        judge = get_llm(settings, role="judge", model=judge_model)
         records = await run_answer_eval(engine, judge, questions, profile=profile, limit=limit)
         fingerprint = await corpus_fingerprint(get_session_factory())
-        return records, fingerprint
+        # Stamped into the report: grading answers with the model that wrote
+        # them is a known bias, so a reader needs to see both.
+        models = {
+            "answer": str(settings.model_spec_for("answer")),
+            "judge": judge.describe(),
+        }
+        return records, fingerprint, models
 
-    records, fingerprint = run_async(run())
+    records, fingerprint, models = run_async(run())
     from sci_rag.evals import summarize_answer_records
 
     summary = summarize_answer_records(records)
@@ -780,8 +787,8 @@ def eval_answers(
     console.print(table)
     json_path, md_path = write_report(
         kind="answers",
-        payload=answers_payload(records, fingerprint, snapshot=snapshot),
-        markdown=answers_markdown(records, fingerprint),
+        payload=answers_payload(records, fingerprint, snapshot=snapshot, models=models),
+        markdown=answers_markdown(records, fingerprint, models=models),
     )
     console.print(f"Report written to [bold]{md_path}[/bold] (and {json_path.name}).")
 

@@ -316,7 +316,7 @@ $ sci-rag eval answers [OPTIONS]
 | `--questions` | path | unset | Seed questions JSONL. |
 | `--profile` | text | deep | Retrieval profile for answer generation. |
 | `--limit` | integer | 8 | Sources per answer. |
-| `--judge-model` | text | unset | Judge model id (defaults to the answer model). |
+| `--judge-model` | text | unset | Judge model spec, 'model' or 'provider:model'. Overrides SCI_RAG_JUDGE_MODEL. |
 | `--snapshot` | text | unset | Record this corpus snapshot name in the report. |
 
 ## `sci-rag eval diff`
