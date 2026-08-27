@@ -21,7 +21,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from mcp.server import MCPServer
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, text
 
 import sci_rag
 from sci_rag.db.models import KgEntity, KgRelationship
@@ -178,10 +178,11 @@ def build_mcp_server(
         """
         limit = max(1, min(limit, 100))
         conditions = [
+            KgEntity.canonical_entity_id.is_(None),
             or_(
                 KgEntity.name.ilike(f"%{name_contains}%"),
                 func.array_to_string(KgEntity.aliases, " ").ilike(f"%{name_contains}%"),
-            )
+            ),
         ]
         if entity_type:
             conditions.append(KgEntity.entity_type == entity_type)
@@ -217,7 +218,18 @@ def build_mcp_server(
         async with service.session_factory() as session:
             entity = (
                 await session.execute(
-                    select(KgEntity).where(func.lower(KgEntity.name) == entity_name.lower())
+                    select(KgEntity)
+                    .where(
+                        or_(
+                            func.lower(KgEntity.name) == entity_name.lower(),
+                            text(
+                                "EXISTS (SELECT 1 FROM unnest(kg_entities.aliases) alias "
+                                "WHERE lower(alias) = lower(:entity_name))"
+                            ).bindparams(entity_name=entity_name),
+                        )
+                    )
+                    .order_by(KgEntity.canonical_entity_id.is_not(None))
+                    .limit(1)
                 )
             ).scalar_one_or_none()
             if entity is None:
@@ -226,6 +238,23 @@ def build_mcp_server(
                     "found": False,
                     "hint": "Try search_entities to find the canonical name.",
                 }
+            seen_ids: set[str] = set()
+            while entity.canonical_entity_id is not None:
+                if entity.id in seen_ids:
+                    return {
+                        "entity": entity_name,
+                        "found": False,
+                        "hint": "Entity canonicalization cycle detected; run sci-rag doctor.",
+                    }
+                seen_ids.add(entity.id)
+                canonical = await session.get(KgEntity, entity.canonical_entity_id)
+                if canonical is None:
+                    return {
+                        "entity": entity_name,
+                        "found": False,
+                        "hint": "Canonical entity is missing; run sci-rag doctor.",
+                    }
+                entity = canonical
             edges = (
                 (
                     await session.execute(

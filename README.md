@@ -138,6 +138,7 @@ docs/              Methodology, tutorials, API reference, ADRs
 | `sci-rag campaign discover --topic ... \| --doi-file ...` | Build a deduplicated, resumable DOI list through OpenAlex or Crossref |
 | `sci-rag campaign build --topic ... \| --doi-file ... --dry-run` | Map explicit license signals, download verified direct OA PDFs, and write an ingest manifest |
 | `sci-rag graph extract` | Extract entities and relationships from chunks |
+| `sci-rag graph resolve-entities --dry-run` | Preview alias, fuzzy, and optional LLM duplicate-entity merges |
 | `sci-rag graph communities` | Cluster the graph and write summaries |
 | `sci-rag retrieve "question"` | Ranked results with per-layer traces (filter with `--year-min/--year-max/--author/--journal/--exclude-doi/--license/--source`) |
 | `sci-rag answer "question"` | Grounded answer with citations; known retracted papers excluded by default |

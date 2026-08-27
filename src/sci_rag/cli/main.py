@@ -504,6 +504,81 @@ def graph_communities(
     )
 
 
+@graph_app.command("resolve-entities")
+def graph_resolve_entities(
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--apply",
+        help="Preview merges by default; --apply writes tombstones and audit receipts.",
+    ),
+    no_llm: bool = typer.Option(
+        False,
+        "--no-llm",
+        help="Skip borderline pairs instead of asking the configured LLM.",
+    ),
+    threshold: float = typer.Option(
+        0.92,
+        "--threshold",
+        min=0.0,
+        max=1.0,
+        help="Minimum same-type similarity for an automatic fuzzy merge.",
+    ),
+    llm_threshold: float = typer.Option(
+        0.80,
+        "--llm-threshold",
+        min=0.0,
+        max=1.0,
+        help="Minimum similarity for a borderline pair to be reviewed by the LLM.",
+    ),
+) -> None:
+    """Resolve duplicate graph entities conservatively and audit every merge."""
+    from sci_rag.config import get_settings
+    from sci_rag.db import get_session_factory
+    from sci_rag.graph import resolve_entities
+    from sci_rag.llm import get_llm
+
+    if llm_threshold > threshold:
+        raise typer.BadParameter("--llm-threshold cannot exceed --threshold")
+    settings = get_settings()
+    llm = None
+    if not no_llm and settings.credentials_mode() != "none":
+        llm = get_llm(settings)
+    try:
+        result = run_async(
+            resolve_entities(
+                get_session_factory(),
+                llm=llm,
+                dry_run=dry_run,
+                no_llm=no_llm,
+                fuzzy_threshold=threshold,
+                ambiguous_threshold=llm_threshold,
+            )
+        )
+    except ValueError as exc:
+        if "llm is required" not in str(exc):
+            raise
+        console.print(
+            "[red]Borderline entity pairs need configured model credentials.[/red] "
+            "Configure Google credentials or rerun with [bold]--no-llm[/bold] "
+            "to leave those pairs separate."
+        )
+        raise typer.Exit(1) from None
+    table = Table(title="Entity resolution" + (" (dry run)" if dry_run else ""))
+    table.add_column("What")
+    table.add_column("Count", justify="right")
+    table.add_row("active entities", str(result.entities_considered))
+    table.add_row("automatic pairs", str(result.automatic_pairs))
+    table.add_row("borderline pairs", str(result.ambiguous_pairs))
+    table.add_row("LLM failures", str(result.llm_failures))
+    table.add_row("planned merges", str(result.planned_merges))
+    table.add_row("entities merged", str(result.merged))
+    console.print(table)
+    if dry_run and result.planned_merges:
+        console.print("Dry run: no rows changed. Re-run with [bold]--apply[/bold] to merge.")
+    elif result.llm_failures:
+        console.print("[yellow]Unclear pairs remained separate; rerun to retry them.[/yellow]")
+
+
 def _load_questions(questions_path: Path | None):  # type: ignore[no-untyped-def]
     from sci_rag.config import get_settings
     from sci_rag.evals import load_seed_questions

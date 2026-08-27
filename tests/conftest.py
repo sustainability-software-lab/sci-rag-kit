@@ -68,7 +68,8 @@ async def clean_tables(database):  # type: ignore[no-untyped-def]
     async with database.begin() as conn:
         await conn.execute(
             text(
-                "TRUNCATE documents, chunks, kg_entities, kg_relationships, kg_communities CASCADE"
+                "TRUNCATE documents, chunks, kg_entities, kg_relationships, kg_communities, "
+                "entity_resolution_audit CASCADE"
             )
         )
     yield

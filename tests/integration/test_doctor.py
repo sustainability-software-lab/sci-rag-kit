@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy import text, update
 
 from sci_rag.cli.doctor import _run_checks
-from sci_rag.db import Document, get_engine
+from sci_rag.db import Document, KgEntity, get_engine, get_session_factory
 from sci_rag.ingest import ingest_entries, load_manifest
 
 pytestmark = pytest.mark.integration
@@ -71,6 +71,23 @@ async def test_doctor_warns_about_known_retracted_documents(clean_tables, local_
     assert checks["retractions"].status == "warn"
     assert "1" in checks["retractions"].detail
     assert "exclude" in checks["retractions"].fix.lower()
+
+
+async def test_doctor_warns_about_normalized_entity_duplicates(clean_tables) -> None:  # type: ignore[no-untyped-def]
+    await _stamp_alembic_revision()
+    async with get_session_factory()() as session:
+        session.add_all(
+            [
+                KgEntity(name="Rice-straw", entity_type="Feedstock"),
+                KgEntity(name="rice straw", entity_type="Feedstock"),
+            ]
+        )
+        await session.commit()
+
+    checks = _by_name(await _run_checks(probe=False))
+
+    assert checks["entity resolution"].status == "warn"
+    assert "resolve-entities" in checks["entity resolution"].fix
 
 
 async def test_doctor_catches_dimension_mismatch(clean_tables, monkeypatch) -> None:  # type: ignore[no-untyped-def]

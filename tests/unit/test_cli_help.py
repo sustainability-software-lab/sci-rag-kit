@@ -44,6 +44,7 @@ def test_subcommand_help_screens() -> None:
         ["graph", "--help"],
         ["graph", "extract", "--help"],
         ["graph", "communities", "--help"],
+        ["graph", "resolve-entities", "--help"],
         ["eval", "--help"],
         ["eval", "retrieval", "--help"],
         ["eval", "answers", "--help"],
@@ -63,6 +64,9 @@ def test_documented_flags_exist() -> None:
     extract_help = _plain(runner.invoke(app, ["graph", "extract", "--help"]).output)
     for flag in ("--all", "--batch-size", "--max-chunks"):
         assert flag in extract_help
+    resolve_help = _plain(runner.invoke(app, ["graph", "resolve-entities", "--help"]).output)
+    for flag in ("--dry-run", "--apply", "--no-llm", "--threshold", "--llm-threshold"):
+        assert flag in resolve_help
     eval_help = _plain(runner.invoke(app, ["eval", "retrieval", "--help"]).output)
     for flag in ("--ablation", "--questions", "--limit"):
         assert flag in eval_help

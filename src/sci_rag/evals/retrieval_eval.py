@@ -128,6 +128,11 @@ DEFAULT_ABLATIONS: list[AblationConfig] = [
         {"profile": "deep"},
         scope=RetrievalScope(exclude_retracted=True),
     ),
+    AblationConfig(
+        "resolved_entities",
+        "Post-resolution deep retrieval; pair with a pre-resolution snapshot via eval diff",
+        {"profile": "deep"},
+    ),
 ]
 
 

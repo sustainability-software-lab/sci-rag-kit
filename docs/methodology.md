@@ -145,6 +145,17 @@ implications, and 0.4 for inferences across sentences. Re-extraction merges
 aliases and preserves the highest confidence observed for a repeated typed
 edge.
 
+Extraction can still fragment one concept across several names. Run
+`sci-rag graph resolve-entities --dry-run` to inspect a conservative
+three-tier resolution pass: normalized name and alias overlap first,
+high-similarity same-type names second, and one batched LLM decision for
+the ambiguous band. Nothing is written until `--apply`. A merge unions
+evidence and aliases, repoints relationships, and leaves the old row as a
+`canonical_entity_id` tombstone. Every applied merge has a durable row in
+`entity_resolution_audit`; `--no-llm` provides a deterministic-only pass.
+The doctor reports cheap probable duplicates, and graph GC preserves these
+tombstones.
+
 At query time, a fast LLM call extracts entity names from the question,
 matching graph entities are walked up to **two hops** in either
 direction, and the chunks those entities point to re-enter the candidate

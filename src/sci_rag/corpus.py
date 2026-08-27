@@ -157,7 +157,9 @@ async def graph_gc(
             (
                 await session.execute(
                     select(KgEntity.id).where(
-                        (KgEntity.chunk_ids == []) & (KgEntity.document_ids == [])
+                        (KgEntity.chunk_ids == [])
+                        & (KgEntity.document_ids == [])
+                        & KgEntity.canonical_entity_id.is_(None)
                     )
                 )
             )

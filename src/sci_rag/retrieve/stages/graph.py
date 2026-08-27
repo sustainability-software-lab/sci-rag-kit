@@ -32,8 +32,26 @@ MAX_HOPS = 2
 
 _WALK_SQL = text(
     """
-    WITH RECURSIVE walk(entity_id, hop) AS (
-        SELECT id, 0 FROM kg_entities WHERE lower(name) = ANY(:names)
+    WITH RECURSIVE canonical_walk(entity_id) AS (
+        SELECT id
+        FROM kg_entities
+        WHERE lower(name) = ANY(:names)
+           OR EXISTS (
+               SELECT 1 FROM unnest(aliases) AS alias
+               WHERE lower(alias) = ANY(:names)
+           )
+        UNION
+        SELECT e.canonical_entity_id
+        FROM kg_entities e
+        JOIN canonical_walk c ON c.entity_id = e.id
+        WHERE e.canonical_entity_id IS NOT NULL
+    ), matched(entity_id) AS (
+        SELECT c.entity_id
+        FROM canonical_walk c
+        JOIN kg_entities e ON e.id = c.entity_id
+        WHERE e.canonical_entity_id IS NULL
+    ), walk(entity_id, hop) AS (
+        SELECT entity_id, 0 FROM matched
         UNION
         SELECT CASE WHEN r.source_entity_id = w.entity_id
                     THEN r.target_entity_id ELSE r.source_entity_id END,
@@ -44,7 +62,7 @@ _WALK_SQL = text(
     )
     SELECT e.chunk_ids, MIN(w.hop) AS hop
     FROM walk w
-    JOIN kg_entities e ON e.id = w.entity_id
+    JOIN kg_entities e ON e.id = w.entity_id AND e.canonical_entity_id IS NULL
     GROUP BY e.id, e.chunk_ids
     ORDER BY hop, e.id
     """
