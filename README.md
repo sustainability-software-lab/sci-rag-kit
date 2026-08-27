@@ -21,7 +21,7 @@ To start a new project, use GitHub's **Use this template**, run the
 quickstart below against the bundled demo corpus, then replace the demo
 domain with your own.
 
-## What it provides
+## What's in the kit
 
 - **Ingestion**: PDF/Markdown/text parsing (Docling when installed, pypdf
   fallback), structure-aware chunking that preserves section hierarchy and
