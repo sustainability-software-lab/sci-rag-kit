@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
-from sqlalchemy import ColumnElement
+from sqlalchemy import ColumnElement, or_
 
 from sci_rag.db.models import Document
 
@@ -28,20 +28,55 @@ STAGES = ("vector", "keyword", "graph", "community", "hyde")
 class RetrievalScope:
     """What a caller is allowed to see.
 
-    ``None`` means unrestricted for that dimension; an empty license tuple
-    means deny everything (fail closed).
+    Two families of dimension live here. The rights dimensions
+    (``license_classes``, ``sources``) are allowlists where ``None`` means
+    unrestricted and an EMPTY tuple means deny everything: that asymmetry
+    is deliberate, because "the caller restricted this to nothing" must
+    never read as "show them everything". The metadata dimensions (year
+    range, authors, journals, DOI excludes) are ordinary filters where an
+    empty tuple simply means nobody asked.
     """
 
     license_classes: tuple[str, ...] | None = None
     sources: tuple[str, ...] | None = None
     exclude_document_ids: tuple[str, ...] = ()
 
+    # Metadata filters. Scientific corpora are filtered by when, by whom,
+    # and where published at least as often as by rights.
+    year_min: int | None = None
+    year_max: int | None = None
+    authors: tuple[str, ...] = ()
+    journals: tuple[str, ...] = ()
+    exclude_dois: tuple[str, ...] = ()
+
+    # Retraction awareness. Default OFF here so raw retrieval and every
+    # existing ablation keep measuring what they measured before; the
+    # ANSWER path turns it on, because citing a retracted paper as live
+    # evidence is the failure that actually matters.
+    exclude_retracted: bool = False
+
     def denies_all(self) -> bool:
         return self.license_classes is not None and len(self.license_classes) == 0
 
     def is_unrestricted(self) -> bool:
+        """True only when nothing is filtered at all.
+
+        The community layer gates on this: a stored summary aggregates
+        evidence across documents before any scope is known, so ANY
+        restriction has to disable it. Every field above must be
+        represented here, which is what tests/unit/test_retrieval_scope.py
+        pins down field by field.
+        """
         return (
-            self.license_classes is None and self.sources is None and not self.exclude_document_ids
+            self.license_classes is None
+            and self.sources is None
+            and not self.exclude_document_ids
+            and self.year_min is None
+            and self.year_max is None
+            and not self.authors
+            and not self.journals
+            and not self.exclude_dois
+            and not self.exclude_retracted
         )
 
 
@@ -54,7 +89,34 @@ def scope_conditions(scope: RetrievalScope) -> list[ColumnElement[bool]]:
         conditions.append(Document.source.in_(scope.sources))
     if scope.exclude_document_ids:
         conditions.append(Document.id.not_in(scope.exclude_document_ids))
+    if scope.year_min is not None:
+        conditions.append(Document.publication_year >= scope.year_min)
+    if scope.year_max is not None:
+        conditions.append(Document.publication_year <= scope.year_max)
+    if scope.authors:
+        # authors is a Postgres ARRAY: overlap is "shares at least one".
+        conditions.append(Document.authors.overlap(list(scope.authors)))
+    if scope.journals:
+        conditions.append(Document.journal.in_(scope.journals))
+    if scope.exclude_dois:
+        # A NULL doi is not excluded by a DOI blocklist; not_in() alone
+        # would drop those rows, since NULL NOT IN (...) is NULL.
+        conditions.append(or_(Document.doi.is_(None), Document.doi.not_in(scope.exclude_dois)))
+    if scope.exclude_retracted:
+        conditions.append(_not_retracted())
     return conditions
+
+
+def _not_retracted() -> ColumnElement[bool]:
+    """Documents Crossref has not flagged as retracted.
+
+    Retraction status lands in ``Document.extra`` during enrichment, so a
+    document nobody enriched has no flag at all and is not excluded: this
+    filter removes what is KNOWN to be retracted, and the doctor check is
+    what surfaces an unenriched corpus.
+    """
+    flag = Document.extra["crossref"]["is_retracted"]
+    return or_(flag.is_(None), flag.as_boolean().is_(False))
 
 
 @dataclass

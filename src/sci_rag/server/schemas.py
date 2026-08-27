@@ -35,6 +35,25 @@ class QueryRequest(BaseModel):
         description="Allowlist of license classes; omit for all. An empty list returns nothing.",
     )
     sources: list[str] | None = Field(None, description="Allowlist of document sources.")
+    year_min: int | None = Field(
+        None, ge=1000, le=2200, description="Earliest publication year to include."
+    )
+    year_max: int | None = Field(
+        None, ge=1000, le=2200, description="Latest publication year to include."
+    )
+    authors: list[str] | None = Field(
+        None,
+        description=(
+            "Keep only documents with at least one of these authors, matched exactly "
+            "against the stored author strings."
+        ),
+    )
+    journals: list[str] | None = Field(
+        None, description="Keep only documents published in one of these journals."
+    )
+    exclude_dois: list[str] | None = Field(
+        None, description="Drop these DOIs (for example a paper already under review)."
+    )
     include_content: bool = Field(
         True, description="Set false to omit chunk text (lean responses)."
     )
@@ -93,6 +112,25 @@ class AnswerRequest(BaseModel):
     stream: bool = Field(True, description="true = Server-Sent Events; false = one JSON response.")
     license_classes: list[str] | None = None
     sources: list[str] | None = None
+    year_min: int | None = Field(
+        None, ge=1000, le=2200, description="Earliest publication year to include."
+    )
+    year_max: int | None = Field(
+        None, ge=1000, le=2200, description="Latest publication year to include."
+    )
+    authors: list[str] | None = Field(
+        None,
+        description=(
+            "Keep only documents with at least one of these authors, matched exactly "
+            "against the stored author strings."
+        ),
+    )
+    journals: list[str] | None = Field(
+        None, description="Keep only documents published in one of these journals."
+    )
+    exclude_dois: list[str] | None = Field(
+        None, description="Drop these DOIs (for example a paper already under review)."
+    )
     llm_api_key: SecretStr | None = Field(
         None,
         description=(

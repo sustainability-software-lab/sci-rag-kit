@@ -132,3 +132,60 @@ async def test_documents_catalog_and_detail(client) -> None:  # type: ignore[no-
     missing = await client.get("/v1/documents/doesnotexist")
     assert missing.status_code == 404
     assert missing.json()["code"] == "document_not_found"
+
+
+async def test_query_metadata_filters(client) -> None:  # type: ignore[no-untyped-def]
+    """The v0.3 filters ride through the schema, the service, and every layer.
+
+    The demo corpus is two 2023 documents and three 2024 ones, so a year
+    bound is a real cut, not a no-op.
+    """
+    recent = await client.post(
+        "/v1/query", json={"query": "residue", "top_k": 10, "year_min": 2024}
+    )
+    assert recent.status_code == 200
+    older = await client.post("/v1/query", json={"query": "residue", "top_k": 10, "year_max": 2023})
+    assert older.status_code == 200
+    recent_docs = {item["document_id"] for item in recent.json()["items"]}
+    older_docs = {item["document_id"] for item in older.json()["items"]}
+    assert recent_docs and older_docs
+    assert not (recent_docs & older_docs), "year bounds returned overlapping documents"
+
+    by_author = await client.post(
+        "/v1/query",
+        json={"query": "residue", "top_k": 10, "authors": ["Demo Region Policy Desk"]},
+    )
+    assert by_author.status_code == 200
+    assert by_author.json()["items"], "author filter matched nothing it should have matched"
+
+    unknown_journal = await client.post(
+        "/v1/query", json={"query": "residue", "journals": ["Journal of Nothing"]}
+    )
+    assert unknown_journal.status_code == 200
+    assert unknown_journal.json()["items"] == []
+
+
+async def test_year_filter_skips_the_community_stage(client) -> None:  # type: ignore[no-untyped-def]
+    """Community summaries aggregate across documents before any scope is
+    known, so a metadata filter has to disable that layer like every other
+    restriction does."""
+    response = await client.post(
+        "/v1/query", json={"query": "residue", "profile": "deep", "year_min": 2024}
+    )
+    assert response.status_code == 200
+    community = next(t for t in response.json()["traces"] if t["stage"] == "community")
+    assert community["status"] == "skipped"
+
+
+async def test_answer_accepts_metadata_filters(client) -> None:  # type: ignore[no-untyped-def]
+    response = await client.post(
+        "/v1/answer",
+        json={"query": "residue availability", "stream": False, "year_min": 2024},
+    )
+    assert response.status_code == 200
+    assert response.json()["answer"]
+
+
+async def test_year_bounds_are_validated(client) -> None:  # type: ignore[no-untyped-def]
+    response = await client.post("/v1/query", json={"query": "residue", "year_min": 99})
+    assert response.status_code == 422

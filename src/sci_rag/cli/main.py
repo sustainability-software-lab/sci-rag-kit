@@ -118,14 +118,33 @@ async def _check_db() -> None:
         await conn.execute(text("SELECT 1"))
 
 
-def _scope(license_classes: str | None, sources: str | None):  # type: ignore[no-untyped-def]
+def _csv(value: str | None) -> tuple[str, ...]:
+    """Split a comma-separated option into a tuple, dropping blanks."""
+    if not value:
+        return ()
+    return tuple(part.strip() for part in value.split(",") if part.strip())
+
+
+def _scope(  # type: ignore[no-untyped-def]
+    license_classes: str | None,
+    sources: str | None,
+    *,
+    year_min: int | None = None,
+    year_max: int | None = None,
+    authors: str | None = None,
+    journals: str | None = None,
+    exclude_dois: str | None = None,
+):
     from sci_rag.retrieve import RetrievalScope
 
     return RetrievalScope(
-        license_classes=tuple(x.strip() for x in license_classes.split(","))
-        if license_classes
-        else None,
-        sources=tuple(x.strip() for x in sources.split(",")) if sources else None,
+        license_classes=_csv(license_classes) if license_classes else None,
+        sources=_csv(sources) if sources else None,
+        year_min=year_min,
+        year_max=year_max,
+        authors=_csv(authors),
+        journals=_csv(journals),
+        exclude_dois=_csv(exclude_dois),
     )
 
 
@@ -219,6 +238,21 @@ def retrieve(
         None, "--license", help="Comma-separated license allowlist (e.g. public,open_commercial)."
     ),
     sources: str | None = typer.Option(None, "--source", help="Comma-separated source allowlist."),
+    year_min: int | None = typer.Option(
+        None, "--year-min", help="Earliest publication year to include."
+    ),
+    year_max: int | None = typer.Option(
+        None, "--year-max", help="Latest publication year to include."
+    ),
+    authors: str | None = typer.Option(
+        None, "--author", help="Comma-separated author allowlist (exact strings)."
+    ),
+    journals: str | None = typer.Option(
+        None, "--journal", help="Comma-separated journal allowlist."
+    ),
+    exclude_dois: str | None = typer.Option(
+        None, "--exclude-doi", help="Comma-separated DOIs to drop."
+    ),
     explain_routing: bool = typer.Option(
         False,
         "--explain-routing",
@@ -237,7 +271,18 @@ def retrieve(
 
             decision = await route(query, retriever.domain)
         result = await retriever.retrieve(
-            query, profile=profile, limit=limit, scope=_scope(license_classes, sources)
+            query,
+            profile=profile,
+            limit=limit,
+            scope=_scope(
+                license_classes,
+                sources,
+                year_min=year_min,
+                year_max=year_max,
+                authors=authors,
+                journals=journals,
+                exclude_dois=exclude_dois,
+            ),
         )
         return result, decision
 
@@ -307,6 +352,21 @@ def answer(
     limit: int = typer.Option(8, help="How many sources to give the model."),
     license_classes: str | None = typer.Option(None, "--license"),
     sources: str | None = typer.Option(None, "--source"),
+    year_min: int | None = typer.Option(
+        None, "--year-min", help="Earliest publication year to include."
+    ),
+    year_max: int | None = typer.Option(
+        None, "--year-max", help="Latest publication year to include."
+    ),
+    authors: str | None = typer.Option(
+        None, "--author", help="Comma-separated author allowlist (exact strings)."
+    ),
+    journals: str | None = typer.Option(
+        None, "--journal", help="Comma-separated journal allowlist."
+    ),
+    exclude_dois: str | None = typer.Option(
+        None, "--exclude-doi", help="Comma-separated DOIs to drop."
+    ),
 ) -> None:
     """Generate a grounded answer with numbered citations."""
     from sci_rag.answer import AnswerEngine
@@ -316,7 +376,18 @@ def answer(
         engine = AnswerEngine()
         console.print(f"[dim]Retrieving ({profile} profile)...[/dim]")
         async for event in engine.answer_stream(
-            query, profile=profile, limit=limit, scope=_scope(license_classes, sources)
+            query,
+            profile=profile,
+            limit=limit,
+            scope=_scope(
+                license_classes,
+                sources,
+                year_min=year_min,
+                year_max=year_max,
+                authors=authors,
+                journals=journals,
+                exclude_dois=exclude_dois,
+            ),
         ):
             if event.type == "retrieval_done":
                 degraded = event.data["degraded_stages"]

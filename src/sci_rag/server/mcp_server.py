@@ -53,6 +53,9 @@ def build_mcp_server(
         top_k: int = 5,
         deep: bool = False,
         license_classes: list[str] | None = None,
+        year_min: int | None = None,
+        year_max: int | None = None,
+        journals: list[str] | None = None,
     ) -> dict[str, Any]:
         """Search the knowledge base and get back ranked evidence chunks.
 
@@ -63,12 +66,20 @@ def build_mcp_server(
         traversal, community summaries, and HyDE to the vector+keyword
         default). Restrict license_classes (e.g. ["public",
         "open_commercial"]) when you plan to redistribute what you quote.
+        Narrow by publication year with year_min/year_max, or to particular
+        journals, when recency or venue matters; those filters apply inside
+        every layer, before ranking, and they disable the cross-document
+        community summaries because a summary cannot be filtered after the
+        fact.
         """
         result = await service.retrieve(
             query,
             profile="deep" if deep else "interactive",
             top_k=max(1, min(top_k, 50)),
             license_classes=license_classes,
+            year_min=year_min,
+            year_max=year_max,
+            journals=journals,
         )
         return {
             "query": query,

@@ -64,11 +64,32 @@ curl -s -X POST localhost:8000/v1/query \
 ```
 
 Request fields: `query` (required), `top_k` (1..50, default 8),
-`profile` (`interactive` default, or `deep`), per-layer overrides
-(`include_graph`, `include_community`, `include_hyde`),
+`profile` (`interactive` default, `deep`, or `auto`), per-layer overrides
+(`include_graph`, `include_community`, `include_hyde`, `include_rerank`),
 `license_classes` and `sources` allowlists (omit for all; an empty
-license list returns nothing by design), `include_content: false` for
-lean responses.
+license list returns nothing by design), the metadata filters below, and
+`include_content: false` for lean responses.
+
+**Metadata filters.** `year_min`, `year_max`, `authors`, `journals`, and
+`exclude_dois` narrow by publication metadata:
+
+```bash
+curl -s -X POST localhost:8000/v1/query \
+  -H 'Authorization: Bearer team-key' -H 'Content-Type: application/json' \
+  -d '{"query": "pretreatment of rice straw", "top_k": 5,
+       "year_min": 2020, "journals": ["Biomass and Bioenergy"],
+       "exclude_dois": ["10.1016/j.biombioe.2019.00000"]}'
+```
+
+They are enforced inside every layer's SQL, before ranking, exactly like
+the license scope: an out-of-range document can never crowd an eligible
+one out of a bounded candidate pool. `authors` and `journals` match
+whole stored strings, not substrings. One consequence to expect: **any**
+filter disables the community layer, because a stored community summary
+aggregates evidence across documents before your scope is known, and it
+cannot be filtered after the fact. The `community` trace reads `skipped`
+when that happens. `journal` is populated by `sci-rag corpus enrich` or
+directly from your manifest.
 
 The response carries `items` (each with title, section path, citation,
 license class, fused score, and `layers`, which names the layers that
@@ -132,7 +153,7 @@ The seven tools:
 
 | Tool | Use it to |
 |------|-----------|
-| `search_corpus(query, top_k, deep, license_classes)` | get ranked evidence chunks to reason over yourself |
+| `search_corpus(query, top_k, deep, license_classes, year_min, year_max, journals)` | get ranked evidence chunks to reason over yourself |
 | `answer_question(query, top_k, license_classes)` | get a grounded answer with numbered citations |
 | `get_document(document_id)` | inspect a cited source: metadata, license, chunk previews |
 | `search_entities(name_contains, entity_type, limit)` | find knowledge-graph entities by name |
@@ -159,7 +180,11 @@ result = await retriever.retrieve(
     "rice straw availability",
     profile="deep",
     limit=5,
-    scope=RetrievalScope(license_classes=("public", "open_commercial")),
+    scope=RetrievalScope(
+        license_classes=("public", "open_commercial"),
+        year_min=2020,
+        journals=("Biomass and Bioenergy",),
+    ),
 )
 for item in result.items:
     print(item.title, item.layers, item.score)

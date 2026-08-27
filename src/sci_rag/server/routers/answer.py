@@ -71,6 +71,11 @@ async def answer(
         max_tokens=body.max_tokens,
         license_classes=body.license_classes,
         sources=body.sources,
+        year_min=body.year_min,
+        year_max=body.year_max,
+        authors=body.authors,
+        journals=body.journals,
+        exclude_dois=body.exclude_dois,
         api_key_override=api_key_override,
     )
     if body.stream:

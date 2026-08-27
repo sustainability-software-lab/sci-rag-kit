@@ -46,6 +46,9 @@ async def test_tool_inventory_and_schemas(service) -> None:  # type: ignore[no-u
         "top_k",
         "deep",
         "license_classes",
+        "year_min",
+        "year_max",
+        "journals",
     }
 
     resources = await mcp.list_resources()

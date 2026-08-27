@@ -64,6 +64,9 @@ class Document(Base):
     authors: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
     publication_year: Mapped[int | None] = mapped_column(Integer)
     doi: Mapped[str | None] = mapped_column(Text)
+    # A first-class column rather than a key in ``extra``: journal is a
+    # retrieval filter, and filters belong in indexed columns, not JSONB.
+    journal: Mapped[str | None] = mapped_column(Text)
     formatted_citation: Mapped[str | None] = mapped_column(Text)
 
     # Redistribution rights, fail-closed: anything we cannot show is "unknown"
@@ -89,6 +92,8 @@ class Document(Base):
         UniqueConstraint("content_hash", name="uq_documents_content_hash"),
         Index("ix_documents_source", "source"),
         Index("ix_documents_license_class", "license_class"),
+        Index("ix_documents_journal", "journal"),
+        Index("ix_documents_publication_year", "publication_year"),
     )
 
 

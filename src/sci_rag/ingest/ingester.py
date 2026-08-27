@@ -145,6 +145,7 @@ async def _ingest_one(
                 authors=entry.authors,
                 publication_year=entry.year,
                 doi=entry.doi,
+                journal=entry.journal,
                 formatted_citation=build_citation(entry, title),
                 license_class=entry.license_class,
                 license_source="manifest" if entry.license_class != "unknown" else None,
