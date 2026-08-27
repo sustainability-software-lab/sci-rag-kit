@@ -1,83 +1,84 @@
 # sci-rag-kit
 
-**A do-it-yourself GraphRAG factory for scientific domains.** Point it at
-a folder of papers, reports, and protocols, and get a grounded,
-citation-backed question-answering system for your field: hybrid
-retrieval over Postgres, a knowledge graph built from your own ontology,
-an evaluation harness that keeps you honest, and serving over REST and
-MCP so both humans and AI agents can use it.
+A template repository for building a retrieval-augmented question-answering
+system over a scientific document collection. It implements hybrid GraphRAG
+retrieval on PostgreSQL, grounded answer generation with citations, an
+evaluation harness, and serving over REST and MCP. Domain specialization
+(ontology, prompts, evaluation questions) is configuration, not code.
 
-This is a [GitHub template repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template).
-Click **Use this template**, follow the ten-minute quickstart below, and
-you have a working RAG over a demo corpus. Then swap in your own
-documents and ontology, and it is yours.
+Built and maintained by the Sustainability Software Lab at Lawrence Berkeley
+National Laboratory. It generalizes the retrieval methodology developed for
+the PISCES bioprocess platform; the design is documented decision by
+decision in [docs/methodology.md](docs/methodology.md).
 
-## Why this exists
+To start a project from it, use GitHub's **Use this template**, run the
+quickstart below against the bundled demo corpus, then replace the demo
+domain with your own.
 
-Every scientific group is sitting on a pile of domain documents and
-wondering the same thing: can we ask it questions and trust the answers?
-Getting from that pile to a trustworthy system involves a dozen
-interlocking decisions (chunking, embeddings, graph extraction, fusion,
-licensing, evaluation, serving) that are easy to get subtly wrong and
-tedious to rebuild for every domain. This kit packages a
-production-tested methodology into a template anyone can specialize:
+## What it provides
 
-- **Five fused retrieval layers.** Dense vectors, keyword full-text,
-  knowledge-graph traversal, community summaries, and HyDE, combined by
-  weighted reciprocal rank fusion. Multi-hop questions work because the
-  graph connects evidence the words alone would miss.
-- **Everything in one Postgres database.** Text, vectors (pgvector +
-  HNSW), full-text indexes, and the graph, in plain rows. One backup, one
-  migration story, no vector-store or graph-database sidecars.
-- **Your domain is configuration, not code.** Entity types, relationship
-  types, prompts, and evaluation questions live in one `domain/` folder.
-  Specializing to a new field never means editing Python.
-- **Licensing is fail-closed.** Every document carries a redistribution
-  class; retrieval scopes are enforced inside every layer's SQL, before
-  ranking; an empty allowlist returns nothing. Your paywalled PDFs cannot
-  leak onto a public surface.
-- **Answers cite or refuse.** Every claim carries a numbered citation you
-  can check, and when the corpus lacks the answer, the system says so.
-- **An evaluation harness that cannot flatter you.** Expert seed
-  questions, per-layer ablations, and a two-pass LLM judge that grades
-  grounding blind (it never sees the reference answer). Reports are
-  stamped with a corpus fingerprint and git commit.
-- **Agents are first-class.** A full MCP server (seven tools) ships
-  alongside the REST API, backed by the same service, with API keys,
-  scopes, rate limits, and a bring-your-own-LLM-key flow.
+- **Ingestion**: PDF/Markdown/text parsing (Docling when installed, pypdf
+  fallback), structure-aware chunking that preserves section hierarchy and
+  keeps tables intact, content-hash deduplication, per-document license
+  metadata.
+- **Retrieval**: five candidate generators run in parallel and fuse by
+  weighted reciprocal rank: dense vectors (pgvector + HNSW), Postgres
+  full-text search, knowledge-graph traversal, community summaries, and
+  HyDE. Per-stage timeouts, traces, and graceful degradation.
+- **Knowledge graph**: LLM extraction of entities and typed relationships
+  constrained to a user-defined ontology (`domain/domain.yaml`), with
+  evidence provenance per edge; deterministic community detection with
+  LLM-written, embedded summaries. Stored as ordinary Postgres rows; no
+  separate graph database (see ADR 0001).
+- **Access control on content**: each document carries a redistribution
+  class (`public`, `open_commercial`, `open_noncommercial`, `restricted`,
+  `unknown`). Retrieval scopes are applied inside every layer's SQL before
+  ranking; an empty allowlist returns nothing.
+- **Answering**: numbered inline citations tied to retrieved sources;
+  when retrieval finds nothing in scope, the system states that instead of
+  answering from model priors.
+- **Evaluation**: expert-authored seed questions, retrieval metrics
+  (hit@k, MRR) with per-layer ablation configs, and a two-pass LLM judge:
+  the grounding pass never sees the reference answer, and correctness is
+  graded separately against it. Reports are stamped with a corpus
+  fingerprint and git commit.
+- **Serving**: a FastAPI service (`/v1`, OpenAPI at `/docs`) and an MCP
+  server (seven tools, mounted at `/mcp` and runnable over stdio) backed by
+  the same service instance. Static API keys with scopes and rate limits,
+  an interface seam for OAuth, and per-request LLM key override.
 
-The methodology behind all of this is written up, decision by decision,
-in [docs/methodology.md](docs/methodology.md).
+Everything runs in a single PostgreSQL database: text, vectors, full-text
+indexes, and the graph.
 
-## The ten-minute quickstart
+## Quickstart
 
-You need: [uv](https://docs.astral.sh/uv/), Docker (for Postgres), and
-optionally a free [Google AI Studio API key](https://aistudio.google.com/apikey)
-for real embeddings and answers.
+Requirements: [uv](https://docs.astral.sh/uv/), Docker (for Postgres), and
+optionally a [Google AI Studio API key](https://aistudio.google.com/apikey)
+or Vertex AI credentials for real embeddings and generation.
 
 ```bash
-# 1. Get the code (or click "Use this template" first and clone yours)
 git clone https://github.com/sustainability-software-lab/sci-rag-kit.git
 cd sci-rag-kit
 
-# 2. Configure. The defaults work; add your Google key for real models.
 cp .env.example .env
-#    In .env, set SCI_RAG_GOOGLE_API_KEY=...        (easiest)
-#    or SCI_RAG_GCP_PROJECT=... for Vertex AI       (labs on Google Cloud)
-#    or SCI_RAG_EMBEDDING_PROVIDER=local-hash       (no credentials at all)
+# In .env, set one of:
+#   SCI_RAG_GOOGLE_API_KEY=...              AI Studio key
+#   SCI_RAG_GCP_PROJECT=...                 Vertex AI (after gcloud auth application-default login)
+#   SCI_RAG_EMBEDDING_PROVIDER=local-hash   offline mode: no credentials, lexical-only retrieval, no generation
 
-# 3. Install, start Postgres, create the schema
-make setup
-
-# 4. Ingest the demo corpus and see retrieval work, with scores
-make demo
-
-# 5. Ask a real question (needs the Google key from step 2)
-uv run sci-rag answer "What conversion route suits rice straw given its ash content?"
+make setup     # uv sync, start Postgres (port 5433), create the schema
+make demo      # ingest the demo corpus, run a traced retrieval, score it
 ```
 
-You should see an answer like this, built from three different demo
-documents, every claim cited:
+With credentials configured, generation and the graph work too:
+
+```bash
+uv run sci-rag answer "What conversion route suits rice straw given its ash content?"
+make demo-cloud   # graph extraction + communities + a deep answer + ablation report
+uv run sci-rag serve   # REST at /docs, MCP at /mcp
+```
+
+Example answer from the demo corpus (three documents, all claims cited):
 
 > Given its ash content, anaerobic digestion is a suitable conversion
 > route for rice straw [2][4]. Rice straw has an ash content near 18
@@ -86,67 +87,56 @@ documents, every claim cited:
 > accelerated clinker formation [5]. ... a mild alkali soak raises the
 > biogas yield to 320 cubic meters per dry ton [1][3].
 
-Then build the knowledge graph and try the full five-layer retrieval:
-
-```bash
-make demo-cloud    # graph extraction + communities + a deep answer + ablation report
-uv run sci-rag serve   # REST API at /docs, MCP server at /mcp
-```
-
 The demo corpus is five synthetic documents about agricultural residues
-(plausible numbers, entirely fictional, CC0). It exists so you can watch
-every moving part work before you commit your own documents.
+(realistic form, fictional numbers, CC0), included so the pipeline can be
+exercised end to end before you commit your own documents.
 
-## Making it yours
+## Specializing to your domain
 
-The whole point. The five-step version:
-
-1. Put your documents in `data/raw/` (PDF, Markdown, or plain text) and
-   describe them in a corpus manifest (title, authors, license class).
-2. Edit `domain/domain.yaml`: your domain's name, entity types,
-   relationship types, and HyDE query classes.
-3. Skim the five prompts in `domain/prompts/` and adjust the wording to
-   your field.
-4. Write ten `domain/eval_seed_questions.jsonl` questions a domain expert
-   can vouch for.
+1. Put documents in `data/raw/` and describe them in a JSONL corpus
+   manifest (title, authors, license class, source).
+2. Edit `domain/domain.yaml`: entity types, relationship types, and HyDE
+   query classes for your field.
+3. Adjust the wording of the prompts in `domain/prompts/` where needed.
+4. Write 10 to 20 ground-truth questions in
+   `domain/eval_seed_questions.jsonl`.
 5. Run `sci-rag ingest`, `sci-rag graph extract`, `sci-rag graph
-   communities`, then `sci-rag eval retrieval --ablation` to see what you
-   built.
+   communities`, then `sci-rag eval retrieval --ablation`.
 
-The full walkthrough, with advice on each step, is
-[docs/bring-your-own-domain.md](docs/bring-your-own-domain.md). Use
-`uv run python scripts/init_domain.py` to rebrand the repo for your
-project in one step.
+The step-by-step version with worked examples is
+[docs/bring-your-own-domain.md](docs/bring-your-own-domain.md).
+`uv run python scripts/init_domain.py` handles the rebranding (project
+name, description, seed-question reset).
 
-## What is in the box
+## Repository layout
 
 ```
-domain/            Your field: ontology, prompts, seed questions  <- you edit this
-src/sci_rag/       The kit: ingest, embed, graph, retrieve, answer, evals, server, cli
-data/demo/         The offline demo corpus (synthetic, CC0)
-migrations/        Database schema (Alembic; pgvector + HNSW + FTS indexes)
-tests/             73 tests, all runnable offline (deterministic local embedder)
-infra/terraform/   Optional Google Cloud deployment (Cloud SQL + Cloud Run)
-docs/              Methodology, tutorials, API reference, architecture decisions
+domain/            Ontology, prompts, seed questions (the specialization surface)
+src/sci_rag/       ingest, embed, graph, retrieve, answer, evals, server, cli
+data/demo/         Demo corpus (synthetic, CC0)
+migrations/        Alembic schema (pgvector + HNSW + FTS indexes)
+tests/             73 tests; the suite runs offline against docker-compose Postgres
+infra/terraform/   Optional GCP deployment (Cloud SQL + Cloud Run)
+docs/              Methodology, tutorials, API reference, ADRs
 ```
 
-The command line is the spine of everything:
+## CLI
 
-| Command | What it does |
-|---------|--------------|
+| Command | Purpose |
+|---------|---------|
 | `sci-rag db upgrade` | Create or upgrade the database schema |
-| `sci-rag ingest <folder>` (or `--manifest file.jsonl`) | Parse, chunk, embed, and store documents |
-| `sci-rag graph extract` | Build the knowledge graph from ingested chunks |
+| `sci-rag ingest <folder>` / `--manifest file.jsonl` | Parse, chunk, embed, store |
+| `sci-rag graph extract` | Extract entities and relationships from chunks |
 | `sci-rag graph communities` | Cluster the graph and write summaries |
-| `sci-rag retrieve "question"` | Inspect retrieval: ranked results plus per-layer traces |
-| `sci-rag answer "question"` | A grounded, cited answer |
-| `sci-rag eval retrieval [--ablation]` | Score retrieval against your seed questions |
-| `sci-rag eval answers` | Generate and judge answers (blind grounding + correctness) |
-| `sci-rag serve` | REST API (`/docs`) + MCP (`/mcp`) in one process |
-| `sci-rag mcp` | MCP over stdio, for local agents like Claude Code |
-| `sci-rag stats` | What is in the knowledge base |
+| `sci-rag retrieve "question"` | Ranked results with per-layer traces |
+| `sci-rag answer "question"` | Grounded answer with citations |
+| `sci-rag eval retrieval [--ablation]` | Retrieval metrics against seed questions |
+| `sci-rag eval answers` | Generate and judge answers |
+| `sci-rag serve` | REST + MCP server |
+| `sci-rag mcp` | MCP over stdio (for local agents) |
+| `sci-rag stats` | Corpus contents summary |
 
-Connect an agent in one line:
+Register the MCP server with a local agent:
 
 ```bash
 claude mcp add my-corpus -- uv run --directory /path/to/your/repo sci-rag mcp
@@ -156,35 +146,33 @@ claude mcp add my-corpus -- uv run --directory /path/to/your/repo sci-rag mcp
 
 | | |
 |---|---|
-| [Quickstart](docs/quickstart.md) | The ten minutes above, with troubleshooting |
-| [Bring your own domain](docs/bring-your-own-domain.md) | The full specialization tutorial |
-| [Methodology](docs/methodology.md) | Every design decision, with reasons |
-| [Architecture](docs/architecture.md) | How the code is laid out and why |
-| [Evaluation guide](docs/evaluation.md) | Seed questions, ablations, the blind judge |
+| [Quickstart](docs/quickstart.md) | Setup, first run, troubleshooting |
+| [Bring your own domain](docs/bring-your-own-domain.md) | Specialization tutorial |
+| [Methodology](docs/methodology.md) | Design rationale for every component |
+| [Architecture](docs/architecture.md) | Code layout, data model, extension points |
+| [Evaluation guide](docs/evaluation.md) | Seed questions, ablations, the judge |
 | [API reference](docs/api.md) | REST endpoints, MCP tools, auth, error codes |
-| [Deploying on Google Cloud](docs/deploy-gcp.md) | Cloud SQL + Cloud Run, with Terraform |
-| [Decision records](docs/adr/) | The trade-offs, argued honestly |
+| [Deploying on Google Cloud](docs/deploy-gcp.md) | Cloud SQL + Cloud Run via Terraform |
+| [Decision records](docs/adr/) | Postgres-native graph, embedding dimensions, Docling, template format |
 
-## Requirements and defaults
+## Defaults and requirements
 
-Python 3.11+, PostgreSQL 15+ with pgvector (the bundled
-`docker-compose.yml` provides it). Google models are the default
-(`gemini-embedding-001` at 1536 dimensions, `gemini-2.5-flash` for
-generation) through either a free AI Studio key or Vertex AI credentials;
-a deterministic offline embedder covers tests and dry runs. PDF parsing
-uses [Docling](https://github.com/docling-project/docling) when installed
-(`uv sync --extra docling`; it is a large install) and falls back to
-pypdf otherwise.
+Python 3.11+; PostgreSQL 15+ with pgvector (provided by
+`docker-compose.yml`). Default models: `gemini-embedding-001` at 1536
+dimensions (within pgvector's HNSW index limit; see ADR 0002) and
+`gemini-2.5-flash` for generation, via AI Studio key or Vertex AI. A
+deterministic offline embedder covers tests and credential-free runs.
+Docling is an optional extra (`uv sync --extra docling`) because of its
+install size; without it, PDF parsing falls back to pypdf at reduced table
+fidelity.
 
-## Lineage and acknowledgments
+## Lineage
 
-sci-rag-kit generalizes the retrieval methodology developed for PISCES,
-a bioprocess development platform built at Lawrence Berkeley National
-Laboratory, and was created as part of a collaboration with the
-University of Washington Scientific Software Engineering Center (UW SSEC)
-under the Schmidt Sciences VIS program. The kit is a fresh,
-domain-agnostic implementation of that methodology, built to be
-specialized by any scientific group.
+Developed at Lawrence Berkeley National Laboratory as part of a
+collaboration with the University of Washington Scientific Software
+Engineering Center (UW SSEC) under the Schmidt Sciences VIS program. The
+retrieval methodology originates in LBL's PISCES platform; this kit is an
+independent, domain-agnostic implementation of it.
 
 ## License
 

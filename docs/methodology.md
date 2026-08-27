@@ -6,9 +6,9 @@ whether the approach fits your field, explain it in a paper, or
 re-implement it in another stack. The code follows this document, not the
 other way around.
 
-The short version: **hybrid retrieval over one Postgres database, a
-knowledge graph built from your ontology, honest fail-closed scoping, and
-an evaluation harness designed so it cannot flatter you.**
+In one sentence: hybrid retrieval over a single Postgres database, a
+knowledge graph built from a user-defined ontology, fail-closed license
+scoping, and an evaluation harness designed to be hard to game.
 
 ## 1 Why this shape
 
@@ -22,7 +22,7 @@ Scientific question-answering has three properties that break naive RAG:
    straw does the county produce"; the document says "141,000 harvested
    acres at a 1.1 straw-to-grain ratio". Pure keyword search misses it;
    pure embedding search blurs it.
-3. **Corpora are legal minefields.** A lab's document pile mixes public
+3. **Corpora mix redistribution rights.** A lab's document pile mixes public
    reports, CC-BY papers, and paywalled PDFs it may hold but not
    redistribute. A RAG that quotes retrieved text IS redistribution, so
    rights have to be a first-class, fail-closed property of retrieval.
@@ -241,7 +241,7 @@ of improvising. The response carries a structured citation list mapping
 each number to its document, and the honesty rule is checked after the
 fact by the evaluation judge.
 
-## 9 Evaluation that cannot flatter you
+## 9 Evaluation design
 
 * **Ground truth is expert-authored.** A seed question holds the
   question, what a correct answer must say, which documents contain it,

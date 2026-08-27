@@ -1,9 +1,9 @@
 # Bring your own domain
 
-This is the tutorial the kit exists for: turning YOUR field's documents
-into a RAG you can trust. Budget an afternoon for a first serious pass.
-Nothing here requires editing Python; your whole domain lives in the
-`domain/` folder, a corpus manifest, and environment variables.
+This tutorial covers specializing the kit to your own field. Budget an
+afternoon for a first serious pass. Nothing here requires editing
+Python; the domain is defined by the `domain/` folder, a corpus
+manifest, and environment variables.
 
 Worked example throughout: suppose you study membrane materials for
 water treatment, and you have 60 PDFs of papers, theses, and technical
@@ -198,10 +198,10 @@ semi-public endpoint should pin callers to
 [API reference](api.md) covers keys, scopes, and the MCP tools; the
 [GCP guide](deploy-gcp.md) covers putting it on Cloud Run.
 
-## The loop you are actually in
+## The improvement loop
 
-Corpus and ontology changes are cheap; trust is earned by the eval
-reports. The rhythm that works: add or fix a handful of documents,
-re-run ingest and graph, re-run the two eval commands, read the diffs.
-When a real user asks a question the system fumbles, turn that question
-into a seed question first, then fix the fumble.
+Corpus and ontology changes are cheap; the eval reports are the
+evidence that a change helped. A workable rhythm: add or fix a handful
+of documents, re-run ingest and graph, re-run the two eval commands,
+read the diffs. When a real user asks a question the system misses,
+add it as a seed question first, then fix the miss.

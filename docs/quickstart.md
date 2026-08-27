@@ -1,7 +1,7 @@
 # Quickstart
 
-From zero to a working, questionable-by-agents RAG in about ten minutes.
-Every command here is copy-pasteable from the repository root.
+Setup through a served, agent-accessible RAG over the demo corpus, in
+about ten minutes. Every command runs from the repository root.
 
 ## What you need
 

@@ -1,10 +1,10 @@
 # The evaluation guide
 
-Most RAG evaluation flatters its author. This harness is built so it
-cannot: mechanical retrieval metrics against expert ground truth,
-per-layer ablations so every component has to earn its keep, and a judge
-that is structurally prevented from grading on vibes. This page explains
-how to use it and why it is shaped this way.
+The harness is designed to make results hard to game, including by
+accident: mechanical retrieval metrics against expert ground truth,
+per-layer ablations that show what each component contributes, and a
+judge whose prompts structurally separate grounding from correctness.
+This page covers usage and the reasoning behind the design.
 
 ## The two commands
 
@@ -134,5 +134,5 @@ regressions fail loudly.
 4. Keep the change only if the numbers (and your reading of the judged
    answers) agree it helped.
 
-Boring, and it works. The moment two people disagree about whether a
-change helped, the reports settle it.
+When two people disagree about whether a change helped, the reports
+settle it.

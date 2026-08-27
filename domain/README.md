@@ -1,7 +1,7 @@
-# The domain folder: where the kit becomes YOUR kit
+# The domain folder
 
-Everything that makes this RAG about your field lives here, and only
-here. The Python never needs to change.
+Everything domain-specific lives here, and only here; specializing the
+kit to a new field does not involve editing Python.
 
 | File | What it controls |
 |------|------------------|
