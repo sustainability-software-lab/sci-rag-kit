@@ -1,0 +1,40 @@
+.md-typeset figure {
+  margin: 1.8rem 0;
+}
+
+.md-typeset figure > img,
+.md-typeset figure > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--srag-border);
+  border-radius: var(--srag-radius-md);
+  background: var(--srag-surface-soft);
+}
+
+.md-typeset figure > figcaption {
+  max-width: 36rem;
+  margin: 0.65rem auto 0;
+  text-align: center;
+}
+
+.mermaid {
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  padding: 1rem;
+  text-align: center;
+  border: 1px solid var(--srag-border);
+  border-radius: var(--srag-radius-md);
+  background: var(--srag-surface-soft);
+}
+
+.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.srag-home-hero__figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+}

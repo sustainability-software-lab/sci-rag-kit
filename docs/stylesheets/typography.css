@@ -1,0 +1,97 @@
+.md-typeset {
+  color: var(--srag-ink-800);
+  font-size: 0.83rem;
+  line-height: 1.68;
+}
+
+.md-content__inner {
+  width: calc(100% - 1.6rem);
+  max-width: 42rem;
+  margin-inline: auto;
+  padding-bottom: 4rem;
+}
+
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4 {
+  color: var(--srag-ink-950);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.md-typeset h1 {
+  margin-bottom: 1rem;
+  font-size: clamp(2rem, 3vw, 2.65rem);
+  line-height: 1.12;
+}
+
+.md-typeset h2 {
+  margin-top: 2.8rem;
+  font-size: 1.55rem;
+  line-height: 1.25;
+}
+
+.md-typeset h3 {
+  margin-top: 2rem;
+  font-size: 1.18rem;
+  line-height: 1.35;
+}
+
+.md-typeset > p:first-of-type:not(.srag-kicker),
+.md-typeset .srag-lede {
+  color: var(--srag-muted-700);
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.md-typeset a:not(.srag-card, .srag-button) {
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  text-decoration-thickness: 0.06em;
+  text-underline-offset: 0.16em;
+}
+
+.md-typeset a:not(.srag-card, .srag-button):hover {
+  text-decoration-color: currentColor;
+}
+
+.md-typeset strong {
+  color: var(--srag-ink-900);
+  font-weight: 650;
+}
+
+.md-typeset small,
+.md-typeset figcaption {
+  color: var(--srag-muted-600);
+  font-size: 0.72rem;
+}
+
+.md-nav,
+.md-header,
+.md-tabs {
+  font-weight: 500;
+}
+
+.md-nav__title,
+.md-nav__item--section > .md-nav__link {
+  font-weight: 650;
+}
+
+.md-typeset code,
+.md-typeset kbd,
+.md-typeset pre {
+  font-size: 0.9em;
+  line-height: 1.55;
+}
+
+@media screen and (max-width: 44.984375em) {
+  .md-typeset {
+    font-size: 0.8rem;
+  }
+
+  .md-content__inner {
+    padding-bottom: 2.5rem;
+  }
+}

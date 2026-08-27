@@ -38,10 +38,10 @@ The release that makes the kit specifically better for SCIENCE than a
 general-purpose RAG framework:
 
 - **Campaign corpus builder.** `sci-rag campaign build --topic|--doi-file`:
-  OpenAlex/Crossref discovery, Unpaywall open-access resolution, legal
-  PDF downloads, and a corpus manifest whose license classes derive from
-  OA status, failing closed to `unknown`. Rate-limited, resumable,
-  dry-run first.
+  OpenAlex/Crossref discovery, Unpaywall open-access resolution, verified
+  direct OA PDF downloads, and a corpus manifest whose license classes derive
+  only from explicit recognized license signals, otherwise `unknown`.
+  Rate-limited, resumable, dry-run first.
 - **Retraction awareness and metadata enrichment.** Crossref (including
   Retraction Watch data) enrichment into document metadata; retrieval
   scope gains `exclude_retracted`, default ON for answering; `doctor`
@@ -127,5 +127,5 @@ Open a Discussion for direction-level proposals (see
 [GOVERNANCE.md](GOVERNANCE.md)), or pick up a
 [good first issue](https://github.com/sustainability-software-lab/sci-rag-kit/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 Success for this project is measured behaviorally: external
-contributions merged, adopters listed in [ADOPTERS.md](../ADOPTERS.md),
+contributions merged, adopters listed in [ADOPTERS.md](adopters.md),
 and citations of the methodology, not stars.

@@ -51,7 +51,7 @@ sci-rag = "sci_rag.cli.main:app"
 
 [project.urls]
 Homepage = "https://github.com/sustainability-software-lab/sci-rag-kit"
-Documentation = "https://github.com/sustainability-software-lab/sci-rag-kit/tree/main/docs"
+Documentation = "https://sustainability-software-lab.github.io/sci-rag-kit/"
 
 [dependency-groups]
 dev = [
@@ -61,6 +61,11 @@ dev = [
   "mypy>=1.10",
   "ruff>=0.4",
   "types-pyyaml",
+]
+docs = [
+  "mkdocs==1.6.*",
+  "mkdocs-material==9.7.*",
+  "pymdown-extensions>=10.16,<11",
 ]
 
 [build-system]

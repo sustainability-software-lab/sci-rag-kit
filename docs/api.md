@@ -88,8 +88,8 @@ whole stored strings, not substrings. One consequence to expect: **any**
 filter disables the community layer, because a stored community summary
 aggregates evidence across documents before your scope is known, and it
 cannot be filtered after the fact. The `community` trace reads `skipped`
-when that happens. `journal` is populated by `sci-rag corpus enrich` or
-directly from your manifest.
+when that happens. `journal` can come directly from your manifest or be
+refreshed from explicit Crossref metadata with `sci-rag corpus enrich`.
 
 The response carries `items` (each with title, section path, citation,
 license class, fused score, and `layers`, which names the layers that

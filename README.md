@@ -4,6 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/sustainability-software-lab/sci-rag-kit/actions/workflows/ci.yml"><img src="https://github.com/sustainability-software-lab/sci-rag-kit/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://sustainability-software-lab.github.io/sci-rag-kit/"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-005bfd.svg" alt="Documentation"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-blue.svg" alt="License: BSD-3-Clause"></a>
   <img src="https://img.shields.io/badge/python-3.11%20%7C%203.12-blue" alt="Python 3.11 | 3.12">
 </p>
@@ -14,8 +15,9 @@ retrieval on PostgreSQL, grounded answer generation with citations, an
 evaluation harness, and REST API + MCP endpoints. Ready to customize around any domain
 using flexible config files.
 
-More details on the project structure can be found in in
-[docs/methodology.md](docs/methodology.md).
+Read the [documentation site](https://sustainability-software-lab.github.io/sci-rag-kit/)
+for the guided path, or go directly to the
+[methodology](docs/methodology.md) for the design specification.
 
 To start a new project, use GitHub's **Use this template**, run the
 quickstart below against the bundled demo corpus, then replace the demo
@@ -134,7 +136,7 @@ docs/              Methodology, tutorials, API reference, ADRs
 | `sci-rag ingest <folder>` / `--manifest file.jsonl` | Parse, chunk, embed, store |
 | `sci-rag corpus enrich --mailto you@example.org` | Add Crossref journal, citation-count, and retraction metadata (`--dry-run` first) |
 | `sci-rag campaign discover --topic ... \| --doi-file ...` | Build a deduplicated, resumable DOI list through OpenAlex or Crossref |
-| `sci-rag campaign build --topic ... \| --doi-file ... --dry-run` | Resolve explicit OA rights, then download verified legal PDFs and write an ingest manifest |
+| `sci-rag campaign build --topic ... \| --doi-file ... --dry-run` | Map explicit license signals, download verified direct OA PDFs, and write an ingest manifest |
 | `sci-rag graph extract` | Extract entities and relationships from chunks |
 | `sci-rag graph communities` | Cluster the graph and write summaries |
 | `sci-rag retrieve "question"` | Ranked results with per-layer traces (filter with `--year-min/--year-max/--author/--journal/--exclude-doi/--license/--source`) |
@@ -153,6 +155,9 @@ claude mcp add my-corpus -- uv run --directory /path/to/your/repo sci-rag mcp
 ```
 
 ## Documentation
+
+The complete, searchable site is published at
+[sustainability-software-lab.github.io/sci-rag-kit](https://sustainability-software-lab.github.io/sci-rag-kit/).
 
 | | |
 |---|---|

@@ -43,8 +43,8 @@ jobs:
         run: uv sync
       - name: Lint
         run: |
-          uv run ruff check src tests examples
-          uv run ruff format --check src tests examples
+          uv run ruff check src tests examples scripts
+          uv run ruff format --check src tests examples scripts
       - name: Type check
         run: uv run mypy
       - name: Tests (unit + integration + smoke eval, with coverage floor)
@@ -88,3 +88,25 @@ jobs:
           # never break the build.
           args: --offline --no-progress "**/*.md"
           fail: true
+
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install project and documentation dependencies
+        run: uv sync --group docs
+      - name: Check and build documentation exactly as contributors do
+        run: make docs
+      - name: Upload documentation preview
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: docs-preview
+          path: site/
+          if-no-files-found: error
+          retention-days: 7

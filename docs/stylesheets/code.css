@@ -1,0 +1,42 @@
+.md-typeset .highlight,
+.md-typeset pre > code {
+  border-radius: var(--srag-radius-sm);
+}
+
+.md-typeset .highlight {
+  overflow: hidden;
+  border: 1px solid var(--srag-border);
+  background: var(--md-code-bg-color);
+}
+
+.md-typeset .highlight pre {
+  margin: 0;
+}
+
+.md-typeset .highlighttable {
+  border: 1px solid var(--srag-border);
+  border-radius: var(--srag-radius-sm);
+  box-shadow: none;
+}
+
+.md-clipboard {
+  opacity: 0.7;
+}
+
+.highlight:hover .md-clipboard,
+.md-clipboard:focus-visible {
+  opacity: 1;
+}
+
+.md-typeset :not(pre) > code {
+  padding: 0.08em 0.32em;
+  border: 1px solid color-mix(in srgb, var(--srag-border) 75%, transparent);
+  border-radius: 0.25rem;
+}
+
+.md-typeset kbd {
+  color: var(--srag-ink-800);
+  border-color: var(--srag-border-strong);
+  background: var(--srag-surface-soft);
+  box-shadow: 0 1px 0 var(--srag-border-strong);
+}
