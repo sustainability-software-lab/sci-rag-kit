@@ -28,6 +28,7 @@ migrations, `domain/`, and data paths resolve predictably.
 | `sci-rag graph` | Build the knowledge graph: extract entities, then detect communities. |
 | `sci-rag graph extract` | Extract entities and relationships from ingested chunks (needs an LLM). |
 | `sci-rag graph communities` | Cluster the graph and write LLM summaries (rebuilds all communities). |
+| `sci-rag graph citations` | Build corpus-local citation pointers from cached Crossref metadata. |
 | `sci-rag graph resolve-entities` | Resolve duplicate graph entities conservatively and audit every merge. |
 | `sci-rag graph gc` | Garbage-collect the graph: evidence-less entities, dangling relationships, communities whose members no longer resolve. |
 | `sci-rag eval` | Measure your RAG honestly: retrieval metrics, layer ablations, judged answers. |
@@ -225,6 +226,20 @@ $ sci-rag graph communities [OPTIONS]
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `--min-size` | integer | 3 | Smallest cluster worth summarizing. |
+
+## `sci-rag graph citations`
+
+Build corpus-local citation pointers from cached Crossref metadata.
+
+```console
+$ sci-rag graph citations [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--dry-run, --apply` | boolean | true | Preview by default; --apply reconciles cached Crossref references. |
 
 ## `sci-rag graph resolve-entities`
 

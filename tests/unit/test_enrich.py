@@ -40,6 +40,19 @@ def test_crossref_parser_does_not_infer_retraction_from_missing_notices() -> Non
     assert metadata.journal is None
 
 
+def test_crossref_parser_caches_normalized_reference_dois() -> None:
+    work = _work("crossref_current.json")
+    work["reference"] = [
+        {"DOI": "https://doi.org/10.1000/Cited"},
+        {"DOI": "10.1000/cited"},
+        {"article-title": "Reference without DOI"},
+    ]
+
+    metadata = parse_crossref_work(work)  # type: ignore[arg-type]
+
+    assert metadata.reference_dois == ("10.1000/cited",)
+
+
 def test_crossref_parser_rejects_malformed_update_notices() -> None:
     with pytest.raises(ValueError, match="update-to"):
         parse_crossref_work(_work("crossref_malformed.json"))  # type: ignore[arg-type]

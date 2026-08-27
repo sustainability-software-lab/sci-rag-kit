@@ -26,10 +26,17 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 import structlog
-from sqlalchemy import CursorResult, delete, select
+from sqlalchemy import CursorResult, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from sci_rag.db.models import Chunk, Document, KgCommunity, KgEntity, KgRelationship
+from sci_rag.db.models import (
+    Chunk,
+    Document,
+    DocumentCitation,
+    KgCommunity,
+    KgEntity,
+    KgRelationship,
+)
 
 log = structlog.get_logger(__name__)
 
@@ -38,6 +45,7 @@ log = structlog.get_logger(__name__)
 class DeleteOutcome:
     documents_deleted: int = 0
     chunks_deleted: int = 0
+    citations_deleted: int = 0
     entities_scrubbed: int = 0
     relationships_deleted: int = 0
     communities_deleted: int = 0
@@ -49,6 +57,7 @@ class GcOutcome:
     relationships_deleted: int = 0
     communities_deleted: int = 0
     communities_pruned: int = 0
+    citations_deleted: int = 0
 
     @property
     def clean(self) -> bool:
@@ -57,6 +66,7 @@ class GcOutcome:
             or self.relationships_deleted
             or self.communities_deleted
             or self.communities_pruned
+            or self.citations_deleted
         )
 
 
@@ -80,6 +90,15 @@ async def delete_documents(
             (await session.execute(select(Chunk.id).where(Chunk.document_id.in_(found))))
             .scalars()
             .all()
+        )
+        outcome.citations_deleted = int(
+            await session.scalar(
+                select(func.count(DocumentCitation.id)).where(
+                    (DocumentCitation.citing_document_id.in_(found))
+                    | (DocumentCitation.cited_document_id.in_(found))
+                )
+            )
+            or 0
         )
 
         # Relationships evidenced by the doomed documents or chunks.
@@ -135,6 +154,7 @@ async def delete_documents(
         "corpus_delete",
         documents=outcome.documents_deleted,
         chunks=outcome.chunks_deleted,
+        citations=outcome.citations_deleted,
         entities_scrubbed=outcome.entities_scrubbed,
         relationships=outcome.relationships_deleted,
         communities=outcome.communities_deleted,
@@ -196,6 +216,23 @@ async def graph_gc(
         )
         outcome.relationships_deleted = len(dangling_relationships)
 
+        dangling_citations = (
+            (
+                await session.execute(
+                    select(DocumentCitation.id).where(
+                        DocumentCitation.citing_document_id.not_in(live_document_ids)
+                        | (
+                            DocumentCitation.cited_document_id.is_not(None)
+                            & DocumentCitation.cited_document_id.not_in(live_document_ids)
+                        )
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        outcome.citations_deleted = len(dangling_citations)
+
         # Communities referencing entities that no longer exist (including
         # the ones this sweep is about to delete).
         surviving = {
@@ -222,6 +259,10 @@ async def graph_gc(
             await session.execute(
                 delete(KgRelationship).where(KgRelationship.id.in_(dangling_relationships))
             )
+        if dangling_citations:
+            await session.execute(
+                delete(DocumentCitation).where(DocumentCitation.id.in_(dangling_citations))
+            )
         if evidence_less:
             await session.execute(delete(KgEntity).where(KgEntity.id.in_(evidence_less)))
         for community in prunable:
@@ -234,6 +275,7 @@ async def graph_gc(
         dry_run=dry_run,
         entities=outcome.entities_deleted,
         relationships=outcome.relationships_deleted,
+        citations=outcome.citations_deleted,
         communities_deleted=outcome.communities_deleted,
         communities_pruned=outcome.communities_pruned,
     )

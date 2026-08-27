@@ -20,6 +20,7 @@ from sci_rag.corpus import delete_documents, graph_gc
 from sci_rag.db import (
     Chunk,
     Document,
+    DocumentCitation,
     KgCommunity,
     KgEntity,
     KgRelationship,
@@ -119,6 +120,12 @@ async def _build_graph_fixture() -> dict[str, str]:
             summary_embedding=None,
         )
         session.add(community)
+        citation = DocumentCitation(
+            citing_document_id=almond_doc,
+            cited_document_id=rice_doc,
+            cited_doi="10.1000/rice-report",
+        )
+        session.add(citation)
         await session.commit()
         return {
             "rice_doc": rice_doc,
@@ -127,6 +134,7 @@ async def _build_graph_fixture() -> dict[str, str]:
             "both_entity": both_docs.id,
             "relationship": relationship.id,
             "community": community.id,
+            "citation": citation.id,
         }
 
 
@@ -148,6 +156,7 @@ async def test_delete_cascades_scrubs_and_unreaches_every_layer(
     assert outcome.documents_deleted == 1
     assert outcome.relationships_deleted == 1
     assert outcome.communities_deleted == 1
+    assert outcome.citations_deleted == 1
 
     factory = get_session_factory()
     async with factory() as session:
@@ -166,6 +175,7 @@ async def test_delete_cascades_scrubs_and_unreaches_every_layer(
         assert rice_entity.document_ids == [] and rice_entity.chunk_ids == []
         # The community that aggregated the deleted evidence is gone.
         assert await session.get(KgCommunity, ids["community"]) is None
+        assert await session.get(DocumentCitation, ids["citation"]) is None
 
     # GC removes the evidence-less entity.
     gc_outcome = await graph_gc(get_session_factory(), dry_run=False)
@@ -177,7 +187,10 @@ async def test_delete_cascades_scrubs_and_unreaches_every_layer(
     # No layer can reach the deleted content anymore.
     retriever = make_retriever(local_embedder)
     result = await retriever.retrieve(
-        "how many tons of rice straw", profile="deep", include_hyde=False
+        "how many tons of rice straw",
+        profile="deep",
+        include_hyde=False,
+        graph_include_citations=True,
     )
     all_content = " ".join(item.content for item in result.items)
     assert RICE_PHRASE not in all_content

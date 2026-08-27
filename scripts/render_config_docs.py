@@ -63,6 +63,7 @@ DOMAIN_DESCRIPTIONS = {
     "retrieval.graph": "Relationship-confidence controls for graph traversal; off by default.",
     "retrieval.graph.min_confidence": "Minimum relationship confidence allowed to extend a graph walk.",
     "retrieval.graph.confidence_weighted": "Order graph candidates by minimum path confidence before hop distance.",
+    "retrieval.graph.include_citations": "Expand graph candidates by one resolved document-citation hop.",
     "retrieval.reranker": "Post-fusion second-look configuration; off by default.",
     "retrieval.reranker.enabled": "Whether the configured adapter reranks the fused pool.",
     "retrieval.reranker.adapter": "Reranker implementation: LLM or local cross-encoder.",

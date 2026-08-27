@@ -156,13 +156,14 @@ Same capabilities as tools for agents. Two transports:
 * **Streamable HTTP** (remote agents): `POST /mcp/` on the running
   server, guarded by the same bearer keys (scope `retrieval:query`).
 
-The seven tools:
+The eight tools:
 
 | Tool | Use it to |
 |------|-----------|
 | `search_corpus(query, top_k, deep, license_classes, year_min, year_max, journals)` | get ranked evidence chunks to reason over yourself |
 | `answer_question(query, top_k, license_classes)` | get a grounded answer with numbered citations |
 | `get_document(document_id)` | inspect a cited source: metadata, license, chunk previews |
+| `get_citations(document_id)` | follow its references and the corpus documents that cite it |
 | `search_entities(name_contains, entity_type, limit)` | find knowledge-graph entities by name |
 | `get_entity_relationships(entity_name)` | see every stated relationship of an entity, with evidence quotes |
 | `list_sources()` | learn the corpus's source buckets and license mix |

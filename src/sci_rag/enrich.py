@@ -12,6 +12,7 @@ from urllib.parse import quote
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from sci_rag.citations import reference_dois_from_crossref
 from sci_rag.db.models import Document
 
 
@@ -29,6 +30,7 @@ class CrossrefMetadata:
     retraction_notice_doi: str | None
     citation_count: int | None
     journal: str | None
+    reference_dois: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -86,6 +88,7 @@ def parse_crossref_work(work: dict[str, Any]) -> CrossrefMetadata:
         ),
         citation_count=citation_count if isinstance(citation_count, int) else None,
         journal=unescape(journal) if isinstance(journal, str) else None,
+        reference_dois=tuple(reference_dois_from_crossref(work)),
     )
 
 
@@ -142,6 +145,7 @@ async def enrich_documents(
                     "retraction_notice_doi": metadata.retraction_notice_doi,
                     "citation_count": metadata.citation_count,
                     "journal": metadata.journal,
+                    "reference_dois": list(metadata.reference_dois),
                     "enriched_at": enriched_at,
                 }
                 document.extra = extra

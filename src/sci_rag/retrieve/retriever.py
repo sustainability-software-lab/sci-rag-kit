@@ -98,6 +98,7 @@ class Retriever:
         include_hyde: bool | None = None,
         include_rerank: bool | None = None,
         graph_confidence_weighted: bool | None = None,
+        graph_include_citations: bool | None = None,
         use_query_cache: bool | None = None,
     ) -> RetrievalResult:
         scope = scope or RetrievalScope()
@@ -194,6 +195,11 @@ class Retriever:
                     graph_tuning.confidence_weighted
                     if graph_confidence_weighted is None
                     else graph_confidence_weighted
+                ),
+                include_citations=(
+                    graph_tuning.include_citations
+                    if graph_include_citations is None
+                    else graph_include_citations
                 ),
             )
 

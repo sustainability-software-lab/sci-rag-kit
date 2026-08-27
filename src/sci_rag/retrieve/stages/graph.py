@@ -99,8 +99,9 @@ _WALK_SQL = text(
                     )
                 )
           )
-    ), candidates AS (
+    ), entity_candidates AS (
         SELECT candidate_chunk.id,
+               candidate_chunk.document_id,
                MIN(w.hop) AS hop,
                MAX(w.path_confidence) AS path_confidence
         FROM walk w
@@ -108,7 +109,44 @@ _WALK_SQL = text(
         CROSS JOIN LATERAL unnest(e.chunk_ids) AS entity_chunk_id
         JOIN chunks candidate_chunk ON candidate_chunk.id = entity_chunk_id
         WHERE :unrestricted OR candidate_chunk.document_id = ANY(:eligible_document_ids)
-        GROUP BY candidate_chunk.id
+        GROUP BY candidate_chunk.id, candidate_chunk.document_id
+    ), candidate_documents AS (
+        SELECT document_id, MIN(hop) AS hop, MAX(path_confidence) AS path_confidence
+        FROM entity_candidates
+        GROUP BY document_id
+    ), citation_documents AS (
+        SELECT dc.cited_document_id AS document_id,
+               source.hop + 1 AS hop,
+               source.path_confidence
+        FROM candidate_documents source
+        JOIN document_citations dc ON dc.citing_document_id = source.document_id
+        WHERE :include_citations
+          AND dc.cited_document_id IS NOT NULL
+          AND (:unrestricted OR dc.cited_document_id = ANY(:eligible_document_ids))
+        UNION ALL
+        SELECT dc.citing_document_id AS document_id,
+               source.hop + 1 AS hop,
+               source.path_confidence
+        FROM candidate_documents source
+        JOIN document_citations dc ON dc.cited_document_id = source.document_id
+        WHERE :include_citations
+          AND (:unrestricted OR dc.citing_document_id = ANY(:eligible_document_ids))
+    ), citation_candidates AS (
+        SELECT citation_chunk.id,
+               MIN(citation_document.hop) AS hop,
+               MAX(citation_document.path_confidence) AS path_confidence
+        FROM citation_documents citation_document
+        JOIN chunks citation_chunk ON citation_chunk.document_id = citation_document.document_id
+        WHERE :unrestricted OR citation_chunk.document_id = ANY(:eligible_document_ids)
+        GROUP BY citation_chunk.id
+    ), combined_candidates AS (
+        SELECT id, hop, path_confidence FROM entity_candidates
+        UNION ALL
+        SELECT id, hop, path_confidence FROM citation_candidates
+    ), candidates AS (
+        SELECT id, MIN(hop) AS hop, MAX(path_confidence) AS path_confidence
+        FROM combined_candidates
+        GROUP BY id
     )
     SELECT id, hop
     FROM candidates
@@ -149,6 +187,7 @@ async def graph_stage(
     *,
     min_confidence: float = 0.0,
     confidence_weighted: bool = False,
+    include_citations: bool = False,
 ) -> list[Key]:
     names = await extract_query_entities(llm, domain, query)
     if not names:
@@ -174,6 +213,7 @@ async def graph_stage(
                     "max_hops": MAX_HOPS,
                     "min_confidence": min_confidence,
                     "confidence_weighted": confidence_weighted,
+                    "include_citations": include_citations,
                     # Restricted callers seed only exact names proven in
                     # eligible chunk content; aliases lack per-surface provenance.
                     "allow_aliases": unrestricted,

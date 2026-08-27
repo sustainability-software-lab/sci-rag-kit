@@ -504,6 +504,38 @@ def graph_communities(
     )
 
 
+@graph_app.command("citations")
+def graph_citations(
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--apply",
+        help="Preview by default; --apply reconciles cached Crossref references.",
+    ),
+) -> None:
+    """Build corpus-local citation pointers from cached Crossref metadata."""
+    from sci_rag.citations import build_citation_edges
+    from sci_rag.db import get_session_factory
+
+    async def run():  # type: ignore[no-untyped-def]
+        await _check_db()
+        return await build_citation_edges(get_session_factory(), dry_run=dry_run)
+
+    result = run_async(run())
+    table = Table(title="Citation graph" + (" (dry run)" if dry_run else ""))
+    table.add_column("What")
+    table.add_column("Count", justify="right")
+    table.add_row("documents with cached references", str(result.documents_scanned))
+    table.add_row("unique DOI references", str(result.references_found))
+    table.add_row("resolved in corpus", str(result.matched))
+    table.add_row("unresolved DOI pointers", str(result.unmatched))
+    table.add_row("self-citations skipped", str(result.self_citations_skipped))
+    table.add_row("rows written or updated", str(result.rows_written))
+    table.add_row("stale rows removed", str(result.rows_removed))
+    console.print(table)
+    if dry_run:
+        console.print("Dry run: nothing changed. Re-run with [bold]--apply[/bold].")
+
+
 @graph_app.command("resolve-entities")
 def graph_resolve_entities(
     dry_run: bool = typer.Option(
@@ -1195,6 +1227,7 @@ def corpus_delete(
     console.print(
         f"[green]Deleted {outcome.documents_deleted} document(s)[/green]: "
         f"{outcome.chunks_deleted} chunk(s) cascaded, "
+        f"{outcome.citations_deleted} citation pointer(s) removed, "
         f"{outcome.entities_scrubbed} entit(ies) scrubbed, "
         f"{outcome.relationships_deleted} relationship(s) removed, "
         f"{outcome.communities_deleted} communit(ies) dropped."
@@ -1255,6 +1288,7 @@ def graph_gc_command(
     table.add_column("Count", justify="right")
     table.add_row("evidence-less entities", str(outcome.entities_deleted))
     table.add_row("dangling relationships", str(outcome.relationships_deleted))
+    table.add_row("dangling citations", str(outcome.citations_deleted))
     table.add_row("communities dropped", str(outcome.communities_deleted))
     table.add_row("communities pruned", str(outcome.communities_pruned))
     console.print(table)

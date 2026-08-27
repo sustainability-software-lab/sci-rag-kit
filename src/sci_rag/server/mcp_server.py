@@ -9,7 +9,7 @@ multi-RAG routers all connect here. Two transports, one tool set:
   sharing the exact service instance the REST API uses.
 
 Tool descriptions below are written for the agent reading them: what the
-tool is for, when to reach for it, and what comes back. The seven tools
+tool is for, when to reach for it, and what comes back. The eight tools
 follow an inspect-then-drill pattern (search or ask first; documents,
 entities, and relationships for follow-up).
 """
@@ -208,6 +208,15 @@ def build_mcp_server(
             ]
         }
 
+    async def get_citations(document_id: str) -> dict[str, Any]:
+        """Inspect a document's references and the corpus documents that cite it.
+
+        Use after get_document when following scientific provenance in either
+        direction. Resolved references include corpus document titles and ids;
+        unresolved Crossref DOI pointers remain visible with resolved=false.
+        """
+        return await service.get_citations(document_id)
+
     async def get_entity_relationships(entity_name: str) -> dict[str, Any]:
         """Show every stated relationship of one entity, with evidence quotes.
 
@@ -328,6 +337,7 @@ def build_mcp_server(
         "search_corpus": search_corpus,
         "answer_question": answer_question,
         "get_document": get_document,
+        "get_citations": get_citations,
         "search_entities": search_entities,
         "get_entity_relationships": get_entity_relationships,
         "list_sources": list_sources,

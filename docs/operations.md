@@ -18,11 +18,25 @@ address to Crossref's polite pool, rate limits requests, retries 429 and 5xx
 responses, and records failures per document. A later run skips metadata
 refreshed in the last 30 days.
 
-The command stores citation count, journal, enrichment time, and explicit
+The command stores citation count, journal, normalized reference DOIs,
+enrichment time, and explicit
 Crossref retraction assertions in `documents.extra`, while also promoting
 journal to its indexed column. Both current `updated-by` responses and the
 `update-to` shape used by Retraction Watch records are recognized. The kit
 does not infer retraction from titles or missing fields.
+
+Preview the corpus-local citation reconciliation, then apply it:
+
+```bash
+uv run sci-rag graph citations --dry-run
+uv run sci-rag graph citations --apply
+```
+
+Resolved rows connect two present corpus documents. References whose DOI is
+not yet in the corpus stay as null-target pointers and resolve on a later run
+after that document is ingested. Self-references and duplicate DOI references
+do not become edges. `corpus delete` cascades affected pointers, while
+`sci-rag graph gc` reports and removes any dangling rows found defensively.
 
 Run `uv run sci-rag doctor` afterwards. A retraction warning gives the known
 count. Answering excludes those documents by default, while raw retrieval

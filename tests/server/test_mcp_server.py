@@ -18,6 +18,7 @@ EXPECTED_TOOLS = [
     "search_corpus",
     "answer_question",
     "get_document",
+    "get_citations",
     "search_entities",
     "get_entity_relationships",
     "list_sources",
@@ -76,6 +77,13 @@ async def test_agent_smoke_every_tool(service) -> None:  # type: ignore[no-untyp
     document = _payload(await mcp.call_tool("get_document", {"document_id": top["document_id"]}))
     assert document["title"].startswith("Colusa Basin")
     assert document["chunks"]
+
+    citation_graph = _payload(
+        await mcp.call_tool("get_citations", {"document_id": top["document_id"]})
+    )
+    assert citation_graph["document_id"] == top["document_id"]
+    assert citation_graph["references"] == []
+    assert citation_graph["cited_by"] == []
 
     answer = _payload(await mcp.call_tool("answer_question", {"query": "rice straw availability"}))
     assert "[1]" in answer["answer"]
