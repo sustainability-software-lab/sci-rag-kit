@@ -4,6 +4,32 @@ Notable changes to sci-rag-kit. The format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [Semantic Versioning](https://semver.org/) once past 1.0.
 
+## [Unreleased]
+
+### Added
+
+- `sci-rag init`: an interactive setup wizard that specializes a checkout
+  for your own domain. Asks about the project, credentials and models,
+  ontology, corpus source, PDF parser, reranker, license, and stack, then
+  writes `domain/domain.yaml`, `.env`, `pyproject.toml`, the `Makefile`,
+  `README.md`, and the corpus scaffold. `--defaults` and `--answers-file`
+  make generation reproducible; `--dry-run` previews it. The ontology can
+  be drafted by the configured model and is validated against
+  `DomainConfig` before anything is written, so a malformed draft is
+  rejected rather than saved as unusable YAML.
+- `domain/prompts/ontology_draft.md`: the prompt behind that draft.
+
+### Changed
+
+- `.env` now reaches the process environment. pydantic-settings reads it
+  into `Settings` but never exported it, so Typer's `envvar=` lookups and
+  the `OPENALEX_API_KEY` read in `sci-rag campaign discover` could not see
+  values placed there. A real environment variable still wins over the
+  file.
+- `scripts/init_domain.py` is now a thin shim over `sci_rag.scaffold`, so
+  it and the wizard cannot disagree about what a seed-question reset looks
+  like. Its command line, dry-run behavior, and output are unchanged.
+
 ## [0.2.0] - 2026-08-27
 
 The "Credibility" release: the gaps between what the methodology
