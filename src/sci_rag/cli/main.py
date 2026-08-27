@@ -211,12 +211,19 @@ def ingest(
 @app.command()
 def retrieve(
     query: str = typer.Argument(..., help="The question to search for."),
-    profile: str = typer.Option("deep", help="Retrieval profile: interactive or deep."),
+    profile: str = typer.Option(
+        "deep", help="Retrieval profile: interactive, deep, or auto (router decides)."
+    ),
     limit: int = typer.Option(8, help="How many fused results to return."),
     license_classes: str | None = typer.Option(
         None, "--license", help="Comma-separated license allowlist (e.g. public,open_commercial)."
     ),
     sources: str | None = typer.Option(None, "--source", help="Comma-separated source allowlist."),
+    explain_routing: bool = typer.Option(
+        False,
+        "--explain-routing",
+        help="Print what the auto router decides for this query (and why) before retrieving.",
+    ),
 ) -> None:
     """Inspect retrieval: see what each layer contributed and what won."""
     from sci_rag.retrieve import Retriever
@@ -224,11 +231,35 @@ def retrieve(
     async def run():  # type: ignore[no-untyped-def]
         await _check_db()
         retriever = Retriever()
-        return await retriever.retrieve(
+        decision = None
+        if explain_routing:
+            from sci_rag.retrieve.router import route
+
+            decision = await route(query, retriever.domain)
+        result = await retriever.retrieve(
             query, profile=profile, limit=limit, scope=_scope(license_classes, sources)
         )
+        return result, decision
 
-    result = run_async(run())
+    result, decision = run_async(run())
+
+    if decision is not None:
+        routing_table = Table(title="Routing decision (what --profile auto would run)")
+        routing_table.add_column("What")
+        routing_table.add_column("Value")
+        routing_table.add_row("resolved profile", decision.profile)
+        routing_table.add_row("graph layer", "on" if decision.include_graph else "off")
+        routing_table.add_row("community layer", "on" if decision.include_community else "off")
+        routing_table.add_row("hyde layer", "on" if decision.include_hyde else "off")
+        routing_table.add_row("matched query class", decision.matched_class or "none")
+        for i, reason in enumerate(decision.reasons):
+            routing_table.add_row("why" if i == 0 else "", reason)
+        console.print(routing_table)
+        if profile != "auto":
+            console.print(
+                f"(this request actually ran with [bold]--profile {profile}[/bold]; "
+                "use --profile auto to let the router drive)"
+            )
 
     trace_table = Table(title=f"Retrieval stages ({profile} profile)")
     trace_table.add_column("Stage")

@@ -17,9 +17,12 @@ class QueryRequest(BaseModel):
         ..., min_length=1, max_length=2000, description="The question to search for."
     )
     top_k: int = Field(8, ge=1, le=50, description="How many fused results to return.")
-    profile: Literal["interactive", "deep"] = Field(
+    profile: Literal["interactive", "deep", "auto"] = Field(
         "interactive",
-        description="interactive = vector+keyword, fast; deep = all five layers.",
+        description=(
+            "interactive = vector+keyword, fast; deep = all five layers; "
+            "auto = a cheap router picks per query (response traces show its decision)."
+        ),
     )
     include_graph: bool | None = Field(None, description="Override the profile's graph layer.")
     include_community: bool | None = Field(None, description="Override the community layer.")
