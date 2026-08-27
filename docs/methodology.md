@@ -165,6 +165,14 @@ pool ranked by hop distance. This is what makes multi-hop questions work:
 the connecting entity brings its evidence with it even when the
 question's words never appear in that text.
 
+Alias strings currently do not carry per-surface document provenance. An
+unrestricted graph walk may therefore expand canonical aliases and tombstone
+names, while any license, source, date, author, journal, DOI, or document
+restriction seeds the walk from active exact names only. Retrieved chunks are
+restricted before ranking, and every traversed relationship must itself carry
+eligible document or chunk provenance. Restricted evidence therefore cannot
+seed, extend, or contribute a candidate to the walk.
+
 ### 6.4 Community summaries
 
 Clusters of tightly connected entities usually map onto real themes in a

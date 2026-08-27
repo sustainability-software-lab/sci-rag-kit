@@ -24,8 +24,10 @@ from datetime import UTC, datetime
 from typing import Any
 
 import structlog
-from sqlalchemy import Row, select, update
+from sqlalchemy import Row, bindparam, func, or_, select, text, update
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.sql.sqltypes import Text as TextType
 
 from sci_rag.db.models import Chunk, KgEntity, KgRelationship
 from sci_rag.domain import DomainProfile
@@ -36,6 +38,11 @@ log = structlog.get_logger(__name__)
 _MAX_PASSAGE_CHARS = 4000
 _MAX_NAME_LEN = 200
 _MAX_ALIASES = 20
+
+_ALIAS_MATCH = text(
+    "EXISTS (SELECT 1 FROM unnest(kg_entities.aliases) AS alias "
+    "WHERE lower(alias) = ANY(:entity_names))"
+).bindparams(bindparam("entity_names", type_=ARRAY(TextType())))
 
 
 @dataclass
@@ -269,37 +276,33 @@ async def _upsert_entities(
     existing_rows = (
         (
             await session.execute(
-                select(KgEntity).where(KgEntity.name.in_([e.name for e in entities]))
-            )
-        )
-        .scalars()
-        .all()
-    )
-    # Case-insensitive lookup against whatever is already in the graph.
-    from sqlalchemy import func as sa_func
-
-    more_rows = (
-        (
-            await session.execute(
-                select(KgEntity).where(sa_func.lower(KgEntity.name).in_(names_lower))
+                select(KgEntity)
+                .where(or_(func.lower(KgEntity.name).in_(names_lower), _ALIAS_MATCH))
+                .order_by(KgEntity.id),
+                {"entity_names": names_lower},
             )
         )
         .scalars()
         .all()
     )
     existing: dict[str, KgEntity] = {}
-    seen_row_ids: set[str] = set()
-    for matched_row in [*existing_rows, *more_rows]:
-        if matched_row.id in seen_row_ids:
-            continue
-        seen_row_ids.add(matched_row.id)
+    priorities: dict[str, int] = {}
+    requested_names = set(names_lower)
+    for matched_row in existing_rows:
         canonical_row = await _follow_canonical_entity(session, matched_row)
-        key = matched_row.name.lower()
-        incumbent = existing.get(key)
-        # If inconsistent historical data contains both an active exact-name
-        # row and a tombstone with that name, the active row is authoritative.
-        if incumbent is None or matched_row.canonical_entity_id is None:
-            existing[key] = canonical_row
+        exact_key = matched_row.name.lower()
+        candidates: list[tuple[str, int]] = []
+        if exact_key in requested_names:
+            candidates.append((exact_key, 0 if matched_row.canonical_entity_id is None else 1))
+        candidates.extend(
+            (alias.lower(), 2 if matched_row.canonical_entity_id is None else 3)
+            for alias in (matched_row.aliases or [])
+            if alias.lower() in requested_names
+        )
+        for key, priority in candidates:
+            if priority < priorities.get(key, 4):
+                priorities[key] = priority
+                existing[key] = canonical_row
 
     ids: dict[str, str] = {}
     for entity in entities:

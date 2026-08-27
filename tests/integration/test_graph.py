@@ -231,6 +231,9 @@ async def test_reextraction_through_tombstone_enriches_canonical_entity(
 ) -> None:  # type: ignore[no-untyped-def]
     await _build_graph(corpus, local_embedder, ScriptedLLM())
     async with get_session_factory()() as session:
+        winner = await session.scalar(select(KgEntity).where(KgEntity.name == "rice straw"))
+        assert winner is not None
+        winner.aliases = [*winner.aliases, "rice residue"]
         session.add(
             KgEntity(
                 id="f" * 32,
@@ -244,7 +247,7 @@ async def test_reextraction_through_tombstone_enriches_canonical_entity(
     assert report.merged == 1
 
     new_path = tmp_path / "new-paddy-evidence.md"
-    new_path.write_text("Paddy straw has a newly reported use in biogas systems.")
+    new_path.write_text("Rice residue has a newly reported use in biogas systems.")
     [outcome] = (
         await ingest_entries(
             [CorpusEntry(path=new_path, license_class="public", source="incremental")],
@@ -254,12 +257,12 @@ async def test_reextraction_through_tombstone_enriches_canonical_entity(
     assert outcome.document_id is not None
     payload = {
         "entities": [
-            {"name": "Paddy Straw", "type": "Feedstock", "passages": [1]},
+            {"name": "rice residue", "type": "Feedstock", "passages": [1]},
             {"name": "biogas", "type": "Product", "passages": [1]},
         ],
         "relationships": [
             {
-                "source": "Paddy Straw",
+                "source": "rice residue",
                 "target": "biogas",
                 "type": "AFFECTS",
                 "evidence": "newly reported use",
@@ -292,6 +295,9 @@ async def test_reextraction_through_tombstone_enriches_canonical_entity(
     assert new_chunk.id in winner.chunk_ids
     assert loser.chunk_ids == []
     assert relationship.source_entity_id == winner.id
+    async with get_session_factory()() as session:
+        duplicate = await session.scalar(select(KgEntity).where(KgEntity.name == "rice residue"))
+    assert duplicate is None
 
 
 async def test_stats_shows_relationship_confidence_distribution(

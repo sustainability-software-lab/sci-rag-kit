@@ -16,12 +16,12 @@ even when the question's own words never appear in that text.
 from __future__ import annotations
 
 import structlog
-from sqlalchemy import bindparam, text
+from sqlalchemy import String, bindparam, select, text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.sql.sqltypes import Text as TextType
 
-from sci_rag.db.models import Chunk, Document
+from sci_rag.db.models import Document
 from sci_rag.domain import DomainProfile
 from sci_rag.llm import LLMClient
 from sci_rag.retrieve.types import Key, RetrievalScope, scope_conditions
@@ -35,11 +35,29 @@ _WALK_SQL = text(
     WITH RECURSIVE canonical_walk(entity_id) AS (
         SELECT id
         FROM kg_entities
-        WHERE lower(name) = ANY(:names)
-           OR EXISTS (
-               SELECT 1 FROM unnest(aliases) AS alias
-               WHERE lower(alias) = ANY(:names)
+        WHERE (
+                (canonical_entity_id IS NULL AND lower(name) = ANY(:names))
+                OR (
+                    :allow_aliases
+                    AND (
+                        lower(name) = ANY(:names)
+                        OR EXISTS (
+                            SELECT 1 FROM unnest(aliases) AS alias
+                            WHERE lower(alias) = ANY(:names)
+                        )
+                   )
+               )
            )
+          AND (
+                :unrestricted
+                OR document_ids && :eligible_document_ids
+                OR EXISTS (
+                    SELECT 1
+                    FROM unnest(chunk_ids) AS entity_chunk_id
+                    JOIN chunks seed_chunk ON seed_chunk.id = entity_chunk_id
+                    WHERE seed_chunk.document_id = ANY(:eligible_document_ids)
+                )
+          )
         UNION
         SELECT e.canonical_entity_id
         FROM kg_entities e
@@ -59,14 +77,33 @@ _WALK_SQL = text(
         FROM kg_relationships r
         JOIN walk w ON w.entity_id IN (r.source_entity_id, r.target_entity_id)
         WHERE w.hop < :max_hops
+          AND (
+                :unrestricted
+                OR r.document_id = ANY(:eligible_document_ids)
+                OR (
+                    r.document_id IS NULL
+                    AND r.chunk_id IN (
+                        SELECT edge_chunk.id
+                        FROM chunks edge_chunk
+                        WHERE edge_chunk.document_id = ANY(:eligible_document_ids)
+                    )
+                )
+          )
     )
-    SELECT e.chunk_ids, MIN(w.hop) AS hop
+    SELECT candidate_chunk.id, MIN(w.hop) AS hop
     FROM walk w
     JOIN kg_entities e ON e.id = w.entity_id AND e.canonical_entity_id IS NULL
-    GROUP BY e.id, e.chunk_ids
-    ORDER BY hop, e.id
+    CROSS JOIN LATERAL unnest(e.chunk_ids) AS entity_chunk_id
+    JOIN chunks candidate_chunk ON candidate_chunk.id = entity_chunk_id
+    WHERE :unrestricted OR candidate_chunk.document_id = ANY(:eligible_document_ids)
+    GROUP BY candidate_chunk.id
+    ORDER BY hop, candidate_chunk.id
+    LIMIT :limit
     """
-).bindparams(bindparam("names", type_=ARRAY(TextType())))
+).bindparams(
+    bindparam("names", type_=ARRAY(TextType())),
+    bindparam("eligible_document_ids", type_=ARRAY(String())),
+)
 
 
 async def extract_query_entities(llm: LLMClient, domain: DomainProfile, query: str) -> list[str]:
@@ -99,30 +136,29 @@ async def graph_stage(
     lowered = sorted({name.lower() for name in names})
 
     async with session_factory() as session:
-        rows = (await session.execute(_WALK_SQL, {"names": lowered, "max_hops": MAX_HOPS})).all()
-        # Collect candidate chunk ids in hop order, closest entities first.
-        ordered_chunk_ids: list[str] = []
-        seen: set[str] = set()
-        for chunk_ids, _hop in rows:
-            for chunk_id in chunk_ids or []:
-                if chunk_id not in seen:
-                    seen.add(chunk_id)
-                    ordered_chunk_ids.append(chunk_id)
-        if not ordered_chunk_ids:
-            return []
-
-        # Resolve against the caller's scope; scope always precedes ranking.
-        from sqlalchemy import select
-
-        eligible = set(
-            (
-                await session.execute(
-                    select(Chunk.id)
-                    .join(Document, Chunk.document_id == Document.id)
-                    .where(Chunk.id.in_(ordered_chunk_ids), *scope_conditions(scope))
-                )
-            ).scalars()
-        )
-
-    results = [cid for cid in ordered_chunk_ids if cid in eligible][:limit]
-    return [("chunk", chunk_id) for chunk_id in results]
+        unrestricted = scope.is_unrestricted()
+        eligible_document_ids: list[str] = []
+        if not unrestricted:
+            eligible_document_ids = list(
+                (
+                    await session.execute(select(Document.id).where(*scope_conditions(scope)))
+                ).scalars()
+            )
+            if not eligible_document_ids:
+                return []
+        rows = (
+            await session.execute(
+                _WALK_SQL,
+                {
+                    "names": lowered,
+                    "max_hops": MAX_HOPS,
+                    # Alias strings have no per-surface provenance. Until they
+                    # do, a restricted caller may seed only active exact names.
+                    "allow_aliases": unrestricted,
+                    "unrestricted": unrestricted,
+                    "eligible_document_ids": eligible_document_ids,
+                    "limit": limit,
+                },
+            )
+        ).all()
+    return [("chunk", chunk_id) for chunk_id, _hop in rows]
