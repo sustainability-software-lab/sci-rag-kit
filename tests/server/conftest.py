@@ -55,7 +55,12 @@ async def service(database, clean_tables, local_embedder):  # type: ignore[no-un
     assert report.failed == 0
     # A tiny hand-planted graph so entity tools have something to serve.
     async with session_scope() as db:
-        straw = KgEntity(name="rice straw", entity_type="Feedstock", description="residue")
+        straw = KgEntity(
+            name="rice straw",
+            entity_type="Feedstock",
+            description="residue",
+            aliases=["paddy straw"],
+        )
         digestion = KgEntity(name="anaerobic digestion", entity_type="ConversionProcess")
         db.add_all([straw, digestion])
         await db.flush()

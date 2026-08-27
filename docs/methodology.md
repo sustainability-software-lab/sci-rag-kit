@@ -137,9 +137,13 @@ At ingestion time, an LLM extracts entities and typed relationships from
 each chunk, constrained to a **domain ontology you declare** (entity
 types and relation types with one-line descriptions, in a YAML file).
 Unknown types and dangling endpoints are dropped, never guessed. Entities
-are canonical by name and accumulate evidence pointers (the chunks they
-were extracted from); relationships keep the quoted phrase that stated
-them.
+are canonical by name, accumulate evidence pointers (the chunks they were
+extracted from), and retain surface-form aliases actually present in the
+source. Relationships keep the quoted phrase that stated them and a
+calibrated confidence score: 1.0 for direct statements, 0.7 for strong
+implications, and 0.4 for inferences across sentences. Re-extraction merges
+aliases and preserves the highest confidence observed for a repeated typed
+edge.
 
 At query time, a fast LLM call extracts entity names from the question,
 matching graph entities are walked up to **two hops** in either

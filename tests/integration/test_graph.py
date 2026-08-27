@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 from collections.abc import AsyncIterator
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -27,6 +31,7 @@ EXTRACTION = {
             "type": "Feedstock",
             "description": "post-harvest residue",
             "passages": [1],
+            "aliases": ["paddy straw"],
         },
         {"name": "Colusa County", "type": "Region", "description": "rice region", "passages": [1]},
         {
@@ -44,6 +49,7 @@ EXTRACTION = {
             "type": "LOCATED_IN",
             "evidence": "produced in Colusa County",
             "passage": 1,
+            "confidence": 0.82,
         },
         {
             "source": "rice straw",
@@ -73,14 +79,19 @@ EXTRACTION = {
 class ScriptedLLM(LLMClient):
     """Extraction prompts get the scripted graph; everything else gets prose."""
 
-    def __init__(self, query_entities: list[str] | None = None) -> None:
+    def __init__(
+        self,
+        query_entities: list[str] | None = None,
+        extraction: dict | None = None,
+    ) -> None:
         self.query_entities = query_entities or []
+        self.extraction = extraction or EXTRACTION
 
     async def generate(
         self, prompt, *, system=None, temperature=0.2, max_tokens=2048, json_mode=False
     ):  # type: ignore[no-untyped-def]
         if "knowledge graph for this domain" in prompt:
-            return json.dumps(EXTRACTION)
+            return json.dumps(self.extraction)
         if '"entities"' in prompt:
             names = ", ".join(f'"{e}"' for e in self.query_entities)
             return f'{{"entities": [{names}]}}'
@@ -138,8 +149,14 @@ async def test_extraction_populates_graph_with_provenance(clean_tables, corpus, 
         "biogas",
     }
     assert all(e.chunk_ids for e in entities)
+    rice_straw = next(entity for entity in entities if entity.name == "rice straw")
+    assert rice_straw.aliases == ["paddy straw"]
     assert len(relationships) == 4
     assert all(r.evidence for r in relationships)
+    located_in = next(
+        relationship for relationship in relationships if relationship.relation_type == "LOCATED_IN"
+    )
+    assert located_in.confidence == 0.82
     assert unstamped == 0
 
 
@@ -170,21 +187,110 @@ async def test_extraction_is_incremental_and_duplicate_safe(clean_tables, corpus
     assert relationship_count == 4
 
 
-async def test_graph_layer_reaches_evidence_via_hops(clean_tables, corpus, local_embedder):  # type: ignore[no-untyped-def]
-    llm = ScriptedLLM(query_entities=["biogas"])
-    await _build_graph(corpus, local_embedder, llm)
-    retriever = Retriever(
+async def test_reextraction_merges_aliases_and_keeps_higher_confidence(
+    clean_tables, corpus, local_embedder
+) -> None:  # type: ignore[no-untyped-def]
+    first_payload = deepcopy(EXTRACTION)
+    first_payload["relationships"][0]["confidence"] = 0.55
+    await _build_graph(corpus, local_embedder, ScriptedLLM(extraction=first_payload))
+
+    second_payload = deepcopy(EXTRACTION)
+    second_payload["entities"][0]["aliases"] = ["rice residue"]
+    second_payload["relationships"][0]["confidence"] = 0.91
+    await extract_graph(
+        session_factory=get_session_factory(),
+        llm=ScriptedLLM(extraction=second_payload),
+        domain=load_domain(DOMAIN_DIR),
+        reprocess_all=True,
+        rate_limit_s=0,
+    )
+
+    lower_payload = deepcopy(EXTRACTION)
+    lower_payload["relationships"][0]["confidence"] = 0.2
+    await extract_graph(
+        session_factory=get_session_factory(),
+        llm=ScriptedLLM(extraction=lower_payload),
+        domain=load_domain(DOMAIN_DIR),
+        reprocess_all=True,
+        rate_limit_s=0,
+    )
+
+    async with get_session_factory()() as session:
+        rice_straw = await session.scalar(select(KgEntity).where(KgEntity.name == "rice straw"))
+        located_in = await session.scalar(
+            select(KgRelationship).where(KgRelationship.relation_type == "LOCATED_IN")
+        )
+    assert rice_straw is not None
+    assert rice_straw.aliases == ["paddy straw", "rice residue"]
+    assert located_in is not None
+    assert located_in.confidence == 0.91
+
+
+async def test_stats_shows_relationship_confidence_distribution(
+    clean_tables, corpus, local_embedder
+) -> None:  # type: ignore[no-untyped-def]
+    await _build_graph(corpus, local_embedder, ScriptedLLM())
+
+    result = subprocess.run(
+        [sys.executable, "-m", "sci_rag.cli.main", "stats"],
+        cwd=Path(__file__).parents[2],
+        env=os.environ.copy(),
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "Relationship confidence" in result.stdout
+    assert "direct=" in result.stdout
+    assert "strong=" in result.stdout
+    assert "inferred=" in result.stdout
+
+
+async def test_graph_layer_reaches_evidence_and_new_fields_preserve_baseline(
+    clean_tables, corpus, local_embedder
+) -> None:  # type: ignore[no-untyped-def]
+    old_format = deepcopy(EXTRACTION)
+    for entity in old_format["entities"]:
+        entity.pop("aliases", None)
+    for relationship in old_format["relationships"]:
+        relationship.pop("confidence", None)
+
+    baseline_llm = ScriptedLLM(query_entities=["biogas"], extraction=old_format)
+    await _build_graph(corpus, local_embedder, baseline_llm)
+    baseline_retriever = Retriever(
         domain=load_domain(DOMAIN_DIR),
         embedder=local_embedder,
-        llm=llm,
+        llm=baseline_llm,
         session_factory=get_session_factory(),
     )
-    result = await retriever.retrieve(
+    baseline = await baseline_retriever.retrieve(
         "what feedstock ends up as biogas", profile="deep", include_hyde=False
     )
-    graph_trace = result.trace_for("graph")
+
+    enhanced_llm = ScriptedLLM(query_entities=["biogas"])
+    await extract_graph(
+        session_factory=get_session_factory(),
+        llm=enhanced_llm,
+        domain=load_domain(DOMAIN_DIR),
+        reprocess_all=True,
+        rate_limit_s=0,
+    )
+    enhanced_retriever = Retriever(
+        domain=load_domain(DOMAIN_DIR),
+        embedder=local_embedder,
+        llm=enhanced_llm,
+        session_factory=get_session_factory(),
+    )
+    enhanced = await enhanced_retriever.retrieve(
+        "what feedstock ends up as biogas", profile="deep", include_hyde=False
+    )
+
+    graph_trace = enhanced.trace_for("graph")
     assert graph_trace is not None and graph_trace.status == "success"
-    assert any("graph" in item.layers for item in result.items)
+    assert any("graph" in item.layers for item in enhanced.items)
+    assert [item.id for item in enhanced.items] == [item.id for item in baseline.items]
 
 
 async def test_communities_build_and_serve_unrestricted_queries(
