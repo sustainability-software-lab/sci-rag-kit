@@ -14,7 +14,7 @@ retrieval on PostgreSQL, grounded answer generation with citations, an
 evaluation harness, and REST API + MCP endpoints. Ready to customize around any domain
 using flexible config files.
 
-More details on the project structure are documented in
+More details on the project structure can be found in in
 [docs/methodology.md](docs/methodology.md).
 
 To start a new project, use GitHub's **Use this template**, run the
