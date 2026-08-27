@@ -1,0 +1,46 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: sci_rag_test
+          POSTGRES_USER: sci_rag
+          POSTGRES_PASSWORD: sci_rag
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U sci_rag -d sci_rag_test"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      SCI_RAG_TEST_DATABASE_URL: postgresql+asyncpg://sci_rag:sci_rag@localhost:5433/sci_rag_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync
+      - name: Lint
+        run: |
+          uv run ruff check src tests
+          uv run ruff format --check src tests
+      - name: Type check
+        run: uv run mypy
+      - name: Tests (unit + integration + smoke eval)
+        run: uv run pytest -q

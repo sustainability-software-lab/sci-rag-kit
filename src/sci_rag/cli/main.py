@@ -233,10 +233,7 @@ def answer(
                 if cited:
                     console.print("\n\n[bold]Sources[/bold]")
                     for c in cited:
-                        line = f"  [{c['index']}] {c['title']}"
-                        if c["citation"]:
-                            line += f". {c['citation']}"
-                        console.print(line)
+                        console.print(f"  [{c['index']}] {c['citation'] or c['title']}")
             elif event.type == "error":
                 console.print(f"\n[red]{event.data['message']}[/red]")
                 raise typer.Exit(1)

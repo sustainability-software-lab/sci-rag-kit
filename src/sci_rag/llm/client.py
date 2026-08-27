@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
@@ -22,6 +23,10 @@ import structlog
 from sci_rag.config import Settings
 
 log = structlog.get_logger(__name__)
+
+# The google-genai SDK logs an advisory about automatic function calling on
+# every generate_content call; we do not use AFC, so keep the noise down.
+logging.getLogger("google_genai.models").setLevel(logging.ERROR)
 
 _MAX_ATTEMPTS = 3
 
@@ -101,18 +106,40 @@ class GoogleLLM(LLMClient):
     ) -> str:
         from google.genai import types
 
+        # Gemini 2.5 models "think" by default, and thought tokens count
+        # against max_output_tokens. On high-volume structured calls
+        # (extraction, judging) that turns into minutes of latency and
+        # sometimes an empty response once the budget is spent on thought.
+        # JSON-mode calls therefore disable thinking; if a model rejects the
+        # knob we retry once without it.
+        thinking_config = (
+            types.ThinkingConfig(thinking_budget=0) if json_mode else None
+        )
         config = types.GenerateContentConfig(
             system_instruction=system,
             temperature=temperature,
             max_output_tokens=max_tokens,
             response_mime_type="application/json" if json_mode else None,
+            thinking_config=thinking_config,
         )
         delay = 1.0
         for attempt in range(1, _MAX_ATTEMPTS + 1):
             try:
-                response = await self._client.aio.models.generate_content(
-                    model=self.model, contents=prompt, config=config
-                )
+                try:
+                    response = await self._client.aio.models.generate_content(
+                        model=self.model, contents=prompt, config=config
+                    )
+                except Exception as exc:
+                    # Some models reject the thinking knob outright; drop it
+                    # and try again rather than failing the whole call.
+                    if thinking_config is not None and "thinking" in str(exc).lower():
+                        config.thinking_config = None
+                        thinking_config = None
+                        response = await self._client.aio.models.generate_content(
+                            model=self.model, contents=prompt, config=config
+                        )
+                    else:
+                        raise
                 return response.text or ""
             except Exception as exc:
                 if attempt == _MAX_ATTEMPTS or not _is_retryable(exc):

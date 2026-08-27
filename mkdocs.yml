@@ -1,0 +1,25 @@
+# Optional docs site. The docs read fine on GitHub; this exists for teams
+# that want a hosted site: `uvx --with mkdocs-material mkdocs serve`
+site_name: sci-rag-kit
+site_description: A DIY GraphRAG factory for scientific domains
+repo_url: https://github.com/sustainability-software-lab/sci-rag-kit
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: teal
+docs_dir: docs
+nav:
+  - Home: index.md
+  - Quickstart: quickstart.md
+  - Bring your own domain: bring-your-own-domain.md
+  - Methodology: methodology.md
+  - Architecture: architecture.md
+  - Evaluation: evaluation.md
+  - API reference: api.md
+  - Deploy on Google Cloud: deploy-gcp.md
+  - Decisions:
+      - Graph in Postgres: adr/0001-graph-in-postgres.md
+      - 1536-dim embeddings: adr/0002-embeddings-1536-hnsw.md
+      - Docling with fallback: adr/0003-docling-with-pypdf-fallback.md
+      - Template, not cookiecutter: adr/0004-template-repo-not-cookiecutter.md

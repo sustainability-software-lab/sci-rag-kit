@@ -1,0 +1,116 @@
+# Deploying on Google Cloud
+
+The kit ships a small, honest Terraform module (`infra/terraform/`) that
+stands up a production-shaped instance: Cloud SQL Postgres (pgvector),
+one Cloud Run service serving REST and MCP, one Cloud Run job for
+migrations and ingestion, a corpus bucket, secrets, and a least-privilege
+service account. This page walks it end to end.
+
+Two honest notes before you start. First, this costs money while it
+exists; the database is the steady cost (the default `db-g1-small` tier
+is a few tens of dollars a month), so tear down experiments with
+`terraform destroy`. Second, everything here is also doable by hand in
+the console; the Terraform is 300 readable lines, and reading it IS the
+architecture documentation.
+
+## Prerequisites
+
+* A Google Cloud project with billing, and `gcloud` authenticated
+  (`gcloud auth login` plus `gcloud auth application-default login`).
+* APIs enabled once per project:
+
+```bash
+gcloud services enable run.googleapis.com sqladmin.googleapis.com \
+  secretmanager.googleapis.com artifactregistry.googleapis.com \
+  aiplatform.googleapis.com --project=YOUR_PROJECT
+```
+
+* Terraform 1.5+.
+
+## Step 1: build and push the image
+
+```bash
+gcloud artifacts repositories create sci-rag --repository-format=docker \
+  --location=us-central1 --project=YOUR_PROJECT   # once
+
+gcloud builds submit --project=YOUR_PROJECT \
+  --tag us-central1-docker.pkg.dev/YOUR_PROJECT/sci-rag/sci-rag:v1 .
+```
+
+The Dockerfile packages the kit, your `domain/` folder, and the
+migrations, so the same image serves the API and runs schema upgrades.
+Rebuild and repush whenever your domain or corpus manifest changes.
+
+## Step 2: terraform apply
+
+```bash
+cd infra/terraform
+terraform init
+terraform apply \
+  -var project_id=YOUR_PROJECT \
+  -var image=us-central1-docker.pkg.dev/YOUR_PROJECT/sci-rag/sci-rag:v1
+```
+
+What you get, and the security posture you get it with:
+
+* The database is reachable only through the Cloud SQL connector (the
+  service and job mount it as a unix socket); no open TCP.
+* The runtime service account holds exactly `cloudsql.client`,
+  `aiplatform.user`, and read access to its two secrets.
+* The Cloud Run service is **not** public by default. Flip
+  `-var allow_unauthenticated=true` when you want the app's own API keys
+  to be the only gate.
+
+## Step 3: migrate, then ingest
+
+```bash
+# Create the schema (terraform output prints this exact command):
+gcloud run jobs execute sci-rag-ops --region=us-central1 --project=YOUR_PROJECT --wait
+
+# Ingest the corpus baked into the image (the demo, or your own):
+gcloud run jobs execute sci-rag-ops --region=us-central1 --project=YOUR_PROJECT \
+  --args='ingest,--manifest,data/demo/manifest.jsonl' --wait
+
+# Build the graph:
+gcloud run jobs execute sci-rag-ops --region=us-central1 --project=YOUR_PROJECT \
+  --args='graph,extract' --wait
+gcloud run jobs execute sci-rag-ops --region=us-central1 --project=YOUR_PROJECT \
+  --args='graph,communities' --wait
+```
+
+For corpora too large to bake into the image, upload documents to the
+created bucket and extend your manifest workflow to pull from it, or run
+ingestion from your laptop against the database through the
+[Cloud SQL Auth Proxy](https://cloud.google.com/sql/docs/postgres/connect-auth-proxy)
+(the `db_connection_name` output is what the proxy needs).
+
+## Step 4: set API keys and verify
+
+```bash
+echo '{"team-key": {"scopes": ["retrieval:query", "retrieval:answer", "corpus:read"]}}' | \
+  gcloud secrets versions add sci-rag-api-keys --data-file=- --project=YOUR_PROJECT
+# New secret versions are picked up on the next Cloud Run revision or restart.
+
+URL=$(terraform output -raw service_url)
+curl -s $URL/health
+curl -s $URL/v1/corpus-manifest
+curl -s -X POST $URL/v1/query -H "Authorization: Bearer team-key" \
+  -H 'Content-Type: application/json' -d '{"query": "rice straw availability"}'
+```
+
+Remote agents connect to `$URL/mcp/` with the same bearer key.
+
+## Operating notes
+
+* **Scale to zero** is on (`min_instance_count = 0`); the first request
+  after idle pays a cold start. Set it to 1 for a always-warm instance.
+* **Schema changes**: rebuild the image, `terraform apply` (new
+  revision), run the ops job once. Migrations are additive Alembic
+  revisions; write them the way `migrations/versions/0001_initial.py`
+  models.
+* **External license posture**: if the service is public-facing, make
+  your clients pin `license_classes` to `["public", "open_commercial"]`,
+  and consider keys whose scope list omits `corpus:read` for outsiders.
+* **Teardown**: `terraform destroy` (the database has deletion
+  protection on by default; flip `-var deletion_protection=false`
+  first when you really mean it).
