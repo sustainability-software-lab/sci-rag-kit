@@ -19,9 +19,13 @@ nav:
   - Architecture: architecture.md
   - Evaluation: evaluation.md
   - Benchmarks: benchmarks.md
+  - Choosing sci-rag-kit: choosing-sci-rag-kit.md
   - API reference: api.md
   - Operations: operations.md
   - Deploy on Google Cloud: deploy-gcp.md
+  - Roadmap: ROADMAP.md
+  - Versioning: VERSIONING.md
+  - Governance: GOVERNANCE.md
   - Decisions:
       - Graph in Postgres: adr/0001-graph-in-postgres.md
       - 1536-dim embeddings: adr/0002-embeddings-1536-hnsw.md
