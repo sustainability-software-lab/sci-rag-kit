@@ -97,7 +97,7 @@ The demo corpus is five synthetic documents about agricultural residues
 (realistic form, fictional numbers, CC0), included so the pipeline can be
 exercised end to end before you commit your own documents.
 
-## Specializing to your domain
+## Customizing to your domain
 
 1. Put documents in `data/raw/` and describe them in a JSONL corpus
    manifest (title, authors, license class, source).
