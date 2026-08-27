@@ -186,4 +186,5 @@ async def _build_one(
         member_entity_ids=members,
         summary=summary,
         summary_embedding=vector,
+        summary_embedding_version=embedder.version,
     )
