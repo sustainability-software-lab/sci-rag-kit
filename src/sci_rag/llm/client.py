@@ -1,9 +1,10 @@
 """The LLM interface used everywhere generation happens.
 
 One abstraction covers answer generation, graph extraction, HyDE passages,
-community summaries, and the evaluation judge. The default implementation
-talks to Gemini through google-genai in either credential mode (AI Studio
-API key or Vertex AI). Tests use :class:`MockLLM`, which replays canned
+community summaries, reranking, query routing, and the evaluation judge. The
+adapters that implement it live in sibling modules -- one per provider, the
+same layout ``sci_rag.embed`` uses -- and are selected by
+:func:`sci_rag.llm.get_llm`. Tests use :class:`MockLLM`, which replays canned
 responses and records every prompt it saw.
 """
 
@@ -11,34 +12,98 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 import re
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TypeVar
 
 import structlog
 
-from sci_rag.config import Settings
+from sci_rag.llm.spec import ModelSpec
 
 log = structlog.get_logger(__name__)
 
-# The google-genai SDK logs an advisory about automatic function calling on
-# every generate_content call; we do not use AFC, so keep the noise down.
-logging.getLogger("google_genai.models").setLevel(logging.ERROR)
-
 _MAX_ATTEMPTS = 3
+T = TypeVar("T")
+
+#: HTTP statuses worth a second attempt: throttling and server-side faults.
+RETRYABLE_STATUS = frozenset({408, 409, 429, 500, 502, 503, 504})
+
+#: gRPC/Google status names that mean the same thing.
+_RETRYABLE_MARKERS = ("RESOURCE_EXHAUSTED", "UNAVAILABLE", "DEADLINE_EXCEEDED")
+
+#: Matches a status code as a standalone token, so an error whose *text*
+#: happens to contain "500" is not mistaken for a server error.
+_STATUS_IN_TEXT = re.compile(r"\b(?:" + "|".join(str(s) for s in sorted(RETRYABLE_STATUS)) + r")\b")
 
 
-def _is_retryable(exc: Exception) -> bool:
+def status_code_of(exc: Exception) -> int | None:
+    """The HTTP status an SDK exception carries, if it carries one."""
+    for attribute in ("status_code", "code", "status"):
+        value = getattr(exc, attribute, None)
+        if isinstance(value, int):
+            return value
+    return None
+
+
+def default_is_retryable(exc: Exception) -> bool:
+    """Whether a provider error is worth retrying.
+
+    Typed SDK exceptions expose a status code, which is authoritative. Plain
+    exceptions fall back to scanning the message, matching status codes only
+    as whole tokens.
+    """
+    code = status_code_of(exc)
+    if code is not None:
+        return code in RETRYABLE_STATUS
     text = str(exc)
-    return any(
-        marker in text for marker in ("429", "503", "500", "RESOURCE_EXHAUSTED", "UNAVAILABLE")
+    return any(marker in text for marker in _RETRYABLE_MARKERS) or bool(
+        _STATUS_IN_TEXT.search(text)
     )
 
 
+async def retry_async(
+    operation: Callable[[], Awaitable[T]],
+    *,
+    is_retryable: Callable[[Exception], bool] = default_is_retryable,
+    max_attempts: int = _MAX_ATTEMPTS,
+) -> T:
+    """Run ``operation`` with exponential backoff on transient provider errors.
+
+    Every adapter shares this loop, and the SDK clients are built with their
+    own retries disabled, so the kit has exactly one retry policy to reason
+    about and one ``llm_retry`` event to watch in the logs.
+    """
+    delay = 1.0
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return await operation()
+        except Exception as exc:
+            if attempt == max_attempts or not is_retryable(exc):
+                raise
+            log.warning("llm_retry", attempt=attempt, delay_s=delay, error=type(exc).__name__)
+            await asyncio.sleep(delay)
+            delay *= 2
+    raise AssertionError("unreachable")
+
+
 class LLMClient(ABC):
+    #: The provider's own model id, exactly as sent on the wire.
+    model: str = ""
+    #: Which provider serves that id. Set by :func:`sci_rag.llm.get_llm`;
+    #: ``None`` for hand-built clients such as :class:`MockLLM`.
+    spec: ModelSpec | None = None
+
+    def describe(self) -> str:
+        """Identity for traces and reports: ``provider:model`` when known.
+
+        Answers and eval reports record which model produced them. With more
+        than one provider in play, the bare model id is no longer enough to
+        say who was asked.
+        """
+        return str(self.spec) if self.spec is not None else self.model
+
     @abstractmethod
     async def generate(
         self,
@@ -81,100 +146,6 @@ def parse_json_loosely(raw: str) -> Any:
     return json.loads(text)
 
 
-class GoogleLLM(LLMClient):
-    def __init__(
-        self,
-        settings: Settings,
-        *,
-        model: str | None = None,
-        api_key_override: str | None = None,
-    ) -> None:
-        # Imported here so offline paths never load the SDK.
-        from sci_rag.embed.google import make_genai_client
-
-        self._client = make_genai_client(settings, api_key_override=api_key_override)
-        self.model = model or settings.llm_model
-
-    async def generate(
-        self,
-        prompt: str,
-        *,
-        system: str | None = None,
-        temperature: float = 0.2,
-        max_tokens: int = 2048,
-        json_mode: bool = False,
-    ) -> str:
-        from google.genai import types
-
-        # Gemini 2.5 models "think" by default, and thought tokens count
-        # against max_output_tokens. On high-volume structured calls
-        # (extraction, judging) that turns into minutes of latency and
-        # sometimes an empty response once the budget is spent on thought.
-        # JSON-mode calls therefore disable thinking; if a model rejects the
-        # knob we retry once without it.
-        thinking_config = types.ThinkingConfig(thinking_budget=0) if json_mode else None
-        config = types.GenerateContentConfig(
-            system_instruction=system,
-            temperature=temperature,
-            max_output_tokens=max_tokens,
-            response_mime_type="application/json" if json_mode else None,
-            thinking_config=thinking_config,
-        )
-        delay = 1.0
-        for attempt in range(1, _MAX_ATTEMPTS + 1):
-            try:
-                try:
-                    response = await self._client.aio.models.generate_content(
-                        model=self.model, contents=prompt, config=config
-                    )
-                except Exception as exc:
-                    # Some models reject the thinking knob outright; drop it
-                    # and try again rather than failing the whole call.
-                    if thinking_config is not None and "thinking" in str(exc).lower():
-                        config.thinking_config = None
-                        thinking_config = None
-                        response = await self._client.aio.models.generate_content(
-                            model=self.model, contents=prompt, config=config
-                        )
-                    else:
-                        raise
-                return response.text or ""
-            except Exception as exc:
-                if attempt == _MAX_ATTEMPTS or not _is_retryable(exc):
-                    raise
-                log.warning("llm_retry", attempt=attempt, delay_s=delay, error=type(exc).__name__)
-                await asyncio.sleep(delay)
-                delay *= 2
-        raise AssertionError("unreachable")
-
-    async def _stream_impl(
-        self, prompt: str, system: str | None, temperature: float, max_tokens: int
-    ) -> AsyncIterator[str]:
-        from google.genai import types
-
-        config = types.GenerateContentConfig(
-            system_instruction=system,
-            temperature=temperature,
-            max_output_tokens=max_tokens,
-        )
-        stream = await self._client.aio.models.generate_content_stream(
-            model=self.model, contents=prompt, config=config
-        )
-        async for chunk in stream:
-            if chunk.text:
-                yield chunk.text
-
-    def stream(
-        self,
-        prompt: str,
-        *,
-        system: str | None = None,
-        temperature: float = 0.2,
-        max_tokens: int = 2048,
-    ) -> AsyncIterator[str]:
-        return self._stream_impl(prompt, system, temperature, max_tokens)
-
-
 @dataclass
 class MockLLM(LLMClient):
     """Deterministic stand-in for tests: replays queued responses in order.
@@ -186,6 +157,7 @@ class MockLLM(LLMClient):
     responses: list[str] = field(default_factory=list)
     default_response: str = "{}"
     calls: list[dict[str, Any]] = field(default_factory=list)
+    model: str = "mock"
 
     async def generate(
         self,
@@ -219,9 +191,3 @@ class MockLLM(LLMClient):
         self.calls.append({"prompt": prompt, "system": system, "stream": True})
         text = self.responses.pop(0) if self.responses else self.default_response
         return self._stream_impl(text)
-
-
-def get_llm(
-    settings: Settings, *, model: str | None = None, api_key_override: str | None = None
-) -> LLMClient:
-    return GoogleLLM(settings, model=model, api_key_override=api_key_override)

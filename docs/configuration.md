@@ -26,11 +26,16 @@ renderer, including commented optional values.
 | `SCI_RAG_GOOGLE_API_KEY` | str \| NoneType | unset | Google AI Studio key. It takes precedence over Vertex when both are set. |
 | `SCI_RAG_GCP_PROJECT` | str \| NoneType | unset | Google Cloud project used for Vertex AI credentials. |
 | `SCI_RAG_GCP_LOCATION` | str | us-central1 | Vertex AI region. |
+| `SCI_RAG_ANTHROPIC_API_KEY` | str \| NoneType | unset | Key for the direct Anthropic API. Unset uses Vertex AI, which needs only a GCP project. |
+| `SCI_RAG_OPENAI_API_KEY` | str \| NoneType | unset | Key for the OpenAI-compatible provider. Unset uses Vertex AI credentials against Model Garden. |
+| `SCI_RAG_OPENAI_BASE_URL` | str \| NoneType | unset | Endpoint for the OpenAI-compatible provider. Unset derives the Vertex Model Garden URL from the project and location. |
 | `SCI_RAG_EMBEDDING_PROVIDER` | 'google' \| 'local-hash' | google | Embedding route: Google semantic embeddings or the deterministic offline hash provider. |
 | `SCI_RAG_EMBEDDING_MODEL` | str | gemini-embedding-001 | Provider model identifier stamped into stored embedding versions. |
 | `SCI_RAG_EMBEDDING_DIM` | int | 1536 | Fixed vector width. Changing it on a populated schema requires migration and re-embedding. |
+| `SCI_RAG_LLM_PROVIDER` | 'google' \| 'anthropic' \| 'openai-compatible' | google | Backend a bare model id belongs to. Any model setting may override it inline as `provider:model`. |
 | `SCI_RAG_LLM_MODEL` | str | gemini-2.5-flash | Generation model for answers, HyDE, communities, reranking, and judging. |
 | `SCI_RAG_EXTRACTION_MODEL` | str \| NoneType | unset | Optional high-volume extraction model; unset inherits the generation model. |
+| `SCI_RAG_JUDGE_MODEL` | str \| NoneType | unset | Optional evaluation judge model; unset inherits the generation model. Naming a different provider avoids self-graded answers. |
 | `SCI_RAG_INTERACTIVE_STAGE_TIMEOUT_S` | float | 8.0 | Per-stage timeout for the low-latency interactive profile. |
 | `SCI_RAG_DEEP_STAGE_TIMEOUT_S` | float | 30.0 | Per-stage timeout for deep and agent-oriented retrieval. |
 | `SCI_RAG_DOMAIN_DIR` | Path | domain | Path to the validated domain profile and prompts. |

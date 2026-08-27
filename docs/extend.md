@@ -86,6 +86,49 @@ An LLM client implements full generation and streaming. JSON consumers use the s
 
 Provider additions also need a deliberate selection path in `get_embedder()` or `get_llm()`. That small factory is preferable to a general plug-in loader because supported providers remain visible in one file.
 
+### Generation providers that ship with the kit
+
+Three adapters live beside each other in `src/sci_rag/llm/`, selected by a `provider:model` spec. A bare model id belongs to `SCI_RAG_LLM_PROVIDER`; a prefixed one overrides it for that role.
+
+| Provider | Reaches | Credentials | Extra |
+|---|---|---|---|
+| `google` | Gemini | `SCI_RAG_GOOGLE_API_KEY` or `SCI_RAG_GCP_PROJECT` | built in |
+| `anthropic` | Claude, on Vertex or the direct API | `SCI_RAG_GCP_PROJECT` (ADC) or `SCI_RAG_ANTHROPIC_API_KEY` | `anthropic` |
+| `openai-compatible` | Vertex partner models (Grok, Llama, Mistral, DeepSeek), OpenAI, self-hosted vLLM/Ollama | `SCI_RAG_GCP_PROJECT` (ADC) or `SCI_RAG_OPENAI_API_KEY` (+ optional `SCI_RAG_OPENAI_BASE_URL`) | `openai` |
+
+On Google Cloud the third row is the only route to the non-Google partner models: Vertex serves them behind an OpenAI-compatible endpoint rather than a native API, so one adapter covers every current and future partner model. Model ids there keep their publisher prefix, as in `xai/grok-4.1-fast-reasoning`; sending the bare id is rejected as a malformed publisher model.
+
+!!! warning "Partner models are not served from every region"
+
+    `SCI_RAG_GCP_LOCATION` defaults to `us-central1`, which serves Gemini but **not** Claude or Grok. Both are reachable from `global`, and Grok is only offered there. Set `SCI_RAG_GCP_LOCATION=global` when generating with a partner model; Google embeddings work from `global` too, though noticeably slower than from a region. A model that is not served where you asked fails with a clear `400 ... is not servable in region` or `404 ... not found`, so `sci-rag doctor --probe` will catch it before a pipeline run does.
+
+    Which models a project can reach also depends on what is enabled in its Model Garden, so treat the ids above as examples to check with `doctor`, not a guaranteed menu.
+
+### What a new adapter has to normalize
+
+`LLMClient` presents one signature to every call site, so an adapter absorbs the differences between providers rather than exposing them:
+
+| `generate()` argument | google | anthropic | openai-compatible |
+|---|---|---|---|
+| `system` | `system_instruction` | `system=` | leading `system` message |
+| `temperature` | forwarded | **dropped** | forwarded |
+| `max_tokens` | `max_output_tokens` | `max_tokens` (required) | `max_tokens` |
+| `json_mode` | `response_mime_type` + `thinking_budget=0` | `output_config={"effort": "low"}` | `response_format` |
+
+Two of those cells are easy to get wrong:
+
+- **Current Claude models removed the sampling parameters.** Forwarding `temperature` returns a 400, so the Anthropic adapter drops it. The intent behind a low temperature maps onto `effort` instead.
+- **Lowering effort is not the same as disabling thinking.** Disabling it on current Claude models can leak reasoning tags or write a tool call into visible text, which would corrupt the JSON the extraction and judge call sites parse.
+- **Not every Claude model accepts the effort knob.** `claude-sonnet-5` takes it; `claude-haiku-4-5` rejects it with `400 output_config.effort: Extra inputs are not permitted`. The adapter probes once per client and remembers the result, because re-learning it per call would double the request count across a graph-extraction run.
+
+Where a provider may reject a knob, the adapters retry once without it rather than failing the call. Retry policy itself is shared: `retry_async()` in `llm/client.py` owns the backoff, and the SDK clients are constructed with `max_retries=0` so their own retries do not compound with it.
+
+### Embeddings are Google-only on purpose
+
+`SCI_RAG_EMBEDDING_PROVIDER` accepts `google` or `local-hash`, and there is no third option by design. Anthropic ships no embedding API, and on Vertex the only *managed* text embeddings are Google's; every alternative means deploying and paying for your own Model Garden endpoint.
+
+More to the point, an embedder is not a runtime-swappable choice here. `SCI_RAG_EMBEDDING_DIM` is baked into the pgvector column at migration time (see [ADR 0002](adr/0002-embeddings-1536-hnsw.md)), and each chunk stores the `version` that produced it. Changing embedder means a migration, a full re-embed, and an index rebuild -- `sci-rag embed plan` exists to scope exactly that work. Point `SCI_RAG_EMBEDDING_MODEL` at a different Google embedding model freely; treat anything beyond that as a data migration, not a configuration change.
+
 ## 5. Add an authentication backend
 
 `AuthBackend` has two synchronous operations: authenticate a bearer token into an `AuthContext`, and enforce its rate limit. The shipped factory selects open local mode or static JSON keys from `SCI_RAG_API_KEYS`.

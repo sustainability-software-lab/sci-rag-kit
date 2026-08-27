@@ -45,6 +45,10 @@ domain with your own.
 - **Answering**: numbered inline citations tied to retrieved sources;
   when retrieval finds nothing in scope, the system states that instead of
   answering from model priors.
+- **Model providers**: Gemini, Claude, and any OpenAI-compatible endpoint,
+  chosen per role with a `provider:model` setting. On Google Cloud that
+  reaches the Vertex Model Garden partner models (Claude, Grok, Llama,
+  Mistral) with no credentials beyond the project you already have.
 - **Evaluation**: expert-authored seed questions, retrieval metrics
   (hit@k, MRR) with per-layer ablation configs, and a two-pass LLM judge:
   the grounding pass never sees the reference answer, and correctness is
@@ -73,6 +77,7 @@ cp .env.example .env
 #   SCI_RAG_GOOGLE_API_KEY=...              AI Studio key
 #   SCI_RAG_GCP_PROJECT=...                 Vertex AI (after gcloud auth application-default login)
 #   SCI_RAG_EMBEDDING_PROVIDER=local-hash   offline mode: no credentials, lexical-only retrieval, no generation
+# To generate with Claude or Grok instead of Gemini, see docs/extend.md.
 
 make setup     # uv sync, start Postgres (port 5433), create the schema
 make demo      # ingest the demo corpus, run a traced retrieval, score it

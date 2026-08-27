@@ -1,5 +1,12 @@
 """Rebrand this template for your own project and domain.
 
+This is the narrow, surgical path: it sets a name and description and resets
+the seed questions, editing `domain/domain.yaml` in place so its guided
+comments survive. For the full setup session (credentials, ontology, corpus,
+license, stack) run the wizard instead:
+
+    uv run sci-rag init
+
 Shows its plan by default; nothing changes without --apply:
 
     uv run python scripts/init_domain.py \
@@ -7,14 +14,8 @@ Shows its plan by default; nothing changes without --apply:
         --description "Membrane chemistry and performance for water treatment" \
         --apply
 
-What it does (and all it does):
-
-1. Sets your project name/description in pyproject.toml and in
-   domain/domain.yaml (the demo ontology stays in place as a worked
-   example for you to edit; see docs/bring-your-own-domain.md).
-2. Resets domain/eval_seed_questions.jsonl to a guided blank, so the
-   demo's ground truth never masquerades as yours.
-3. Prints the checklist of what to edit next.
+The seed template and the slug rule come from ``sci_rag.scaffold`` so this
+script and the wizard cannot disagree about what a reset looks like.
 
 The Python package stays ``sci_rag`` on purpose (see ADR 0004): keeping
 the import path lets you diff against, and pull improvements from, the
@@ -28,27 +29,10 @@ import re
 import sys
 from pathlib import Path
 
+from sci_rag.scaffold.apply import SEED_TEMPLATE
+from sci_rag.scaffold.naming import slugify
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
-
-SEED_TEMPLATE = """\
-# Ground-truth questions for the evaluation harness (one JSON object per line).
-# Write 10 to 20 questions a domain expert can vouch for. Format:
-#
-# {"id": "unique-slug",
-#  "question": "As a user would ask it",
-#  "reference_answer": "What a correct answer must say",
-#  "reference_titles": ["Exact document title that contains the answer"],
-#  "evidence_phrases": ["a distinctive string from the answering passage", "42.7 g/L"],
-#  "tags": ["your-label"]}
-#
-# Include one question the corpus canNOT answer, tagged "unanswerable",
-# as an honesty probe. See docs/evaluation.md for advice on writing these.
-"""
-
-
-def _slugify(name: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
-    return slug or "my-sci-rag"
 
 
 def main() -> int:
@@ -59,7 +43,7 @@ def main() -> int:
     parser.add_argument("--apply", action="store_true", help="Actually write changes.")
     args = parser.parse_args()
 
-    slug = args.slug or _slugify(args.name)
+    slug = args.slug or slugify(args.name)
     changes: list[tuple[Path, str, str]] = []
 
     pyproject = REPO_ROOT / "pyproject.toml"
@@ -114,6 +98,7 @@ Done. {args.name} is yours. Next, in order:
   4. Write your seed questions in domain/eval_seed_questions.jsonl.
   5. Rewrite README.md's opening for your project.
 
+For the guided version of all of that, run `uv run sci-rag init`.
 The full walkthrough: docs/bring-your-own-domain.md
 """
     )

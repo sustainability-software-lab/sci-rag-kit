@@ -106,7 +106,7 @@ class AnswerEngine:
         text_parts: list[str] = []
         sources: list[SourceCitation] = []
         retrieval: RetrievalResult | None = None
-        model = self.settings.llm_model
+        model = str(self.settings.model_spec_for("answer"))
         async for event in events:
             if event.type == "delta":
                 text_parts.append(event.data["text"])
@@ -190,7 +190,7 @@ class AnswerEngine:
         except Exception as exc:
             yield AnswerEvent(type="error", data={"code": "llm_unavailable", "message": str(exc)})
             return
-        model = getattr(llm, "model", self.settings.llm_model)
+        model = llm.describe()
         yield AnswerEvent(type="generation_started", data={"model": model})
 
         collected: list[str] = []

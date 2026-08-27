@@ -23,6 +23,7 @@ migrations, `domain/`, and data paths resolve predictably.
 | `sci-rag serve` | Serve the REST API (/v1, docs at /docs) and the MCP server (/mcp). |
 | `sci-rag mcp` | Run the MCP server over stdio (for local agents like Claude Code). Add it to an agent with, for example: claude mcp add sci-rag -- uv run --directory /path/to/your/repo sci-rag mcp |
 | `sci-rag doctor` | Diagnose the environment: config, domain, database, corpus, credentials. |
+| `sci-rag init` | Specialize this checkout for your own domain. Asks about your project, credentials, ontology, corpus, and stack, then rewrites the configuration files in place. Everything it writes is a file you are meant to keep editing afterwards; nothing is generated code. |
 | `sci-rag db` | Database schema management. |
 | `sci-rag db upgrade` | Create or upgrade the database schema (runs the Alembic migrations). |
 | `sci-rag graph` | Build the knowledge graph: extract entities, then detect communities. |
@@ -173,6 +174,23 @@ $ sci-rag doctor [OPTIONS]
 |---|---|---|---|
 | `--probe` | boolean | false | Also make one tiny live embedding and generation call. |
 
+## `sci-rag init`
+
+Specialize this checkout for your own domain. Asks about your project, credentials, ontology, corpus, and stack, then rewrites the configuration files in place. Everything it writes is a file you are meant to keep editing afterwards; nothing is generated code.
+
+```console
+$ sci-rag init [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--target` | path | . | The checkout to specialize. Defaults to the current directory. |
+| `--defaults` | boolean | false | Take every default without asking. Useful in CI. |
+| `--answers-file` | path | unset | A YAML file of answers, for reproducible generation. Unanswered questions take their default. |
+| `--dry-run` | boolean | false | Show what would change without writing anything. |
+
 ## `sci-rag db`
 
 Database schema management.
@@ -313,7 +331,7 @@ $ sci-rag eval answers [OPTIONS]
 | `--questions` | path | unset | Seed questions JSONL. |
 | `--profile` | text | deep | Retrieval profile for answer generation. |
 | `--limit` | integer | 8 | Sources per answer. |
-| `--judge-model` | text | unset | Judge model id (defaults to the answer model). |
+| `--judge-model` | text | unset | Judge model spec, 'model' or 'provider:model'. Overrides SCI_RAG_JUDGE_MODEL. |
 | `--snapshot` | text | unset | Record this corpus snapshot name in the report. |
 
 ## `sci-rag eval diff`

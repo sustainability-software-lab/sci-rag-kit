@@ -4,6 +4,68 @@ Notable changes to sci-rag-kit. The format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [Semantic Versioning](https://semver.org/) once past 1.0.
 
+## [Unreleased]
+
+### Added
+
+- `sci-rag init`: an interactive setup wizard that specializes a checkout
+  for your own domain. Asks about the project, credentials and models,
+  ontology, corpus source, PDF parser, reranker, license, and stack, then
+  writes `domain/domain.yaml`, `.env`, `pyproject.toml`, the `Makefile`,
+  `README.md`, and the corpus scaffold. `--defaults` and `--answers-file`
+  make generation reproducible; `--dry-run` previews it. The ontology can
+  be drafted by the configured model and is validated against
+  `DomainConfig` before anything is written, so a malformed draft is
+  rejected rather than saved as unusable YAML.
+- `domain/prompts/ontology_draft.md`: the prompt behind that draft.
+- Multi-provider generation. `SCI_RAG_LLM_MODEL` and friends now accept a
+  `provider:model` spec selecting `google`, `anthropic` (Claude on Vertex AI
+  or the direct API), or `openai-compatible` (Vertex Model Garden partner
+  models such as Grok, Llama, Mistral, and DeepSeek; also OpenAI and
+  self-hosted vLLM/Ollama). New `anthropic` and `openai` extras; the SDKs are
+  imported lazily so a Google-only install carries neither. See ADR 0006 for
+  why the adapters are hand-written and why embeddings stay Google-only.
+- `SCI_RAG_JUDGE_MODEL`, so the evaluation judge can run on a different
+  provider than the generator. Answer eval reports now record which model
+  answered and which graded, making cross-provider judging auditable.
+- `sci-rag doctor` reports the resolved spec per role and checks credentials
+  for each generation provider in use.
+
+### Changed
+
+- `.env` now reaches the process environment. pydantic-settings reads it
+  into `Settings` but never exported it, so Typer's `envvar=` lookups and
+  the `OPENALEX_API_KEY` read in `sci-rag campaign discover` could not see
+  values placed there. A real environment variable still wins over the
+  file.
+- `scripts/init_domain.py` is now a thin shim over `sci_rag.scaffold`, so
+  it and the wizard cannot disagree about what a seed-question reset looks
+  like. Its command line, dry-run behavior, and output are unchanged.
+
+- A bare model id still resolves to `SCI_RAG_LLM_PROVIDER` (default `google`),
+  so existing configurations keep working unchanged.
+- `GoogleLLM` moved from `sci_rag.llm.client` to `sci_rag.llm.google`, matching
+  the layout of `sci_rag.embed`. `sci_rag.llm` re-exports it as before.
+- Retry policy is shared across providers in `retry_async()`, and status-code
+  detection no longer matches a code embedded in a longer number.
+
+### Fixed
+
+- `sci-rag doctor --probe` no longer warns on a healthy setup. Its generation
+  probe capped output at 10 tokens, which reasoning models spend on thought
+  before writing anything, so a working provider looked like it returned
+  nothing.
+- The Vertex Model Garden endpoint is now derived correctly for the `global`
+  location, which is served by an unprefixed host. Grok is offered *only*
+  globally, so the previous URL made it unreachable.
+- The OpenAI-compatible adapter closes its response stream, returning the
+  connection to the pool when a consumer stops early.
+- `sci-rag init` no longer rewrites the commented examples in `.env.example`
+  with the answers it collected. Only the first assignment of a key is the
+  setting; substituting the later illustrative ones turned worked examples
+  into confidently wrong advice and emitted the same key several times.
+
+
 ## [0.2.0] - 2026-08-27
 
 The "Credibility" release: the gaps between what the methodology

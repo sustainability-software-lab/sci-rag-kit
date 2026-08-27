@@ -59,6 +59,41 @@ app.add_typer(campaign_app, name="campaign")
 console = Console()
 
 
+def _load_dotenv_into_environ(path: Path | None = None) -> list[str]:
+    """Export `.env` into the process environment, without overriding it.
+
+    pydantic-settings reads `.env` into :class:`~sci_rag.config.Settings` but
+    never exports it, so anything that reads the environment directly could
+    not see values the documentation tells users to put there: Typer's
+    ``envvar=`` lookups, and third-party keys like ``OPENALEX_API_KEY`` that
+    can never be `Settings` fields because they carry no ``SCI_RAG_`` prefix.
+
+    A real environment variable always wins, so a one-off ``VAR=x sci-rag ...``
+    still overrides the file.
+    """
+    env_path = path if path is not None else Path(".env")
+    if not env_path.is_file():
+        return []
+    exported: list[str] = []
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, _, value = stripped.removeprefix("export ").partition("=")
+        key = key.strip()
+        if not key or key in os.environ:
+            continue
+        os.environ[key] = value.strip().strip("\"'")
+        exported.append(key)
+    return exported
+
+
+@app.callback()
+def _bootstrap() -> None:
+    """Runs before every command; see :func:`_load_dotenv_into_environ`."""
+    _load_dotenv_into_environ()
+
+
 def find_repo_root() -> Path:
     """Walk up from the current directory to the folder holding alembic.ini."""
     current = Path.cwd()
@@ -452,7 +487,7 @@ def graph_extract(
     stats_result = run_async(
         extract_graph(
             session_factory=get_session_factory(),
-            llm=get_llm(settings, model=settings.resolved_extraction_model),
+            llm=get_llm(settings, role="extraction"),
             domain=load_domain(settings.domain_dir),
             batch_size=batch_size,
             reprocess_all=reprocess_all,
@@ -736,7 +771,8 @@ def eval_answers(
     profile: str = typer.Option("deep", help="Retrieval profile for answer generation."),
     limit: int = typer.Option(8, help="Sources per answer."),
     judge_model: str | None = typer.Option(
-        None, help="Judge model id (defaults to the answer model)."
+        None,
+        help="Judge model spec, 'model' or 'provider:model'. Overrides SCI_RAG_JUDGE_MODEL.",
     ),
     snapshot: str | None = typer.Option(
         None, "--snapshot", help="Record this corpus snapshot name in the report."
@@ -760,12 +796,18 @@ def eval_answers(
 
     async def run():  # type: ignore[no-untyped-def]
         engine = AnswerEngine(settings=settings)
-        judge = get_llm(settings, model=judge_model) if judge_model else get_llm(settings)
+        judge = get_llm(settings, role="judge", model=judge_model)
         records = await run_answer_eval(engine, judge, questions, profile=profile, limit=limit)
         fingerprint = await corpus_fingerprint(get_session_factory())
-        return records, fingerprint
+        # Stamped into the report: grading answers with the model that wrote
+        # them is a known bias, so a reader needs to see both.
+        models = {
+            "answer": str(settings.model_spec_for("answer")),
+            "judge": judge.describe(),
+        }
+        return records, fingerprint, models
 
-    records, fingerprint = run_async(run())
+    records, fingerprint, models = run_async(run())
     from sci_rag.evals import summarize_answer_records
 
     summary = summarize_answer_records(records)
@@ -777,8 +819,8 @@ def eval_answers(
     console.print(table)
     json_path, md_path = write_report(
         kind="answers",
-        payload=answers_payload(records, fingerprint, snapshot=snapshot),
-        markdown=answers_markdown(records, fingerprint),
+        payload=answers_payload(records, fingerprint, snapshot=snapshot, models=models),
+        markdown=answers_markdown(records, fingerprint, models=models),
     )
     console.print(f"Report written to [bold]{md_path}[/bold] (and {json_path.name}).")
 
@@ -1427,8 +1469,10 @@ def mcp_stdio() -> None:
 
 
 from sci_rag.cli.doctor import doctor as _doctor  # noqa: E402 - registered after app exists
+from sci_rag.cli.init import init as _init  # noqa: E402 - registered after app exists
 
 app.command("doctor")(_doctor)
+app.command("init")(_init)
 
 
 def main() -> None:
