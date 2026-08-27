@@ -26,6 +26,7 @@ _PROMPT_FILES = (
     "judge_grounding",
     "judge_correctness",
 )
+_LATEST_SCHEMA_REVISION = "0005"
 
 
 @dataclass
@@ -246,6 +247,17 @@ async def _run_checks(*, probe: bool) -> list[Check]:
                     "schema",
                     "fail",
                     "tables not created yet",
+                    "uv run sci-rag db upgrade",
+                )
+            )
+            await dispose_engine()
+            return checks
+        if revision != _LATEST_SCHEMA_REVISION:
+            checks.append(
+                Check(
+                    "schema",
+                    "fail",
+                    f"migration revision {revision}; expected {_LATEST_SCHEMA_REVISION}",
                     "uv run sci-rag db upgrade",
                 )
             )

@@ -36,26 +36,34 @@ _WALK_SQL = text(
         SELECT id
         FROM kg_entities
         WHERE (
-                (canonical_entity_id IS NULL AND lower(name) = ANY(:names))
+                lower(name) = ANY(:names)
                 OR (
                     :allow_aliases
-                    AND (
-                        lower(name) = ANY(:names)
-                        OR EXISTS (
-                            SELECT 1 FROM unnest(aliases) AS alias
-                            WHERE lower(alias) = ANY(:names)
-                        )
-                   )
+                    AND EXISTS (
+                        SELECT 1 FROM unnest(aliases) AS alias
+                        WHERE lower(alias) = ANY(:names)
+                    )
                )
            )
           AND (
                 :unrestricted
-                OR document_ids && :eligible_document_ids
                 OR EXISTS (
                     SELECT 1
                     FROM unnest(chunk_ids) AS entity_chunk_id
                     JOIN chunks seed_chunk ON seed_chunk.id = entity_chunk_id
                     WHERE seed_chunk.document_id = ANY(:eligible_document_ids)
+                      AND btrim(regexp_replace(
+                            lower(kg_entities.name), '[^[:alnum:]]+', ' ', 'g'
+                          )) <> ''
+                      AND position(
+                            ' ' || btrim(regexp_replace(
+                                lower(kg_entities.name), '[^[:alnum:]]+', ' ', 'g'
+                            )) || ' '
+                            IN
+                            ' ' || btrim(regexp_replace(
+                                lower(seed_chunk.content), '[^[:alnum:]]+', ' ', 'g'
+                            )) || ' '
+                          ) > 0
                 )
           )
         UNION

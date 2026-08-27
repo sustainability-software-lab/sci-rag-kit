@@ -134,6 +134,65 @@ async def test_extraction_does_not_reuse_alias_from_different_entity_type(clean_
     assert ids["char"] == feedstock.id
 
 
+async def test_exact_name_type_conflict_is_rejected_without_relationship(clean_tables) -> None:  # type: ignore[no-untyped-def]
+    document_id = "6" * 32
+    chunk_id = "7" * 32
+    conflicting_id = "8" * 32
+    target_id = "9" * 32
+    async with get_session_factory()() as session:
+        session.add_all(
+            [
+                Document(
+                    id=document_id,
+                    title="Conflicting type evidence",
+                    content_hash="a" * 64,
+                    license_class="public",
+                ),
+                Chunk(
+                    id=chunk_id,
+                    document_id=document_id,
+                    chunk_index=0,
+                    content="Char produces fuel.",
+                    token_count=3,
+                ),
+                KgEntity(
+                    id=conflicting_id,
+                    name="char",
+                    entity_type="Product",
+                    document_ids=[],
+                    chunk_ids=[],
+                ),
+                KgEntity(id=target_id, name="fuel", entity_type="Product"),
+            ]
+        )
+        await session.flush()
+        ids = await _upsert_entities(
+            session,
+            [ExtractedEntity("char", "Feedstock", "incoming material", [1])],
+            {1: chunk_id},
+            {1: document_id},
+            fallback_chunk_ids=[chunk_id],
+            fallback_document_ids=[document_id],
+            stats=ExtractionStats(),
+        )
+        await _insert_relationships(
+            session,
+            [ExtractedRelationship("char", "fuel", "PRODUCES", "produces fuel", 1)],
+            {**ids, "fuel": target_id},
+            {1: chunk_id},
+            {1: document_id},
+            ExtractionStats(),
+        )
+        await session.commit()
+
+    async with get_session_factory()() as session:
+        conflicting = await session.get(KgEntity, conflicting_id)
+        relationship_count = await session.scalar(select(func.count(KgRelationship.id)))
+    assert "char" not in ids
+    assert conflicting is not None and conflicting.document_ids == []
+    assert relationship_count == 0
+
+
 async def test_relationship_extraction_preserves_distinct_evidence_surfaces(clean_tables) -> None:  # type: ignore[no-untyped-def]
     source_id = "a" * 32
     target_id = "b" * 32
@@ -310,6 +369,14 @@ class ExactQueryLLM:
         return {"entities": ["seed process"]}
 
 
+class NamedQueryLLM:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    async def generate_json(self, prompt: str, *, max_tokens: int = 512):  # type: ignore[no-untyped-def]
+        return {"entities": [self.name]}
+
+
 async def test_traversal_by_merged_name_reaches_survivor_evidence(clean_tables) -> None:  # type: ignore[no-untyped-def]
     ids = await seed_duplicates()
     await resolve_entities(get_session_factory(), dry_run=False, no_llm=True)
@@ -327,19 +394,150 @@ async def test_traversal_by_merged_name_reaches_survivor_evidence(clean_tables) 
 
 
 async def test_scoped_traversal_does_not_expand_unproven_aliases(clean_tables) -> None:  # type: ignore[no-untyped-def]
-    await seed_duplicates()
+    ids = await seed_duplicates()
+    async with get_session_factory()() as session:
+        winner = await session.get(KgEntity, ids["winner"])
+        assert winner is not None
+        winner.aliases = [*winner.aliases, "unproven alias"]
+        await session.commit()
     await resolve_entities(get_session_factory(), dry_run=False, no_llm=True)
 
     keys = await graph_stage(
         get_session_factory(),
-        QueryLLM(),  # type: ignore[arg-type]
+        NamedQueryLLM("unproven alias"),  # type: ignore[arg-type]
         load_domain(Path(__file__).parents[2] / "domain"),
-        "What converts paddy straw?",
+        "What is the unproven alias?",
         RetrievalScope(license_classes=("public",)),
         limit=5,
     )
 
     assert keys == []
+
+
+async def test_scoped_name_provenance_requires_token_boundaries(clean_tables) -> None:  # type: ignore[no-untyped-def]
+    document_id = "o" * 32
+    chunk_id = "p" * 32
+    async with get_session_factory()() as session:
+        session.add_all(
+            [
+                Document(
+                    id=document_id,
+                    title="Soil evidence",
+                    content_hash="4" * 64,
+                    license_class="public",
+                ),
+                Chunk(
+                    id=chunk_id,
+                    document_id=document_id,
+                    chunk_index=0,
+                    content="Soil quality is measured here.",
+                    token_count=5,
+                ),
+                KgEntity(
+                    name="oil",
+                    entity_type="Product",
+                    document_ids=[document_id],
+                    chunk_ids=[chunk_id],
+                ),
+            ]
+        )
+        await session.commit()
+
+    keys = await graph_stage(
+        get_session_factory(),
+        NamedQueryLLM("oil"),  # type: ignore[arg-type]
+        load_domain(Path(__file__).parents[2] / "domain"),
+        "What is oil?",
+        RetrievalScope(license_classes=("public",)),
+        limit=5,
+    )
+
+    assert keys == []
+
+
+async def test_scoped_traversal_requires_name_provenance_after_resolution(clean_tables) -> None:  # type: ignore[no-untyped-def]
+    restricted_document_ids = ["g" * 32, "h" * 32]
+    restricted_chunk_ids = ["i" * 32, "j" * 32]
+    public_document_id = "k" * 32
+    public_chunk_id = "l" * 32
+    restricted_entity_id = "m" * 32
+    public_entity_id = "n" * 32
+    async with get_session_factory()() as session:
+        session.add_all(
+            [
+                Document(
+                    id=document_id,
+                    title=f"Restricted name evidence {index}",
+                    content_hash=str(index + 1) * 64,
+                    license_class="restricted",
+                )
+                for index, document_id in enumerate(restricted_document_ids)
+            ]
+            + [
+                Chunk(
+                    id=restricted_chunk_ids[index],
+                    document_id=document_id,
+                    chunk_index=0,
+                    content="Restricted term appears here.",
+                    token_count=4,
+                )
+                for index, document_id in enumerate(restricted_document_ids)
+            ]
+            + [
+                Document(
+                    id=public_document_id,
+                    title="Public name evidence",
+                    content_hash="3" * 64,
+                    license_class="public",
+                ),
+                Chunk(
+                    id=public_chunk_id,
+                    document_id=public_document_id,
+                    chunk_index=0,
+                    content="Public term appears here.",
+                    token_count=4,
+                ),
+                KgEntity(
+                    id=restricted_entity_id,
+                    name="restricted term",
+                    entity_type="Feedstock",
+                    aliases=["public term"],
+                    document_ids=restricted_document_ids,
+                    chunk_ids=restricted_chunk_ids,
+                ),
+                KgEntity(
+                    id=public_entity_id,
+                    name="public term",
+                    entity_type="Feedstock",
+                    document_ids=[public_document_id],
+                    chunk_ids=[public_chunk_id],
+                ),
+            ]
+        )
+        await session.commit()
+
+    report = await resolve_entities(get_session_factory(), dry_run=False, no_llm=True)
+    assert report.merged == 1
+    scope = RetrievalScope(license_classes=("public",))
+    restricted_keys = await graph_stage(
+        get_session_factory(),
+        NamedQueryLLM("restricted term"),  # type: ignore[arg-type]
+        load_domain(Path(__file__).parents[2] / "domain"),
+        "What is the restricted term?",
+        scope,
+        limit=5,
+    )
+    public_keys = await graph_stage(
+        get_session_factory(),
+        NamedQueryLLM("public term"),  # type: ignore[arg-type]
+        load_domain(Path(__file__).parents[2] / "domain"),
+        "What is the public term?",
+        scope,
+        limit=5,
+    )
+
+    assert restricted_keys == []
+    assert ("chunk", public_chunk_id) in public_keys
 
 
 async def test_scoped_traversal_rejects_edges_evidenced_only_by_restricted_document(
@@ -378,8 +576,8 @@ async def test_scoped_traversal_rejects_edges_evidenced_only_by_restricted_docum
                     id=seed_chunk,
                     document_id=public_seed_doc,
                     chunk_index=0,
-                    content="Seed evidence.",
-                    token_count=2,
+                    content="Seed process evidence.",
+                    token_count=3,
                 ),
                 Chunk(
                     id=neighbor_chunk,

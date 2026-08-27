@@ -24,7 +24,37 @@ async def _stamp_alembic_revision() -> None:
             text("CREATE TABLE IF NOT EXISTS alembic_version (version_num varchar(32) PRIMARY KEY)")
         )
         await conn.execute(text("DELETE FROM alembic_version"))
-        await conn.execute(text("INSERT INTO alembic_version VALUES ('0001')"))
+        await conn.execute(text("INSERT INTO alembic_version VALUES ('0005')"))
+
+
+async def test_doctor_reports_outdated_schema_before_new_column_queries(clean_tables) -> None:  # type: ignore[no-untyped-def]
+    await _stamp_alembic_revision()
+    async with get_engine().begin() as conn:
+        await conn.execute(text("UPDATE alembic_version SET version_num = '0004'"))
+        await conn.execute(text("ALTER TABLE kg_entities DROP COLUMN canonical_entity_id CASCADE"))
+    try:
+        checks = _by_name(await _run_checks(probe=False))
+        assert checks["schema"].status == "fail"
+        assert "db upgrade" in checks["schema"].fix
+    finally:
+        async with get_engine().begin() as conn:
+            await conn.execute(
+                text("ALTER TABLE kg_entities ADD COLUMN canonical_entity_id VARCHAR(32)")
+            )
+            await conn.execute(
+                text(
+                    "ALTER TABLE kg_entities ADD CONSTRAINT "
+                    "fk_kg_entities_canonical_entity_id FOREIGN KEY (canonical_entity_id) "
+                    "REFERENCES kg_entities(id) ON DELETE SET NULL"
+                )
+            )
+            await conn.execute(
+                text(
+                    "CREATE INDEX ix_kg_entities_canonical_entity_id "
+                    "ON kg_entities (canonical_entity_id)"
+                )
+            )
+            await conn.execute(text("UPDATE alembic_version SET version_num = '0005'"))
 
 
 def _by_name(checks) -> dict[str, object]:  # type: ignore[no-untyped-def]

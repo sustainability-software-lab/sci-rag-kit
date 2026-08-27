@@ -287,12 +287,15 @@ async def _upsert_entities(
     )
     existing: dict[tuple[str, str], KgEntity] = {}
     priorities: dict[tuple[str, str], int] = {}
+    exact_name_rows: dict[str, KgEntity] = {}
     requested_types: dict[str, set[str]] = {}
     for entity in entities:
         requested_types.setdefault(entity.name.lower(), set()).add(entity.entity_type)
     for matched_row in existing_rows:
         canonical_row = await _follow_canonical_entity(session, matched_row)
         exact_key = matched_row.name.lower()
+        if exact_key in requested_types:
+            exact_name_rows.setdefault(exact_key, matched_row)
         candidates: list[tuple[str, int]] = []
         if matched_row.entity_type in requested_types.get(exact_key, set()):
             candidates.append((exact_key, 0 if matched_row.canonical_entity_id is None else 1))
@@ -320,6 +323,13 @@ async def _upsert_entities(
         typed_name = (entity.name.lower(), entity.entity_type)
         row = existing.get(typed_name)
         if row is None:
+            if entity.name.lower() in exact_name_rows:
+                log.warning(
+                    "entity_type_conflict",
+                    existing_type=exact_name_rows[entity.name.lower()].entity_type,
+                    extracted_type=entity.entity_type,
+                )
+                continue
             row = KgEntity(
                 name=entity.name,
                 entity_type=entity.entity_type,
@@ -381,6 +391,11 @@ async def _insert_relationships(
     document_id_by_passage: dict[int, str],
     stats: ExtractionStats,
 ) -> None:
+    relationships = [
+        relationship
+        for relationship in relationships
+        if relationship.source.lower() in entity_ids and relationship.target.lower() in entity_ids
+    ]
     if not relationships:
         return
     involved = {entity_ids[r.source.lower()] for r in relationships} | {

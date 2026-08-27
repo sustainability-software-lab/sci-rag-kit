@@ -285,8 +285,6 @@ async def _apply_merges(
             if not winner.description and loser.description:
                 winner.description = loser.description
             loser.canonical_entity_id = winner.id
-            loser.document_ids = []
-            loser.chunk_ids = []
             session.add(
                 EntityResolutionAudit(
                     merged_entity_id=loser.id,
