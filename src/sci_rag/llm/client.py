@@ -112,9 +112,7 @@ class GoogleLLM(LLMClient):
         # sometimes an empty response once the budget is spent on thought.
         # JSON-mode calls therefore disable thinking; if a model rejects the
         # knob we retry once without it.
-        thinking_config = (
-            types.ThinkingConfig(thinking_budget=0) if json_mode else None
-        )
+        thinking_config = types.ThinkingConfig(thinking_budget=0) if json_mode else None
         config = types.GenerateContentConfig(
             system_instruction=system,
             temperature=temperature,
