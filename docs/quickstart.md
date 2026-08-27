@@ -1,9 +1,9 @@
 ---
-title: Build your first scientific RAG
+title: Quickstart
 description: Set up Sci-RAG Kit, ingest the synthetic demo corpus, inspect retrieval, produce a cited answer, and serve REST and MCP.
 ---
 
-# Build your first scientific RAG
+# Quickstart
 
 Set up a served, agent-accessible knowledge base over the bundled demo corpus. You will see the evidence returned by each retrieval stage before you add your own literature.
 
