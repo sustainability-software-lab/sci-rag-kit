@@ -1,0 +1,65 @@
+"""CLI wiring smokes: every command parses, help renders, bad input is caught.
+
+These run with no database and no credentials; they protect the command
+surface the docs promise.
+"""
+
+from typer.testing import CliRunner
+
+from sci_rag.cli.main import app
+
+runner = CliRunner()
+
+
+def test_root_help_lists_all_commands() -> None:
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
+    for command in ("ingest", "retrieve", "answer", "stats", "serve", "mcp", "doctor"):
+        assert command in result.output
+    for group in ("db", "graph", "eval"):
+        assert group in result.output
+
+
+def test_subcommand_help_screens() -> None:
+    for args in (
+        ["db", "--help"],
+        ["db", "upgrade", "--help"],
+        ["ingest", "--help"],
+        ["graph", "--help"],
+        ["graph", "extract", "--help"],
+        ["graph", "communities", "--help"],
+        ["eval", "--help"],
+        ["eval", "retrieval", "--help"],
+        ["eval", "answers", "--help"],
+        ["retrieve", "--help"],
+        ["answer", "--help"],
+        ["serve", "--help"],
+        ["doctor", "--help"],
+    ):
+        result = runner.invoke(app, args)
+        assert result.exit_code == 0, f"{args}: {result.output}"
+
+
+def test_documented_flags_exist() -> None:
+    ingest_help = runner.invoke(app, ["ingest", "--help"]).output
+    for flag in ("--manifest", "--source", "--no-docling", "--chunk-tokens", "--overlap-tokens"):
+        assert flag in ingest_help
+    extract_help = runner.invoke(app, ["graph", "extract", "--help"]).output
+    for flag in ("--all", "--batch-size", "--max-chunks"):
+        assert flag in extract_help
+    eval_help = runner.invoke(app, ["eval", "retrieval", "--help"]).output
+    for flag in ("--ablation", "--questions", "--limit"):
+        assert flag in eval_help
+    doctor_help = runner.invoke(app, ["doctor", "--help"]).output
+    assert "--probe" in doctor_help
+
+
+def test_ingest_rejects_ambiguous_input() -> None:
+    # Neither a folder nor a manifest.
+    neither = runner.invoke(app, ["ingest"])
+    assert neither.exit_code != 0
+    assert "exactly one" in neither.output
+    # Both at once.
+    both = runner.invoke(app, ["ingest", "data/raw", "--manifest", "x.jsonl"])
+    assert both.exit_code != 0
+    assert "exactly one" in both.output

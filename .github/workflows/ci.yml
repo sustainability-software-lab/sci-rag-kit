@@ -5,9 +5,14 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -38,9 +43,48 @@ jobs:
         run: uv sync
       - name: Lint
         run: |
-          uv run ruff check src tests
-          uv run ruff format --check src tests
+          uv run ruff check src tests examples
+          uv run ruff format --check src tests examples
       - name: Type check
         run: uv run mypy
-      - name: Tests (unit + integration + smoke eval)
-        run: uv run pytest -q
+      - name: Tests (unit + integration + smoke eval, with coverage floor)
+        run: uv run pytest -q --cov=sci_rag --cov-report=term --cov-fail-under=78
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the server image
+        run: docker build -t sci-rag-kit:ci .
+      - name: Image smoke (CLI runs inside the container)
+        run: docker run --rm sci-rag-kit:ci sci-rag --help
+
+  terraform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: Format check
+        run: terraform fmt -check -diff
+      - name: Validate
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+
+  docs-links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check internal documentation links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          # Offline: internal file links only, so external-site flake can
+          # never break the build.
+          args: --offline --no-progress "**/*.md"
+          fail: true

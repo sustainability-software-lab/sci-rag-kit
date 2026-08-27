@@ -1,8 +1,12 @@
-# sci-rag-kit
+<p align="center">
+  <img src="docs/assets/logo.png" alt="Sci RAG Kit" width="560">
+</p>
 
-[![CI](https://github.com/sustainability-software-lab/sci-rag-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/sustainability-software-lab/sci-rag-kit/actions/workflows/ci.yml)
-[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
-![Python 3.11 | 3.12](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
+<p align="center">
+  <a href="https://github.com/sustainability-software-lab/sci-rag-kit/actions/workflows/ci.yml"><img src="https://github.com/sustainability-software-lab/sci-rag-kit/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-blue.svg" alt="License: BSD-3-Clause"></a>
+  <img src="https://img.shields.io/badge/python-3.11%20%7C%203.12-blue" alt="Python 3.11 | 3.12">
+</p>
 
 A template repository for building a retrieval-augmented question-answering
 system over a scientific document collection. It implements hybrid GraphRAG
