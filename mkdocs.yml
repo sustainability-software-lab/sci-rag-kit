@@ -31,3 +31,4 @@ nav:
       - 1536-dim embeddings: adr/0002-embeddings-1536-hnsw.md
       - Docling with fallback: adr/0003-docling-with-pypdf-fallback.md
       - Template, not cookiecutter: adr/0004-template-repo-not-cookiecutter.md
+      - Citation edges in their own table: adr/0005-citation-edges-as-a-document-table.md
