@@ -59,6 +59,41 @@ app.add_typer(campaign_app, name="campaign")
 console = Console()
 
 
+def _load_dotenv_into_environ(path: Path | None = None) -> list[str]:
+    """Export `.env` into the process environment, without overriding it.
+
+    pydantic-settings reads `.env` into :class:`~sci_rag.config.Settings` but
+    never exports it, so anything that reads the environment directly could
+    not see values the documentation tells users to put there: Typer's
+    ``envvar=`` lookups, and third-party keys like ``OPENALEX_API_KEY`` that
+    can never be `Settings` fields because they carry no ``SCI_RAG_`` prefix.
+
+    A real environment variable always wins, so a one-off ``VAR=x sci-rag ...``
+    still overrides the file.
+    """
+    env_path = path if path is not None else Path(".env")
+    if not env_path.is_file():
+        return []
+    exported: list[str] = []
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, _, value = stripped.removeprefix("export ").partition("=")
+        key = key.strip()
+        if not key or key in os.environ:
+            continue
+        os.environ[key] = value.strip().strip("\"'")
+        exported.append(key)
+    return exported
+
+
+@app.callback()
+def _bootstrap() -> None:
+    """Runs before every command; see :func:`_load_dotenv_into_environ`."""
+    _load_dotenv_into_environ()
+
+
 def find_repo_root() -> Path:
     """Walk up from the current directory to the folder holding alembic.ini."""
     current = Path.cwd()
@@ -1393,8 +1428,10 @@ def mcp_stdio() -> None:
 
 
 from sci_rag.cli.doctor import doctor as _doctor  # noqa: E402 - registered after app exists
+from sci_rag.cli.init import init as _init  # noqa: E402 - registered after app exists
 
 app.command("doctor")(_doctor)
+app.command("init")(_init)
 
 
 def main() -> None:
