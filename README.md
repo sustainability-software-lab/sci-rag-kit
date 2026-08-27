@@ -6,10 +6,8 @@ retrieval on PostgreSQL, grounded answer generation with citations, an
 evaluation harness, and serving over REST and MCP. Domain specialization
 (ontology, prompts, evaluation questions) is configuration, not code.
 
-Built and maintained by the Sustainability Software Lab at Lawrence Berkeley
-National Laboratory. It generalizes the retrieval methodology developed for
-the PISCES bioprocess platform; the design is documented decision by
-decision in [docs/methodology.md](docs/methodology.md).
+The design is documented decision by decision in
+[docs/methodology.md](docs/methodology.md).
 
 To start a project from it, use GitHub's **Use this template**, run the
 quickstart below against the bundled demo corpus, then replace the demo
@@ -165,14 +163,6 @@ deterministic offline embedder covers tests and credential-free runs.
 Docling is an optional extra (`uv sync --extra docling`) because of its
 install size; without it, PDF parsing falls back to pypdf at reduced table
 fidelity.
-
-## Lineage
-
-Developed at Lawrence Berkeley National Laboratory as part of a
-collaboration with the University of Washington Scientific Software
-Engineering Center (UW SSEC) under the Schmidt Sciences VISS program. The
-retrieval methodology originates in LBL's PISCES platform; this kit is an
-independent, domain-agnostic implementation of it.
 
 ## License
 

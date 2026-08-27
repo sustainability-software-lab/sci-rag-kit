@@ -6,6 +6,6 @@ In short: be welcoming, be respectful, assume good faith, and keep
 criticism about the work, never the person. Harassment, discrimination,
 and sustained disruption are not tolerated.
 
-To report a problem, open a private report to the maintainers through
-GitHub's "Report content" tooling or contact the Sustainability Software
-Lab maintainers directly. Reports are handled confidentially.
+To report a problem, open a private report through GitHub's "Report
+content" tooling or contact the maintainers directly. Reports are
+handled confidentially.
