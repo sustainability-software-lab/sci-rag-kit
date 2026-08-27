@@ -133,6 +133,7 @@ docs/              Methodology, tutorials, API reference, ADRs
 | `sci-rag db upgrade` | Create or upgrade the database schema |
 | `sci-rag ingest <folder>` / `--manifest file.jsonl` | Parse, chunk, embed, store |
 | `sci-rag corpus enrich --mailto you@example.org` | Add Crossref journal, citation-count, and retraction metadata (`--dry-run` first) |
+| `sci-rag campaign discover --topic ... \| --doi-file ...` | Build a deduplicated, resumable DOI list through OpenAlex or Crossref |
 | `sci-rag graph extract` | Extract entities and relationships from chunks |
 | `sci-rag graph communities` | Cluster the graph and write summaries |
 | `sci-rag retrieve "question"` | Ranked results with per-layer traces (filter with `--year-min/--year-max/--author/--journal/--exclude-doi/--license/--source`) |
@@ -156,6 +157,7 @@ claude mcp add my-corpus -- uv run --directory /path/to/your/repo sci-rag mcp
 |---|---|
 | [Quickstart](docs/quickstart.md) | Setup, first run, troubleshooting |
 | [Bring your own domain](docs/bring-your-own-domain.md) | Specialization tutorial |
+| [Corpus campaigns](docs/campaigns.md) | Polite, resumable discovery from topics or DOI seeds |
 | [Methodology](docs/methodology.md) | Design rationale for every component |
 | [Architecture](docs/architecture.md) | Code layout, data model, extension points |
 | [Evaluation guide](docs/evaluation.md) | Seed questions, ablations, the judge |

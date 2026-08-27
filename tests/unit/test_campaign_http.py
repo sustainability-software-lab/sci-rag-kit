@@ -63,3 +63,31 @@ async def test_polite_client_spaces_requests_at_the_configured_rate() -> None:
         await client.get_json("https://api.crossref.org/works/two")
 
     assert delays == [0.5]
+
+
+@pytest.mark.asyncio
+async def test_polite_client_retries_server_errors_then_raises() -> None:
+    requests = 0
+    delays: list[float] = []
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        nonlocal requests
+        requests += 1
+        return httpx.Response(500, json={"message": "temporary failure"})
+
+    async def sleep(delay: float) -> None:
+        delays.append(delay)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as transport:
+        client = PoliteHttpClient(
+            mailto="researcher@example.org",
+            client=transport,
+            sleep=sleep,
+            max_retries=2,
+            requests_per_second=None,
+        )
+        with pytest.raises(httpx.HTTPStatusError):
+            await client.get_json("https://api.openalex.org/works")
+
+    assert requests == 3
+    assert delays == [0.5, 1.0]
