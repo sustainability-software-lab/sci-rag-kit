@@ -332,6 +332,25 @@ async def _run_checks(*, probe: bool) -> list[Check]:
             else:
                 checks.append(Check("embedding versions", "ok", f"all rows on {current_version}"))
 
+        orphaned = (
+            await conn.scalar(
+                text(
+                    "SELECT count(*) FROM kg_entities "
+                    "WHERE chunk_ids = '{}' AND document_ids = '{}'"
+                )
+            )
+            or 0
+        )
+        if orphaned:
+            checks.append(
+                Check(
+                    "graph hygiene",
+                    "warn",
+                    f"{orphaned} entit(ies) with no evidence (left by deletions)",
+                    "uv run sci-rag graph gc --apply",
+                )
+            )
+
         entities = await conn.scalar(text("SELECT count(*) FROM kg_entities")) or 0
         communities = await conn.scalar(text("SELECT count(*) FROM kg_communities")) or 0
         if documents and not entities:
