@@ -954,9 +954,23 @@ def stats() -> None:
                     )
                 )
             ).all()
-        return counts, by_license, versions
+            confidence = {
+                "direct": await session.scalar(
+                    select(func.count(KgRelationship.id)).where(KgRelationship.confidence >= 0.85)
+                ),
+                "strong": await session.scalar(
+                    select(func.count(KgRelationship.id)).where(
+                        KgRelationship.confidence >= 0.55,
+                        KgRelationship.confidence < 0.85,
+                    )
+                ),
+                "inferred": await session.scalar(
+                    select(func.count(KgRelationship.id)).where(KgRelationship.confidence < 0.55)
+                ),
+            }
+        return counts, by_license, versions, confidence
 
-    counts, by_license, versions = run_async(run())
+    counts, by_license, versions, confidence = run_async(run())
     table = Table(title="Knowledge base")
     table.add_column("Thing")
     table.add_column("Count", justify="right")
@@ -967,6 +981,11 @@ def stats() -> None:
         console.print("Licenses: " + ", ".join(f"{lc}={n}" for lc, n in by_license))
     if versions:
         console.print("Embedding versions: " + ", ".join(f"{v}={n}" for v, n in versions))
+    if counts["relationships"]:
+        console.print(
+            "Relationship confidence: "
+            + ", ".join(f"{band}={count}" for band, count in confidence.items())
+        )
 
 
 @app.command()

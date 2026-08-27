@@ -141,7 +141,7 @@ docs/              Methodology, tutorials, API reference, ADRs
 | `sci-rag eval answers` | Generate and judge answers |
 | `sci-rag serve` | REST + MCP server |
 | `sci-rag mcp` | MCP over stdio (for local agents) |
-| `sci-rag stats` | Corpus contents summary |
+| `sci-rag stats` | Corpus contents and relationship-confidence summary |
 | `sci-rag doctor` | Check config, database, corpus, and credentials in one pass |
 
 Register the MCP server with a local agent:

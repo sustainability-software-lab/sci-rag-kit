@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
@@ -35,6 +35,7 @@ log = structlog.get_logger(__name__)
 
 _MAX_PASSAGE_CHARS = 4000
 _MAX_NAME_LEN = 200
+_MAX_ALIASES = 20
 
 
 @dataclass
@@ -43,6 +44,7 @@ class ExtractedEntity:
     entity_type: str
     description: str
     passages: list[int]
+    aliases: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -52,6 +54,7 @@ class ExtractedRelationship:
     relation_type: str
     evidence: str
     passage: int
+    confidence: float = 1.0
 
 
 @dataclass
@@ -93,10 +96,15 @@ def parse_extraction(
             entity_type=canonical_type,
             description=str(raw.get("description", "")).strip()[:500],
             passages=passages,
+            aliases=_parse_aliases(raw.get("aliases"), canonical_name=name),
         )
         key = name.lower()
         if key in seen_names:
             seen_names[key].passages = sorted(set(seen_names[key].passages) | set(passages))
+            seen_names[key].aliases = _parse_aliases(
+                [*seen_names[key].aliases, *entity.aliases],
+                canonical_name=seen_names[key].name,
+            )
         else:
             seen_names[key] = entity
             entities.append(entity)
@@ -123,9 +131,36 @@ def parse_extraction(
                 relation_type=canonical_type,
                 evidence=str(raw.get("evidence", "")).strip()[:1000],
                 passage=passage if isinstance(passage, int) and 1 <= passage <= batch_size else 1,
+                confidence=_parse_confidence(raw.get("confidence")),
             )
         )
     return entities, relationships
+
+
+def _parse_aliases(value: Any, *, canonical_name: str) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    aliases: list[str] = []
+    seen = {canonical_name.casefold()}
+    for raw_alias in value:
+        if not isinstance(raw_alias, str):
+            continue
+        alias = " ".join(raw_alias.split())
+        key = alias.casefold()
+        if not alias or len(alias) > _MAX_NAME_LEN or key in seen:
+            continue
+        seen.add(key)
+        aliases.append(alias)
+        if len(aliases) == _MAX_ALIASES:
+            break
+    return aliases
+
+
+def _parse_confidence(value: Any) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return 1.0
+    confidence = float(value)
+    return confidence if 0.0 <= confidence <= 1.0 else 1.0
 
 
 async def extract_graph(
@@ -270,6 +305,7 @@ async def _upsert_entities(
                 name=entity.name,
                 entity_type=entity.entity_type,
                 description=entity.description or None,
+                aliases=entity.aliases,
                 chunk_ids=list(dict.fromkeys(chunk_ids)),
                 document_ids=list(dict.fromkeys(document_ids)),
             )
@@ -285,6 +321,12 @@ async def _upsert_entities(
             )
             row.chunk_ids = merged_chunks
             row.document_ids = merged_documents
+            merged_aliases = _parse_aliases(
+                [*(row.aliases or []), *entity.aliases], canonical_name=row.name
+            )
+            if merged_aliases != (row.aliases or []):
+                row.aliases = merged_aliases
+                changed = True
             if not row.description and entity.description:
                 row.description = entity.description
                 changed = True
@@ -307,31 +349,37 @@ async def _insert_relationships(
     involved = {entity_ids[r.source.lower()] for r in relationships} | {
         entity_ids[r.target.lower()] for r in relationships
     }
-    existing_rows = await session.execute(
-        select(
-            KgRelationship.source_entity_id,
-            KgRelationship.target_entity_id,
-            KgRelationship.relation_type,
-        ).where(KgRelationship.source_entity_id.in_(involved))
+    existing_rows = (
+        (
+            await session.execute(
+                select(KgRelationship).where(KgRelationship.source_entity_id.in_(involved))
+            )
+        )
+        .scalars()
+        .all()
     )
-    existing_triples: set[tuple[str, str, str]] = {
-        (source, target, relation) for source, target, relation in existing_rows
+    existing_triples: dict[tuple[str, str, str], KgRelationship] = {
+        (row.source_entity_id, row.target_entity_id, row.relation_type): row
+        for row in existing_rows
     }
     for relationship in relationships:
         source_id = entity_ids[relationship.source.lower()]
         target_id = entity_ids[relationship.target.lower()]
         triple = (source_id, target_id, relationship.relation_type)
-        if triple in existing_triples:
+        existing = existing_triples.get(triple)
+        if existing is not None:
+            if relationship.confidence > existing.confidence:
+                existing.confidence = relationship.confidence
             continue
-        existing_triples.add(triple)
-        session.add(
-            KgRelationship(
-                source_entity_id=source_id,
-                target_entity_id=target_id,
-                relation_type=relationship.relation_type,
-                evidence=relationship.evidence or None,
-                document_id=document_id_by_passage.get(relationship.passage),
-                chunk_id=chunk_id_by_passage.get(relationship.passage),
-            )
+        row = KgRelationship(
+            source_entity_id=source_id,
+            target_entity_id=target_id,
+            relation_type=relationship.relation_type,
+            evidence=relationship.evidence or None,
+            confidence=relationship.confidence,
+            document_id=document_id_by_passage.get(relationship.passage),
+            chunk_id=chunk_id_by_passage.get(relationship.passage),
         )
+        existing_triples[triple] = row
+        session.add(row)
         stats.relationships_created += 1
