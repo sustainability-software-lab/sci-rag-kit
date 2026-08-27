@@ -24,17 +24,33 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Which managers this run covers. Everything except a pull request gets all
+  # four. A pull request gets uv only, unless it touches the code that decides
+  # what a generated project looks like, in which case it gets all four too:
+  # those are exactly the changes a uv-only leg cannot catch.
   select:
     runs-on: ubuntu-latest
     outputs:
       managers: ${{ steps.pick.outputs.managers }}
     steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - id: pick
+        env:
+          BASE: ${{ github.event.pull_request.base.ref }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo 'managers=["uv"]' >> "$GITHUB_OUTPUT"
+          ALL='["uv","pixi","conda","venv+pip"]'
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "managers=$ALL" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          CHANGED=$(git diff --name-only "origin/$BASE...HEAD")
+          echo "$CHANGED"
+          if echo "$CHANGED" | grep -qE '^(src/sci_rag/scaffold/|\.github/workflows/generated-projects\.yml|Dockerfile|\.devcontainer/|Makefile)'; then
+            echo "the diff changes what a generated project looks like; running all four"
+            echo "managers=$ALL" >> "$GITHUB_OUTPUT"
           else
-            echo 'managers=["uv","pixi","conda","venv+pip"]' >> "$GITHUB_OUTPUT"
+            echo 'managers=["uv"]' >> "$GITHUB_OUTPUT"
           fi
 
   generate:
