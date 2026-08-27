@@ -418,6 +418,9 @@ def eval_retrieval(
     ablation: bool = typer.Option(
         False, "--ablation", help="Run every layer-ablation config, not just full_deep."
     ),
+    snapshot: str | None = typer.Option(
+        None, "--snapshot", help="Record this corpus snapshot name in the report."
+    ),
 ) -> None:
     """Score retrieval against your seed questions (and per-layer ablations)."""
     from sci_rag.db import get_session_factory
@@ -443,7 +446,7 @@ def eval_retrieval(
     _print_retrieval_results(results)
     json_path, md_path = write_report(
         kind="retrieval-ablation" if ablation else "retrieval",
-        payload=retrieval_payload(results, fingerprint),
+        payload=retrieval_payload(results, fingerprint, snapshot=snapshot),
         markdown=retrieval_markdown(results, fingerprint),
     )
     console.print(f"Report written to [bold]{md_path}[/bold] (and {json_path.name}).")
@@ -456,6 +459,9 @@ def eval_answers(
     limit: int = typer.Option(8, help="Sources per answer."),
     judge_model: str | None = typer.Option(
         None, help="Judge model id (defaults to the answer model)."
+    ),
+    snapshot: str | None = typer.Option(
+        None, "--snapshot", help="Record this corpus snapshot name in the report."
     ),
 ) -> None:
     """Generate answers for every seed question and grade them with the blind judge."""
@@ -493,7 +499,7 @@ def eval_answers(
     console.print(table)
     json_path, md_path = write_report(
         kind="answers",
-        payload=answers_payload(records, fingerprint),
+        payload=answers_payload(records, fingerprint, snapshot=snapshot),
         markdown=answers_markdown(records, fingerprint),
     )
     console.print(f"Report written to [bold]{md_path}[/bold] (and {json_path.name}).")
@@ -692,6 +698,32 @@ def corpus_delete(
             "Rebuild community coverage with [bold]sci-rag graph communities[/bold]; "
             "sweep evidence-less entities with [bold]sci-rag graph gc --apply[/bold]."
         )
+
+
+@corpus_app.command("snapshot")
+def corpus_snapshot(
+    name: str | None = typer.Argument(None, help="Snapshot name (default: UTC timestamp)."),
+) -> None:
+    """Write a named corpus fingerprint manifest under data/snapshots/.
+
+    Records counts, per-document content hashes, embedding versions, the
+    git commit, and a single corpus digest. Reference it from eval runs
+    with --snapshot NAME so reported numbers stay tied to exactly the
+    corpus that produced them.
+    """
+    from sci_rag.db import get_session_factory
+    from sci_rag.snapshot import write_snapshot
+
+    async def run():  # type: ignore[no-untyped-def]
+        await _check_db()
+        return await write_snapshot(get_session_factory(), name=name)
+
+    try:
+        info = run_async(run())
+    except FileExistsError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    console.print(f"[green]Snapshot [bold]{info.name}[/bold] written to {info.path}.[/green]")
 
 
 @graph_app.command("gc")
