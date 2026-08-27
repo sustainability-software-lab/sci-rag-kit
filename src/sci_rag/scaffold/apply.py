@@ -184,13 +184,20 @@ def apply_env_file(answers: ProjectAnswers, root: Path) -> list[str]:
     }
 
     lines: list[str] = []
+    substituted: set[str] = set()
     for line in (root / ".env.example").read_text(encoding="utf-8").splitlines():
         match = _ENV_LINE.match(line)
-        if match and match.group("key") in overrides:
-            value, enabled = overrides[match.group("key")]
+        key = match.group("key") if match else None
+        if key in overrides and key not in substituted:
+            value, enabled = overrides[key]
             prefix = "" if enabled else "# "
-            lines.append(f"{prefix}{match.group('key')}={value}")
+            lines.append(f"{prefix}{key}={value}")
+            substituted.add(key)
         else:
+            # Only the first assignment of a key is the setting; later ones are
+            # illustrative, like the commented "provider:model" examples. They
+            # must survive verbatim -- rewriting them with the chosen value
+            # turns worked examples into confidently wrong advice.
             lines.append(line)
 
     if answers.contact_email:

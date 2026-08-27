@@ -10,10 +10,14 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import typer
 from rich.console import Console
 from rich.table import Table
+
+if TYPE_CHECKING:
+    from sci_rag.config import Settings
 
 console = Console()
 
@@ -64,6 +68,81 @@ def doctor(
     console.print("[green]All checks passed.[/green]")
 
 
+def _llm_credential_checks(settings: Settings) -> list[Check]:
+    """One check per generation provider actually in use.
+
+    Each provider carries its own credentials, so a deployment can embed with
+    an AI Studio key while generating through Claude on Vertex. Checking the
+    union of configured roles keeps the report honest about what will fail.
+    """
+    roles: dict[str, list[str]] = {}
+    for role in ("answer", "extraction", "judge"):
+        spec = settings.model_spec_for(role)
+        roles.setdefault(spec.provider, []).append(role)
+
+    checks: list[Check] = []
+    for provider, used_by in roles.items():
+        label = f"llm credentials ({provider})"
+        where = ", ".join(used_by)
+        if provider == "google":
+            if settings.credentials_mode() == "none":
+                checks.append(
+                    Check(
+                        label,
+                        "fail",
+                        f"Used for {where}, but no Google credentials are set.",
+                        "Set SCI_RAG_GOOGLE_API_KEY or SCI_RAG_GCP_PROJECT in .env.",
+                    )
+                )
+            else:
+                checks.append(Check(label, "ok", f"{where} via {settings.credentials_mode()}"))
+        elif provider == "anthropic":
+            if settings.anthropic_api_key:
+                checks.append(Check(label, "ok", f"{where} via SCI_RAG_ANTHROPIC_API_KEY"))
+            elif settings.gcp_project:
+                checks.append(
+                    Check(label, "ok", f"{where} via Vertex AI ({settings.gcp_location})")
+                )
+            else:
+                checks.append(
+                    Check(
+                        label,
+                        "fail",
+                        f"Used for {where}, but neither Vertex nor an Anthropic key is set.",
+                        "Set SCI_RAG_GCP_PROJECT to use Claude as a Vertex partner model, "
+                        "or SCI_RAG_ANTHROPIC_API_KEY for the direct API.",
+                    )
+                )
+        else:  # openai-compatible
+            if settings.openai_base_url and not settings.openai_api_key:
+                checks.append(
+                    Check(
+                        label,
+                        "fail",
+                        f"Used for {where}: SCI_RAG_OPENAI_BASE_URL is set without a key.",
+                        "Set SCI_RAG_OPENAI_API_KEY, or unset the base URL to use Vertex AI.",
+                    )
+                )
+            elif settings.openai_api_key:
+                target = settings.openai_base_url or "the OpenAI API"
+                checks.append(Check(label, "ok", f"{where} via {target}"))
+            elif settings.gcp_project:
+                checks.append(
+                    Check(label, "ok", f"{where} via Vertex Model Garden ({settings.gcp_location})")
+                )
+            else:
+                checks.append(
+                    Check(
+                        label,
+                        "fail",
+                        f"Used for {where}, but no endpoint is configured.",
+                        "Set SCI_RAG_GCP_PROJECT for Vertex Model Garden partner models, "
+                        "or SCI_RAG_OPENAI_API_KEY (with an optional SCI_RAG_OPENAI_BASE_URL).",
+                    )
+                )
+    return checks
+
+
 async def _run_checks(*, probe: bool) -> list[Check]:
     from sci_rag.config import get_settings
 
@@ -77,7 +156,10 @@ async def _run_checks(*, probe: bool) -> list[Check]:
             "config",
             "ok",
             f"embedding={settings.embedding_provider}:{settings.embedding_model}@{settings.embedding_dim}, "
-            f"llm={settings.llm_model}, credentials={mode}",
+            f"llm={settings.model_spec_for('answer')}, "
+            f"extraction={settings.model_spec_for('extraction')}, "
+            f"judge={settings.model_spec_for('judge')}, "
+            f"google_credentials={mode}",
         )
     )
     if settings.embedding_provider == "google" and mode == "none":
@@ -95,12 +177,14 @@ async def _run_checks(*, probe: bool) -> list[Check]:
             Check(
                 "credentials",
                 "warn",
-                "No Google credentials: retrieval works, generation and graph build will not.",
+                "No Google credentials: retrieval works, embedding new documents will not.",
                 "Set SCI_RAG_GOOGLE_API_KEY (or SCI_RAG_GCP_PROJECT) in .env.",
             )
         )
     else:
         checks.append(Check("credentials", "ok", f"mode={mode}"))
+
+    checks.extend(_llm_credential_checks(settings))
 
     # --- domain profile -------------------------------------------------
     try:
@@ -465,13 +549,15 @@ async def _live_probe(settings) -> list[Check]:  # type: ignore[no-untyped-def]
 
         llm = get_llm(settings)
         start = time.monotonic()
-        reply = await llm.generate("Reply with the single word: ready", max_tokens=10)
+        # Budget generously: reasoning models spend output tokens on thought
+        # before writing anything, so a tight cap makes a healthy provider
+        # look like it returned nothing.
+        reply = await llm.generate("Reply with the single word: ready", max_tokens=2048)
         checks.append(
             Check(
                 "generation probe",
                 "ok" if reply.strip() else "warn",
-                f"{getattr(llm, 'model', settings.llm_model)}, "
-                f"{int((time.monotonic() - start) * 1000)} ms",
+                f"{llm.describe()}, {int((time.monotonic() - start) * 1000)} ms",
             )
         )
     except Exception as exc:

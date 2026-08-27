@@ -14,6 +14,7 @@ import pytest
 
 import sci_rag.embed.google as embed_google
 import sci_rag.llm.client as llm_client
+import sci_rag.llm.google as llm_google
 from sci_rag.config import Settings
 from sci_rag.embed import EmbeddingDimensionError
 from sci_rag.embed.google import GoogleEmbedder, make_genai_client
@@ -125,7 +126,7 @@ class StubGenerateClient:
 
 def _llm_with(monkeypatch, client):  # type: ignore[no-untyped-def]
     monkeypatch.setattr(embed_google, "make_genai_client", lambda *a, **k: client)
-    return llm_client.GoogleLLM(_settings())
+    return llm_google.GoogleLLM(_settings())
 
 
 async def test_json_mode_disables_thinking(monkeypatch) -> None:  # type: ignore[no-untyped-def]
