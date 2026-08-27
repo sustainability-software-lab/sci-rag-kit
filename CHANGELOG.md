@@ -60,6 +60,10 @@ Notable changes to sci-rag-kit. The format follows
   globally, so the previous URL made it unreachable.
 - The OpenAI-compatible adapter closes its response stream, returning the
   connection to the pool when a consumer stops early.
+- `sci-rag init` no longer rewrites the commented examples in `.env.example`
+  with the answers it collected. Only the first assignment of a key is the
+  setting; substituting the later illustrative ones turned worked examples
+  into confidently wrong advice and emitted the same key several times.
 
 
 ## [0.2.0] - 2026-08-27

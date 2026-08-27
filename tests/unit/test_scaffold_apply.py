@@ -134,6 +134,19 @@ def test_env_keeps_the_guided_comments_from_the_example(template: Path) -> None:
     assert "# --- Embeddings" in env
 
 
+def test_env_leaves_illustrative_examples_alone(template: Path) -> None:
+    # .env.example documents the provider settings with commented
+    # "provider:model" examples. Only the first assignment of a key is the
+    # setting; rewriting the later ones with the chosen value would turn a
+    # worked example into confidently wrong advice.
+    apply.apply_env_file(_answers(llm_model="gemini-2.5-flash"), template)
+    env = (template / ".env").read_text(encoding="utf-8")
+
+    assignments = [line for line in env.splitlines() if line.startswith("SCI_RAG_LLM_MODEL=")]
+    assert assignments == ["SCI_RAG_LLM_MODEL=gemini-2.5-flash"]
+    assert "#   SCI_RAG_LLM_MODEL=anthropic:claude-haiku-4-5" in env
+
+
 def test_env_for_an_ai_studio_key_enables_only_that_option(template: Path) -> None:
     apply.apply_env_file(_answers(credentials="google_ai_studio"), template)
     env = (template / ".env").read_text(encoding="utf-8")
