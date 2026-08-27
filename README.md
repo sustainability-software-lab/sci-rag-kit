@@ -159,9 +159,13 @@ claude mcp add my-corpus -- uv run --directory /path/to/your/repo sci-rag mcp
 | [Architecture](docs/architecture.md) | Code layout, data model, extension points |
 | [Evaluation guide](docs/evaluation.md) | Seed questions, ablations, the judge |
 | [Benchmarks](docs/benchmarks.md) | Measured demo-corpus results, reproducible via make benchmark |
+| [Choosing sci-rag-kit](docs/choosing-sci-rag-kit.md) | Honest comparison vs GraphRAG, LightRAG, PaperQA2, LlamaIndex |
+| [Roadmap](docs/ROADMAP.md) | Waves 2-3, collaboration seams, launch-gated decisions |
 | [API reference](docs/api.md) | REST endpoints, MCP tools, auth, error codes |
 | [Deploying on Google Cloud](docs/deploy-gcp.md) | Cloud SQL + Cloud Run via Terraform |
 | [Decision records](docs/adr/) | Postgres-native graph, embedding dimensions, Docling, template format |
+| [Versioning](docs/VERSIONING.md) + [Governance](docs/GOVERNANCE.md) | What 0.x promises; how decisions get made |
+| [Adopters](ADOPTERS.md) | Who runs a knowledge base built from the kit |
 
 ## Defaults and requirements
 

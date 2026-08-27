@@ -1,0 +1,131 @@
+# Roadmap
+
+Where sci-rag-kit is going, in the order the evidence supports. Wave 1
+(v0.2 "Credibility") is shipped; waves 2 and 3 are committed directions
+whose details get their own planning pass before implementation, and
+every retrieval-affecting item lands the same way: behind an ablation
+config, with before/after evidence on a benchmark page, or not at all.
+
+Dates are deliberately absent. The kit is developed in the open; the
+milestones on the issue tracker are the source of truth for sequencing,
+and this page is the source of truth for intent.
+
+## Shipped: v0.2 "Credibility"
+
+The release that closed the gap between what the methodology document
+promised and what the code did:
+
+- Post-fusion reranker (LLM adapter by default, local cross-encoder
+  behind the `rerank` extra), off until the ablation justifies it
+- Bootstrap 95% confidence intervals, small-sample warnings, and paired
+  significance tests across the eval harness
+- `sci-rag eval diff`: per-question rank moves and paired metric deltas
+  between any two runs
+- `sci-rag eval calibrate`: Cohen's kappa between human labels and the
+  judge, with a seeded (non-expert) demo label set
+- `sci-rag embed reindex`: act on embedding version stamps
+- `sci-rag corpus delete` + `sci-rag graph gc`: full-lifecycle corpora,
+  with a regression test proving deleted content unreachable through
+  every retrieval layer
+- `sci-rag corpus snapshot` + a backup/restore runbook
+- Adaptive routing (`--profile auto`) with `--explain-routing`
+- [docs/benchmarks.md](benchmarks.md): measured numbers, reproducible
+  with `make benchmark`
+
+## Wave 2: v0.3 "Campaigns" (the scientific differentiators)
+
+The release that makes the kit specifically better for SCIENCE than a
+general-purpose RAG framework:
+
+- **Campaign corpus builder.** `sci-rag campaign build --topic|--doi-file`:
+  OpenAlex/Crossref discovery, Unpaywall open-access resolution, legal
+  PDF downloads, and a corpus manifest whose license classes derive from
+  OA status, failing closed to `unknown`. Rate-limited, resumable,
+  dry-run first.
+- **Retraction awareness and metadata enrichment.** Crossref (including
+  Retraction Watch data) enrichment into document metadata; retrieval
+  scope gains `exclude_retracted`, default ON for answering; `doctor`
+  warns when retracted documents are present.
+- **Citation-graph edges.** References become first-class `CITES`
+  relationships between corpus documents (Crossref metadata first,
+  GROBID/Docling reference parsing as fallback); citation traversal
+  joins the graph stage; MCP gains `get_citations`.
+- **Metadata filters.** Year range, author, journal, DOI excludes,
+  enforced inside every layer's SQL like every other scope dimension.
+- **Entity resolution.** Extraction emits aliases;
+  `sci-rag graph resolve-entities` merges by alias/fuzzy/LLM
+  adjudication with an audit log; the ablation decides whether it stays.
+- **Confidence-weighted traversal.** Calibrated extraction confidence,
+  used by the graph stage; ablation-gated like everything else.
+- **Contextual snippet compression** (the PaperQA2 pattern):
+  per-chunk relevance-scored summarization before answer assembly,
+  landing only if judged answer quality holds while tokens drop.
+- **PRISMA-style screening** (stretch): LLM inclusion/exclusion on
+  abstracts with a human-review queue and PRISMA-aligned counts.
+
+## Wave 3: v0.4+ "Scale and intelligence"
+
+Proven patterns from the wider GraphRAG landscape, adopted once the kit
+has users whose corpora need them:
+
+- Lazy, cached community summaries with graph-change invalidation
+- Per-document extraction caching for cheap update/delete
+- Bi-temporal edge validity with `as_of` scoping
+- Multi-corpus deployments (schema-per-corpus) behind corpus routing,
+  feeding the federation seam
+- Prometheus/OpenTelemetry observability and `/metrics`
+- HTML/LaTeX/DOCX parsers; Docling OCR exposure
+- Hierarchical communities (the `level` column earns its keep)
+- A visual-retrieval seam (image chunks + vision embeddings), last,
+  behind an extra
+
+Deliberately out of scope, with reasons recorded in
+[docs/methodology.md](methodology.md) and the planning docs: a Neo4j or
+dedicated graph-database migration, RAPTOR, agentic retrieval loops on
+every query, index-time contextual embedding, and learned fusion.
+
+## Collaboration seams
+
+The kit is built to be extended at named seams rather than forked. Two
+collaborations define the near-term ones:
+
+**UW SSEC** (University of Washington Scientific Software Engineering
+Center). Three workstreams plug into seams that exist today, on their
+timeline, not ours:
+
+- An **evaluation platform** consuming the eval harness's JSON reports
+  (`eval_results/*/report.json`, `calibration.json`), which are stable,
+  versioned artifacts precisely so external tooling can build on them
+- **OAuth** on the `AuthBackend` seam in `src/sci_rag/server/auth.py`
+  (static API keys are the shipped default; the seam exists for an
+  institutional identity provider)
+- **Federation** on the corpus-manifest endpoint
+  (`/v1/corpus-manifest`), the machine-readable descriptor a multi-RAG
+  router reads to decide which knowledge base fits a query
+
+**BioCirV** (LBL) is the flagship domain deployment: an agricultural
+residues and bioeconomy corpus built with the kit. It supplies the
+things a template cannot generate for itself: a real corpus at real
+scale, domain-expert calibration labels to supersede the shipped
+non-expert seed set, and the first public case study.
+
+## Launch-gated decisions (owner: maintainer, not automation)
+
+Recorded here so they are visible, and deliberately NOT executed by
+tooling; each is a judgment call with public-facing consequences:
+
+- Restoring `CITATION.cff` and attribution wording
+- Minting a Zenodo DOI on the next tagged release
+- JOSS (Journal of Open Source Software) submission
+- PyPI publication
+- A hosted demo (for example Hugging Face Spaces)
+- Flipping the repository public
+
+## How to influence this roadmap
+
+Open a Discussion for direction-level proposals (see
+[GOVERNANCE.md](GOVERNANCE.md)), or pick up a
+[good first issue](https://github.com/sustainability-software-lab/sci-rag-kit/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+Success for this project is measured behaviorally: external
+contributions merged, adopters listed in [ADOPTERS.md](../ADOPTERS.md),
+and citations of the methodology, not stars.
