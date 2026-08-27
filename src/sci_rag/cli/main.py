@@ -43,6 +43,11 @@ embed_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(embed_app, name="embed")
+corpus_app = typer.Typer(
+    help="Corpus lifecycle: delete documents cleanly, snapshot what you have.",
+    no_args_is_help=True,
+)
+app.add_typer(corpus_app, name="corpus")
 
 console = Console()
 
@@ -642,6 +647,87 @@ def embed_reindex(
             f"[green]Re-embedded {outcome.chunks_reembedded} chunk(s) and "
             f"{outcome.communities_reembedded} community summar(ies) "
             f"in {outcome.batches} batch(es).[/green]"
+        )
+
+
+@corpus_app.command("delete")
+def corpus_delete(
+    document_ids: list[str] = typer.Argument(..., help="Document id(s) to delete."),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip the confirmation prompt."),
+) -> None:
+    """Delete documents and every graph trace of their evidence.
+
+    Chunks cascade, entity evidence arrays are scrubbed, relationships
+    evidenced by the documents go, and communities that aggregated that
+    evidence are dropped (rebuild them with `sci-rag graph communities`).
+    Run `sci-rag graph gc` afterwards to sweep entities left with no
+    evidence at all.
+    """
+    from sci_rag.corpus import delete_documents
+    from sci_rag.db import get_session_factory
+
+    if not yes:
+        typer.confirm(
+            f"Delete {len(document_ids)} document(s) and scrub their graph evidence?",
+            abort=True,
+        )
+
+    async def run():  # type: ignore[no-untyped-def]
+        await _check_db()
+        return await delete_documents(get_session_factory(), document_ids)
+
+    outcome = run_async(run())
+    if outcome.documents_deleted == 0:
+        console.print("[yellow]No matching documents found; nothing deleted.[/yellow]")
+        raise typer.Exit(1)
+    console.print(
+        f"[green]Deleted {outcome.documents_deleted} document(s)[/green]: "
+        f"{outcome.chunks_deleted} chunk(s) cascaded, "
+        f"{outcome.entities_scrubbed} entit(ies) scrubbed, "
+        f"{outcome.relationships_deleted} relationship(s) removed, "
+        f"{outcome.communities_deleted} communit(ies) dropped."
+    )
+    if outcome.communities_deleted:
+        console.print(
+            "Rebuild community coverage with [bold]sci-rag graph communities[/bold]; "
+            "sweep evidence-less entities with [bold]sci-rag graph gc --apply[/bold]."
+        )
+
+
+@graph_app.command("gc")
+def graph_gc_command(
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--apply",
+        help="--dry-run (default) reports what would go; --apply removes it.",
+    ),
+) -> None:
+    """Garbage-collect the graph: evidence-less entities, dangling
+    relationships, communities whose members no longer resolve."""
+    from sci_rag.corpus import graph_gc
+    from sci_rag.db import get_session_factory
+
+    async def run():  # type: ignore[no-untyped-def]
+        await _check_db()
+        return await graph_gc(get_session_factory(), dry_run=dry_run)
+
+    outcome = run_async(run())
+    table = Table(title="Graph GC" + (" (dry run)" if dry_run else ""))
+    table.add_column("What")
+    table.add_column("Count", justify="right")
+    table.add_row("evidence-less entities", str(outcome.entities_deleted))
+    table.add_row("dangling relationships", str(outcome.relationships_deleted))
+    table.add_row("communities dropped", str(outcome.communities_deleted))
+    table.add_row("communities pruned", str(outcome.communities_pruned))
+    console.print(table)
+    if outcome.clean:
+        console.print("[green]Graph is clean; nothing to collect.[/green]")
+    elif dry_run:
+        console.print("Dry run: nothing removed. Re-run with [bold]--apply[/bold].")
+    else:
+        console.print(
+            "[green]Swept.[/green] Rebuild community coverage with "
+            "[bold]sci-rag graph communities[/bold] if communities were dropped."
         )
 
 
