@@ -298,6 +298,40 @@ async def _run_checks(*, probe: bool) -> list[Check]:
         else:
             checks.append(Check("corpus", "ok", f"{documents} documents, {chunks} chunks"))
 
+        if chunks:
+            from sci_rag.embed import get_embedder
+
+            current_version = get_embedder(settings).version
+            stale_chunks = (
+                await conn.scalar(
+                    text(
+                        "SELECT count(*) FROM chunks WHERE embedding_version IS DISTINCT FROM :v"
+                    ).bindparams(v=current_version)
+                )
+                or 0
+            )
+            stale_communities = (
+                await conn.scalar(
+                    text(
+                        "SELECT count(*) FROM kg_communities WHERE summary IS NOT NULL "
+                        "AND summary_embedding_version IS DISTINCT FROM :v"
+                    ).bindparams(v=current_version)
+                )
+                or 0
+            )
+            if stale_chunks or stale_communities:
+                checks.append(
+                    Check(
+                        "embedding versions",
+                        "warn",
+                        f"{stale_chunks} chunk(s) and {stale_communities} community "
+                        f"summar(ies) not on {current_version}",
+                        "uv run sci-rag embed reindex --apply",
+                    )
+                )
+            else:
+                checks.append(Check("embedding versions", "ok", f"all rows on {current_version}"))
+
         entities = await conn.scalar(text("SELECT count(*) FROM kg_entities")) or 0
         communities = await conn.scalar(text("SELECT count(*) FROM kg_communities")) or 0
         if documents and not entities:

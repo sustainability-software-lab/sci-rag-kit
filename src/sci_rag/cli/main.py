@@ -38,6 +38,11 @@ eval_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(eval_app, name="eval")
+embed_app = typer.Typer(
+    help="Embedding maintenance: find and re-embed rows left behind by a model upgrade.",
+    no_args_is_help=True,
+)
+app.add_typer(embed_app, name="embed")
 
 console = Console()
 
@@ -578,6 +583,66 @@ def eval_calibrate(
     console.print(f"Calibration data written to [bold]{calibration_json}[/bold].")
     if output is not None:
         output.write_text(markdown, encoding="utf-8")
+
+
+@embed_app.command("reindex")
+def embed_reindex(
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--apply",
+        help="--dry-run (default) reports what is stale; --apply re-embeds it.",
+    ),
+    batch_size: int = typer.Option(32, help="Rows re-embedded per batch (one commit per batch)."),
+) -> None:
+    """Re-embed chunks and community summaries stamped with a retired embedder version.
+
+    A dimension change is refused outright: that is a schema migration
+    plus a full re-ingest, never a reindex.
+    """
+    from sci_rag.config import get_settings
+    from sci_rag.db import get_session_factory
+    from sci_rag.embed import get_embedder
+    from sci_rag.embed.planner import ReindexRefused, apply_reindex, plan_reindex
+
+    embedder = get_embedder(get_settings())
+
+    async def run():  # type: ignore[no-untyped-def]
+        await _check_db()
+        factory = get_session_factory()
+        plan = await plan_reindex(factory, embedder)
+        outcome = None
+        if not dry_run and not plan.clean:
+            outcome = await apply_reindex(
+                factory, embedder, batch_size=batch_size, progress=console.print
+            )
+        return plan, outcome
+
+    try:
+        plan, outcome = run_async(run())
+    except ReindexRefused as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+
+    table = Table(title=f"Re-embed plan (current embedder: {plan.embedder_version})")
+    table.add_column("What")
+    table.add_column("Count", justify="right")
+    table.add_row("chunks total", str(plan.total_chunks))
+    table.add_row("chunks stale", str(plan.stale_chunks))
+    for version, count in sorted(plan.chunk_versions.items(), key=lambda kv: str(kv[0])):
+        table.add_row(f"  from {version or 'unstamped'}", str(count))
+    table.add_row("community summaries stale", str(plan.stale_communities))
+    console.print(table)
+
+    if plan.clean:
+        console.print("[green]Everything is already on the current embedding version.[/green]")
+    elif dry_run:
+        console.print("Dry run: nothing written. Re-run with [bold]--apply[/bold] to re-embed.")
+    elif outcome is not None:
+        console.print(
+            f"[green]Re-embedded {outcome.chunks_reembedded} chunk(s) and "
+            f"{outcome.communities_reembedded} community summar(ies) "
+            f"in {outcome.batches} batch(es).[/green]"
+        )
 
 
 @app.command()

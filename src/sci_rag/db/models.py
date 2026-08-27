@@ -206,6 +206,9 @@ class KgCommunity(Base):
     member_entity_ids: Mapped[list[str]] = mapped_column(ARRAY(String(32)), default=list)
     summary: Mapped[str | None] = mapped_column(Text)
     summary_embedding: Mapped[list[float] | None] = mapped_column(Vector(EMBEDDING_DIM))
+    # Stamped like Chunk.embedding_version; NULL (from builds predating the
+    # stamp) reads as stale, so `sci-rag embed reindex` picks it up.
+    summary_embedding_version: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (Index("ix_kg_communities_level", "level"),)
