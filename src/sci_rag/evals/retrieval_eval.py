@@ -116,6 +116,11 @@ DEFAULT_ABLATIONS: list[AblationConfig] = [
         "Deep with the reranker explicitly off (paired control for with_rerank)",
         {"profile": "deep", "include_rerank": False},
     ),
+    AblationConfig(
+        "auto_routed",
+        "Adaptive routing picks the profile and layers per query",
+        {"profile": "auto"},
+    ),
 ]
 
 

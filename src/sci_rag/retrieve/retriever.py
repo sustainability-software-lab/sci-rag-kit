@@ -38,6 +38,7 @@ from sci_rag.embed import EmbeddingProvider, QueryEmbeddingCache, get_embedder
 from sci_rag.llm import LLMClient, get_llm
 from sci_rag.retrieve.fusion import rrf_fuse
 from sci_rag.retrieve.rerank import Reranker, build_reranker
+from sci_rag.retrieve.router import route
 from sci_rag.retrieve.stages import (
     community_stage,
     graph_stage,
@@ -108,6 +109,32 @@ class Retriever:
                 items=[],
                 traces=[StageTrace(stage="scope", status="denied")],
                 profile=profile,
+            )
+
+        router_trace: StageTrace | None = None
+        if profile == "auto":
+            # Resolve the plan up front; explicit include_* flags still win
+            # below because the router only fills the ones left as None.
+            start = time.monotonic()
+            decision = await route(query, self.domain)
+            router_trace = StageTrace(
+                stage="router",
+                status="success",
+                duration_ms=int((time.monotonic() - start) * 1000),
+            )
+            profile = decision.profile
+            include_graph = include_graph if include_graph is not None else decision.include_graph
+            include_community = (
+                include_community if include_community is not None else decision.include_community
+            )
+            include_hyde = include_hyde if include_hyde is not None else decision.include_hyde
+            log.info(
+                "router_decision",
+                profile=profile,
+                graph=include_graph,
+                community=include_community,
+                hyde=include_hyde,
+                ambiguous=decision.ambiguous,
             )
 
         deep = profile == "deep"
@@ -199,6 +226,8 @@ class Retriever:
             embedding_task.cancel()
 
         traces: list[StageTrace] = []
+        if router_trace is not None:
+            traces.append(router_trace)
         layer_results: dict[str, list[Key]] = {}
         finished_by_name = {name: (keys, trace) for name, keys, trace in finished}
         for name, factory in plan:
