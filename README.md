@@ -158,6 +158,7 @@ claude mcp add my-corpus -- uv run --directory /path/to/your/repo sci-rag mcp
 | [Methodology](docs/methodology.md) | Design rationale for every component |
 | [Architecture](docs/architecture.md) | Code layout, data model, extension points |
 | [Evaluation guide](docs/evaluation.md) | Seed questions, ablations, the judge |
+| [Benchmarks](docs/benchmarks.md) | Measured demo-corpus results, reproducible via make benchmark |
 | [API reference](docs/api.md) | REST endpoints, MCP tools, auth, error codes |
 | [Deploying on Google Cloud](docs/deploy-gcp.md) | Cloud SQL + Cloud Run via Terraform |
 | [Decision records](docs/adr/) | Postgres-native graph, embedding dimensions, Docling, template format |
