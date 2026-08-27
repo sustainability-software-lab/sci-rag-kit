@@ -147,6 +147,35 @@ class Chunk(Base):
     )
 
 
+class DocumentCitation(Base):
+    """One normalized Crossref reference, optionally resolved inside the corpus."""
+
+    __tablename__ = "document_citations"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    citing_document_id: Mapped[str] = mapped_column(
+        ForeignKey("documents.id", ondelete="CASCADE"), nullable=False
+    )
+    cited_document_id: Mapped[str | None] = mapped_column(
+        ForeignKey("documents.id", ondelete="CASCADE"), nullable=True
+    )
+    cited_doi: Mapped[str] = mapped_column(Text, nullable=False)
+    source: Mapped[str] = mapped_column(Text, nullable=False, default="crossref")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint(
+            "citing_document_id", "cited_document_id", name="uq_document_citations_pair"
+        ),
+        UniqueConstraint(
+            "citing_document_id", "cited_doi", "source", name="uq_document_citations_reference"
+        ),
+        Index("ix_document_citations_citing", "citing_document_id"),
+        Index("ix_document_citations_cited", "cited_document_id"),
+        Index("ix_document_citations_doi", "cited_doi"),
+    )
+
+
 class KgEntity(Base):
     """A canonical concept extracted from the corpus (types come from domain.yaml)."""
 

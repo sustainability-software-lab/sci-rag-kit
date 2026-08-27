@@ -168,6 +168,12 @@ The domain profile may set a minimum relationship confidence, and may rank
 by the strongest minimum-edge confidence along each path before using hop
 distance as a tie-breaker. Both controls are off by default and must earn
 their place through the `confidence_weighted` versus `full_deep` ablation.
+The graph stage can also expand the represented documents by one resolved
+citation hop in either direction. This is off by default. It uses only
+`document_citations` rows whose target resolves to a corpus document, applies
+the request scope to the neighboring document before chunk ranking, and is
+evaluated through the `with_citations` ablation. Unresolved DOI pointers remain
+visible provenance but never enter retrieval.
 This is what makes multi-hop questions work: the connecting entity brings
 its evidence with it even when the question's words never appear in that
 text.

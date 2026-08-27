@@ -113,6 +113,11 @@ DEFAULT_ABLATIONS: list[AblationConfig] = [
         "Deep with graph candidates ordered by minimum path confidence",
         {"profile": "deep", "graph_confidence_weighted": True},
     ),
+    AblationConfig(
+        "with_citations",
+        "Deep with one-hop corpus citation expansion inside the graph stage",
+        {"profile": "deep", "graph_include_citations": True},
+    ),
     AblationConfig("no_hyde", "Deep without HyDE", {"profile": "deep", "include_hyde": False}),
     AblationConfig(
         "no_community",

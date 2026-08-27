@@ -20,6 +20,7 @@ def test_graph_tuning_is_off_by_default() -> None:
 
     assert tuning.min_confidence == 0.0
     assert tuning.confidence_weighted is False
+    assert tuning.include_citations is False
 
 
 @pytest.mark.parametrize("value", [-0.01, 1.01])
@@ -42,14 +43,27 @@ def test_confidence_weighted_ablation_is_an_explicit_opt_in() -> None:
     assert config.kwargs == {"profile": "deep", "graph_confidence_weighted": True}
 
 
+def test_citation_ablation_is_an_explicit_opt_in() -> None:
+    config = next(config for config in DEFAULT_ABLATIONS if config.name == "with_citations")
+
+    assert config.kwargs == {"profile": "deep", "graph_include_citations": True}
+    assert "document_citations" in str(_WALK_SQL)
+    assert ":include_citations" in str(_WALK_SQL)
+
+
 @pytest.mark.asyncio
 async def test_retriever_passes_domain_threshold_and_ablation_override(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     domain = load_domain(Path(__file__).parents[2] / "domain")
     domain.config.retrieval.graph.min_confidence = 0.6
-    seen: list[tuple[float, bool]] = []
+    seen: list[tuple[float, bool, bool]] = []
 
-    async def fake_graph_stage(*args, min_confidence: float, confidence_weighted: bool):  # type: ignore[no-untyped-def]
-        seen.append((min_confidence, confidence_weighted))
+    async def fake_graph_stage(  # type: ignore[no-untyped-def]
+        *args,
+        min_confidence: float,
+        confidence_weighted: bool,
+        include_citations: bool,
+    ):
+        seen.append((min_confidence, confidence_weighted, include_citations))
         return []
 
     async def fake_resolve(*args):  # type: ignore[no-untyped-def]
@@ -79,4 +93,4 @@ async def test_retriever_passes_domain_threshold_and_ablation_override(monkeypat
         **shared,  # type: ignore[arg-type]
     )
 
-    assert seen == [(0.6, False), (0.6, True)]
+    assert seen == [(0.6, False, False), (0.6, True, False)]

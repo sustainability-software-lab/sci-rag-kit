@@ -81,6 +81,7 @@ show the shape of each entry.
 | `retrieval.graph` | GraphTuning | see nested fields | Relationship-confidence controls for graph traversal; off by default. |
 | `retrieval.graph.min_confidence` | float | 0.0 | Minimum relationship confidence allowed to extend a graph walk. |
 | `retrieval.graph.confidence_weighted` | bool | false | Order graph candidates by minimum path confidence before hop distance. |
+| `retrieval.graph.include_citations` | bool | false | Expand graph candidates by one resolved document-citation hop. |
 | `retrieval.reranker` | RerankerTuning | see nested fields | Post-fusion second-look configuration; off by default. |
 | `retrieval.reranker.enabled` | bool | false | Whether the configured adapter reranks the fused pool. |
 | `retrieval.reranker.adapter` | 'llm' \| 'local' | llm | Reranker implementation: LLM or local cross-encoder. |

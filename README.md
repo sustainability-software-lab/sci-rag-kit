@@ -55,7 +55,7 @@ domain with your own.
   graded separately against it. Reports are stamped with a corpus
   fingerprint and git commit.
 - **Serving**: a FastAPI service (`/v1`, OpenAPI at `/docs`) and an MCP
-  server (seven tools, mounted at `/mcp` and runnable over stdio) backed by
+  server (eight tools, mounted at `/mcp` and runnable over stdio) backed by
   the same service instance. Static API keys with scopes and rate limits,
   an interface seam for OAuth, and per-request LLM key override.
 
@@ -144,6 +144,7 @@ docs/              Methodology, tutorials, API reference, ADRs
 | `sci-rag campaign build --topic ... \| --doi-file ... --dry-run` | Map explicit license signals, download verified direct OA PDFs, and write an ingest manifest |
 | `sci-rag graph extract` | Extract entities and relationships from chunks |
 | `sci-rag graph resolve-entities --dry-run` | Preview alias, fuzzy, and optional LLM duplicate-entity merges |
+| `sci-rag graph citations --dry-run` | Reconcile cached Crossref references into resolved and unresolved DOI pointers |
 | `sci-rag graph communities` | Cluster the graph and write summaries |
 | `sci-rag retrieve "question"` | Ranked results with per-layer traces (filter with `--year-min/--year-max/--author/--journal/--exclude-doi/--license/--source`) |
 | `sci-rag answer "question"` | Grounded answer with citations; known retracted papers excluded by default |

@@ -30,7 +30,7 @@ _PROMPT_FILES = (
     "judge_grounding",
     "judge_correctness",
 )
-_LATEST_SCHEMA_REVISION = "0005"
+_LATEST_SCHEMA_REVISION = "0006"
 
 
 @dataclass

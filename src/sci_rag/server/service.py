@@ -11,12 +11,20 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from sqlalchemy import ColumnElement, func, select
+from sqlalchemy.orm import aliased
 
 import sci_rag
 from sci_rag.answer import AnswerEngine, AnswerEvent
 from sci_rag.config import Settings, get_settings
 from sci_rag.db.engine import get_session_factory
-from sci_rag.db.models import Chunk, Document, KgCommunity, KgEntity, KgRelationship
+from sci_rag.db.models import (
+    Chunk,
+    Document,
+    DocumentCitation,
+    KgCommunity,
+    KgEntity,
+    KgRelationship,
+)
 from sci_rag.retrieve import RetrievalResult, RetrievalScope, Retriever
 from sci_rag.server.errors import ApiError
 
@@ -205,12 +213,62 @@ class RagService:
             )
         return document, list(chunks)
 
+    async def get_citations(self, document_id: str) -> dict[str, Any]:
+        """Return resolved and unresolved references in both directions."""
+        cited = aliased(Document)
+        citing = aliased(Document)
+        async with self.session_factory() as session:
+            document = await session.get(Document, document_id)
+            if document is None:
+                raise ApiError(404, "document_not_found", "No such document", document_id)
+            references = (
+                await session.execute(
+                    select(DocumentCitation, cited)
+                    .outerjoin(cited, cited.id == DocumentCitation.cited_document_id)
+                    .where(DocumentCitation.citing_document_id == document_id)
+                    .order_by(DocumentCitation.cited_doi, DocumentCitation.id)
+                )
+            ).all()
+            cited_by = (
+                await session.execute(
+                    select(DocumentCitation, citing)
+                    .join(citing, citing.id == DocumentCitation.citing_document_id)
+                    .where(DocumentCitation.cited_document_id == document_id)
+                    .order_by(citing.title, citing.id)
+                )
+            ).all()
+        return {
+            "document_id": document.id,
+            "title": document.title,
+            "doi": document.doi,
+            "references": [
+                {
+                    "document_id": target.id if target else None,
+                    "title": target.title if target else None,
+                    "doi": row.cited_doi,
+                    "source": row.source,
+                    "resolved": target is not None,
+                }
+                for row, target in references
+            ],
+            "cited_by": [
+                {
+                    "document_id": source.id,
+                    "title": source.title,
+                    "doi": source.doi,
+                    "source": row.source,
+                }
+                for row, source in cited_by
+            ],
+        }
+
     async def stats(self) -> dict[str, Any]:
         async with self.session_factory() as session:
             counts: dict[str, Any] = {}
             for label, model in (
                 ("documents", Document),
                 ("chunks", Chunk),
+                ("citations", DocumentCitation),
                 ("entities", KgEntity),
                 ("relationships", KgRelationship),
                 ("communities", KgCommunity),

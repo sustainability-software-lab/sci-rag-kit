@@ -102,6 +102,7 @@ retrieval:
   graph:
     min_confidence: 0.0
     confidence_weighted: false
+    include_citations: false
   # Post-fusion reranking: a second look at the fused pool with the actual
   # text in view. OFF by default; enable it only after `sci-rag eval
   # retrieval --ablations` shows with_rerank beating no_rerank on YOUR
