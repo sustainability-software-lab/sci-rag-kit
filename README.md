@@ -12,7 +12,7 @@ A template repository for building a retrieval-augmented generation
 systems over scientific document collections. Implements hybrid GraphRAG
 retrieval on PostgreSQL, grounded answer generation with citations, an
 evaluation harness, and REST API + MCP endpoints. Customizable around any domain
-using flexible configuration files.
+using flexible config files.
 
 More details on the project structure are documented in
 [docs/methodology.md](docs/methodology.md).
