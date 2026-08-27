@@ -9,11 +9,10 @@
   <img src="https://img.shields.io/badge/python-3.11%20%7C%203.12-blue" alt="Python 3.11 | 3.12">
 </p>
 
-A template repository for building retrieval-augmented generation
-systems over scientific document collections. Implements hybrid GraphRAG
-retrieval on PostgreSQL, grounded answer generation with citations, an
-evaluation harness, and REST API + MCP endpoints. Ready to customize around any domain
-using flexible config files.
+A template repository for retrieval-augmented generation over scientific
+document collections, on one Postgres database. It implements hybrid GraphRAG
+retrieval, grounded answer generation with citations, an evaluation harness,
+and REST API plus MCP endpoints.
 
 Read the [documentation site](https://sustainability-software-lab.github.io/sci-rag-kit/)
 for the guided path, or go directly to the
@@ -23,7 +22,7 @@ To start a new project, use GitHub's **Use this template**, run the
 quickstart below against the bundled demo corpus, then replace the demo
 domain with your own.
 
-## What's in the kit
+## Components
 
 - **Ingestion**: PDF/Markdown/text parsing (Docling when installed, pypdf
   fallback), structure-aware chunking that preserves section hierarchy and

@@ -19,7 +19,16 @@
   box-shadow: none;
 }
 
+/* The filename bar above a titled block. */
+.md-typeset .highlighttable .filename {
+  color: var(--srag-muted-600);
+  font-weight: 500;
+  border-bottom: 1px solid var(--srag-border);
+  background: var(--srag-surface-soft);
+}
+
 .md-clipboard {
+  color: var(--srag-muted-500);
   opacity: 0.7;
 }
 
@@ -28,10 +37,13 @@
   opacity: 1;
 }
 
+/* Tight horizontal padding so a code span does not open a visible gap before
+   the punctuation that follows it. */
 .md-typeset :not(pre) > code {
-  padding: 0.08em 0.32em;
-  border: 1px solid color-mix(in srgb, var(--srag-border) 75%, transparent);
-  border-radius: 0.25rem;
+  padding: 0.05em 0.24em;
+  color: var(--md-code-fg-color);
+  border: 1px solid color-mix(in srgb, var(--srag-border) 70%, transparent);
+  border-radius: 3px;
 }
 
 .md-typeset kbd {

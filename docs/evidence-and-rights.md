@@ -17,15 +17,6 @@ flowchart LR
   D --> E[Numbered source block]
   E --> F[Cited answer<br/>claim with source index]
   F --> G[Answer evaluation<br/>blind grounding pass]
-
-  classDef source stroke:#00a8d6,stroke-width:2px
-  classDef process stroke:#005bfd,stroke-width:2px
-  classDef graphNode stroke:#8b5cf6,stroke-width:2px
-  classDef verify stroke:#22a06b,stroke-width:2px
-  class A,B,C source
-  class D,E process
-  class F graphNode
-  class G verify
 ```
 
 The manifest establishes identity and declared rights. Ingestion preserves title, authors, year, DOI, journal, URL, source bucket, and license class on the document; chunks keep their document ID and section path. Retrieval resolves fused candidates back to those rows before returning content. Answer generation numbers that exact result list and reports which sources were actually cited.

@@ -7,15 +7,15 @@ description: Understand Sci-RAG Kit's status, principles, roadmap, governance, d
 
 Sci-RAG Kit is alpha software with an explicit compatibility promise, an evidence-first roadmap, and short decision records for the architectural bets that shape every deployment.
 
-<div class="srag-card-grid" markdown>
+<div class="srag-rows" markdown>
 
-[<span class="srag-card__eyebrow">Direction</span><span class="srag-card__title">Roadmap</span><span class="srag-card__copy">See what shipped in v0.2, what is planned for scientific campaigns, and which launch decisions remain human-owned.</span>](ROADMAP.md){ .srag-card }
+[<span class="srag-row__title">Roadmap</span><span class="srag-row__copy">See what shipped in v0.2, what is planned for scientific campaigns, and which launch decisions remain human-owned.</span>](ROADMAP.md){ .srag-row }
 
-[<span class="srag-card__eyebrow">Compatibility</span><span class="srag-card__title">Versioning</span><span class="srag-card__copy">Learn which five public surfaces hold within 0.x and what evidence is required before a 1.0 promise.</span>](VERSIONING.md){ .srag-card }
+[<span class="srag-row__title">Versioning</span><span class="srag-row__copy">Learn which five public surfaces hold within 0.x and what evidence is required before a 1.0 promise.</span>](VERSIONING.md){ .srag-row }
 
-[<span class="srag-card__eyebrow">Decisions</span><span class="srag-card__title">Architecture records</span><span class="srag-card__copy">Read why the graph lives in Postgres, embeddings are 1536-dimensional, and the repository is a live template.</span>](adr/0001-graph-in-postgres.md){ .srag-card }
+[<span class="srag-row__title">Decision records</span><span class="srag-row__copy">Read why the graph lives in Postgres, embeddings are 1536-dimensional, and the repository is a live template.</span>](adr/0001-graph-in-postgres.md){ .srag-row }
 
-[<span class="srag-card__eyebrow">Participation</span><span class="srag-card__title">Governance and contributing</span><span class="srag-card__copy">Understand how proposals become evidence, decisions, tests, documentation, and releases.</span>](GOVERNANCE.md){ .srag-card }
+[<span class="srag-row__title">Governance and contributing</span><span class="srag-row__copy">Understand how proposals become evidence, decisions, tests, documentation, and releases.</span>](GOVERNANCE.md){ .srag-row }
 
 </div>
 
