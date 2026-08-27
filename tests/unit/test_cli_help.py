@@ -4,20 +4,31 @@ These run with no database and no credentials; they protect the command
 surface the docs promise.
 """
 
+import re
+
 from typer.testing import CliRunner
 
 from sci_rag.cli.main import app
 
-runner = CliRunner()
+# Rich adapts help output to the terminal (colors on CI, 80-column
+# wrapping); pin a wide, colorless rendering and strip any ANSI that
+# slips through so these asserts are environment-independent.
+runner = CliRunner(env={"NO_COLOR": "1", "TERM": "dumb", "COLUMNS": "300"})
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _plain(output: str) -> str:
+    return _ANSI.sub("", output)
 
 
 def test_root_help_lists_all_commands() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
+    output = _plain(result.output)
     for command in ("ingest", "retrieve", "answer", "stats", "serve", "mcp", "doctor"):
-        assert command in result.output
+        assert command in output
     for group in ("db", "graph", "eval"):
-        assert group in result.output
+        assert group in output
 
 
 def test_subcommand_help_screens() -> None:
@@ -41,16 +52,16 @@ def test_subcommand_help_screens() -> None:
 
 
 def test_documented_flags_exist() -> None:
-    ingest_help = runner.invoke(app, ["ingest", "--help"]).output
+    ingest_help = _plain(runner.invoke(app, ["ingest", "--help"]).output)
     for flag in ("--manifest", "--source", "--no-docling", "--chunk-tokens", "--overlap-tokens"):
         assert flag in ingest_help
-    extract_help = runner.invoke(app, ["graph", "extract", "--help"]).output
+    extract_help = _plain(runner.invoke(app, ["graph", "extract", "--help"]).output)
     for flag in ("--all", "--batch-size", "--max-chunks"):
         assert flag in extract_help
-    eval_help = runner.invoke(app, ["eval", "retrieval", "--help"]).output
+    eval_help = _plain(runner.invoke(app, ["eval", "retrieval", "--help"]).output)
     for flag in ("--ablation", "--questions", "--limit"):
         assert flag in eval_help
-    doctor_help = runner.invoke(app, ["doctor", "--help"]).output
+    doctor_help = _plain(runner.invoke(app, ["doctor", "--help"]).output)
     assert "--probe" in doctor_help
 
 
@@ -58,8 +69,8 @@ def test_ingest_rejects_ambiguous_input() -> None:
     # Neither a folder nor a manifest.
     neither = runner.invoke(app, ["ingest"])
     assert neither.exit_code != 0
-    assert "exactly one" in neither.output
+    assert "exactly one" in _plain(neither.output)
     # Both at once.
     both = runner.invoke(app, ["ingest", "data/raw", "--manifest", "x.jsonl"])
     assert both.exit_code != 0
-    assert "exactly one" in both.output
+    assert "exactly one" in _plain(both.output)
