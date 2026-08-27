@@ -34,7 +34,7 @@ jobs:
     env:
       SCI_RAG_TEST_DATABASE_URL: postgresql+asyncpg://sci_rag:sci_rag@localhost:5433/sci_rag_test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build the server image
         run: docker build -t sci-rag-kit:ci .
       - name: Image smoke (CLI runs inside the container)
@@ -67,7 +67,7 @@ jobs:
       run:
         working-directory: infra/terraform
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: hashicorp/setup-terraform@v3
       - name: Format check
         run: terraform fmt -check -diff
@@ -80,7 +80,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Check internal documentation links
         uses: lycheeverse/lychee-action@v2
         with:
