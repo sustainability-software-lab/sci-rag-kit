@@ -58,6 +58,19 @@ class RerankerTuning(BaseModel):
     model: str | None = None
 
 
+class GraphTuning(BaseModel):
+    """Confidence controls for graph traversal.
+
+    Both controls preserve the historical walk by default. A positive
+    ``min_confidence`` filters edges before they spend the hop budget, while
+    ``confidence_weighted`` ranks candidates by their strongest minimum-edge
+    path before using hop distance as the tie-breaker.
+    """
+
+    min_confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    confidence_weighted: bool = False
+
+
 class RetrievalTuning(BaseModel):
     """Fusion weights and candidate limits; defaults are battle-tested."""
 
@@ -80,6 +93,7 @@ class RetrievalTuning(BaseModel):
             "hyde": 20,
         }
     )
+    graph: GraphTuning = Field(default_factory=GraphTuning)
     reranker: RerankerTuning = Field(default_factory=RerankerTuning)
 
 

@@ -163,9 +163,14 @@ relationships, an applied merge clears them; rebuild with
 At query time, a fast LLM call extracts entity names from the question,
 matching graph entities are walked up to **two hops** in either
 direction, and the chunks those entities point to re-enter the candidate
-pool ranked by hop distance. This is what makes multi-hop questions work:
-the connecting entity brings its evidence with it even when the
-question's words never appear in that text.
+pool. By default candidates retain the historical hop-distance ordering.
+The domain profile may set a minimum relationship confidence, and may rank
+by the strongest minimum-edge confidence along each path before using hop
+distance as a tie-breaker. Both controls are off by default and must earn
+their place through the `confidence_weighted` versus `full_deep` ablation.
+This is what makes multi-hop questions work: the connecting entity brings
+its evidence with it even when the question's words never appear in that
+text.
 
 Alias strings currently do not carry per-surface document provenance, so only
 an unrestricted graph walk may expand them. A restricted walk may seed from an

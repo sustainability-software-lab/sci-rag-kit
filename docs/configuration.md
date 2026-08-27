@@ -69,10 +69,13 @@ show the shape of each entry.
 | `query_classes[].name` | str | required | Query-class identifier. |
 | `query_classes[].keywords` | list[str] | [] | Lowercase terms matched against tokenized questions. |
 | `query_classes[].hyde_instruction` | str | "" | Domain-specific style for the hypothetical evidence passage. |
-| `retrieval` | RetrievalTuning | see nested fields | Fusion, candidate, and optional reranker tuning. |
+| `retrieval` | RetrievalTuning | see nested fields | Fusion, candidate, graph-confidence, and optional reranker tuning. |
 | `retrieval.weights` | dict[str, float] | {"community": 0.6, "graph": 0.8, "hyde": 1.2, "keyword": 1.0, "vector": 1.5} | Per-layer multipliers used by weighted reciprocal rank fusion. |
 | `retrieval.rrf_k` | int | 60 | RRF smoothing constant. |
 | `retrieval.candidate_limits` | dict[str, int] | {"community": 5, "graph": 20, "hyde": 20, "keyword": 20, "vector": 20} | Maximum candidates requested from each layer before fusion. |
+| `retrieval.graph` | GraphTuning | see nested fields | Relationship-confidence controls for graph traversal; off by default. |
+| `retrieval.graph.min_confidence` | float | 0.0 | Minimum relationship confidence allowed to extend a graph walk. |
+| `retrieval.graph.confidence_weighted` | bool | false | Order graph candidates by minimum path confidence before hop distance. |
 | `retrieval.reranker` | RerankerTuning | see nested fields | Post-fusion second-look configuration; off by default. |
 | `retrieval.reranker.enabled` | bool | false | Whether the configured adapter reranks the fused pool. |
 | `retrieval.reranker.adapter` | 'llm' \| 'local' | llm | Reranker implementation: LLM or local cross-encoder. |
