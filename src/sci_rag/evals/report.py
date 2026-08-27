@@ -114,14 +114,14 @@ def retrieval_markdown(results: list[RetrievalEvalResult], fingerprint: dict[str
         f"{fingerprint.get('entities')} entities, {fingerprint.get('communities')} communities.",
         f"Embedding versions: {', '.join(fingerprint.get('embedding_versions', [])) or 'none'}.",
         "",
-        "| Config | hit@5 | hit@10 | MRR | questions |",
-        "|--------|------:|-------:|----:|----------:|",
+        "| Config | hit@5 | hit@10 | MRR | nDCG@10 | questions |",
+        "|--------|------:|-------:|----:|--------:|----------:|",
     ]
     for result in results:
         m = result.metrics
         lines.append(
             f"| {result.config.name} | {m['hit_at_5']:.2f} | {m['hit_at_10']:.2f} "
-            f"| {m['mrr']:.2f} | {int(m['n'])} |"
+            f"| {m['mrr']:.2f} | {m.get('ndcg_at_10', 0.0):.2f} | {int(m['n'])} |"
         )
     lines += [
         "",

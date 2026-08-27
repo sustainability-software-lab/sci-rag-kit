@@ -71,6 +71,7 @@ async def query(
         include_graph=body.include_graph,
         include_community=body.include_community,
         include_hyde=body.include_hyde,
+        include_rerank=body.include_rerank,
     )
     items, traces = result_to_models(result, include_content=body.include_content)
     return QueryResponse(

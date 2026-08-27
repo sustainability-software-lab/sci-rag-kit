@@ -24,6 +24,9 @@ class QueryRequest(BaseModel):
     include_graph: bool | None = Field(None, description="Override the profile's graph layer.")
     include_community: bool | None = Field(None, description="Override the community layer.")
     include_hyde: bool | None = Field(None, description="Override the HyDE layer.")
+    include_rerank: bool | None = Field(
+        None, description="Override the post-fusion reranker (off unless the domain enables it)."
+    )
     license_classes: list[str] | None = Field(
         None,
         description="Allowlist of license classes; omit for all. An empty list returns nothing.",

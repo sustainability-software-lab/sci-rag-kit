@@ -43,6 +43,8 @@ dependencies = [
 docling = ["docling>=2.15"]
 # Exact token counting. Without it the kit uses a fast, offline approximation.
 tokenizers = ["tiktoken>=0.7"]
+# Local cross-encoder reranking (the LLM reranker needs no extra at all).
+rerank = ["sentence-transformers>=3.0"]
 
 [project.scripts]
 sci-rag = "sci_rag.cli.main:app"

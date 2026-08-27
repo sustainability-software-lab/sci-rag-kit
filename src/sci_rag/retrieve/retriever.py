@@ -33,10 +33,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sci_rag.config import Settings, get_settings
 from sci_rag.db.engine import get_session_factory
 from sci_rag.db.models import Chunk, Document, KgCommunity
-from sci_rag.domain import DomainProfile, load_domain
+from sci_rag.domain import DomainProfile, RerankerTuning, load_domain
 from sci_rag.embed import EmbeddingProvider, QueryEmbeddingCache, get_embedder
 from sci_rag.llm import LLMClient, get_llm
 from sci_rag.retrieve.fusion import rrf_fuse
+from sci_rag.retrieve.rerank import Reranker, build_reranker
 from sci_rag.retrieve.stages import (
     community_stage,
     graph_stage,
@@ -94,6 +95,7 @@ class Retriever:
         include_graph: bool | None = None,
         include_community: bool | None = None,
         include_hyde: bool | None = None,
+        include_rerank: bool | None = None,
         use_query_cache: bool | None = None,
     ) -> RetrievalResult:
         scope = scope or RetrievalScope()
@@ -210,14 +212,63 @@ class Retriever:
             traces.append(trace)
             layer_results[name] = keys
 
+        rerank_cfg = self.domain.config.retrieval.reranker
+        rerank_on = include_rerank if include_rerank is not None else rerank_cfg.enabled
+
         fused = rrf_fuse(
             layer_results,
             weights=self.domain.config.retrieval.weights,
             k=self.domain.config.retrieval.rrf_k,
-            limit=limit,
+            # With rerank on, fuse a wider pool so the reranker has real
+            # candidates to promote; the final cut back to `limit` happens
+            # after (or instead of) reranking.
+            limit=max(limit, rerank_cfg.pool) if rerank_on else limit,
         )
         items = await self._resolve(fused, scope)
+
+        if not rerank_on:
+            traces.append(StageTrace(stage="rerank", status="disabled"))
+            return RetrievalResult(items=items[:limit], traces=traces, profile=profile)
+
+        items, rerank_trace = await self._rerank(query, items, limit, rerank_cfg)
+        traces.append(rerank_trace)
         return RetrievalResult(items=items, traces=traces, profile=profile)
+
+    async def _rerank(
+        self,
+        query: str,
+        items: list[RetrievedItem],
+        limit: int,
+        cfg: RerankerTuning,
+    ) -> tuple[list[RetrievedItem], StageTrace]:
+        """Rerank the resolved pool; any failure falls back to fused order."""
+        pool = items[: cfg.pool]
+        start = time.monotonic()
+        status = "success"
+        ranked = pool
+        try:
+            reranker: Reranker = build_reranker(
+                cfg.adapter, llm=self.llm, domain=self.domain, model=cfg.model
+            )
+            ranked = await asyncio.wait_for(
+                reranker.rerank(query, pool, top_k=limit), cfg.timeout_s
+            )
+        except TimeoutError:
+            status = "timeout"
+            ranked = pool
+            log.warning("rerank_timeout", timeout_s=cfg.timeout_s)
+        except Exception as exc:
+            status = "error"
+            ranked = pool
+            log.warning("rerank_error", error=type(exc).__name__, detail=str(exc)[:200])
+        duration_ms = int((time.monotonic() - start) * 1000)
+        trace = StageTrace(
+            stage="rerank",
+            status=status if ranked else "empty",
+            duration_ms=duration_ms,
+            candidate_count=len(pool),
+        )
+        return ranked[:limit], trace
 
     async def _timed_stage(
         self,

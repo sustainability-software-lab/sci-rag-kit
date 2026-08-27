@@ -23,6 +23,7 @@ async def test_query_returns_items_traces_and_request_id(client) -> None:  # typ
         "graph",
         "community",
         "hyde",
+        "rerank",
     }
     assert body["request_id"]
     assert response.headers["X-Request-ID"] == body["request_id"]
