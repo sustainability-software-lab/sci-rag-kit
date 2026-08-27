@@ -1,7 +1,6 @@
 # Contributing
 
-Thanks for wanting to make the kit better. Two kinds of contribution
-land here:
+Contributions are welcome! Thanks for helping us improve sci-rag-kit. These may take one of two forms:
 
 * **Improvements to the kit itself**: the pipeline, retrieval layers,
   evaluation harness, server, docs. Very welcome.
