@@ -53,6 +53,60 @@ def find_repo_root() -> Path:
     )
 
 
+def run_async(coro):  # type: ignore[no-untyped-def]
+    """asyncio.run with the common first-run failures translated into
+    short, actionable messages instead of tracebacks."""
+    from sci_rag.config import get_settings
+
+    try:
+        return asyncio.run(coro)
+    except Exception as exc:
+        text = f"{type(exc).__name__}: {exc}"
+        lowered = text.lower()
+        if "does not exist" in lowered and ("relation" in lowered or "table" in lowered):
+            console.print(
+                "[red]The database schema is missing.[/red] Create it with:\n"
+                "  [bold]uv run sci-rag db upgrade[/bold]"
+            )
+        elif any(
+            marker in lowered
+            for marker in (
+                "connection refused",
+                "connect call failed",
+                "connection was closed",
+                "name or service not known",
+                "nodename nor servname",
+            )
+        ):
+            console.print(
+                f"[red]Cannot reach Postgres[/red] at "
+                f"[bold]{get_settings().database_url.split('@')[-1]}[/bold].\n"
+                "Start it with [bold]docker compose up -d --wait[/bold] "
+                "(or point SCI_RAG_DATABASE_URL at your own Postgres), then retry.\n"
+                "Run [bold]uv run sci-rag doctor[/bold] for a full checkup."
+            )
+        elif "no google credentials configured" in lowered:
+            console.print(f"[red]{exc}[/red]")
+        else:
+            raise
+        raise typer.Exit(1) from None
+
+
+async def _check_db() -> None:
+    """Fail fast with a clear message when Postgres is unreachable.
+
+    Retrieval itself degrades per stage by design, which is right for a
+    server but misleading in a terminal: a dead database would read as
+    "no results". A cheap SELECT 1 up front turns that into the real story.
+    """
+    from sqlalchemy import text
+
+    from sci_rag.db import get_engine
+
+    async with get_engine().connect() as conn:
+        await conn.execute(text("SELECT 1"))
+
+
 def _scope(license_classes: str | None, sources: str | None):  # type: ignore[no-untyped-def]
     from sci_rag.retrieve import RetrievalScope
 
@@ -108,7 +162,7 @@ def ingest(
     console.print(f"Ingesting [bold]{len(entries)}[/bold] document(s)...")
 
     embedder = get_embedder(get_settings())
-    report = asyncio.run(
+    report = run_async(
         ingest_entries(
             entries,
             embedder=embedder,
@@ -157,12 +211,13 @@ def retrieve(
     from sci_rag.retrieve import Retriever
 
     async def run():  # type: ignore[no-untyped-def]
+        await _check_db()
         retriever = Retriever()
         return await retriever.retrieve(
             query, profile=profile, limit=limit, scope=_scope(license_classes, sources)
         )
 
-    result = asyncio.run(run())
+    result = run_async(run())
 
     trace_table = Table(title=f"Retrieval stages ({profile} profile)")
     trace_table.add_column("Stage")
@@ -215,6 +270,7 @@ def answer(
     from sci_rag.answer import AnswerEngine
 
     async def run() -> None:
+        await _check_db()
         engine = AnswerEngine()
         console.print(f"[dim]Retrieving ({profile} profile)...[/dim]")
         async for event in engine.answer_stream(
@@ -239,7 +295,7 @@ def answer(
                 raise typer.Exit(1)
         console.print()
 
-    asyncio.run(run())
+    run_async(run())
 
 
 @graph_app.command("extract")
@@ -258,7 +314,7 @@ def graph_extract(
     from sci_rag.llm import get_llm
 
     settings = get_settings()
-    stats_result = asyncio.run(
+    stats_result = run_async(
         extract_graph(
             session_factory=get_session_factory(),
             llm=get_llm(settings, model=settings.resolved_extraction_model),
@@ -293,7 +349,7 @@ def graph_communities(
     from sci_rag.llm import get_llm
 
     settings = get_settings()
-    stats_result = asyncio.run(
+    stats_result = run_async(
         build_communities(
             session_factory=get_session_factory(),
             llm=get_llm(settings),
@@ -372,7 +428,7 @@ def eval_retrieval(
         fingerprint = await corpus_fingerprint(get_session_factory())
         return results, fingerprint
 
-    results, fingerprint = asyncio.run(run())
+    results, fingerprint = run_async(run())
     _print_retrieval_results(results)
     json_path, md_path = write_report(
         kind="retrieval-ablation" if ablation else "retrieval",
@@ -414,7 +470,7 @@ def eval_answers(
         fingerprint = await corpus_fingerprint(get_session_factory())
         return records, fingerprint
 
-    records, fingerprint = asyncio.run(run())
+    records, fingerprint = run_async(run())
     from sci_rag.evals import summarize_answer_records
 
     summary = summarize_answer_records(records)
@@ -473,7 +529,7 @@ def stats() -> None:
             ).all()
         return counts, by_license, versions
 
-    counts, by_license, versions = asyncio.run(run())
+    counts, by_license, versions = run_async(run())
     table = Table(title="Knowledge base")
     table.add_column("Thing")
     table.add_column("Count", justify="right")
@@ -534,6 +590,11 @@ def mcp_stdio() -> None:
     service = RagService()
     mcp_server, _tools = build_mcp_server(service)
     mcp_server.run()
+
+
+from sci_rag.cli.doctor import doctor as _doctor  # noqa: E402 - registered after app exists
+
+app.command("doctor")(_doctor)
 
 
 def main() -> None:

@@ -1,5 +1,9 @@
 # sci-rag-kit
 
+[![CI](https://github.com/sustainability-software-lab/sci-rag-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/sustainability-software-lab/sci-rag-kit/actions/workflows/ci.yml)
+[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
+![Python 3.11 | 3.12](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
+
 A template repository for building a retrieval-augmented question-answering
 system over a scientific document collection. It implements hybrid GraphRAG
 retrieval on PostgreSQL, grounded answer generation with citations, an
@@ -76,7 +80,7 @@ make demo-cloud   # graph extraction + communities + a deep answer + ablation re
 uv run sci-rag serve   # REST at /docs, MCP at /mcp
 ```
 
-Example answer from the demo corpus (three documents, all claims cited):
+Example answer from the demo corpus (five numbered sources across three documents, all claims cited):
 
 > Given its ash content, anaerobic digestion is a suitable conversion
 > route for rice straw [2][4]. Rice straw has an ash content near 18
@@ -113,7 +117,7 @@ domain/            Ontology, prompts, seed questions (the specialization surface
 src/sci_rag/       ingest, embed, graph, retrieve, answer, evals, server, cli
 data/demo/         Demo corpus (synthetic, CC0)
 migrations/        Alembic schema (pgvector + HNSW + FTS indexes)
-tests/             73 tests; the suite runs offline against docker-compose Postgres
+tests/             Offline test suite (runs against the docker-compose Postgres)
 infra/terraform/   Optional GCP deployment (Cloud SQL + Cloud Run)
 docs/              Methodology, tutorials, API reference, ADRs
 ```
@@ -133,6 +137,7 @@ docs/              Methodology, tutorials, API reference, ADRs
 | `sci-rag serve` | REST + MCP server |
 | `sci-rag mcp` | MCP over stdio (for local agents) |
 | `sci-rag stats` | Corpus contents summary |
+| `sci-rag doctor` | Check config, database, corpus, and credentials in one pass |
 
 Register the MCP server with a local agent:
 

@@ -144,3 +144,32 @@ Plus two resources: `corpus://manifest` (same payload as the REST
 manifest) and `corpus://methodology` (how retrieval works here, one
 page). Tool descriptions are written for the agent reading them; if you
 add tools, hold that bar.
+
+## Python API
+
+The CLI and server are thin wrappers over importable pieces, so the same
+capabilities work in notebooks and your own applications. The package
+ships type information (`py.typed`).
+
+```python
+from sci_rag import Retriever, AnswerEngine, RetrievalScope
+
+retriever = Retriever()  # settings from the environment, domain from domain/
+result = await retriever.retrieve(
+    "rice straw availability",
+    profile="deep",
+    limit=5,
+    scope=RetrievalScope(license_classes=("public", "open_commercial")),
+)
+for item in result.items:
+    print(item.title, item.layers, item.score)
+
+engine = AnswerEngine(retriever=retriever)
+answer = await engine.answer("What biogas yield should I expect?")
+print(answer.text, [s.citation for s in answer.cited_sources])
+```
+
+Ingestion, graph building, and evaluation are importable the same way
+(`ingest_entries`, `extract_graph`, `build_communities`,
+`run_retrieval_eval`); see `examples/library_quickstart.py` for a
+complete, runnable walkthrough.

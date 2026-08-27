@@ -81,6 +81,11 @@ class _MinuteWindowLimiter:
 
     def allow(self, key_id: str, per_minute: int) -> tuple[bool, int]:
         window = int(time.time() // 60)
+        if len(self._windows) > 1024:
+            # Keys rotate; stale windows must not accumulate forever.
+            stale = [k for k, (w, _) in self._windows.items() if w != window]
+            for k in stale:
+                del self._windows[k]
         current_window, used = self._windows[key_id]
         if current_window != window:
             current_window, used = window, 0
@@ -150,8 +155,14 @@ class StaticKeyBackend(AuthBackend):
             )
 
 
-def build_auth_backend(api_keys_json: str | None) -> AuthBackend:
+def build_auth_backend(api_keys_json: str | None, *, cors_origins: str = "*") -> AuthBackend:
     if api_keys_json:
+        if cors_origins.strip() == "*":
+            log.warning(
+                "cors_wide_open_with_auth",
+                note="API keys are configured but SCI_RAG_CORS_ORIGINS is '*'. "
+                "Consider restricting origins for browser-facing deployments.",
+            )
         return StaticKeyBackend.from_json(api_keys_json)
     log.warning(
         "auth_disabled",

@@ -24,6 +24,10 @@ git clone https://github.com/sustainability-software-lab/sci-rag-kit.git
 cd sci-rag-kit
 ```
 
+Alternatively, open the repository in GitHub Codespaces: the bundled
+devcontainer starts Postgres and installs everything, so you can go
+straight to step 2.
+
 ## Step 2: configure credentials
 
 ```bash
@@ -137,6 +141,11 @@ biogas yield does pretreated rice straw achieve?" and watch it call
 * Put it on Google Cloud: [deploy-gcp.md](deploy-gcp.md)
 
 ## Troubleshooting
+
+First move for anything unexpected: `uv run sci-rag doctor`. It checks
+configuration, credentials, the database, the schema, the corpus, and the
+graph, and prints a fix hint for whatever is wrong (`--probe` adds one
+live model round-trip).
 
 **`connection refused` on 5433.** Postgres is not up: `docker compose up
 -d --wait`, or check `docker ps`. If you use your own Postgres, confirm

@@ -58,8 +58,16 @@ class _BearerAuthASGI:
         self.required_scope = required_scope
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http":
+        if scope["type"] == "lifespan":
             await self.app(scope, receive, send)
+            return
+        if scope["type"] != "http":
+            # Fail closed: nothing behind this wrapper speaks websocket (or
+            # anything else) today, and an unknown scope type must never
+            # slide past authentication.
+            if scope["type"] == "websocket":
+                await receive()  # the websocket.connect event
+                await send({"type": "websocket.close", "code": 1008})
             return
         headers = {
             k.decode("latin-1").lower(): v.decode("latin-1") for k, v in scope.get("headers", [])
@@ -81,7 +89,7 @@ class _BearerAuthASGI:
 def create_app(*, settings: Settings | None = None, service: RagService | None = None) -> FastAPI:
     settings = settings or get_settings()
     service = service or RagService(settings=settings)
-    auth_backend = build_auth_backend(settings.api_keys)
+    auth_backend = build_auth_backend(settings.api_keys, cors_origins=settings.cors_origins)
 
     mcp, _tools = build_mcp_server(service)
     mcp_app = mcp.streamable_http_app(

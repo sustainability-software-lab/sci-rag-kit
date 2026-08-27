@@ -67,7 +67,7 @@ def build_mcp_server(
         result = await service.retrieve(
             query,
             profile="deep" if deep else "interactive",
-            top_k=top_k,
+            top_k=max(1, min(top_k, 50)),
             license_classes=license_classes,
         )
         return {
@@ -107,7 +107,7 @@ def build_mcp_server(
         citations: list[dict[str, Any]] = []
         error: dict[str, Any] | None = None
         async for event in service.answer_stream(
-            query, top_k=top_k, license_classes=license_classes
+            query, top_k=max(1, min(top_k, 20)), license_classes=license_classes
         ):
             if event.type == "delta":
                 text_parts.append(event.data["text"])
@@ -165,6 +165,7 @@ def build_mcp_server(
         entity type; corpus_stats does not list types, but the domain's
         ontology does and unknown types simply return nothing.
         """
+        limit = max(1, min(limit, 100))
         conditions = [
             or_(
                 KgEntity.name.ilike(f"%{name_contains}%"),

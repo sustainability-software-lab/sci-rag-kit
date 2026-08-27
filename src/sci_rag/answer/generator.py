@@ -197,10 +197,16 @@ class AnswerEngine:
                 collected.append(delta)
                 yield AnswerEvent(type="delta", data={"text": delta})
         except Exception as exc:
-            log.warning("answer_generation_failed", error=type(exc).__name__)
+            # Full detail goes to the server log; the client gets the class
+            # name only, since provider exception text can echo request
+            # internals.
+            log.warning("answer_generation_failed", error=type(exc).__name__, detail=str(exc)[:500])
             yield AnswerEvent(
                 type="error",
-                data={"code": "generation_failed", "message": f"{type(exc).__name__}: {exc}"},
+                data={
+                    "code": "generation_failed",
+                    "message": f"{type(exc).__name__}: generation failed (see server logs)",
+                },
             )
             return
 

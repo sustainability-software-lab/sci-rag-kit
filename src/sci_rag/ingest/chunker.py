@@ -200,7 +200,10 @@ def _overlap_tail_lines(body: str, overlap_tokens: int) -> str:
 
     Capped at two rows so a small table is never duplicated wholesale into
     the following prose chunk; the point is continuity ("the material in the
-    rows above is then screened..."), not repetition.
+    rows above is then screened..."), not repetition. Unlike prose overlap,
+    this can legitimately return nothing: when even one row exceeds the
+    budget, carrying it would defeat the cap, so the table hands over no
+    overlap at all.
     """
     if overlap_tokens <= 0:
         return ""
