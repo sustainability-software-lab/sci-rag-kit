@@ -810,7 +810,7 @@ def campaign_discover(
         100,
         "--max-results",
         min=1,
-        help="Maximum newly discovered topic results.",
+        help="Maximum total candidates for a topic campaign.",
     ),
     campaign_root: Path = typer.Option(
         Path("data/campaigns"),
@@ -861,6 +861,141 @@ def campaign_discover(
         f"[cyan]{report.skipped_processed} already processed[/cyan]."
     )
     console.print(f"State: [bold]{state.path}[/bold]")
+
+
+@campaign_app.command("build")
+def campaign_build(
+    topic: str | None = typer.Option(
+        None,
+        "--topic",
+        help="Search topic for OpenAlex discovery.",
+    ),
+    doi_file: Path | None = typer.Option(
+        None,
+        "--doi-file",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+        help="Text file with one DOI or DOI URL per line.",
+    ),
+    name: str | None = typer.Option(
+        None,
+        "--name",
+        help="Campaign directory name (derived from the input when omitted).",
+    ),
+    mailto: str = typer.Option(
+        ...,
+        "--mailto",
+        envvar="SCI_RAG_CAMPAIGN_MAILTO",
+        help="Contact email sent to OpenAlex, Crossref, and Unpaywall.",
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Resolve and report rights without downloading PDFs or writing a manifest.",
+    ),
+    max_results: int = typer.Option(
+        100,
+        "--max-results",
+        min=1,
+        help="Maximum total candidates for a topic campaign.",
+    ),
+    max_pdf_mb: int = typer.Option(
+        25,
+        "--max-pdf-mb",
+        min=1,
+        help="Reject a PDF larger than this many MiB.",
+    ),
+    campaign_root: Path = typer.Option(
+        Path("data/campaigns"),
+        "--campaign-root",
+        file_okay=False,
+        help="Parent directory for campaign state, PDFs, and manifest.",
+    ),
+) -> None:
+    """Resolve rights, download direct OA PDFs, and write an ingest manifest."""
+    if (topic is None) == (doi_file is None):
+        raise typer.BadParameter("Provide exactly one of --topic or --doi-file.")
+
+    derived_name = name or topic or (doi_file.stem if doi_file is not None else "")
+    campaign_dir = campaign_root / _campaign_slug(derived_name)
+
+    from sci_rag.campaigns.build import build_campaign, load_discovered_candidates
+    from sci_rag.campaigns.discovery import discover_by_dois, discover_by_topic
+    from sci_rag.campaigns.http import PoliteHttpClient
+    from sci_rag.campaigns.state import CampaignState
+
+    state = CampaignState(campaign_dir / "state.jsonl")
+
+    async def run():  # type: ignore[no-untyped-def]
+        async with PoliteHttpClient(mailto=mailto) as client:
+            if topic is not None:
+                discovery = await discover_by_topic(
+                    client,
+                    topic,
+                    max_results=max_results,
+                    state=state,
+                    api_key=os.environ.get("OPENALEX_API_KEY") or None,
+                )
+            else:
+                assert doi_file is not None
+                discovery = await discover_by_dois(client, doi_file, state=state)
+            report = await build_campaign(
+                load_discovered_candidates(state),
+                campaign_dir=campaign_dir,
+                state=state,
+                client=client,
+                dry_run=dry_run,
+                max_pdf_bytes=max_pdf_mb * 1024 * 1024,
+                unpaywall_base_url=os.environ.get("SCI_RAG_UNPAYWALL_BASE_URL")
+                or "https://api.unpaywall.org/v2",
+            )
+            return discovery, report
+
+    discovery, report = run_async(run())
+    title = f"Dry run: {campaign_dir.name}" if dry_run else f"Campaign build: {campaign_dir.name}"
+    table = Table(title=title)
+    table.add_column("Measure")
+    table.add_column("Count", justify="right")
+    for label, count in (
+        ("candidates", report.candidates),
+        ("resolved", report.resolved),
+        ("direct PDFs", report.direct_pdfs),
+        ("downloaded", report.downloaded),
+        ("resumed", report.resumed),
+        ("unavailable", report.unavailable),
+        ("rejected", report.rejected),
+        ("failed", report.failed),
+    ):
+        table.add_row(label, str(count))
+    console.print(table)
+    console.print(
+        f"{report.resolved} resolved, {report.direct_pdfs} direct PDF(s), "
+        f"{report.downloaded} downloaded, {report.resumed} resumed, "
+        f"{report.unavailable} unavailable, {report.rejected} rejected, "
+        f"{report.failed} failed."
+    )
+    console.print(
+        "Licenses: "
+        + (
+            ", ".join(
+                f"{license_class}={count}"
+                for license_class, count in sorted(report.license_counts.items())
+            )
+            or "none"
+        )
+    )
+    console.print(
+        f"Discovery this run: {len(discovery.works)} new, "
+        f"{discovery.duplicate_records} duplicate, "
+        f"{discovery.malformed_records} malformed, "
+        f"{discovery.skipped_processed} already processed."
+    )
+    if report.manifest_path is not None:
+        console.print(f"Manifest: [bold]{report.manifest_path}[/bold]")
+    console.print(f"State: [bold]{state.path}[/bold]")
+    if report.failed:
+        raise typer.Exit(1)
 
 
 @corpus_app.command("enrich")

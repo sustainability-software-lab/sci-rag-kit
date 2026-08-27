@@ -91,3 +91,26 @@ async def test_polite_client_retries_server_errors_then_raises() -> None:
 
     assert requests == 3
     assert delays == [0.5, 1.0]
+
+
+@pytest.mark.asyncio
+async def test_polite_client_uses_unpaywall_email_without_mailto() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json={"status": "ok"})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as transport:
+        client = PoliteHttpClient(
+            mailto="researcher@example.org",
+            client=transport,
+            requests_per_second=None,
+        )
+        await client.get_json(
+            "https://api.unpaywall.org/v2/10.7717/peerj.4375",
+            params={"email": "researcher@example.org"},
+        )
+
+    assert requests[0].url.params["email"] == "researcher@example.org"
+    assert "mailto" not in requests[0].url.params

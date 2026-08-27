@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import time
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
+from contextlib import asynccontextmanager
 from typing import Any
 
 import httpx
@@ -53,7 +54,8 @@ class PoliteHttpClient:
         self, url: str, *, params: Mapping[str, str | int] | None = None
     ) -> dict[str, Any]:
         query = dict(params or {})
-        query.setdefault("mailto", self.mailto)
+        if "email" not in query:
+            query.setdefault("mailto", self.mailto)
         headers = {
             "User-Agent": f"sci-rag-kit/{sci_rag.__version__} (mailto:{self.mailto})",
             "Accept": "application/json",
@@ -71,6 +73,35 @@ class PoliteHttpClient:
                 response.raise_for_status()
             await self._sleep(_retry_delay(response, attempt))
         raise AssertionError("retry loop exhausted without returning or raising")
+
+    @asynccontextmanager
+    async def stream(self, url: str) -> AsyncIterator[httpx.Response]:
+        """Stream a non-API resource with the same rate and retry bounds."""
+        headers = {
+            "User-Agent": f"sci-rag-kit/{sci_rag.__version__}",
+            "Accept": "application/pdf",
+        }
+        for attempt in range(self.max_retries + 1):
+            await self._wait_for_slot()
+            request = self._client.build_request("GET", url, headers=headers)
+            response = await self._client.send(request, stream=True, follow_redirects=True)
+            if response.status_code == 429 or response.status_code >= 500:
+                if attempt == self.max_retries:
+                    try:
+                        response.raise_for_status()
+                    finally:
+                        await response.aclose()
+                delay = _retry_delay(response, attempt)
+                await response.aclose()
+                await self._sleep(delay)
+                continue
+            try:
+                response.raise_for_status()
+                yield response
+            finally:
+                await response.aclose()
+            return
+        raise AssertionError("retry loop exhausted without yielding or raising")
 
     async def _wait_for_slot(self) -> None:
         if self._interval is None:

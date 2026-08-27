@@ -56,6 +56,57 @@ in both the query and User-Agent. HTTP 429 and server errors are retried with
 bounded backoff. Exhausted retries fail visibly; they never become an empty
 success report.
 
-Discovery metadata is not proof that a document may be redistributed. The
-campaign build step resolves explicit open-access license signals, downloads
-only legal PDF locations, and fails closed when rights are unknown.
+Discovery metadata is not proof that a document may be redistributed. Resolve
+rights without downloading first:
+
+```bash
+uv run sci-rag campaign build \
+  --topic "rice straw valorization" \
+  --name rice-straw \
+  --mailto you@example.org \
+  --max-results 20 \
+  --dry-run
+```
+
+The dry run queries Unpaywall for each DOI, prints direct-PDF counts and the
+license-class distribution, and writes only resumable state. It does not
+create `pdfs/` or `corpus.jsonl`.
+
+## Fail-closed rights mapping
+
+Availability and redistribution rights are different signals. A work marked
+green or gold by Unpaywall is not assigned an open license class unless its
+selected location also carries an explicit recognized license:
+
+| Explicit location license | Corpus class |
+| --- | --- |
+| CC0 or public-domain mark | `public` |
+| CC BY family | `open_commercial` |
+| CC BY-NC family | `open_noncommercial` |
+| Missing, `implied-oa`, publisher-specific, or unrecognized | `unknown` |
+
+The mapping never infers a license from `oa_status`, a reachable URL, or a PDF
+response. `unknown` is the intentional safe result when rights are unclear.
+
+## Download and ingest
+
+After reviewing the dry-run distribution, repeat the command without
+`--dry-run`. The builder fetches only Unpaywall's direct `url_for_pdf` for a
+record marked open access. It never visits a landing page to scrape through a
+paywall.
+
+Each response must declare `application/pdf`, stay within `--max-pdf-mb`, and
+begin with a PDF signature. Files are written through a temporary path and
+renamed only after validation. Verified existing files are reused after an
+interruption instead of downloaded again.
+
+Successful downloads produce `data/campaigns/<name>/corpus.jsonl`. It is the
+same format consumed by:
+
+```bash
+uv run sci-rag ingest --manifest data/campaigns/rice-straw/corpus.jsonl
+```
+
+Every manifest row retains the normalized DOI, bibliographic metadata,
+fail-closed `license_class`, and the exact Unpaywall license signal in
+`license_source`.
