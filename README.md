@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/python-3.11%20%7C%203.12-blue" alt="Python 3.11 | 3.12">
 </p>
 
-A template repository for building a retrieval-augmented generation
+A template repository for building retrieval-augmented generation
 systems over scientific document collections. Implements hybrid GraphRAG
 retrieval on PostgreSQL, grounded answer generation with citations, an
 evaluation harness, and REST API + MCP endpoints. Customizable around any domain
