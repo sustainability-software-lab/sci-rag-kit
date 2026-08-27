@@ -134,6 +134,8 @@ class AnswerEngine:
         max_tokens: int = 2048,
     ) -> AsyncIterator[AnswerEvent]:
         yield AnswerEvent(type="retrieval_started", data={"profile": profile})
+        if scope is None:
+            scope = RetrievalScope(exclude_retracted=True)
         retrieval = await self.retriever.retrieve(query, profile=profile, limit=limit, scope=scope)
         yield AnswerEvent(
             type="retrieval_done",

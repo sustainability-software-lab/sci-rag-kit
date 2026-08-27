@@ -36,6 +36,8 @@ def test_subcommand_help_screens() -> None:
         ["db", "--help"],
         ["db", "upgrade", "--help"],
         ["ingest", "--help"],
+        ["corpus", "--help"],
+        ["corpus", "enrich", "--help"],
         ["graph", "--help"],
         ["graph", "extract", "--help"],
         ["graph", "communities", "--help"],
@@ -61,6 +63,11 @@ def test_documented_flags_exist() -> None:
     eval_help = _plain(runner.invoke(app, ["eval", "retrieval", "--help"]).output)
     for flag in ("--ablation", "--questions", "--limit"):
         assert flag in eval_help
+    answer_help = _plain(runner.invoke(app, ["answer", "--help"]).output)
+    assert "--include-retracted" in answer_help
+    enrich_help = _plain(runner.invoke(app, ["corpus", "enrich", "--help"]).output)
+    for flag in ("--dry-run", "--limit", "--mailto"):
+        assert flag in enrich_help
     doctor_help = _plain(runner.invoke(app, ["doctor", "--help"]).output)
     assert "--probe" in doctor_help
 

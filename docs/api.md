@@ -117,6 +117,13 @@ An `error` event (`code`, `message`) replaces the tail on failure.
 `citations` (with a `cited` flag per source), `traces`,
 `degraded_stages`.
 
+Known retracted documents are excluded from answers by default. The flag
+comes from explicit Crossref metadata written by `sci-rag corpus enrich`;
+missing enrichment is not guessed to mean retracted. Raw `/v1/query`
+retrieval keeps its previous behavior so evaluation and inspection remain
+deliberate. The CLI has `sci-rag answer --include-retracted` for the rare,
+explicit case where an operator needs retracted evidence in an answer.
+
 **Bring your own key.** A request may include `llm_api_key` (an AI
 Studio key) if its API key holds the `byo_llm` scope; the operator can
 also bind an LLM key to an API key server-side. Either way the

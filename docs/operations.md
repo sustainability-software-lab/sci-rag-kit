@@ -4,6 +4,31 @@ Everything the kit knows lives in one Postgres database, which makes
 operational discipline short: snapshot what the corpus IS, back up what
 the database HOLDS, and rehearse the restore before you need it.
 
+## Crossref enrichment and retraction review
+
+After ingesting DOI-bearing papers, preview the Crossref enrichment set:
+
+```bash
+uv run sci-rag corpus enrich --mailto you@example.org --dry-run
+```
+
+The dry run makes no network calls and writes nothing. Apply it by removing
+`--dry-run`; `--limit N` bounds a trial. The client identifies your contact
+address to Crossref's polite pool, rate limits requests, retries 429 and 5xx
+responses, and records failures per document. A later run skips metadata
+refreshed in the last 30 days.
+
+The command stores citation count, journal, enrichment time, and explicit
+Crossref retraction assertions in `documents.extra`, while also promoting
+journal to its indexed column. Both current `updated-by` responses and the
+`update-to` shape used by Retraction Watch records are recognized. The kit
+does not infer retraction from titles or missing fields.
+
+Run `uv run sci-rag doctor` afterwards. A retraction warning gives the known
+count. Answering excludes those documents by default, while raw retrieval
+does not change. Review the flagged records and use `sci-rag corpus delete`
+when they should leave the corpus.
+
 ## Corpus snapshots (identity, not backup)
 
 ```bash

@@ -132,10 +132,11 @@ docs/              Methodology, tutorials, API reference, ADRs
 |---------|---------|
 | `sci-rag db upgrade` | Create or upgrade the database schema |
 | `sci-rag ingest <folder>` / `--manifest file.jsonl` | Parse, chunk, embed, store |
+| `sci-rag corpus enrich --mailto you@example.org` | Add Crossref journal, citation-count, and retraction metadata (`--dry-run` first) |
 | `sci-rag graph extract` | Extract entities and relationships from chunks |
 | `sci-rag graph communities` | Cluster the graph and write summaries |
 | `sci-rag retrieve "question"` | Ranked results with per-layer traces (filter with `--year-min/--year-max/--author/--journal/--exclude-doi/--license/--source`) |
-| `sci-rag answer "question"` | Grounded answer with citations |
+| `sci-rag answer "question"` | Grounded answer with citations; known retracted papers excluded by default |
 | `sci-rag eval retrieval [--ablation]` | Retrieval metrics against seed questions |
 | `sci-rag eval answers` | Generate and judge answers |
 | `sci-rag serve` | REST + MCP server |
