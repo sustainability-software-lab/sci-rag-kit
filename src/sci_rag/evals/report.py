@@ -99,12 +99,16 @@ def write_report(
 
 
 def retrieval_payload(
-    results: list[RetrievalEvalResult], fingerprint: dict[str, Any]
+    results: list[RetrievalEvalResult],
+    fingerprint: dict[str, Any],
+    *,
+    snapshot: str | None = None,
 ) -> dict[str, Any]:
     return {
         "kind": "retrieval",
         "generated_at": datetime.now(UTC).isoformat(),
         "git_commit": git_commit(),
+        "snapshot": snapshot,
         "corpus": fingerprint,
         "configs": [
             {
@@ -191,11 +195,17 @@ def summarize_answers_ci(records: list[AnswerEvalRecord]) -> dict[str, Any]:
     }
 
 
-def answers_payload(records: list[AnswerEvalRecord], fingerprint: dict[str, Any]) -> dict[str, Any]:
+def answers_payload(
+    records: list[AnswerEvalRecord],
+    fingerprint: dict[str, Any],
+    *,
+    snapshot: str | None = None,
+) -> dict[str, Any]:
     return {
         "kind": "answers",
         "generated_at": datetime.now(UTC).isoformat(),
         "git_commit": git_commit(),
+        "snapshot": snapshot,
         "corpus": fingerprint,
         "summary": summarize_answer_records(records),
         "summary_ci": summarize_answers_ci(records),

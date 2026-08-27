@@ -19,6 +19,7 @@ nav:
   - Architecture: architecture.md
   - Evaluation: evaluation.md
   - API reference: api.md
+  - Operations: operations.md
   - Deploy on Google Cloud: deploy-gcp.md
   - Decisions:
       - Graph in Postgres: adr/0001-graph-in-postgres.md
