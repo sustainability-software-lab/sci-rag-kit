@@ -40,6 +40,7 @@ def test_subcommand_help_screens() -> None:
         ["corpus", "enrich", "--help"],
         ["campaign", "--help"],
         ["campaign", "discover", "--help"],
+        ["campaign", "build", "--help"],
         ["graph", "--help"],
         ["graph", "extract", "--help"],
         ["graph", "communities", "--help"],
@@ -73,6 +74,17 @@ def test_documented_flags_exist() -> None:
     campaign_help = _plain(runner.invoke(app, ["campaign", "discover", "--help"]).output)
     for flag in ("--topic", "--doi-file", "--name", "--mailto", "--max-results"):
         assert flag in campaign_help
+    build_help = _plain(runner.invoke(app, ["campaign", "build", "--help"]).output)
+    for flag in (
+        "--topic",
+        "--doi-file",
+        "--name",
+        "--mailto",
+        "--dry-run",
+        "--max-results",
+        "--max-pdf-mb",
+    ):
+        assert flag in build_help
     doctor_help = _plain(runner.invoke(app, ["doctor", "--help"]).output)
     assert "--probe" in doctor_help
 

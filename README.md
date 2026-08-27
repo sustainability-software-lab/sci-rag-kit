@@ -134,6 +134,7 @@ docs/              Methodology, tutorials, API reference, ADRs
 | `sci-rag ingest <folder>` / `--manifest file.jsonl` | Parse, chunk, embed, store |
 | `sci-rag corpus enrich --mailto you@example.org` | Add Crossref journal, citation-count, and retraction metadata (`--dry-run` first) |
 | `sci-rag campaign discover --topic ... \| --doi-file ...` | Build a deduplicated, resumable DOI list through OpenAlex or Crossref |
+| `sci-rag campaign build --topic ... \| --doi-file ... --dry-run` | Resolve explicit OA rights, then download verified legal PDFs and write an ingest manifest |
 | `sci-rag graph extract` | Extract entities and relationships from chunks |
 | `sci-rag graph communities` | Cluster the graph and write summaries |
 | `sci-rag retrieve "question"` | Ranked results with per-layer traces (filter with `--year-min/--year-max/--author/--journal/--exclude-doi/--license/--source`) |

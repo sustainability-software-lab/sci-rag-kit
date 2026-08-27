@@ -33,6 +33,7 @@ class CorpusEntry(BaseModel):
     journal: str | None = None
     url: str | None = None
     license_class: str = "unknown"
+    license_source: str | None = None
     source: str = "local"
 
     @field_validator("license_class", mode="before")

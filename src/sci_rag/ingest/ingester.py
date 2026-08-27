@@ -148,7 +148,8 @@ async def _ingest_one(
                 journal=entry.journal,
                 formatted_citation=build_citation(entry, title),
                 license_class=entry.license_class,
-                license_source="manifest" if entry.license_class != "unknown" else None,
+                license_source=entry.license_source
+                or ("manifest" if entry.license_class != "unknown" else None),
                 content_hash=digest,
                 page_count=parsed.page_count,
                 chunk_count=len(drafts),
