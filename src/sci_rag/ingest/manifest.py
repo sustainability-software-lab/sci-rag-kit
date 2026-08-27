@@ -30,6 +30,7 @@ class CorpusEntry(BaseModel):
     authors: list[str] = Field(default_factory=list)
     year: int | None = None
     doi: str | None = None
+    journal: str | None = None
     url: str | None = None
     license_class: str = "unknown"
     source: str = "local"

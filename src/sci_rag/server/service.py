@@ -39,13 +39,45 @@ class RagService:
 
     @staticmethod
     def scope_from(
-        license_classes: list[str] | None, sources: list[str] | None
+        license_classes: list[str] | None = None,
+        sources: list[str] | None = None,
+        *,
+        year_min: int | None = None,
+        year_max: int | None = None,
+        authors: list[str] | None = None,
+        journals: list[str] | None = None,
+        exclude_dois: list[str] | None = None,
+        exclude_retracted: bool = False,
     ) -> RetrievalScope | None:
-        if license_classes is None and sources is None:
+        """Build a scope, or None when the caller restricted nothing.
+
+        Returning None rather than an empty scope keeps the community
+        layer eligible for unfiltered requests: the retriever treats an
+        unrestricted scope and no scope identically, but a caller reading
+        traces should not see a scope object appear out of nowhere.
+        """
+        if not any(
+            (
+                license_classes is not None,
+                sources is not None,
+                year_min is not None,
+                year_max is not None,
+                authors,
+                journals,
+                exclude_dois,
+                exclude_retracted,
+            )
+        ):
             return None
         return RetrievalScope(
             license_classes=tuple(license_classes) if license_classes is not None else None,
             sources=tuple(sources) if sources is not None else None,
+            year_min=year_min,
+            year_max=year_max,
+            authors=tuple(authors or ()),
+            journals=tuple(journals or ()),
+            exclude_dois=tuple(exclude_dois or ()),
+            exclude_retracted=exclude_retracted,
         )
 
     async def retrieve(
@@ -56,6 +88,11 @@ class RagService:
         top_k: int = 8,
         license_classes: list[str] | None = None,
         sources: list[str] | None = None,
+        year_min: int | None = None,
+        year_max: int | None = None,
+        authors: list[str] | None = None,
+        journals: list[str] | None = None,
+        exclude_dois: list[str] | None = None,
         include_graph: bool | None = None,
         include_community: bool | None = None,
         include_hyde: bool | None = None,
@@ -65,7 +102,15 @@ class RagService:
             query,
             profile=profile,
             limit=top_k,
-            scope=self.scope_from(license_classes, sources),
+            scope=self.scope_from(
+                license_classes,
+                sources,
+                year_min=year_min,
+                year_max=year_max,
+                authors=authors,
+                journals=journals,
+                exclude_dois=exclude_dois,
+            ),
             include_graph=include_graph,
             include_community=include_community,
             include_hyde=include_hyde,
@@ -81,6 +126,11 @@ class RagService:
         max_tokens: int = 2048,
         license_classes: list[str] | None = None,
         sources: list[str] | None = None,
+        year_min: int | None = None,
+        year_max: int | None = None,
+        authors: list[str] | None = None,
+        journals: list[str] | None = None,
+        exclude_dois: list[str] | None = None,
         api_key_override: str | None = None,
     ) -> AsyncIterator[AnswerEvent]:
         return self.engine.answer_stream(
@@ -88,7 +138,15 @@ class RagService:
             profile=profile,
             limit=top_k,
             max_tokens=max_tokens,
-            scope=self.scope_from(license_classes, sources),
+            scope=self.scope_from(
+                license_classes,
+                sources,
+                year_min=year_min,
+                year_max=year_max,
+                authors=authors,
+                journals=journals,
+                exclude_dois=exclude_dois,
+            ),
             api_key_override=api_key_override,
         )
 
