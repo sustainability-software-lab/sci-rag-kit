@@ -445,7 +445,14 @@ def _drop_lint_path(text: str, path_name: str) -> str:
 
 
 def apply_pruning(answers: ProjectAnswers, root: Path) -> list[str]:
+    # The kit's own planning documents are its development history, not the
+    # user's. They also describe every environment manager at once, so leaving
+    # them in place would make a generated project look incoherent.
     removed: list[str] = []
+    planning = root / "docs" / "planning"
+    if planning.is_dir():
+        shutil.rmtree(planning, ignore_errors=True)
+        removed.append("docs/planning/")
 
     if not answers.include_terraform:
         shutil.rmtree(root / "infra" / "terraform", ignore_errors=True)
@@ -564,6 +571,10 @@ COHERENCE_SURFACES = (
 )
 
 _COHERENCE_SUFFIXES = {".md", ".yml", ".yaml", ".json", ".py", ""}
+# docs/planning is pruned during generation, so this is belt and braces for a
+# caller that runs the runner pass on its own. The changelogs are the upstream
+# template's history: rewriting a past release note to mention a tool that
+# release never used would be a lie in the service of a green test.
 _COHERENCE_EXCLUDE = ("docs/planning", "docs/changelog.md", "CHANGELOG.md")
 
 

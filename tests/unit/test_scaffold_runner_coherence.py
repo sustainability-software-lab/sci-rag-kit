@@ -154,3 +154,10 @@ def test_the_kits_own_matrix_workflow_does_not_ship(tmp_path: Path, manager: str
     """It generates projects, so a generated project must not carry it."""
     root = _generate(tmp_path, manager)
     assert not (root / ".github" / "workflows" / "generated-projects.yml").exists()
+
+
+@pytest.mark.parametrize("manager", runner_keys())
+def test_the_kits_planning_documents_do_not_ship(tmp_path: Path, manager: str) -> None:
+    """They are the template's development history, and they name every manager."""
+    root = _generate(tmp_path, manager)
+    assert not (root / "docs" / "planning").exists()
