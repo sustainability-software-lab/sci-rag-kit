@@ -18,6 +18,7 @@ nav:
   - Methodology: methodology.md
   - Architecture: architecture.md
   - Evaluation: evaluation.md
+  - Benchmarks: benchmarks.md
   - API reference: api.md
   - Operations: operations.md
   - Deploy on Google Cloud: deploy-gcp.md

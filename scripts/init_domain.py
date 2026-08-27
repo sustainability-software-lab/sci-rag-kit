@@ -92,7 +92,9 @@ def main() -> int:
         return 0
 
     for path, what, _ in changes:
-        print(f"{'WILL CHANGE' if not args.apply else 'CHANGED'}: {path.relative_to(REPO_ROOT)} ({what})")
+        print(
+            f"{'WILL CHANGE' if not args.apply else 'CHANGED'}: {path.relative_to(REPO_ROOT)} ({what})"
+        )
 
     if not args.apply:
         print("\nDry run. Re-run with --apply to write these changes.")

@@ -61,3 +61,24 @@ eval:
 
 eval-ablation:
 	uv run sci-rag eval retrieval --ablation
+
+# The full, reproducible benchmark behind docs/benchmarks.md: real
+# embeddings + graph + every ablation config + judged answers +
+# calibration, then re-render the page from the report JSONs.
+# Needs Docker and Google credentials (see .env.example).
+BENCH_SNAP := benchmark-$(shell date -u +%Y%m%d-%H%M%S)
+benchmark: db-up
+	uv run sci-rag db upgrade
+	uv run sci-rag ingest --manifest data/demo/manifest.jsonl
+	uv run sci-rag graph extract
+	uv run sci-rag graph communities
+	uv run sci-rag corpus snapshot $(BENCH_SNAP)
+	uv run sci-rag eval retrieval --ablation --snapshot $(BENCH_SNAP)
+	uv run sci-rag eval answers --snapshot $(BENCH_SNAP)
+	uv run sci-rag eval calibrate --labels domain/eval_calibration_labels.jsonl \
+		--report $$(ls -td eval_results/*-answers | head -1)
+	uv run python scripts/render_benchmarks.py \
+		--retrieval $$(ls -td eval_results/*-retrieval-ablation | head -1) \
+		--answers $$(ls -td eval_results/*-answers | head -1) \
+		--output docs/benchmarks.md
+	@echo "docs/benchmarks.md regenerated."
