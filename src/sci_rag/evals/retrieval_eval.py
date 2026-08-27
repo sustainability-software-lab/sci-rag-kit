@@ -69,6 +69,13 @@ class AblationConfig:
     scope: RetrievalScope | None = None
 
 
+RESOLVED_ENTITIES_CONFIG = AblationConfig(
+    "resolved_entities",
+    "Deep retrieval on an audited post-resolution corpus snapshot",
+    {"profile": "deep"},
+)
+
+
 DEFAULT_ABLATIONS: list[AblationConfig] = [
     AblationConfig("full_deep", "All five layers (deep profile)", {"profile": "deep"}),
     AblationConfig(
@@ -127,11 +134,6 @@ DEFAULT_ABLATIONS: list[AblationConfig] = [
         "Deep retrieval excluding documents known to be retracted",
         {"profile": "deep"},
         scope=RetrievalScope(exclude_retracted=True),
-    ),
-    AblationConfig(
-        "resolved_entities",
-        "Post-resolution deep retrieval; pair with a pre-resolution snapshot via eval diff",
-        {"profile": "deep"},
     ),
 ]
 

@@ -280,6 +280,7 @@ $ sci-rag eval retrieval [OPTIONS]
 | `--questions` | path | unset | Seed questions JSONL. |
 | `--limit` | integer | 10 | Results retrieved per question. |
 | `--ablation` | boolean | false | Run every layer-ablation config, not just full_deep. |
+| `--condition` | text | unset | Label an established corpus condition (currently: resolved_entities). |
 | `--snapshot` | text | unset | Record this corpus snapshot name in the report. |
 
 ## `sci-rag eval answers`

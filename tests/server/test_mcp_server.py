@@ -141,6 +141,30 @@ async def test_entity_tools_follow_resolution_tombstones(service) -> None:  # ty
     assert relationships["relationships"]
 
 
+async def test_entity_relationship_lookup_prefers_exact_name_over_alias(service) -> None:  # type: ignore[no-untyped-def]
+    from sci_rag.db import KgEntity, get_session_factory
+
+    async with get_session_factory()() as session:
+        session.add(
+            KgEntity(
+                id="f" * 32,
+                name="Paddy Straw",
+                entity_type="Feedstock",
+                aliases=[],
+            )
+        )
+        await session.commit()
+    mcp, _tools = build_mcp_server(service)
+
+    relationships = _payload(
+        await mcp.call_tool("get_entity_relationships", {"entity_name": "Paddy Straw"})
+    )
+
+    assert relationships["found"] is True
+    assert relationships["entity"] == "Paddy Straw"
+    assert relationships["relationships"] == []
+
+
 async def test_manifest_resource_matches_service(service) -> None:  # type: ignore[no-untyped-def]
     mcp, _tools = build_mcp_server(service)
     from pydantic import AnyUrl

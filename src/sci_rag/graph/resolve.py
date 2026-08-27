@@ -14,10 +14,10 @@ from dataclasses import dataclass
 from difflib import SequenceMatcher
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from sci_rag.db.models import EntityResolutionAudit, KgEntity, KgRelationship
+from sci_rag.db.models import EntityResolutionAudit, KgCommunity, KgEntity, KgRelationship
 from sci_rag.llm import LLMClient
 
 log = structlog.get_logger(__name__)
@@ -247,6 +247,7 @@ async def _apply_merges(
         groups.setdefault(find(entity_id), []).append(entity)
 
     merged = 0
+    affected_winner_ids: set[str] = set()
     for group in groups.values():
         if len(group) < 2:
             continue
@@ -257,6 +258,7 @@ async def _apply_merges(
                 item.id,
             ),
         )[0]
+        affected_winner_ids.add(winner.id)
         losers = sorted((item for item in group if item.id != winner.id), key=lambda item: item.id)
         for loser in losers:
             relevant = [
@@ -315,8 +317,23 @@ async def _apply_merges(
             merged += 1
 
     await session.flush()
-    relationships = (await session.execute(select(KgRelationship))).scalars().all()
-    seen: dict[tuple[str, str, str, str | None, str | None], KgRelationship] = {}
+    relationships = (
+        (
+            await session.execute(
+                select(KgRelationship)
+                .where(
+                    or_(
+                        KgRelationship.source_entity_id.in_(affected_winner_ids),
+                        KgRelationship.target_entity_id.in_(affected_winner_ids),
+                    )
+                )
+                .order_by(KgRelationship.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    seen: dict[tuple[str, str, str], KgRelationship] = {}
     for relationship in relationships:
         if relationship.source_entity_id == relationship.target_entity_id:
             await session.delete(relationship)
@@ -325,8 +342,6 @@ async def _apply_merges(
             relationship.source_entity_id,
             relationship.target_entity_id,
             relationship.relation_type,
-            relationship.document_id,
-            relationship.chunk_id,
         )
         incumbent = seen.get(key)
         if incumbent is None:
@@ -336,6 +351,10 @@ async def _apply_merges(
             seen[key] = relationship
         else:
             await session.delete(relationship)
+    if merged:
+        # These summaries materialize member names and graph structure, both
+        # of which changed. They can be rebuilt explicitly after resolution.
+        await session.execute(delete(KgCommunity))
     return merged
 
 

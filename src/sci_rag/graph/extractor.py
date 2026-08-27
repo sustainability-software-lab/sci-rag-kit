@@ -287,7 +287,19 @@ async def _upsert_entities(
         .scalars()
         .all()
     )
-    existing = {row.name.lower(): row for row in [*existing_rows, *more_rows]}
+    existing: dict[str, KgEntity] = {}
+    seen_row_ids: set[str] = set()
+    for matched_row in [*existing_rows, *more_rows]:
+        if matched_row.id in seen_row_ids:
+            continue
+        seen_row_ids.add(matched_row.id)
+        canonical_row = await _follow_canonical_entity(session, matched_row)
+        key = matched_row.name.lower()
+        incumbent = existing.get(key)
+        # If inconsistent historical data contains both an active exact-name
+        # row and a tombstone with that name, the active row is authoritative.
+        if incumbent is None or matched_row.canonical_entity_id is None:
+            existing[key] = canonical_row
 
     ids: dict[str, str] = {}
     for entity in entities:
@@ -334,6 +346,24 @@ async def _upsert_entities(
                 stats.entities_updated += 1
         ids[entity.name.lower()] = row.id
     return ids
+
+
+async def _follow_canonical_entity(session: AsyncSession, entity: KgEntity) -> KgEntity:
+    """Resolve a persisted entity id to its active survivor, failing on corruption."""
+    seen: set[str] = set()
+    current = entity
+    while current.canonical_entity_id is not None:
+        if current.id in seen:
+            raise RuntimeError(f"entity canonicalization cycle at {current.id}")
+        seen.add(current.id)
+        canonical = await session.get(KgEntity, current.canonical_entity_id)
+        if canonical is None:
+            raise RuntimeError(
+                f"entity {current.id} points to missing canonical entity "
+                f"{current.canonical_entity_id}"
+            )
+        current = canonical
+    return current
 
 
 async def _insert_relationships(

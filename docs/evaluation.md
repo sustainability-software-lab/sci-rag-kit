@@ -67,9 +67,19 @@ implement it.
 `--ablation` re-runs the questions under the registered configurations:
 `full_deep`, `interactive`, `vector_only`, `keyword_only`, `no_graph`,
 `no_hyde`, `no_community`, the paired reranker rows, `auto_routed`,
-`no_retracted`, and `resolved_entities`. The final row labels a run taken
-after entity resolution; compare it to a pre-resolution report with
-`sci-rag eval diff BEFORE.json AFTER.json`. Read every row against
+and `no_retracted`. Entity resolution changes persisted corpus state, not
+retrieval kwargs, so it is intentionally not a row in this same-state table.
+Capture it as two named snapshots instead:
+
+```bash
+sci-rag eval retrieval --snapshot before-resolution
+sci-rag graph resolve-entities --apply
+sci-rag eval retrieval --condition resolved_entities --snapshot after-resolution
+sci-rag eval diff BEFORE.json AFTER.json
+```
+
+The post-resolution command requires a durable merge audit row, preventing an
+unchanged corpus from being mislabeled. Read every layer-ablation row against
 `full_deep`:
 
 * A layer earns its fusion weight when REMOVING it hurts. If `no_graph`

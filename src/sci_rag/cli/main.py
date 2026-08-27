@@ -575,7 +575,12 @@ def graph_resolve_entities(
     console.print(table)
     if dry_run and result.planned_merges:
         console.print("Dry run: no rows changed. Re-run with [bold]--apply[/bold] to merge.")
-    elif result.llm_failures:
+    elif result.merged:
+        console.print(
+            "[yellow]Stored community summaries were invalidated; rebuild them with "
+            "[bold]sci-rag graph communities[/bold].[/yellow]"
+        )
+    if result.llm_failures:
         console.print("[yellow]Unclear pairs remained separate; rerun to retry them.[/yellow]")
 
 
@@ -617,13 +622,33 @@ def eval_retrieval(
     ablation: bool = typer.Option(
         False, "--ablation", help="Run every layer-ablation config, not just full_deep."
     ),
+    condition: str | None = typer.Option(
+        None,
+        "--condition",
+        help="Label an established corpus condition (currently: resolved_entities).",
+    ),
     snapshot: str | None = typer.Option(
         None, "--snapshot", help="Record this corpus snapshot name in the report."
     ),
 ) -> None:
     """Score retrieval against your seed questions (and per-layer ablations)."""
-    from sci_rag.db import get_session_factory
-    from sci_rag.evals import DEFAULT_ABLATIONS, run_retrieval_eval
+    if condition not in (None, "resolved_entities"):
+        raise typer.BadParameter(
+            "only resolved_entities is currently supported", param_hint="--condition"
+        )
+    if condition is not None and ablation:
+        raise typer.BadParameter("--condition and --ablation are mutually exclusive")
+    if condition is not None and not snapshot:
+        raise typer.BadParameter("--condition requires --snapshot")
+
+    from sqlalchemy import func, select
+
+    from sci_rag.db import EntityResolutionAudit, get_session_factory
+    from sci_rag.evals import (
+        DEFAULT_ABLATIONS,
+        RESOLVED_ENTITIES_CONFIG,
+        run_retrieval_eval,
+    )
     from sci_rag.evals.report import (
         corpus_fingerprint,
         retrieval_markdown,
@@ -633,7 +658,25 @@ def eval_retrieval(
     from sci_rag.retrieve import Retriever
 
     questions = _load_questions(questions_path)
-    configs = DEFAULT_ABLATIONS if ablation else DEFAULT_ABLATIONS[:1]
+    configs = (
+        [RESOLVED_ENTITIES_CONFIG]
+        if condition == "resolved_entities"
+        else DEFAULT_ABLATIONS
+        if ablation
+        else DEFAULT_ABLATIONS[:1]
+    )
+
+    if condition == "resolved_entities":
+
+        async def count_resolution_audits() -> int:
+            async with get_session_factory()() as session:
+                return (await session.scalar(select(func.count(EntityResolutionAudit.id)))) or 0
+
+        if run_async(count_resolution_audits()) == 0:
+            raise typer.BadParameter(
+                "resolved_entities requires at least one persisted entity-resolution audit row",
+                param_hint="--condition",
+            )
 
     async def run():  # type: ignore[no-untyped-def]
         retriever = Retriever()
@@ -644,7 +687,11 @@ def eval_retrieval(
     results, fingerprint = run_async(run())
     _print_retrieval_results(results)
     json_path, md_path = write_report(
-        kind="retrieval-ablation" if ablation else "retrieval",
+        kind="retrieval-condition"
+        if condition
+        else "retrieval-ablation"
+        if ablation
+        else "retrieval",
         payload=retrieval_payload(results, fingerprint, snapshot=snapshot),
         markdown=retrieval_markdown(results, fingerprint),
     )

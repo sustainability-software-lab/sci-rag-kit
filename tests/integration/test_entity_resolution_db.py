@@ -9,6 +9,7 @@ from sci_rag.db import (
     Chunk,
     Document,
     EntityResolutionAudit,
+    KgCommunity,
     KgEntity,
     KgRelationship,
     get_session_factory,
@@ -111,6 +112,53 @@ async def test_resolution_dry_run_makes_no_writes(clean_tables) -> None:  # type
     assert report.merged == 0
     assert canonical_count == 0
     assert audit_count == 0
+
+
+async def test_resolution_deduplicates_affected_edges_and_invalidates_communities(
+    clean_tables,
+) -> None:  # type: ignore[no-untyped-def]
+    ids = await seed_duplicates()
+    async with get_session_factory()() as session:
+        session.add_all(
+            [
+                KgRelationship(
+                    id="s" * 32,
+                    source_entity_id=ids["winner"],
+                    target_entity_id="e" * 32,
+                    relation_type="CONVERTED_BY",
+                    confidence=0.95,
+                ),
+                KgCommunity(
+                    id="m" * 32,
+                    title="Rice conversion",
+                    level=0,
+                    member_entity_ids=[ids["loser"], "e" * 32],
+                    summary="Paddy straw and digestion.",
+                ),
+            ]
+        )
+        await session.commit()
+
+    await resolve_entities(get_session_factory(), dry_run=False, no_llm=True)
+
+    async with get_session_factory()() as session:
+        relationships = (
+            (
+                await session.execute(
+                    select(KgRelationship).where(
+                        KgRelationship.source_entity_id == ids["winner"],
+                        KgRelationship.target_entity_id == "e" * 32,
+                        KgRelationship.relation_type == "CONVERTED_BY",
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        community_count = await session.scalar(select(func.count(KgCommunity.id)))
+    assert len(relationships) == 1
+    assert relationships[0].confidence == 0.95
+    assert community_count == 0
 
 
 class QueryLLM:

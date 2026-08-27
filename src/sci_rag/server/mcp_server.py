@@ -21,7 +21,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from mcp.server import MCPServer
-from sqlalchemy import func, or_, select, text
+from sqlalchemy import case, func, or_, select, text
 
 import sci_rag
 from sci_rag.db.models import KgEntity, KgRelationship
@@ -228,7 +228,14 @@ def build_mcp_server(
                             ).bindparams(entity_name=entity_name),
                         )
                     )
-                    .order_by(KgEntity.canonical_entity_id.is_not(None))
+                    .order_by(
+                        case(
+                            (func.lower(KgEntity.name) == entity_name.lower(), 0),
+                            else_=1,
+                        ),
+                        KgEntity.canonical_entity_id.is_not(None),
+                        KgEntity.id,
+                    )
                     .limit(1)
                 )
             ).scalar_one_or_none()

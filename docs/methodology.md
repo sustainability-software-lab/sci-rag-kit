@@ -154,7 +154,9 @@ evidence and aliases, repoints relationships, and leaves the old row as a
 `canonical_entity_id` tombstone. Every applied merge has a durable row in
 `entity_resolution_audit`; `--no-llm` provides a deterministic-only pass.
 The doctor reports cheap probable duplicates, and graph GC preserves these
-tombstones.
+tombstones. Because community summaries materialize entity membership and
+relationships, an applied merge clears them; rebuild with
+`sci-rag graph communities` after reviewing the resolution receipts.
 
 At query time, a fast LLM call extracts entity names from the question,
 matching graph entities are walked up to **two hops** in either
