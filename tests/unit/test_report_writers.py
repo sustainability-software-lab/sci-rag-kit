@@ -50,7 +50,9 @@ def test_retrieval_report_roundtrip(tmp_path: Path) -> None:
 
     assert payload["corpus"]["documents"] == 5
     assert payload["configs"][0]["metrics"]["hit_at_5"] == 0.5
-    assert "| full_deep | 0.50 | 0.50 | 0.50 | 0.00 | 2 |" in markdown
+    assert "| full_deep | 0.50 " in markdown
+    assert "[" in markdown and "]" in markdown, "expected 95% CI brackets in the table"
+    assert "small sample" in markdown, "expected a small-n warning for n=2"
     assert "## Missed questions" in markdown and "missed" in markdown
 
     json_path, md_path = write_report(

@@ -150,6 +150,30 @@ class RetrievalEvalResult:
             "ndcg_at_10": sum(ndcg_at_k(r.relevant_ranks, k=10) for r in self.records) / n,
         }
 
+    def per_question_values(self) -> dict[str, list[float]]:
+        """Per-question metric values, the resampling unit for bootstrap CIs."""
+        return {
+            "hit_at_5": [1.0 if r.hit_at_5 else 0.0 for r in self.records],
+            "hit_at_10": [1.0 if r.hit_at_10 else 0.0 for r in self.records],
+            "mrr": [
+                1.0 / r.first_relevant_rank if r.first_relevant_rank else 0.0 for r in self.records
+            ],
+            "ndcg_at_10": [ndcg_at_k(r.relevant_ranks, k=10) for r in self.records],
+        }
+
+    @property
+    def metrics_with_ci(self) -> dict[str, Any]:
+        """Each metric as {mean, lo, hi} (bootstrap 95% CI) plus n."""
+        from sci_rag.evals.stats import bootstrap_ci
+
+        n = len(self.records)
+        out: dict[str, Any] = {"n": n}
+        if n == 0:
+            return out
+        for name, values in self.per_question_values().items():
+            out[name] = bootstrap_ci(values).as_dict()
+        return out
+
 
 async def run_retrieval_eval(
     retriever: Retriever,
