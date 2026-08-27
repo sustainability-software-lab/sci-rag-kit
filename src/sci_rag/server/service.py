@@ -146,6 +146,7 @@ class RagService:
                 authors=authors,
                 journals=journals,
                 exclude_dois=exclude_dois,
+                exclude_retracted=True,
             ),
             api_key_override=api_key_override,
         )

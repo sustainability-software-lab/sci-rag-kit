@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import pytest
 
+from sci_rag.evals.retrieval_eval import DEFAULT_ABLATIONS
 from sci_rag.retrieve.types import RetrievalScope, scope_conditions
 
 # One kwargs dict per restriction dimension.
@@ -78,3 +79,9 @@ def test_scope_stays_hashable() -> None:
     """Frozen and hashable: scopes are cache keys in places."""
     scope = RetrievalScope(year_min=2020, authors=("A",), journals=("J",))
     assert hash(scope) == hash(RetrievalScope(year_min=2020, authors=("A",), journals=("J",)))
+
+
+def test_no_retracted_ablation_carries_the_filter_scope() -> None:
+    config = next(config for config in DEFAULT_ABLATIONS if config.name == "no_retracted")
+
+    assert config.scope == RetrievalScope(exclude_retracted=True)

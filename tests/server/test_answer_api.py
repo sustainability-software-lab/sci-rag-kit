@@ -5,6 +5,9 @@ from __future__ import annotations
 import json
 
 import pytest
+from sqlalchemy import select, update
+
+from sci_rag.db import Document, get_session_factory
 
 pytestmark = pytest.mark.integration
 
@@ -21,6 +24,34 @@ async def test_answer_json_mode(client) -> None:  # type: ignore[no-untyped-def]
     cited = [c for c in body["citations"] if c["cited"]]
     assert cited and cited[0]["index"] == 1
     assert body["traces"]
+
+
+async def test_filtered_answer_still_excludes_retracted_documents(client) -> None:  # type: ignore[no-untyped-def]
+    async with get_session_factory()() as session:
+        document_id = await session.scalar(
+            select(Document.id).where(Document.title.ilike("%Colusa Basin Rice Straw%"))
+        )
+        assert document_id is not None
+        await session.execute(
+            update(Document)
+            .where(Document.id == document_id)
+            .values(extra={"crossref": {"is_retracted": True}})
+        )
+        await session.commit()
+
+    response = await client.post(
+        "/v1/answer",
+        json={
+            "query": "Colusa Basin rice straw resource assessment",
+            "stream": False,
+            "profile": "interactive",
+            "year_min": 2023,
+            "top_k": 10,
+        },
+    )
+
+    assert response.status_code == 200
+    assert all(citation["document_id"] != document_id for citation in response.json()["citations"])
 
 
 async def test_answer_sse_event_sequence(client) -> None:  # type: ignore[no-untyped-def]

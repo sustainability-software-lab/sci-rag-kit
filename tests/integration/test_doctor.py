@@ -5,10 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import text, update
 
 from sci_rag.cli.doctor import _run_checks
-from sci_rag.db import get_engine
+from sci_rag.db import Document, get_engine
 from sci_rag.ingest import ingest_entries, load_manifest
 
 pytestmark = pytest.mark.integration
@@ -57,6 +57,20 @@ async def test_doctor_with_corpus_flags_missing_graph(clean_tables, local_embedd
     assert checks["corpus"].status == "ok"
     assert checks["knowledge graph"].status == "warn"
     assert "graph extract" in checks["knowledge graph"].fix
+
+
+async def test_doctor_warns_about_known_retracted_documents(clean_tables, local_embedder) -> None:  # type: ignore[no-untyped-def]
+    await _stamp_alembic_revision()
+    entries = load_manifest(REPO_ROOT / "data" / "demo" / "manifest.jsonl")
+    await ingest_entries(entries[:1], embedder=local_embedder)
+    async with get_engine().begin() as conn:
+        await conn.execute(update(Document).values(extra={"crossref": {"is_retracted": True}}))
+
+    checks = _by_name(await _run_checks(probe=False))
+
+    assert checks["retractions"].status == "warn"
+    assert "1" in checks["retractions"].detail
+    assert "exclude" in checks["retractions"].fix.lower()
 
 
 async def test_doctor_catches_dimension_mismatch(clean_tables, monkeypatch) -> None:  # type: ignore[no-untyped-def]

@@ -134,6 +134,7 @@ def _scope(  # type: ignore[no-untyped-def]
     authors: str | None = None,
     journals: str | None = None,
     exclude_dois: str | None = None,
+    exclude_retracted: bool = False,
 ):
     from sci_rag.retrieve import RetrievalScope
 
@@ -145,6 +146,7 @@ def _scope(  # type: ignore[no-untyped-def]
         authors=_csv(authors),
         journals=_csv(journals),
         exclude_dois=_csv(exclude_dois),
+        exclude_retracted=exclude_retracted,
     )
 
 
@@ -367,6 +369,11 @@ def answer(
     exclude_dois: str | None = typer.Option(
         None, "--exclude-doi", help="Comma-separated DOIs to drop."
     ),
+    include_retracted: bool = typer.Option(
+        False,
+        "--include-retracted",
+        help="Deliberately allow known retracted papers as answer evidence.",
+    ),
 ) -> None:
     """Generate a grounded answer with numbered citations."""
     from sci_rag.answer import AnswerEngine
@@ -387,6 +394,7 @@ def answer(
                 authors=authors,
                 journals=journals,
                 exclude_dois=exclude_dois,
+                exclude_retracted=not include_retracted,
             ),
         ):
             if event.type == "retrieval_done":
@@ -756,6 +764,48 @@ def embed_reindex(
             f"{outcome.communities_reembedded} community summar(ies) "
             f"in {outcome.batches} batch(es).[/green]"
         )
+
+
+@corpus_app.command("enrich")
+def corpus_enrich(
+    mailto: str = typer.Option(
+        ..., "--mailto", help="Contact email sent to Crossref's polite API pool."
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="List eligible DOI records without network calls or writes."
+    ),
+    limit: int | None = typer.Option(
+        None, "--limit", min=1, help="Process at most this many documents."
+    ),
+) -> None:
+    """Add Crossref citation, journal, and retraction metadata to the corpus."""
+    from sci_rag.campaigns.http import PoliteHttpClient
+    from sci_rag.db import get_session_factory
+    from sci_rag.enrich import enrich_documents
+
+    async def run():  # type: ignore[no-untyped-def]
+        await _check_db()
+        async with PoliteHttpClient(mailto=mailto) as client:
+            return await enrich_documents(
+                get_session_factory(), client, dry_run=dry_run, limit=limit
+            )
+
+    report = run_async(run())
+    table = Table(title="Crossref enrichment plan" if dry_run else "Crossref enrichment report")
+    table.add_column("DOI")
+    table.add_column("Status")
+    table.add_column("Detail")
+    for outcome in report.outcomes:
+        table.add_row(outcome.doi, outcome.status, outcome.detail)
+    console.print(table)
+    console.print(
+        f"[green]{report.enriched} enriched[/green], "
+        f"[cyan]{report.planned} planned[/cyan], "
+        f"[yellow]{report.skipped} skipped recent[/yellow], "
+        f"[red]{report.failed} failed[/red]."
+    )
+    if report.failed:
+        raise typer.Exit(1)
 
 
 @corpus_app.command("delete")

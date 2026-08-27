@@ -66,6 +66,7 @@ class AblationConfig:
     name: str
     description: str
     kwargs: dict[str, Any] = field(default_factory=dict)
+    scope: RetrievalScope | None = None
 
 
 DEFAULT_ABLATIONS: list[AblationConfig] = [
@@ -120,6 +121,12 @@ DEFAULT_ABLATIONS: list[AblationConfig] = [
         "auto_routed",
         "Adaptive routing picks the profile and layers per query",
         {"profile": "auto"},
+    ),
+    AblationConfig(
+        "no_retracted",
+        "Deep retrieval excluding documents known to be retracted",
+        {"profile": "deep"},
+        scope=RetrievalScope(exclude_retracted=True),
     ),
 ]
 
@@ -194,8 +201,9 @@ async def run_retrieval_eval(
     for config in configs:
         records: list[QuestionRetrievalRecord] = []
         for question in answerable:
+            effective_scope = config.scope if config.scope is not None else scope
             result = await retriever.retrieve(
-                question.question, limit=limit, scope=scope, **config.kwargs
+                question.question, limit=limit, scope=effective_scope, **config.kwargs
             )
             relevant_ranks = [
                 rank

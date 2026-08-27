@@ -298,6 +298,28 @@ async def _run_checks(*, probe: bool) -> list[Check]:
         else:
             checks.append(Check("corpus", "ok", f"{documents} documents, {chunks} chunks"))
 
+        retracted = (
+            await conn.scalar(
+                text(
+                    "SELECT count(*) FROM documents "
+                    "WHERE extra #>> '{crossref,is_retracted}' = 'true'"
+                )
+            )
+            or 0
+        )
+        if retracted:
+            checks.append(
+                Check(
+                    "retractions",
+                    "warn",
+                    f"{retracted} document(s) are flagged as retracted",
+                    "Answers exclude them by default. Review them and use "
+                    "sci-rag corpus delete when they should leave the corpus.",
+                )
+            )
+        else:
+            checks.append(Check("retractions", "ok", "no known retracted documents"))
+
         if chunks:
             from sci_rag.embed import get_embedder
 
