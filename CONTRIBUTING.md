@@ -12,9 +12,10 @@ Contributions are welcome! Thanks for helping us improve sci-rag-kit. These may 
 ## Development setup
 
 ```bash
-uv sync
+uv sync --group docs
 docker compose up -d --wait
 make check          # ruff + mypy + the full test suite
+make docs           # generated references + strict build + public-artifact guard
 uvx pre-commit install   # optional: run the same lint hooks on every commit
 ```
 

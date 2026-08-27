@@ -1,0 +1,404 @@
+.srag-home-hero {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--srag-border);
+  background:
+    radial-gradient(circle at 10% 10%, color-mix(in srgb, var(--srag-cyan-500) 12%, transparent), transparent 34rem),
+    radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--srag-violet-600) 10%, transparent), transparent 31rem),
+    linear-gradient(180deg, var(--srag-surface), var(--srag-surface-soft));
+}
+
+.srag-home-hero::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  background: var(--srag-gradient);
+  content: "";
+}
+
+.srag-home-hero__inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(31rem, 1.08fr);
+  gap: clamp(2rem, 5vw, 5rem);
+  align-items: center;
+  min-height: 35rem;
+  padding: clamp(4.2rem, 8vw, 7rem) 1.2rem clamp(3.5rem, 7vw, 6rem);
+}
+
+.srag-home-hero__brand {
+  position: relative;
+  width: 13.5rem;
+  height: 4.8rem;
+  margin-bottom: 1.5rem;
+}
+
+.srag-home-hero__logo {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 13.5rem;
+  height: auto;
+}
+
+.srag-logo--dark {
+  display: none;
+}
+
+[data-md-color-scheme="slate"] .srag-logo--light {
+  display: none;
+}
+
+[data-md-color-scheme="slate"] .srag-logo--dark {
+  display: block;
+}
+
+.srag-home-hero h1 {
+  max-width: 13ch;
+  margin: 0;
+  color: var(--srag-ink-950);
+  font-size: clamp(2.5rem, 5vw, 4.35rem);
+  font-weight: 750;
+  line-height: 1.02;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+.srag-home-hero__lede {
+  max-width: 35rem;
+  margin: 1.3rem 0 0;
+  color: var(--srag-muted-700);
+  font-size: clamp(0.92rem, 1.6vw, 1.08rem);
+  line-height: 1.65;
+}
+
+.srag-home-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1.7rem;
+}
+
+.srag-button {
+  display: inline-flex;
+  min-height: 2.65rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.62rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: var(--srag-radius-sm);
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.srag-button:is(:hover, :focus-visible) {
+  transform: translateY(-1px);
+}
+
+.md-typeset .srag-button--primary {
+  color: white;
+  background: var(--srag-blue-600);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--srag-blue-600) 22%, transparent);
+}
+
+.md-typeset .srag-button--primary:hover {
+  color: white;
+  background: #004ddb;
+}
+
+.md-typeset .srag-button--secondary {
+  color: var(--srag-ink-900);
+  border-color: var(--srag-border-strong);
+  background: color-mix(in srgb, var(--srag-surface) 86%, transparent);
+}
+
+.md-typeset .srag-button--secondary:hover {
+  color: var(--srag-ink-950);
+  border-color: var(--srag-blue-600);
+}
+
+.srag-home-hero__status {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 1.25rem 0 0;
+  color: var(--srag-muted-600);
+  font-family: var(--md-code-font-family);
+  font-size: 0.62rem;
+}
+
+.srag-status-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--srag-success);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--srag-success) 13%, transparent);
+}
+
+.srag-home-hero__figure {
+  margin: 0;
+}
+
+.srag-home-hero__figure img {
+  border: 1px solid var(--srag-border);
+  border-radius: var(--srag-radius-lg);
+  background: #f8fbff;
+  box-shadow: 0 25px 70px rgb(8 18 37 / 12%);
+}
+
+.srag-home-hero__figure figcaption {
+  margin-top: 0.7rem;
+  color: var(--srag-muted-600);
+  font-size: 0.64rem;
+  text-align: center;
+}
+
+.srag-home-body {
+  width: 100%;
+}
+
+@media screen and (min-width: 76.25em) {
+  .srag-home-nav {
+    display: none;
+  }
+}
+
+.srag-home-body > .md-typeset {
+  color: var(--srag-ink-800);
+  font-size: 0.84rem;
+}
+
+.srag-home-section {
+  max-width: var(--md-grid-width);
+  margin: 0 auto;
+  padding: clamp(3.2rem, 7vw, 6rem) 1.2rem;
+}
+
+.srag-home-section + .srag-home-section {
+  border-top: 1px solid var(--srag-border);
+}
+
+.srag-home-section__head {
+  max-width: 42rem;
+  margin-bottom: 2rem;
+}
+
+.srag-home-section__head h2 {
+  margin: 0.2rem 0 0.8rem;
+  font-size: clamp(1.75rem, 3vw, 2.55rem);
+  line-height: 1.14;
+}
+
+.srag-home-section__head p:last-child {
+  color: var(--srag-muted-700);
+  font-size: 0.92rem;
+}
+
+.srag-home-quickstart {
+  display: grid;
+  grid-template-columns: minmax(0, 0.75fr) minmax(28rem, 1.25fr);
+  gap: clamp(2rem, 6vw, 6rem);
+  align-items: center;
+}
+
+.srag-home-quickstart .highlight {
+  margin: 0;
+  box-shadow: var(--srag-shadow-soft);
+}
+
+.srag-capability-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.srag-capability {
+  min-height: 9.5rem;
+  padding: 1.05rem;
+  border: 1px solid var(--srag-border);
+  border-radius: var(--srag-radius-md);
+  background: var(--srag-surface);
+}
+
+.srag-capability__mark {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  margin-bottom: 0.9rem;
+  color: var(--srag-blue-600);
+  font-family: var(--md-code-font-family);
+  font-size: 0.62rem;
+  font-weight: 700;
+  border: 1px solid color-mix(in srgb, var(--srag-blue-600) 22%, var(--srag-border));
+  border-radius: 50%;
+  background: var(--srag-blue-soft);
+}
+
+.srag-capability:nth-child(3n + 2) .srag-capability__mark {
+  color: var(--srag-violet-600);
+  border-color: color-mix(in srgb, var(--srag-violet-600) 22%, var(--srag-border));
+  background: var(--srag-violet-soft);
+}
+
+.srag-capability:nth-child(3n) .srag-capability__mark {
+  color: #006886;
+  border-color: color-mix(in srgb, var(--srag-cyan-500) 36%, var(--srag-border));
+  background: var(--srag-cyan-soft);
+}
+
+.srag-capability h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.92rem;
+}
+
+.srag-capability p {
+  margin: 0;
+  color: var(--srag-muted-700);
+  font-size: 0.74rem;
+  line-height: 1.55;
+}
+
+.srag-home-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(2rem, 7vw, 7rem);
+  align-items: start;
+}
+
+.srag-home-tree {
+  overflow-x: auto;
+  margin: 0;
+  padding: 1.3rem;
+  color: #17253b;
+  font-family: var(--md-code-font-family);
+  font-size: 0.68rem;
+  line-height: 1.75;
+  white-space: pre;
+  border: 1px solid var(--srag-border);
+  border-radius: var(--srag-radius-md);
+  background: #f8fbff;
+  box-shadow: var(--srag-shadow-soft);
+}
+
+.srag-pathway-grid,
+.srag-principle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.srag-home-cta {
+  position: relative;
+  overflow: hidden;
+  max-width: calc(var(--md-grid-width) - 2.4rem);
+  margin-block: clamp(3rem, 6vw, 5rem);
+  padding: clamp(2.4rem, 5vw, 4.5rem);
+  color: white;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: var(--srag-radius-lg);
+  background: var(--srag-panel-dark);
+}
+
+.srag-home-cta::after {
+  position: absolute;
+  top: -8rem;
+  right: -5rem;
+  width: 24rem;
+  height: 24rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--srag-violet-600) 55%, transparent), transparent 68%);
+  content: "";
+  pointer-events: none;
+}
+
+.srag-home-cta h2,
+.srag-home-cta p {
+  position: relative;
+  z-index: 1;
+  max-width: 35rem;
+  color: white;
+}
+
+.srag-home-cta h2 {
+  margin-top: 0;
+}
+
+.srag-home-cta .srag-button--secondary {
+  position: relative;
+  z-index: 1;
+  color: white;
+  border-color: rgb(255 255 255 / 35%);
+  background: transparent;
+}
+
+@media screen and (max-width: 76rem) {
+  .srag-home-hero__inner {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .srag-capability-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media screen and (max-width: 60rem) {
+  .srag-home-hero__inner {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .srag-home-hero__figure {
+    max-width: 44rem;
+  }
+
+  .srag-home-quickstart,
+  .srag-home-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media screen and (max-width: 44.984375em) {
+  .srag-home-hero__inner {
+    padding-top: 3.4rem;
+  }
+
+  .srag-home-hero__brand {
+    width: 10rem;
+    height: 3.55rem;
+  }
+
+  .srag-home-hero__logo {
+    width: 10rem;
+  }
+
+  .srag-home-hero h1 {
+    font-size: clamp(2.35rem, 12vw, 3.25rem);
+  }
+
+  .srag-home-hero__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .srag-button {
+    width: 100%;
+  }
+
+  .srag-capability-grid,
+  .srag-pathway-grid,
+  .srag-principle-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .srag-capability {
+    min-height: 0;
+  }
+
+  .srag-home-quickstart {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

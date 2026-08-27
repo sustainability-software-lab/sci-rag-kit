@@ -1,7 +1,7 @@
 # Convenience targets. Everything here is just the underlying command,
 # spelled out; run `make <target>` or copy the command, whichever you like.
 
-.PHONY: setup db-up db-down db-upgrade demo demo-cloud test lint typecheck check serve mcp eval eval-ablation clean-demo
+.PHONY: setup db-up db-down db-upgrade demo demo-cloud test lint typecheck check serve mcp eval eval-ablation docs docs-serve docs-reference clean-demo
 
 ## setup: install dependencies, start Postgres, create the schema
 setup:
@@ -41,8 +41,8 @@ test:
 	uv run pytest
 
 lint:
-	uv run ruff check src tests
-	uv run ruff format --check src tests
+	uv run ruff check src tests examples scripts
+	uv run ruff format --check src tests examples scripts
 
 typecheck:
 	uv run mypy
@@ -61,6 +61,26 @@ eval:
 
 eval-ablation:
 	uv run sci-rag eval retrieval --ablation
+
+## docs-reference: regenerate source-derived CLI and configuration reference.
+docs-reference:
+	uv run python scripts/render_cli_docs.py --output docs/cli.md
+	uv run python scripts/render_config_docs.py --output docs/configuration.md
+
+## docs: build the documentation exactly as CI and GitHub Pages do.
+docs:
+	uv run python scripts/render_cli_docs.py --check --output docs/cli.md
+	uv run python scripts/render_config_docs.py --check --output docs/configuration.md
+	uv run mkdocs build --strict
+	test ! -d site/planning
+	test ! -e site/assets/branding/README/index.html
+	@if grep -RilE 'PISCES|filed software disclosure' site; then \
+		echo "Internal planning language leaked into the public site." >&2; \
+		exit 1; \
+	fi
+
+docs-serve:
+	uv run mkdocs serve
 
 # The full, reproducible benchmark behind docs/benchmarks.md: real
 # embeddings + graph + every ablation config + judged answers +

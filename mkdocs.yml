@@ -1,35 +1,158 @@
-# Optional docs site. The docs read fine on GitHub; this exists for teams
-# that want a hosted site: `uvx --with mkdocs-material mkdocs serve`
-site_name: sci-rag-kit
+site_name: Sci-RAG Kit
 site_description: A DIY GraphRAG factory for scientific domains
+site_author: Sustainability Software Lab
+site_url: https://sustainability-software-lab.github.io/sci-rag-kit/
 repo_url: https://github.com/sustainability-software-lab/sci-rag-kit
+repo_name: sustainability-software-lab/sci-rag-kit
+edit_uri: ""
+copyright: Copyright &copy; 2026 the sci-rag-kit contributors · BSD-3-Clause
+
+docs_dir: docs
+exclude_docs: |
+  planning/
+  assets/branding/README.md
+not_in_nav: |
+  index.md
+  examples/demo-eval/*.md
+
 theme:
   name: material
+  custom_dir: docs/overrides
+  language: en
   logo: assets/branding/icon-sizes/sci-rag-kit-icon-transparent-128.png
   favicon: assets/branding/icon-sizes/favicon.ico
+  icon:
+    repo: fontawesome/brands/github
+  font:
+    text: Inter
+    code: Space Mono
   palette:
-    - scheme: default
-      primary: indigo
-docs_dir: docs
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.indexes
+    - navigation.tracking
+    - navigation.path
+    - navigation.footer
+    - navigation.top
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.copy
+    - content.code.select
+    - content.code.annotate
+
 nav:
-  - Home: index.md
-  - Quickstart: quickstart.md
-  - Bring your own domain: bring-your-own-domain.md
-  - Corpus campaigns: campaigns.md
-  - Methodology: methodology.md
-  - Architecture: architecture.md
-  - Evaluation: evaluation.md
-  - Benchmarks: benchmarks.md
-  - Choosing sci-rag-kit: choosing-sci-rag-kit.md
-  - API reference: api.md
-  - Operations: operations.md
-  - Deploy on Google Cloud: deploy-gcp.md
-  - Roadmap: ROADMAP.md
-  - Versioning: VERSIONING.md
-  - Governance: GOVERNANCE.md
-  - Decisions:
-      - Graph in Postgres: adr/0001-graph-in-postgres.md
-      - 1536-dim embeddings: adr/0002-embeddings-1536-hnsw.md
-      - Docling with fallback: adr/0003-docling-with-pypdf-fallback.md
-      - Template, not cookiecutter: adr/0004-template-repo-not-cookiecutter.md
-      - Citation edges in their own table: adr/0005-citation-edges-as-a-document-table.md
+  - Get started:
+      - get-started.md
+      - Quickstart: quickstart.md
+      - Tour the repository: tour.md
+      - Choosing Sci-RAG Kit: choosing-sci-rag-kit.md
+      - Troubleshooting: troubleshooting.md
+  - Learn:
+      - learn.md
+      - Architecture: architecture.md
+      - Methodology: methodology.md
+      - Evidence and rights: evidence-and-rights.md
+  - Guides:
+      - guides.md
+      - Bring your own domain: bring-your-own-domain.md
+      - Discover a corpus: campaigns.md
+      - Evaluate your pipeline: evaluation.md
+      - Extend the seams: extend.md
+      - Operations: operations.md
+      - Deploy on Google Cloud: deploy-gcp.md
+  - Reference:
+      - reference.md
+      - CLI: cli.md
+      - Configuration: configuration.md
+      - REST, MCP, and Python API: api.md
+      - Benchmarks: benchmarks.md
+      - Glossary: glossary.md
+  - Project:
+      - project.md
+      - Roadmap: ROADMAP.md
+      - Versioning: VERSIONING.md
+      - Governance: GOVERNANCE.md
+      - Adopters: adopters.md
+      - Decision records:
+          - Graph in Postgres: adr/0001-graph-in-postgres.md
+          - 1536-dimensional embeddings: adr/0002-embeddings-1536-hnsw.md
+          - Docling with fallback: adr/0003-docling-with-pypdf-fallback.md
+          - Template repository, not Cookiecutter: adr/0004-template-repo-not-cookiecutter.md
+          - Citation edges in their own table: adr/0005-citation-edges-as-a-document-table.md
+      - Contributing: contributing.md
+      - Changelog: changelog.md
+      - How to cite: citation.md
+
+plugins:
+  - search:
+      lang: en
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.snippets:
+      base_path:
+        - .
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+extra_css:
+  - stylesheets/tokens.css
+  - stylesheets/typography.css
+  - stylesheets/components.css
+  - stylesheets/code.css
+  - stylesheets/diagrams.css
+  - stylesheets/home.css
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/sustainability-software-lab/sci-rag-kit
+      name: Sci-RAG Kit on GitHub

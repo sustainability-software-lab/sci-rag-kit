@@ -1,171 +1,205 @@
-# Quickstart
+---
+title: Build your first scientific RAG
+description: Set up Sci-RAG Kit, ingest the synthetic demo corpus, inspect retrieval, produce a cited answer, and serve REST and MCP.
+---
 
-Setup through a served, agent-accessible RAG over the demo corpus, in
-about ten minutes. Every command runs from the repository root.
+# Build your first scientific RAG
 
-## What you need
+Set up a served, agent-accessible knowledge base over the bundled demo corpus. You will see the evidence returned by each retrieval stage before you add your own literature.
 
-| Thing | Why | Get it |
-|-------|-----|--------|
-| Python 3.11+ and [uv](https://docs.astral.sh/uv/) | runs the kit | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
-| Docker | one-command Postgres with pgvector | [docker.com](https://www.docker.com/) |
-| A Google model credential (optional but recommended) | real embeddings, graph extraction, and answers | see step 2 |
+<div class="srag-meta-strip">
+  <div><strong>Level</strong>Beginner</div>
+  <div><strong>Time</strong>About 10 minutes</div>
+  <div><strong>Services</strong>Docker + Postgres</div>
+  <div><strong>Credentials</strong>Optional</div>
+  <div><strong>Tested with</strong>v0.2</div>
+</div>
 
-No Docker? Any PostgreSQL 15+ with the pgvector extension works; point
-`SCI_RAG_DATABASE_URL` at it and skip `docker compose`.
+Every command runs from the repository root.
 
-## Step 1: get the code
+## Before you start
 
-If you are starting your own project, click **Use this template** on
-GitHub first, then clone your new repository. To just try the kit:
+| Requirement | Why it is needed | Check |
+|---|---|---|
+| Python 3.11 or 3.12 | Supported runtime | `python --version` |
+| [uv](https://docs.astral.sh/uv/) | Environment and dependency management | `uv --version` |
+| Docker | Local Postgres with pgvector | `docker version` |
+| Google credential, optional | Real semantic embeddings, graph extraction, and answers | AI Studio key or Vertex ADC |
 
-```bash
-git clone https://github.com/sustainability-software-lab/sci-rag-kit.git
-cd sci-rag-kit
+No Docker? Use PostgreSQL 15 or newer with pgvector, set `SCI_RAG_DATABASE_URL`, and follow the explicit external-Postgres commands in step 3 instead of running `make setup`.
+
+## 1. Get the repository
+
+For your own project, click **Use this template** on GitHub and clone the repository it creates. To evaluate the kit directly:
+
+```console title="Terminal"
+$ git clone https://github.com/sustainability-software-lab/sci-rag-kit.git
+$ cd sci-rag-kit
 ```
 
-Alternatively, open the repository in GitHub Codespaces: the bundled
-devcontainer starts Postgres and installs everything, so you can go
-straight to step 2.
+The included dev container is another supported path. In GitHub Codespaces it installs the project and starts Postgres, so continue with configuration.
 
-## Step 2: configure credentials
+## 2. Choose a credential mode
 
-```bash
-cp .env.example .env
+Create the local environment file:
+
+```console
+$ cp .env.example .env
 ```
 
-Open `.env` and pick ONE of three modes:
+Choose exactly one mode.
 
-**Mode A, easiest: a free AI Studio key.** Get one at
-[aistudio.google.com/apikey](https://aistudio.google.com/apikey) (free
-tier is plenty for the demo), then set:
+### AI Studio: easiest real-model path
 
-```
+Create an API key at [Google AI Studio](https://aistudio.google.com/apikey), then set:
+
+```dotenv title=".env"
 SCI_RAG_GOOGLE_API_KEY=your-key-here
 ```
 
-**Mode B, for labs on Google Cloud: Vertex AI.** Authenticate once with
-`gcloud auth application-default login`, then set:
+### Vertex AI: labs and Google Cloud teams
 
+Authenticate Application Default Credentials once, then set the project:
+
+```console
+$ gcloud auth application-default login
 ```
+
+```dotenv title=".env"
 SCI_RAG_GCP_PROJECT=your-project-id
 ```
 
-**Mode C, no credentials at all.** Set
-`SCI_RAG_EMBEDDING_PROVIDER=local-hash`. The pipeline runs fully offline
-with a deterministic lexical embedder. Retrieval works mechanically
-(good for seeing the plumbing), but rankings are word-overlap, not
-meaning, and anything that needs an LLM (graph extraction, generated
-answers) is unavailable. You can add a key later and re-ingest.
+### Offline: no credentials
 
-## Step 3: install and initialize
+Use the deterministic local embedder:
 
-```bash
-make setup
+```dotenv title=".env"
+SCI_RAG_EMBEDDING_PROVIDER=local-hash
 ```
 
-That runs three things you could also run yourself: `uv sync` (install),
-`docker compose up -d --wait` (Postgres on port 5433, chosen to never
-collide with a Postgres you already run), and `uv run sci-rag db upgrade`
-(create the schema, including the vector and full-text indexes).
+This mode exercises parsing, chunking, storage, ranking, and retrieval evaluation without network calls. Its similarity is lexical rather than semantic. Graph extraction, HyDE, community summaries, generated answers, and model-based judging remain unavailable until you add a model credential.
 
-## Step 4: run the demo
+## 3. Install and initialize
 
-```bash
-make demo
+With Docker:
+
+```console
+$ make setup
 ```
 
-This ingests the bundled demo corpus (five synthetic documents about
-agricultural residues; realistic style, fictional numbers, CC0), runs a
-retrieval you can inspect, and scores retrieval against the bundled seed
-questions. You will see a stage table like:
+The target runs `uv sync`, starts the compose Postgres on host port `5433`, and applies every Alembic migration.
 
-```
-│ vector    │ success │  ... │ 20 │
-│ keyword   │ success │  ... │  4 │
-│ graph     │ disabled │     │    │
+With an external PostgreSQL service, make sure `SCI_RAG_DATABASE_URL` points to it, then run the two non-Docker steps directly:
+
+```console
+$ uv sync
+$ uv run sci-rag db upgrade
 ```
 
-`disabled` is normal at this point: the graph does not exist yet.
+**Expected output**
 
-## Step 5: ask something
-
-```bash
-uv run sci-rag answer "How much rice straw was generated in the Colusa Basin in 2023?"
+```text
+Database schema is up to date.
 ```
 
-With a Google credential you get a short, cited answer (the correct demo
-answer is about 302,000 dry tons, citing the resource assessment). In
-offline mode this step reports that no LLM is configured, which is
-itself the system working: it refuses rather than fakes.
+<div class="srag-checkpoint" markdown>
+**Checkpoint: the foundation is healthy**
 
-## Step 6: build the graph and go deep
+Run `uv run sci-rag doctor`. Configuration, domain, database, and schema should report healthy. An empty corpus or missing optional credential can still be informational at this point.
+</div>
+
+## 4. Ingest and inspect the demo
+
+```console
+$ make demo
+```
+
+This command ingests five synthetic CC0 documents about agricultural residues, retrieves evidence for one question, and scores retrieval against the bundled seed questions. The numbers are plausible but fictional; the fixture demonstrates the pipeline, not the state of a real region.
+
+**Expected output**
+
+```text
+Ingestion report
+5 ingested, 0 skipped, 0 failed.
+
+vector     success     ...
+keyword    success     ...
+graph      disabled    ...
+```
+
+Exact candidate counts and metric values depend on the credential mode. `graph disabled` is normal here because `make demo` uses the interactive profile, which intentionally leaves the model-dependent graph layer off.
+
+<div class="srag-checkpoint" markdown>
+**Checkpoint: evidence is inspectable**
+
+The retrieval table should show a title, section path, license class, contributing layers, fused score, and content excerpt. The stage table should distinguish success, empty, disabled, or failure rather than silently omitting a layer.
+</div>
+
+## 5. Generate a cited answer
 
 With a Google credential:
 
-```bash
-make demo-cloud
+```console
+$ uv run sci-rag answer "How much rice straw was generated in the Colusa Basin in 2023?"
 ```
 
-That extracts entities and relationships from every chunk (about a
-minute on the demo corpus), clusters them into summarized communities,
-asks a question that needs evidence from three documents at once, and
-runs the full per-layer ablation report so you can see what each
-retrieval layer contributes. Reports land in `eval_results/`.
+The demo answer is approximately 302,000 dry tons and cites the synthetic resource assessment. Check the cited passage rather than treating the number alone as success.
 
-## Step 7: serve it
+In offline mode this command reports that no LLM is configured. That refusal is expected: the system does not fabricate an answer when generation is unavailable.
 
-```bash
-uv run sci-rag serve
+## 6. Build the graph and run the deep path
+
+With a Google credential:
+
+```console
+$ make demo-cloud
 ```
 
-* Interactive API docs: http://127.0.0.1:8000/docs
-* A retrieval call: `curl -s -X POST localhost:8000/v1/query -H 'Content-Type: application/json' -d '{"query": "rice straw availability"}'`
-* The public corpus manifest: http://127.0.0.1:8000/v1/corpus-manifest
-* MCP for agents, same process: http://127.0.0.1:8000/mcp
+The target extracts ontology-constrained entities and relationships, builds community summaries, asks a multi-document question, and runs the per-layer retrieval ablation. Reports are written under `eval_results/`.
 
-To wire a local agent over stdio instead:
+<div class="srag-checkpoint" markdown>
+**Checkpoint: complexity produced evidence**
 
-```bash
-claude mcp add demo-corpus -- uv run --directory $(pwd) sci-rag mcp
+Open the newest retrieval report. It should identify the corpus fingerprint, models, profile, enabled layers, metrics, confidence intervals, and per-question records. Do not enable an expensive layer in your own profile merely because it worked on this fixture.
+</div>
+
+## 7. Serve humans and agents
+
+```console
+$ uv run sci-rag serve
 ```
 
-Then ask Claude Code something like "using the demo-corpus tools, what
-biogas yield does pretreated rice straw achieve?" and watch it call
-`search_corpus` and `answer_question`.
+The one process exposes:
 
-## Where to next
+- OpenAPI: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- Corpus manifest: [http://127.0.0.1:8000/v1/corpus-manifest](http://127.0.0.1:8000/v1/corpus-manifest)
+- MCP over streamable HTTP: `http://127.0.0.1:8000/mcp`
 
-* Swap in your own field: [bring-your-own-domain.md](bring-your-own-domain.md)
-* Understand what you just ran: [methodology.md](methodology.md)
-* Put it on Google Cloud: [deploy-gcp.md](deploy-gcp.md)
+Try retrieval through REST:
 
-## Troubleshooting
+```console
+$ curl -s -X POST http://127.0.0.1:8000/v1/query \
+    -H 'Content-Type: application/json' \
+    -d '{"query": "rice straw availability", "top_k": 3}'
+```
 
-First move for anything unexpected: `uv run sci-rag doctor`. It checks
-configuration, credentials, the database, the schema, the corpus, and the
-graph, and prints a fix hint for whatever is wrong (`--probe` adds one
-live model round-trip).
+For a local agent over stdio:
 
-**`connection refused` on 5433.** Postgres is not up: `docker compose up
--d --wait`, or check `docker ps`. If you use your own Postgres, confirm
-`SCI_RAG_DATABASE_URL` and that `CREATE EXTENSION vector` is available.
+```console
+$ claude mcp add demo-corpus -- uv run --directory "$(pwd)" sci-rag mcp
+```
 
-**`No Google credentials configured`.** The error tells you the three
-options; it appears the moment something needs a model (answering,
-extraction, HyDE), not at startup, so retrieval-only use works without
-credentials.
+Ask the agent to use `demo-corpus` for a question. You should see a `search_corpus` or `answer_question` tool call rather than an answer from the agent's unaided memory.
 
-**Embedding dimension errors.** The database columns are created with
-`SCI_RAG_EMBEDDING_DIM` (default 1536) at migration time. If you change
-the dimension or the embedding model family, re-create the schema (drop
-and `sci-rag db upgrade`) and re-ingest; mixing dimensions is refused
-loudly on purpose.
+## What you built
 
-**PDF text looks mangled.** The pypdf fallback is doing its best with a
-hard PDF. Install the good parser: `uv sync --extra docling` (large
-download; it brings a table-structure model) and re-ingest.
+You now have one Postgres database containing source records, structure-aware chunks, dense vectors, full-text search, and, if enabled, a concept graph and community summaries. One service exposes the same retrieval and answer behavior to CLI users, REST clients, and MCP agents. The evaluation artifacts record what that system did on known questions.
 
-**Ingest says `skipped_duplicate`.** Working as intended: identical
-content is recognized by hash and never stored twice. Delete and
-re-ingest only if you actually changed the file.
+## Continue
+
+- Replace the fixture with your field: [Bring your own domain](bring-your-own-domain.md)
+- Follow ownership through the code: [Architecture](architecture.md)
+- Understand provenance and license scope: [Evidence and rights](evidence-and-rights.md)
+- Diagnose a mismatch: [Troubleshooting](troubleshooting.md)
+- Enrich DOI metadata and review known retractions: [Operations](operations.md#crossref-enrichment-and-retraction-review)
+- Deploy the service: [Google Cloud guide](deploy-gcp.md)

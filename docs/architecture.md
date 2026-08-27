@@ -6,18 +6,45 @@ For the reasoning behind the retrieval design itself, read
 
 ## The map
 
+```mermaid
+flowchart LR
+  D[domain/<br/>ontology · prompts · questions]
+  S[Scientific files<br/>manifest + rights]
+  I[Ingest<br/>parse · chunk · embed]
+  DB[(Postgres<br/>text · vectors · FTS · graph)]
+  G[Graph builder<br/>extract · communities]
+  R[Retriever<br/>five layers · fusion]
+  A[Answer engine<br/>numbered evidence]
+  E[Evaluation<br/>ablations · judge]
+  X[Crossref enrichment<br/>journal · citations · retractions]
+  API[One RagService<br/>REST /v1 · MCP /mcp]
+  U[Humans and agents]
+
+  D --> I
+  D --> G
+  D --> R
+  D --> A
+  D --> E
+  S --> I --> DB
+  DB <--> X
+  DB <--> G
+  DB --> R --> A
+  R --> E
+  A --> E
+  A --> API --> U
+  R --> API
+
+  classDef source stroke:#00a8d6,stroke-width:2px
+  classDef process stroke:#005bfd,stroke-width:2px
+  classDef graphNode stroke:#8b5cf6,stroke-width:2px
+  classDef verify stroke:#22a06b,stroke-width:2px
+  class S,D,I source
+  class DB,R,A,API process
+  class G graphNode
+  class E,X verify
 ```
-                     domain/  (ontology, prompts, seed questions)
-                        |
-   files ->  ingest  ->  db (Postgres + pgvector)  <-  graph builder
-              |             ^         ^                  (extract, communities)
-              |             |         |
-            embed        retrieve   evals
-              |             |         |
-              +----- answer +---------+
-                        |
-                 server (REST /v1 + MCP /mcp)  ->  humans and agents
-```
+
+The domain profile shapes extraction, retrieval, answering, and evaluation without becoming a second application. Both network interfaces call the same service facade, and every evidence-bearing path returns to the same document and chunk rows.
 
 Package by package (`src/sci_rag/`):
 
@@ -27,6 +54,8 @@ Package by package (`src/sci_rag/`):
 | `domain` | loads and validates `domain/` (ontology, prompts, tuning) | `DomainProfile` |
 | `db` | SQLAlchemy models, async engine, Alembic migrations | `session_scope()`, models |
 | `ingest` | parsers (Docling/pypdf/markdown), chunker, manifest, ingester | `ingest_entries()` |
+| `campaigns` | bounded discovery, explicit OA resolution, verified PDF download, manifest output, and append-only resumable state | `discover_by_topic()`, `build_campaign()`, `CampaignState` |
+| `enrich` | Crossref journal, citation-count, and explicit retraction metadata | `enrich_documents()` |
 | `embed` | `EmbeddingProvider` interface; Google + offline hash implementations | `get_embedder()` |
 | `llm` | `LLMClient` interface; Google implementation + `MockLLM` | `get_llm()` |
 | `graph` | entity/relation extraction, community detection + summaries | `extract_graph()`, `build_communities()` |
@@ -44,21 +73,60 @@ Two rules keep this navigable:
 2. **REST and MCP share one `RagService` instance.** The two front doors
    cannot drift apart because there is exactly one service behind both.
 
+## Retrieval flow
+
+The five candidate sources run concurrently where their dependencies allow, then fuse once. Scope conditions are part of each eligible layer's database query, not a cleanup step after ranking.
+
+```mermaid
+flowchart LR
+  Q[Question + profile + scope] --> ROUTE{Profile and router}
+  ROUTE --> V[Vector]
+  ROUTE --> K[Keyword]
+  ROUTE --> G[Graph]
+  ROUTE --> C[Community]
+  ROUTE --> H[HyDE]
+  V --> F[Weighted RRF]
+  K --> F
+  G --> F
+  C --> F
+  H --> F
+  F --> RR{Reranker enabled?}
+  RR -->|yes| P[Reordered top-k]
+  RR -->|no or failure| B[Fused top-k]
+  P --> O[Items + traces + degraded stages]
+  B --> O
+
+  classDef source stroke:#00a8d6,stroke-width:2px
+  classDef process stroke:#005bfd,stroke-width:2px
+  classDef graphNode stroke:#8b5cf6,stroke-width:2px
+  classDef verify stroke:#22a06b,stroke-width:2px
+  class Q source
+  class ROUTE,V,K,F,RR,B process
+  class G,C,H,P graphNode
+  class O verify
+```
+
+Vector and community retrieval share one shielded query-embedding task. Graph and HyDE use the configured model when enabled. A stage owns its timeout and session; its failure becomes a trace while other candidates continue.
+
 ## Data model
 
 Five tables, one database:
 
 * `documents`: source identity, citation metadata, license class,
-  content hash (unique; the dedup backstop).
+  content hash (unique; the dedup backstop), and sparse Crossref
+  enrichment including explicit retraction status.
 * `chunks`: the retrieval unit. Text, token count, section path,
   `is_table`, a pgvector embedding (HNSW indexed) with its
   `embedding_version`, a generated `search_tsv` full-text column (GIN
   indexed), and `graph_extracted_at` (NULL means the graph builder has
   not seen it yet, which is how incremental extraction finds work).
-* `kg_entities`: canonical by name; type from your ontology; evidence
-  pointers (`chunk_ids`, `document_ids`).
+* `kg_entities`: canonical by name; type from your ontology; retained
+  source aliases; evidence pointers (`chunk_ids`, `document_ids`).
 * `kg_relationships`: directed typed edges with the quoted evidence
-  phrase and its chunk.
+  phrase, its chunk, and calibrated confidence (1.0 for direct
+  statements, 0.7 for strong implications, and 0.4 for cross-sentence
+  inferences). Repeated extraction preserves the highest observed
+  confidence for the typed edge.
 * `kg_communities`: cluster membership, an LLM summary, and the
   summary's embedding.
 
@@ -87,6 +155,8 @@ survives.
 * Fail-closed beats fail-open everywhere rights are involved: empty
   license scope returns nothing; `unknown` license is unsafe; the
   community layer refuses scoped requests outright.
+* License, source, year, author, journal, document, and DOI conditions
+  are applied before a layer orders or limits candidates.
 * Anything a model returns is validated before it touches the database
   (ontology types, judge scores, JSON shapes) and dropped, not repaired,
   when malformed.
@@ -121,18 +191,18 @@ protocol.
    `ingest/parsers.py::parse_file` producing the shared block model.
 2. **A new corpus collector** (S3, an API): produce `CorpusEntry` rows;
    everything downstream is unchanged.
-3. **A reranker**: wrap the fused candidate list inside
-   `Retriever.retrieve()` after fusion; add an ablation config so it has
-   to prove itself.
+3. **A reranker**: implement the `Reranker` protocol and add an ablation
+   config so the adapter has to prove itself.
 4. **A different embedding or LLM provider**: implement the two-method
    `EmbeddingProvider` / `LLMClient` interfaces; stamp a distinct
    `version` so re-embedding stays findable.
 5. **A different auth backend**: implement `AuthBackend`
-   (authenticate + rate check) and pass it in `create_app`.
+   (authenticate + rate check) and wire it into your application factory;
+   the shipped `create_app()` selects open or static-key mode from settings.
 
 ## What is deliberately absent
 
 No task queue, no cache service, no vector-store sidecar, no graph
 database, no plugin framework. Each was considered and declined for v1;
-the [decision records](adr/) hold the arguments, including the
-conditions under which we would reverse them.
+the [decision records](adr/0001-graph-in-postgres.md) hold the arguments,
+including the conditions under which we would reverse them.
