@@ -194,7 +194,7 @@ candidate several layers agree on beats a candidate one layer loved.
 | HyDE | 1.2 |
 
 These defaults have held up in production use, but the honest way to tune
-them for YOUR corpus is the evaluation harness's ablation mode, which
+them for your corpus is the evaluation harness's ablation mode, which
 reports what each layer actually contributes to hit rate before you touch
 a weight.
 

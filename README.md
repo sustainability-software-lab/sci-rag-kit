@@ -170,7 +170,7 @@ fidelity.
 
 Developed at Lawrence Berkeley National Laboratory as part of a
 collaboration with the University of Washington Scientific Software
-Engineering Center (UW SSEC) under the Schmidt Sciences VIS program. The
+Engineering Center (UW SSEC) under the Schmidt Sciences VISS program. The
 retrieval methodology originates in LBL's PISCES platform; this kit is an
 independent, domain-agnostic implementation of it.
 

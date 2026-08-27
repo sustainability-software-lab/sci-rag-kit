@@ -121,7 +121,7 @@ prompt first.
 shipped demo corpus with the offline embedder on every CI run, with
 conservative thresholds (hit@10 at least 0.65). It exists to catch a
 broken chunker, layer, or seed file before it ships, and it is the
-pattern to copy when you want YOUR corpus protected by CI: freeze a
+pattern to copy to protect your own corpus with CI: freeze a
 small fixture corpus, pin thresholds under your current numbers, and let
 regressions fail loudly.
 

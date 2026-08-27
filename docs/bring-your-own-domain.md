@@ -173,7 +173,7 @@ probe.
 Then:
 
 ```bash
-uv run sci-rag eval retrieval --ablation   # which layers earn their keep on YOUR corpus
+uv run sci-rag eval retrieval --ablation   # which layers contribute on your corpus
 uv run sci-rag eval answers                # generated answers, graded by the blind judge
 ```
 
