@@ -28,6 +28,11 @@ that is exactly what the default is for.
 
 from __future__ import annotations
 
+#: What a document carries when nobody has recorded its rights. Named because
+#: the fail-closed rule is keyed on this exact value: `unknown` is never
+#: included in a restricted scope unless a caller asks for it by name.
+UNKNOWN_CLASS = "unknown"
+
 LICENSE_CLASSES: tuple[str, ...] = (
     "public",
     "open_commercial",
@@ -44,7 +49,7 @@ EXTERNAL_SAFE_CLASSES: tuple[str, ...] = ("public", "open_commercial")
 def normalize_license_class(value: str | None) -> str:
     """Map a manifest value onto the taxonomy, defaulting to ``unknown``."""
     if value is None:
-        return "unknown"
+        return UNKNOWN_CLASS
     cleaned = value.strip().lower().replace("-", "_").replace(" ", "_")
     if cleaned in LICENSE_CLASSES:
         return cleaned
@@ -62,4 +67,4 @@ def normalize_license_class(value: str | None) -> str:
         "paywalled": "restricted",
         "all_rights_reserved": "restricted",
     }
-    return aliases.get(cleaned, "unknown")
+    return aliases.get(cleaned, UNKNOWN_CLASS)

@@ -39,6 +39,26 @@ The taxonomy is operational, not legal advice. Record the actual license and ret
 
 `public` and `open_commercial` are the codebase's predefined safe classes for surfaces you do not fully control. A deployment still has to choose and enforce its own request scope.
 
+### Auditing what you actually have
+
+```bash
+sci-rag corpus license-report            # the table
+sci-rag corpus license-report --json     # the same numbers, machine-readable
+sci-rag corpus license-report --strict   # exit 1 if anything is still `unknown`
+```
+
+Counts by class, by document **and** by chunk, because those answer different
+questions: rights are declared per document, but retrieval returns chunks, so a
+corpus that is 20% restricted by document can be 60% restricted by the material
+an answer would draw on. Every class in the taxonomy is listed even at zero — a
+missing row would read as "not checked" rather than "none".
+
+Documents still in `unknown` are named individually, with the source bucket
+each came from, because that is usually the actionable pattern: one scraper or
+one hand-built manifest, not four unrelated files. `--strict` is the opt-in that
+turns the report into a CI gate; without it the command always exits 0, because
+a report that breaks the build is a report nobody runs.
+
 ## Scope precedes ranking
 
 A `RetrievalScope` can constrain:

@@ -1588,6 +1588,101 @@ def corpus_snapshot(
     console.print(f"[green]Snapshot [bold]{info.name}[/bold] written to {info.path}.[/green]")
 
 
+#: The undeclared list can be the whole corpus. The table shows a readable
+#: slice and says how many it left out; `--json` never elides.
+_UNDECLARED_TABLE_LIMIT = 20
+
+
+@corpus_app.command("license-report")
+def corpus_license_report(
+    as_json: bool = typer.Option(False, "--json", help="Machine-readable output."),
+    strict: bool = typer.Option(
+        False,
+        "--strict",
+        help="Exit 1 when any document is still 'unknown'. For CI; the report itself never fails.",
+    ),
+) -> None:
+    """The corpus's rights posture: what is declared, and what is not.
+
+    License classes gate retrieval, but nothing summarized them. This counts
+    the corpus by class, by document and by chunk, and names every document
+    nobody has recorded rights for.
+    """
+    import json as _json
+
+    from sci_rag.db import get_session_factory
+    from sci_rag.license_report import build_license_report, report_payload
+    from sci_rag.licensing import EXTERNAL_SAFE_CLASSES
+
+    async def run():  # type: ignore[no-untyped-def]
+        await _check_db()
+        return await build_license_report(get_session_factory())
+
+    report = run_async(run())
+
+    if as_json:
+        print(_json.dumps(report_payload(report), indent=2))
+        raise typer.Exit(1 if strict and not report.clean else 0)
+
+    table = Table(title="License posture")
+    table.add_column("Class")
+    table.add_column("Documents", justify="right")
+    table.add_column("%", justify="right")
+    table.add_column("Chunks", justify="right")
+    table.add_column("%", justify="right")
+    table.add_column("External-safe")
+    for row in report.by_class:
+        colour = "yellow" if row.license_class == "unknown" and row.documents else None
+        name = f"[{colour}]{row.license_class}[/{colour}]" if colour else row.license_class
+        table.add_row(
+            name,
+            str(row.documents),
+            f"{row.document_share:.1f}",
+            str(row.chunks),
+            f"{row.chunk_share:.1f}",
+            "yes" if row.external_safe else "no",
+        )
+    console.print(table)
+
+    console.print(
+        f"{report.total_documents} document(s), {report.total_chunks} chunk(s). "
+        f"[green]{report.external_safe_documents} ({report.external_safe_share:.1f}%)[/green] "
+        f"are external-safe ({', '.join(EXTERNAL_SAFE_CLASSES)}): the classes you can expose "
+        "on a surface you do not fully control."
+    )
+
+    if report.undeclared:
+        shown = report.undeclared[:_UNDECLARED_TABLE_LIMIT]
+        undeclared = Table(title="Undeclared rights (license_class: unknown)")
+        undeclared.add_column("Source")
+        undeclared.add_column("Title")
+        for document in shown:
+            undeclared.add_row(document.source, document.title)
+        console.print(undeclared)
+        if len(report.undeclared) > len(shown):
+            console.print(
+                f"[yellow]... and {len(report.undeclared) - len(shown)} more. "
+                "Use --json for the full list.[/yellow]"
+            )
+        by_source = ", ".join(
+            f"{source} ({count})" for source, count in sorted(report.undeclared_by_source.items())
+        )
+        console.print(f"Undeclared documents come from: {by_source}.")
+        console.print(
+            "[yellow]`unknown` is fail-closed, not neutral.[/yellow] Whenever a caller "
+            "restricts the license scope, these documents are excluded unless the scope "
+            "names `unknown` explicitly, so they are invisible to scoped retrieval and to "
+            "a scoped export. Record their rights in the corpus manifest and re-ingest, "
+            "or leave them out on purpose."
+        )
+    else:
+        console.print("[green]Every document has a recorded license class.[/green]")
+
+    # A report is not a gate. `--strict` is the opt-in that makes it one.
+    if strict and not report.clean:
+        raise typer.Exit(1)
+
+
 @corpus_app.command("export")
 def corpus_export(
     outdir: Path = typer.Argument(..., help="Directory to write the export files into."),
