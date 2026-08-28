@@ -116,18 +116,20 @@ retrieval:
 
 # Question-aware compression between retrieval and answer prompt assembly.
 #
-# OFF for the shipped demo. The paired n=10 judged-answer gate was re-run for
-# the v0.3 benchmark and did not hold: median prompt tokens fell 1280 -> 378,
-# but all four judged dimensions moved down (groundedness 2.00 -> 1.60,
-# citation accuracy 2.00 -> 1.80, completeness 1.90 -> 1.60, correctness
-# 1.60 -> 1.10). At n=10 no single drop is distinguishable from noise, but the
-# gate asks for quality to HOLD, and this run does not show it holding.
+# ON for the shipped demo, with the floor at 0.0: summarize every source, drop
+# none. The paired judged-answer gate was re-run for v0.3 across a floor sweep
+# and this is the setting where it holds. Two independent paired runs at 0.0:
+# every judged dimension identical to the uncompressed baseline, median prompt
+# tokens 25% to 27% lower.
 #
-# The mechanism is the relevance floor, not the summarizer: 61 chunks were
-# dropped across 10 questions with zero compression failures. A lower floor
-# may well pass the gate. Re-run it before turning this on, here or anywhere
-# else. See docs/benchmarks.md.
+# The floor is the whole story. At 0.15 and 0.3 groundedness and citation
+# accuracy both fall off 2.00, because the floor discards evidence the answer
+# then cannot ground itself in. Summarizing sources is safe here; dropping them
+# is not. Raise the floor only with a paired run that still holds.
+#
+# Re-run the gate before carrying this to another corpus. See
+# docs/benchmarks.md.
 compression:
-  enabled: false
-  relevance_floor: 0.3
+  enabled: true
+  relevance_floor: 0.0
   max_tokens_per_chunk: 160

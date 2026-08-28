@@ -90,7 +90,7 @@ show the shape of each entry.
 | `retrieval.reranker.model` | str \| NoneType | unset | Optional model override for the local cross-encoder. |
 | `compression` | CompressionTuning | see nested fields | Question-aware chunk compression before answer prompt assembly. |
 | `compression.enabled` | bool | false | Domain default; enable only after paired judged-answer evidence. |
-| `compression.relevance_floor` | float | 0.3 | Drop a model-scored chunk below this relevance score. |
+| `compression.relevance_floor` | float | 0.0 | Drop a model-scored chunk below this relevance score. Defaults to 0.0, which drops nothing: summarizing a source is safe, discarding one is not. A v0.3 floor sweep found groundedness and citation accuracy both fall off their ceiling at 0.15 and above, because the answer loses evidence it needs to ground itself in. Raise it only behind a paired judged-answer run that still holds. |
 | `compression.max_tokens_per_chunk` | int | 160 | Maximum accepted tokens per summary; over-budget output falls back to full text. |
 
 ## Files beside the YAML profile

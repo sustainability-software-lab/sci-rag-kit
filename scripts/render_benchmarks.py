@@ -234,6 +234,17 @@ def _compression_section(answers: dict[str, Any], compressed: dict[str, Any]) ->
     failures = sum(r.get("compression_failure_count", 0) for r in compressed.get("records", []))
     n = int(compressed.get("summary", {}).get("n", 0))
 
+    try:
+        from pathlib import Path as _Path
+
+        from sci_rag.config import get_settings
+        from sci_rag.domain import load_domain
+
+        tuning = load_domain(_Path(get_settings().domain_dir)).config.compression
+        floor = f"{tuning.relevance_floor}"
+    except Exception:
+        floor = "unknown"
+
     lines = [
         "## Contextual compression: the paired gate",
         "",
@@ -241,6 +252,13 @@ def _compression_section(answers: dict[str, Any], compressed: dict[str, Any]) ->
         "one with `--compressed` and one without. Compression may default on",
         "only when judged quality HOLDS while measured prompt tokens fall. A",
         "token saving on its own is not evidence; it is half of a trade.",
+        "",
+        f"Measured at `relevance_floor: {floor}`, which is the load-bearing",
+        "setting rather than a detail. The floor decides whether a source is",
+        "dropped instead of summarized, and dropping evidence is what an",
+        "answer cannot recover from. Raising it trades groundedness for",
+        "tokens; that is a different trade from summarizing, and it needs its",
+        "own paired run.",
         "",
         "| Dimension | Uncompressed | Compressed |",
         "|-----------|-------------:|-----------:|",

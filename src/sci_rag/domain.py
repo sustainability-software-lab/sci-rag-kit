@@ -110,10 +110,17 @@ class CompressionTuning(BaseModel):
         description="Domain default; enable only after paired judged-answer evidence.",
     )
     relevance_floor: float = Field(
-        default=0.3,
+        default=0.0,
         ge=0.0,
         le=1.0,
-        description="Drop a model-scored chunk below this relevance score.",
+        description=(
+            "Drop a model-scored chunk below this relevance score. Defaults to 0.0, "
+            "which drops nothing: summarizing a source is safe, discarding one is "
+            "not. A v0.3 floor sweep found groundedness and citation accuracy both "
+            "fall off their ceiling at 0.15 and above, because the answer loses "
+            "evidence it needs to ground itself in. Raise it only behind a paired "
+            "judged-answer run that still holds."
+        ),
     )
     max_tokens_per_chunk: int = Field(
         default=160,
