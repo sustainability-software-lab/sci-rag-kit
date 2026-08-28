@@ -28,7 +28,7 @@ and [examples/demo-eval/answers.md](examples/demo-eval/answers.md).
 
 One JSON object per line:
 
-```jsonl
+```jsonl title="domain/eval_seed_questions.jsonl"
 {"id": "biogas-yield-pretreated",
  "question": "What biogas yield does alkali-pretreated rice straw achieve per dry ton?",
  "reference_answer": "About 320 cubic meters per dry ton at roughly 54 percent methane.",

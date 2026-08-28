@@ -35,7 +35,7 @@ Add the suffix to `SUPPORTED_SUFFIXES`, add a branch in `parse_file()`, and let 
 
 A collector does not need to know about chunking or storage. It emits `CorpusEntry` records containing a local path plus whatever source metadata it can establish:
 
-```python title="CorpusEntry fields (excerpt from src/sci_rag/ingest/manifest.py)"
+```python title="src/sci_rag/ingest/manifest.py"
 path: Path
 title: str | None
 authors: list[str]
@@ -53,7 +53,7 @@ Resolve remote bytes to stable local paths before ingestion. Normalize identifie
 
 `Reranker` is a structural protocol with one async operation:
 
-```python title="src/sci_rag/retrieve/rerank.py (interface excerpt)"
+```python title="src/sci_rag/retrieve/rerank.py"
 class Reranker(Protocol):
     name: str
 
@@ -70,7 +70,7 @@ Do not enable a new reranker by default from intuition. Run `sci-rag eval retrie
 
 An embedding provider exposes `version`, `dim`, and one batch method:
 
-```python title="src/sci_rag/embed/provider.py (interface excerpt)"
+```python title="src/sci_rag/embed/provider.py"
 class EmbeddingProvider(ABC):
     version: str
     dim: int

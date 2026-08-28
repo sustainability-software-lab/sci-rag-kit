@@ -72,7 +72,7 @@ learned the hard way:
 A manifest is one JSON line per document, and it is where licensing and
 citations come from. Create `data/corpus.jsonl`:
 
-```jsonl
+```jsonl title="data/corpus.jsonl"
 {"path": "raw/lee-2021-fouling-review.pdf", "title": "Membrane Fouling Mechanisms: A Review", "authors": ["Lee, S.", "Park, J."], "year": 2021, "doi": "10.1000/example", "license_class": "open_commercial", "source": "journal_papers"}
 {"path": "raw/epa-membrane-guidance.pdf", "title": "EPA Membrane Filtration Guidance Manual", "authors": ["US EPA"], "year": 2005, "license_class": "public", "source": "agency_reports"}
 {"path": "raw/chen-thesis.pdf", "title": "Chen PhD Thesis", "year": 2023, "license_class": "restricted", "source": "theses"}
@@ -99,7 +99,7 @@ Open `domain/domain.yaml`. This one file tells the graph extractor what
 concepts matter in your field. Replace the demo's agricultural types
 with yours:
 
-```yaml
+```yaml title="domain/domain.yaml"
 name: "Membrane Materials KB"
 description: >
   Membrane chemistry, fouling behavior, and separation performance for
@@ -191,7 +191,7 @@ Sanity checks along the way:
 Replace `domain/eval_seed_questions.jsonl` with 10 to 20 questions a
 domain expert can vouch for. Each line:
 
-```jsonl
+```jsonl title="domain/eval_seed_questions.jsonl"
 {"id": "pfas-rejection", "question": "What PFAS rejection does a polyamide RO membrane achieve?", "reference_answer": "Above 99 percent for long-chain PFAS at typical seawater RO conditions, per Lee 2021.", "reference_titles": ["Membrane Fouling Mechanisms: A Review"], "evidence_phrases": ["99", "long-chain PFAS"], "tags": ["performance"]}
 ```
 
