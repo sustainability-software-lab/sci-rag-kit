@@ -167,27 +167,33 @@ confidence interval and median prompt tokens fall measurably. Otherwise leave
 `compression.enabled: false` and record the rejection. A token reduction by
 itself is not evidence that answer quality held.
 
-The shipped demo passed that gate on its 10 seed questions. Both conditions used
-the same 5-document, 34-chunk corpus fingerprint and `local-hash-v1@64`
-retrieval, with real `gemini-2.5-flash` answers and an independent
-`claude-haiku-4-5` judge on Vertex AI. All 10 questions were graded with no
-evaluation failures.
+The shipped demo did not pass that gate, and this is what a rejection looks like
+written down. Both conditions ran on the v0.3 benchmark's 10 seed questions and
+one corpus snapshot, with real `gemini-2.5-flash` answers and judging; all 10
+were graded with no evaluation failures. Cells are mean [95% bootstrap CI].
 
-| Metric | Uncompressed | Compressed | Paired delta [95% CI] |
-|---|---:|---:|---:|
-| groundedness | 2.00 | 2.00 | +0.00 [+0.00, +0.00] |
-| citation accuracy | 2.00 | 2.00 | +0.00 [+0.00, +0.00] |
-| completeness | 2.00 | 1.90 | -0.10 [-0.30, +0.00] |
-| correctness | 1.80 | 2.00 | +0.20 [+0.00, +0.60] |
-| prompt tokens | 1,352 median | 309.5 median | -928.9 [-1065.4, -706.2] |
+| Dimension | Uncompressed | Compressed |
+|---|---:|---:|
+| groundedness | 2.00 [2.00, 2.00] | 1.60 [1.00, 2.00] |
+| citation accuracy | 2.00 [2.00, 2.00] | 1.80 [1.40, 2.00] |
+| completeness | 1.90 [1.70, 2.00] | 1.60 [1.20, 2.00] |
+| correctness | 1.60 [1.10, 2.00] | 1.10 [0.50, 1.70] |
+| median prompt tokens | 1280 | 378 |
 
-Every quality interval includes zero while the prompt-token interval excludes
-zero, so the demo adopts `compression.enabled: true`. The condition token values
-are medians; the paired delta is the mean per-question change. The compressed
-run recorded seven chunk fallbacks in one question and 58 low-relevance drops.
-Those are visible in the report rather than hidden; the fallback question
-retained its complete source text. These small-corpus results justify the demo
-default only, not a general quality claim for other corpora.
+Prompt tokens fell 70% and all four judged dimensions moved down. At n=10 no
+single drop separates from noise, which is not a defence of the default: the
+gate asks for evidence that quality holds, and overlapping intervals are not
+that evidence. So the demo keeps `compression.enabled: false`.
+
+The counters say where it went: 61 sources dropped by the relevance floor across
+the 10 questions, and zero compression failures. Nothing failed to summarize, so
+the floor is discarding evidence the answer then cannot ground itself in, which
+is consistent with groundedness and completeness being what fell. A lower floor
+may pass the gate; tuning it is
+[#90](https://github.com/sustainability-software-lab/sci-rag-kit/issues/90).
+[Benchmarks](benchmarks.md#contextual-compression-the-paired-gate) carries the
+run's provenance, and these small-corpus results decide the demo default only,
+not a general quality claim for other corpora.
 
 ## Calibrating the judge
 
