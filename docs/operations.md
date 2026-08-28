@@ -171,6 +171,41 @@ In Parquet, `documents.extra` is written as a JSON string rather than a
 struct, because its keys vary per document and an inferred struct schema
 would change with the corpus.
 
+## Retrieval latency
+
+```bash
+sci-rag profile                       # interactive, deep, and auto over the seed questions
+sci-rag profile --runs 10             # more replays, tighter percentiles
+sci-rag profile --json                # machine-readable, for tracking over time
+```
+
+Nothing new is instrumented: every request already records a duration per
+stage, and this replays the seed questions and aggregates those traces into
+p50/p95 per stage, per profile, plus a one-line verdict naming the slowest
+stage and what `auto` routed to.
+
+Two things about the numbers are easy to misread, so the command says both out
+loud rather than leaving them to you:
+
+* **The stage column does not sum to the request time.** Candidate generators
+  run concurrently, so a request is roughly as slow as its slowest stage, not
+  as slow as their total. Wall-clock is measured separately and shown in each
+  table's title.
+* **The query-embedding cache is off while profiling.** Interactive requests
+  normally cache query embeddings in process memory, so replaying one question
+  ten times would measure the cache on runs 2 through 10 and report a p50 no
+  real user ever sees. Every run is cold, which makes the profiles comparable
+  and slightly pessimistic about a warm interactive path.
+
+A stage that was switched off is not a failure. `interactive` disables graph,
+community, and HyDE by definition, and an unconfigured reranker is a choice, so
+those show in the status column but never as a degradation. The warning line is
+reserved for stages that ran and did not succeed, because a stage that timed
+out is fast for the wrong reason.
+
+This measures speed, not quality. `docs/benchmarks.md` is where a layer earns
+its place; the profiler only tells you what it costs.
+
 ## The habits that matter
 
 1. Snapshot before and after every bulk change (ingest campaign,
