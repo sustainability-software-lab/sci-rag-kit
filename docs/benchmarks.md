@@ -9,10 +9,10 @@ honest comparison on axes other than benchmark scores).
 
 ## What was measured
 
-- Corpus: 5 documents, 34 chunks, 67 entities, 80 relationships, 8 communities (the synthetic agricultural-residue demo corpus shipped in `data/demo/`)
-- Corpus snapshot: `benchmark-20260828-045130` (see `data/snapshots/`; the digest pins the exact document set)
+- Corpus: 5 documents, 34 chunks, 83 entities, 79 relationships, 7 communities (the synthetic agricultural-residue demo corpus shipped in `data/demo/`)
+- Corpus snapshot: `benchmark-20260828-162913` (see `data/snapshots/`; the digest pins the exact document set)
 - Embedding: `gemini-embedding-001@1536`; generation and judging: `gemini-2.5-flash`
-- Code: commit `821bf0a`
+- Code: commit `d011632`
 - Rendered: 2026-08-28
 
 ## Retrieval ablations
@@ -26,19 +26,19 @@ like this, that qualitative story is the only defensible claim.
 
 | Config | hit@5 | hit@10 | MRR | nDCG@10 | n |
 |--------|---:|---:|---:|---:|---:|
-| full_deep | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.95 [0.90, 0.99] | 9 |
+| full_deep | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.93 [0.88, 0.98] | 9 |
 | interactive | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.96 [0.91, 1.00] | 9 |
 | vector_only | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.96 [0.91, 1.00] | 9 |
 | keyword_only | 0.33 [0.00, 0.67] | 0.33 [0.00, 0.67] | 0.33 [0.00, 0.67] | 0.33 [0.00, 0.67] | 9 |
-| no_graph | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.93 [0.86, 0.99] | 9 |
-| confidence_weighted | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.93 [0.86, 0.99] | 9 |
-| with_citations | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.97 [0.93, 1.00] | 9 |
-| no_hyde | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.96 [0.92, 0.99] | 9 |
-| no_community | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.96 [0.91, 0.99] | 9 |
-| with_rerank | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.96 [0.92, 0.99] | 9 |
-| no_rerank | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.95 [0.90, 0.99] | 9 |
-| auto_routed | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.93 [0.85, 0.99] | 9 |
-| no_retracted | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.95 [0.87, 1.00] | 9 |
+| no_graph | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.97 [0.93, 1.00] | 9 |
+| confidence_weighted | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.91 [0.84, 0.97] | 9 |
+| with_citations | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.93 [0.88, 0.98] | 9 |
+| no_hyde | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.89, 0.98] | 9 |
+| no_community | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.92 [0.85, 0.98] | 9 |
+| with_rerank | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.95 [0.91, 0.98] | 9 |
+| no_rerank | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.90, 0.98] | 9 |
+| auto_routed | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.88, 0.98] | 9 |
+| no_retracted | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.92 [0.86, 0.97] | 9 |
 
 `resolved_entities` is absent, and that is a result rather than an
 omission. It is a separate condition (`sci-rag eval retrieval
@@ -69,8 +69,8 @@ How to read it:
 |-----------|--------------:|
 | groundedness | 2.00 [2.00, 2.00] |
 | citation_accuracy | 2.00 [2.00, 2.00] |
-| completeness | 1.90 [1.70, 2.00] |
-| correctness | 1.60 [1.10, 2.00] |
+| completeness | 2.00 [2.00, 2.00] |
+| correctness | 1.30 [0.70, 1.80] |
 | graded / total | 10 / 10 |
 
 The grounding judge never sees the reference answer; correctness
@@ -83,19 +83,24 @@ one with `--compressed` and one without. Compression may default on
 only when judged quality HOLDS while measured prompt tokens fall. A
 token saving on its own is not evidence; it is half of a trade.
 
+Measured at `relevance_floor: 0.0`, which is the load-bearing
+setting rather than a detail. The floor decides whether a source is
+dropped instead of summarized, and dropping evidence is what an
+answer cannot recover from. Raising it trades groundedness for
+tokens; that is a different trade from summarizing, and it needs its
+own paired run.
+
 | Dimension | Uncompressed | Compressed |
 |-----------|-------------:|-----------:|
-| groundedness | 2.00 [2.00, 2.00] | 1.60 [1.00, 2.00] |
-| citation_accuracy | 2.00 [2.00, 2.00] | 1.80 [1.40, 2.00] |
-| completeness | 1.90 [1.70, 2.00] | 1.60 [1.20, 2.00] |
-| correctness | 1.60 [1.10, 2.00] | 1.10 [0.50, 1.70] |
-| median prompt tokens | 1280 | 378 (70% lower) |
+| groundedness | 2.00 [2.00, 2.00] | 2.00 [2.00, 2.00] |
+| citation_accuracy | 2.00 [2.00, 2.00] | 2.00 [2.00, 2.00] |
+| completeness | 2.00 [2.00, 2.00] | 2.00 [2.00, 2.00] |
+| correctness | 1.30 [0.70, 1.80] | 1.70 [1.20, 2.00] |
+| median prompt tokens | 1336 | 987 (26% lower) |
 
-Sources dropped by the relevance floor: 61. Compression failures: 0. Questions: 10.
+Sources dropped by the relevance floor: 0. Compression failures: 0. Questions: 10.
 
-On this run the gate does not hold: 4 of 4 judged dimensions moved down (groundedness, citation_accuracy, completeness, correctness). At this sample size no single drop is distinguishable from noise, and that is the point: the gate asks for evidence that quality holds, and overlapping intervals are not that evidence. `compression.enabled` therefore stays `false` in the shipped domain profile.
-
-The mechanism is the relevance floor rather than the summarizer, which the counters above separate: sources were dropped, none failed to compress. A lower floor may pass the gate. Re-run it before turning compression on for any corpus.
+On this run the gate holds: no judged dimension fell while prompt tokens dropped. That justifies the default on THIS corpus only; re-run the gate before carrying it to another.
 
 ## Judge calibration (human labels vs judge)
 
@@ -107,8 +112,8 @@ and the judge's scores on the same answers:
 |-----------|------:|----------------:|--:|
 | groundedness | 1.00 | 1.00 | 10 |
 | citation_accuracy | 1.00 | 1.00 | 10 |
-| completeness | 0.00 | 0.90 | 10 |
-| correctness | 0.00 | 0.70 | 10 |
+| completeness | 1.00 | 1.00 | 10 |
+| correctness | 0.00 | 0.60 | 10 |
 
 Kappa is reported as measured, never asserted as a target. A
 kappa of 0 with high exact agreement means one rater was

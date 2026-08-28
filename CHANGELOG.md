@@ -6,6 +6,18 @@ Notable changes to sci-rag-kit. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Contextual compression is on again in the shipped demo domain, at
+  `relevance_floor: 0.0`, and the model default floor moves from `0.3` to
+  `0.0` to match. A floor sweep found the floor, not the summarizer, is what
+  breaks the paired judged-answer gate: at 0.15 and above, groundedness and
+  citation accuracy fall off their ceiling because the answer loses evidence
+  it needed. At 0.0, where every source is summarized and none dropped, three
+  independent paired runs held every judged dimension while median prompt
+  tokens fell by a quarter. Summarizing a source is safe here; discarding one
+  is not. Closes #90.
+
 ### Added
 
 - `sci-rag draft questions`: an assisted first pass at

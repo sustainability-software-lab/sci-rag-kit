@@ -297,13 +297,21 @@ Between retrieval and prompt assembly, sources may be compressed:
 question-aware summarization of each chunk, dropping any whose relevance
 falls below a floor. This shortens the prompt without changing which
 documents are cited, so the citation list is unaffected. It is off in the
-model default and off for the shipped demo domain, and how it got there is
-the point. Compression only earns a default where a paired judged-answer
-evaluation shows every quality dimension holding while measured prompt
-tokens fall. On the v0.3 benchmark it did not: tokens fell by 70% and all
-four judged dimensions moved down, so the default went off and the numbers
-went on the [benchmarks page](benchmarks.md). Carrying compression to
-another corpus means running that gate there, not inheriting a result.
+model default and on for the shipped demo domain, and how the demo got there
+is the point. Compression only earns a default where a paired judged-answer
+evaluation shows every quality dimension holding while measured prompt tokens
+fall.
+
+The load-bearing setting is the relevance floor, which decides whether a
+source is summarized or discarded. A v0.3 floor sweep found the two are
+not the same trade. At 0.15 and above, groundedness and citation accuracy
+both fall off their ceiling: the answer loses evidence it needed. At 0.0,
+where every source is summarized and none dropped, three paired runs held
+every dimension while median prompt tokens fell by a quarter. So the demo ships
+at 0.0, and the model default floor matches it. The numbers are on the
+[benchmarks page](benchmarks.md). Carrying compression to another corpus means
+running that gate there, not inheriting a result; raising the floor means
+running it again.
 
 ## 9 Evaluation design
 

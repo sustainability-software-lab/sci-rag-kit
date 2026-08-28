@@ -70,11 +70,12 @@ enabled. `retrieval` holds the complete retrieved chunks and their provenance;
 `prompt_retrieval` holds the exact summaries shown to the answer model and the
 blind grounding judge. Both views retain the same document and chunk IDs. A
 malformed or failed summary falls back to complete source text and increments a
-visible failure count. The shipped demo keeps compression off: its paired
-judged-answer gate was re-run for v0.3 and did not hold, and the numbers are on
-the [benchmarks page](benchmarks.md). A specialized domain runs that gate before
-enabling its own default. Compression has no authority to create citation
-targets.
+visible failure count. The shipped demo enables compression at
+`relevance_floor: 0.0`, which summarizes every source and drops none: that is the
+setting where its paired judged-answer gate holds, and the numbers are on the
+[benchmarks page](benchmarks.md). A higher floor discards sources and the gate
+stops holding, so a specialized domain runs that gate before changing either
+value. Compression has no authority to create citation targets.
 
 ## Retrieval flow
 

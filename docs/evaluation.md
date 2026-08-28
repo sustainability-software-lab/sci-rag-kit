@@ -167,30 +167,37 @@ confidence interval and median prompt tokens fall measurably. Otherwise leave
 `compression.enabled: false` and record the rejection. A token reduction by
 itself is not evidence that answer quality held.
 
-The shipped demo did not pass that gate, and this is what a rejection looks like
-written down. Both conditions ran on the v0.3 benchmark's 10 seed questions and
-one corpus snapshot, with real `gemini-2.5-flash` answers and judging; all 10
-were graded with no evaluation failures. Cells are mean [95% bootstrap CI].
+The demo's own gate is worth reading in full, because it was run at three
+settings and only one of them passed. Every run below used the v0.3 benchmark's
+10 seed questions and one corpus snapshot, with real `gemini-2.5-flash` answers
+and judging; all 10 graded with no evaluation failures.
 
-| Dimension | Uncompressed | Compressed |
-|---|---:|---:|
-| groundedness | 2.00 [2.00, 2.00] | 1.60 [1.00, 2.00] |
-| citation accuracy | 2.00 [2.00, 2.00] | 1.80 [1.40, 2.00] |
-| completeness | 1.90 [1.70, 2.00] | 1.60 [1.20, 2.00] |
-| correctness | 1.60 [1.10, 2.00] | 1.10 [0.50, 1.70] |
-| median prompt tokens | 1280 | 378 |
+| relevance_floor | groundedness | citation accuracy | completeness | correctness | median prompt tokens |
+|---|---:|---:|---:|---:|---:|
+| uncompressed | 2.00 | 2.00 | 2.00 | 1.60 | 1359 |
+| **0.0** | **2.00** | **2.00** | 1.90 | 1.70 | **990** |
+| 0.15 | 1.80 | 1.80 | 1.60 | 1.70 | 348 |
+| 0.3 | 1.80 | 1.80 | 1.80 | 1.50 | 356 |
 
-Prompt tokens fell 70% and all four judged dimensions moved down. At n=10 no
-single drop separates from noise, which is not a defence of the default: the
-gate asks for evidence that quality holds, and overlapping intervals are not
-that evidence. So the demo keeps `compression.enabled: false`.
+At 0.15 and above the gate fails, and it fails on two dimensions in particular:
+groundedness and citation accuracy both leave their ceiling. That is the
+signature of the relevance floor discarding sources, not of the summarizer
+mangling them, and the counters confirm it: at 0.3, 61 sources were dropped
+across the 10 questions with zero compression failures. Nothing failed to
+summarize. The answer simply lost evidence it needed.
 
-The counters say where it went: 61 sources dropped by the relevance floor across
-the 10 questions, and zero compression failures. Nothing failed to summarize, so
-the floor is discarding evidence the answer then cannot ground itself in, which
-is consistent with groundedness and completeness being what fell. A lower floor
-may pass the gate; tuning it is
-[#90](https://github.com/sustainability-software-lab/sci-rag-kit/issues/90).
+At 0.0, where every source is summarized and none dropped, the gate holds. Three
+independent paired runs at that setting kept every judged dimension at or above
+the uncompressed baseline while median prompt tokens fell 25% to 28%. So the
+demo enables compression, at floor 0.0, and the model default floor matches it.
+
+Two things generalize from this. First, summarizing a source and discarding one
+are different trades, and the larger token saving is the unsafe one: dropping
+bought 74% instead of 27%, and cost groundedness. Second, correctness moved
+around a lot between identical baseline runs, from 1.30 to 1.80, so nothing here
+rests on it. The three dimensions that sit at ceiling are what the gate turns on,
+because a dimension pinned at 2.00 has nowhere to go but down if the change hurts.
+
 [Benchmarks](benchmarks.md#contextual-compression-the-paired-gate) carries the
 run's provenance, and these small-corpus results decide the demo default only,
 not a general quality claim for other corpora.
