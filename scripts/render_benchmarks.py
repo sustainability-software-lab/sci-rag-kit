@@ -166,14 +166,15 @@ def render_benchmarks(
         "",
         "## What was measured",
         "",
-        f"- Corpus: {corpus.get('documents')} documents, {corpus.get('chunks')} chunks, "
+        f"- Retrieval-ablation corpus: {corpus.get('documents')} documents, "
+        f"{corpus.get('chunks')} chunks, "
         f"{corpus.get('entities')} entities, {corpus.get('relationships')} relationships, "
         f"{corpus.get('communities')} communities (the synthetic agricultural-residue "
         "demo corpus shipped in `data/demo/`)",
-        f"- Corpus snapshot: `{snapshot or 'not recorded'}` "
+        f"- Retrieval-ablation snapshot: `{snapshot or 'not recorded'}` "
         "(see `data/snapshots/`; the digest pins the exact document set)",
-        f"- Embedding: `{versions}`; {_model_description(answers)}",
-        f"- Code: commit `{commit}`",
+        f"- Retrieval-ablation embedding: `{versions}`",
+        f"- Retrieval-ablation code: commit `{commit}`",
         f"- Rendered: {datetime.now(UTC).strftime('%Y-%m-%d')}",
         "",
         "## Retrieval ablations",
@@ -277,9 +278,12 @@ def render_benchmarks(
             "",
             resolution_reading,
             "",
-            f"Control snapshot: `{resolution_baseline.get('snapshot')}`. Post-resolution snapshot:",
-            f"`{resolved_entities.get('snapshot')}`.",
-            f"Both resolution reports were measured at commit `{resolved_entities.get('git_commit')}`.",
+            "Control provenance: snapshot "
+            f"`{resolution_baseline.get('snapshot')}`, code commit "
+            f"`{resolution_baseline.get('git_commit')}`.",
+            "Post-resolution provenance: snapshot "
+            f"`{resolved_entities.get('snapshot')}`, code commit "
+            f"`{resolved_entities.get('git_commit')}`.",
             "",
         ]
 
@@ -288,6 +292,9 @@ def render_benchmarks(
         summary = answers.get("summary", {})
         lines += [
             "## Judged answers, uncompressed condition (blind two-pass judge)",
+            "",
+            f"Answer snapshot: `{answers.get('snapshot')}`; code commit "
+            f"`{answers.get('git_commit')}`. Models: {_model_description(answers)}.",
             "",
             "| Dimension | Mean [95% CI] |",
             "|-----------|--------------:|",

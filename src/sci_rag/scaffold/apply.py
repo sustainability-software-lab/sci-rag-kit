@@ -495,7 +495,7 @@ def apply_pruning(answers: ProjectAnswers, root: Path) -> list[str]:
         makefile = root / "Makefile"
         if makefile.exists():
             text = makefile.read_text(encoding="utf-8")
-            for target in ("demo", "demo-cloud", "benchmark"):
+            for target in ("demo", "demo-cloud", "benchmark", "benchmark-in-db"):
                 text = _remove_make_target(text, target)
             text = re.sub(r"(?m)^(\.PHONY:.*)$", lambda m: _drop_phony(m.group(1)), text, count=1)
             text = _drop_lint_path(text, "examples")
@@ -510,7 +510,7 @@ def apply_pruning(answers: ProjectAnswers, root: Path) -> list[str]:
     return [_log("removed", ", ".join(removed))]
 
 
-_PRUNED_PHONY = {"demo", "demo-cloud", "benchmark", "clean-demo"}
+_PRUNED_PHONY = {"demo", "demo-cloud", "benchmark", "benchmark-in-db", "clean-demo"}
 
 
 def _drop_phony(line: str) -> str:

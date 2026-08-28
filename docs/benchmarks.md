@@ -9,10 +9,10 @@ honest comparison on axes other than benchmark scores).
 
 ## What was measured
 
-- Corpus: 5 documents, 34 chunks, 94 entities, 107 relationships, 15 communities (the synthetic agricultural-residue demo corpus shipped in `data/demo/`)
-- Corpus snapshot: `benchmark-20260828-034547-pre-resolution` (see `data/snapshots/`; the digest pins the exact document set)
-- Embedding: `gemini-embedding-001@1536`; answer `google:gemini-2.5-flash`; judge `anthropic:claude-haiku-4-5`
-- Code: commit `d815b70`
+- Retrieval-ablation corpus: 5 documents, 34 chunks, 94 entities, 107 relationships, 15 communities (the synthetic agricultural-residue demo corpus shipped in `data/demo/`)
+- Retrieval-ablation snapshot: `benchmark-20260828-034547-pre-resolution` (see `data/snapshots/`; the digest pins the exact document set)
+- Retrieval-ablation embedding: `gemini-embedding-001@1536`
+- Retrieval-ablation code: commit `d815b70`
 - Rendered: 2026-08-28
 
 ## Retrieval ablations
@@ -84,11 +84,12 @@ Paired n=9; deltas are resolved minus pre-resolution:
 
 The controlled merge preserved hit@5 and hit@10. Every paired interval includes zero, so this small run establishes neither a retrieval gain nor a degradation.
 
-Control snapshot: `benchmark-20260828-034547-resolution-control`. Post-resolution snapshot:
-`benchmark-20260828-034547-resolved`.
-Both resolution reports were measured at commit `19a058f`.
+Control provenance: snapshot `benchmark-20260828-034547-resolution-control`, code commit `19a058f`.
+Post-resolution provenance: snapshot `benchmark-20260828-034547-resolved`, code commit `19a058f`.
 
 ## Judged answers, uncompressed condition (blind two-pass judge)
+
+Answer snapshot: `benchmark-20260828-034547-resolved`; code commit `19a058f`. Models: answer `google:gemini-2.5-flash`; judge `anthropic:claude-haiku-4-5`.
 
 | Dimension | Mean [95% CI] |
 |-----------|--------------:|

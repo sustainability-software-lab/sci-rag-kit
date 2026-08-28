@@ -306,6 +306,7 @@ def test_pruned_paths_are_not_referenced_by_the_generated_build(template: Path) 
     assert "demo:" not in makefile
     assert "demo-cloud:" not in makefile
     assert "benchmark:" not in makefile
+    assert "benchmark-in-db:" not in makefile
 
 
 # --- license ----------------------------------------------------------------

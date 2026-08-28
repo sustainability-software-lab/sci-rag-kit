@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 import re
+import subprocess
 
 from sqlalchemy import URL, text
 from sqlalchemy.engine import make_url
@@ -32,7 +34,7 @@ def benchmark_database_urls(database_url: str, name: str) -> tuple[URL, URL]:
 
 
 async def create_benchmark_database(database_url: str, name: str) -> str:
-    """Create ``name`` once and return its URL without masking the password."""
+    """Create ``name`` once and return its URL for a child-process environment."""
     admin_url, benchmark_url = benchmark_database_urls(database_url, name)
     engine = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
     try:
@@ -53,17 +55,26 @@ async def create_benchmark_database(database_url: str, name: str) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--name", required=True, help="Fresh database name for this run.")
+    parser.add_argument("command", nargs=argparse.REMAINDER, help="Command to run in the database.")
     args = parser.parse_args()
+    command = args.command[1:] if args.command[:1] == ["--"] else args.command
+    if not command:
+        parser.error("a command is required after --")
 
     from sci_rag.config import get_settings
 
     try:
         url = asyncio.run(create_benchmark_database(get_settings().database_url, args.name))
     except Exception as exc:
-        raise SystemExit(f"could not create the benchmark database: {exc}") from None
-    # Make captures this value into an environment variable. Do not add other
-    # stdout output here because the URL may contain credentials.
-    print(url)
+        raise SystemExit(
+            f"could not create the benchmark database ({type(exc).__name__})"
+        ) from None
+    environment = {
+        **os.environ,
+        "SCI_RAG_DATABASE_URL": url,
+        "SCI_RAG_BENCHMARK_ISOLATED": "1",
+    }
+    subprocess.run(command, check=True, env=environment)
 
 
 if __name__ == "__main__":
