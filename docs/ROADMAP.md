@@ -2,9 +2,9 @@
 
 Where the kit is going, in the order the evidence supports.
 
-Wave 1, v0.2 "Credibility", has shipped. Waves 2 and 3 are committed
-directions, and each one gets its own planning pass before anyone writes
-code. Anything that touches retrieval lands the same way: behind an
+Waves 1 and 2 have shipped. Wave 3 is a committed direction and gets its
+own planning pass before anyone writes code. Anything that touches retrieval
+lands the same way: behind an
 ablation config, with before and after numbers on a benchmark page. If
 the numbers do not hold up, it does not land.
 
@@ -34,7 +34,7 @@ what the code actually did:
 - [docs/benchmarks.md](benchmarks.md): measured numbers, reproducible
   with `make benchmark`
 
-## Wave 2: v0.3 "Campaigns" (the scientific differentiators)
+## Shipped: v0.3 "Campaigns" (the scientific differentiators)
 
 The release that makes the kit better for science than a general-purpose
 RAG framework:
@@ -56,14 +56,25 @@ RAG framework:
   enforced inside every layer's SQL like every other scope dimension.
 - **Entity resolution.** Extraction emits aliases;
   `sci-rag graph resolve-entities` merges by alias/fuzzy/LLM
-  adjudication with an audit log; the ablation decides whether it stays.
+  adjudication with an audit log. The measured demo control preserved
+  hit@5 and hit@10, but its paired intervals did not establish a retrieval
+  gain or degradation, so resolution remains an explicit corpus operation.
 - **Confidence-weighted traversal.** Calibrated extraction confidence,
   used by the graph stage; ablation-gated like everything else.
 - **Contextual snippet compression** (the PaperQA2 pattern):
   per-chunk relevance-scored summarization before answer assembly,
-  landing only if judged answer quality holds while tokens drop.
-- **PRISMA-style screening** (stretch): LLM inclusion/exclusion on
-  abstracts with a human-review queue and PRISMA-aligned counts.
+  adopted for the shipped demo after a paired n=10 judged run held every
+  quality interval while reducing prompt tokens. Custom domains remain
+  evidence-gated.
+- **PRISMA-style screening.** LLM inclusion/exclusion on abstracts with
+  explicit reasons, a human-review queue, append-only decisions, and
+  PRISMA-aligned counts.
+
+The refreshed [benchmark page](benchmarks.md) records every Wave 2 retrieval
+condition and both answer-compression conditions. Retraction exclusion is a
+neutral control because the synthetic corpus contains no known retractions.
+Citation traversal is unexercised because the demo manifest provides no cached
+DOI reference lists and therefore produced zero document citation edges.
 
 ## Wave 3: v0.4+ "Scale and intelligence"
 
@@ -121,7 +132,10 @@ because each one is a judgment call with public consequences:
 - JOSS (Journal of Open Source Software) submission
 - PyPI publication
 - A hosted demo (for example Hugging Face Spaces)
-- Flipping the repository public
+- Creating the final `v0.3.0` tag
+
+Repository visibility was completed separately during `0.3.0a1` packaging
+validation. The remaining items above still require a maintainer decision.
 
 ## How to influence this roadmap
 

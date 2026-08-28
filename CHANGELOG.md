@@ -6,8 +6,33 @@ Notable changes to sci-rag-kit. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-28
+
+The "Campaigns" release adds the scientific corpus-building and evidence-control
+features that distinguish the kit from a general-purpose RAG template. It also
+includes the project factory and provider work first exercised in `0.3.0a1`.
+
 ### Added
 
+- Metadata scope filters for publication year, author, journal, and DOI exclusions,
+  enforced inside every retrieval layer and shared across Python, CLI, REST, and MCP.
+- Crossref enrichment, including explicit Retraction Watch status, with retracted
+  evidence excluded from answer generation by default and surfaced by `doctor`.
+- `sci-rag campaign build`: resumable OpenAlex and Crossref discovery, fail-closed
+  open-access resolution, verified downloads, and ingestible manifests. Protocol
+  screening adds explicit include/exclude reasons, a human-review queue, and
+  PRISMA-aligned counts without inventing flow between stages.
+- Alias and calibrated-confidence extraction, audited entity resolution with
+  canonical tombstones, confidence-weighted graph walks, and first-class
+  corpus-local citation edges. Citation traversal remains opt-in and MCP exposes
+  `get_citations`.
+- Contextual snippet compression with visible per-chunk fallback. A paired n=10
+  judged demo run preserved every quality interval while reducing answer prompt
+  tokens, so the shipped demo enables it. The measurements and confidence intervals
+  are published in [docs/benchmarks.md](docs/benchmarks.md).
+- Wave 2 retrieval conditions for retraction exclusion, entity resolution,
+  confidence weighting, and citation traversal, plus paired answer-compression
+  reporting in the benchmark renderer.
 - `sci-rag init`: an interactive setup wizard that specializes a checkout
   for your own domain. Asks about the project, credentials and models,
   ontology, corpus source, PDF parser, reranker, license, and stack, then
@@ -68,6 +93,10 @@ Notable changes to sci-rag-kit. The format follows
 
 ### Changed
 
+- Answer generation narrows scope by excluding explicitly retracted documents unless
+  the caller deliberately overrides that safety default.
+- The shipped demo enables snippet compression based on its paired judged evidence;
+  custom domain profiles remain opt-in until measured on their own corpora.
 - Generated projects no longer carry the kit's own onboarding. The pipx
   instructions, the recorded session, the vendored player, and the
   renderer that keeps it current are all removed, along with their
@@ -97,6 +126,8 @@ Notable changes to sci-rag-kit. The format follows
 
 ### Fixed
 
+- Retrieval-condition evaluation now performs its audit check and retrieval work on
+  one event loop, avoiding a closed-loop async-engine failure after the preflight.
 - `sci-rag doctor` no longer reports FAIL for a project that runs offline on
   purpose. A project with the local-hash embedder, no credentials anywhere,
   and the shipped generation defaults now sees warnings that name the
@@ -122,6 +153,14 @@ Notable changes to sci-rag-kit. The format follows
   setting; substituting the later illustrative ones turned worked examples
   into confidently wrong advice and emitted the same key several times.
 
+### Compatibility and migration
+
+- No documented Python, CLI, REST, MCP, domain-profile, or eval-report field was
+  removed or changed incompatibly. New settings and report fields are additive.
+- Existing databases must run `sci-rag db upgrade`. Migrations 0003 through 0006
+  add indexed journal and retraction metadata, entity-resolution state and audit
+  rows, and the `document_citations` table. Existing documents and domain profiles
+  remain valid; new features use safe defaults.
 
 ## [0.3.0a1] - 2026-08-28
 
@@ -130,8 +169,8 @@ Trusted Publishing to TestPyPI and PyPI and to reserve the `sci-rag-kit`
 name on both, using a version number that can be burned without cost if
 the publishing path turns out to be wrong.
 
-The changes it carries are the ones listed under Unreleased above. The
-real 0.3.0, with the Wave 2 benchmark refresh, is #49.
+It carried the project-factory and multi-provider work later finalized in
+0.3.0. The final release adds the Wave 2 benchmark evidence and release notes.
 
 ## [0.2.0] - 2026-08-27
 

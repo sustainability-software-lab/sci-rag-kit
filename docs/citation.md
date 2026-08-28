@@ -16,7 +16,7 @@ For work performed with the current release, cite the software title, version or
   author  = {{Sci RAG Kit contributors}},
   title   = {Sci RAG Kit: A DIY GraphRAG factory for scientific domains},
   year    = {2026},
-  version = {0.2.0},
+  version = {0.3.0},
   url     = {https://github.com/sustainability-software-lab/sci-rag-kit},
   license = {BSD-3-Clause}
 }
