@@ -67,18 +67,43 @@ learned the hard way:
   thousand. Start with 20 to 50 good ones; you will learn more from a
   curated small corpus plus the evaluation harness than from a dump.
 
-## Step 2: write the corpus manifest
+## Step 2: the corpus manifest
 
 A manifest is one JSON line per document, and it is where licensing and
-citations come from. Create `data/corpus.jsonl`:
+citations come from. It lives at `data/corpus.jsonl`.
 
-```jsonl title="data/corpus.jsonl"
-{"path": "raw/lee-2021-fouling-review.pdf", "title": "Membrane Fouling Mechanisms: A Review", "authors": ["Lee, S.", "Park, J."], "year": 2021, "doi": "10.1000/example", "license_class": "open_commercial", "source": "journal_papers"}
-{"path": "raw/epa-membrane-guidance.pdf", "title": "EPA Membrane Filtration Guidance Manual", "authors": ["US EPA"], "year": 2005, "license_class": "public", "source": "agency_reports"}
-{"path": "raw/chen-thesis.pdf", "title": "Chen PhD Thesis", "year": 2023, "license_class": "restricted", "source": "theses"}
-```
+=== "Generate it"
 
-Field notes:
+    Reads each document's opening pages through the same parsers ingestion
+    uses, and proposes a manifest with title, authors, year, DOI, journal, and
+    a shared source bucket per document.
+
+    ```bash title="Terminal"
+    uv run sci-rag draft manifest --folder data/raw
+    ```
+
+    Review `data/corpus.jsonl.proposed`, then move it into place, or re-run
+    with `--apply`. No API key? Add `--print-prompt`, paste the result into any
+    assistant, and feed the reply back with `--from-file`. See
+    [LLM-assisted setup](llm-assisted-setup.md).
+
+    **The rights column is yours.** Every drafted row says `license_class:
+    unknown`, which is the fail-closed default, and the command tells you how
+    many documents need a decision. A license sentence found verbatim in a
+    document is quoted into `license_source` as evidence for you to read. The
+    field reference below is what you are editing.
+
+=== "Write it yourself"
+
+    Create `data/corpus.jsonl`:
+
+    ```jsonl title="data/corpus.jsonl"
+    {"path": "raw/lee-2021-fouling-review.pdf", "title": "Membrane Fouling Mechanisms: A Review", "authors": ["Lee, S.", "Park, J."], "year": 2021, "doi": "10.1000/example", "license_class": "open_commercial", "source": "journal_papers"}
+    {"path": "raw/epa-membrane-guidance.pdf", "title": "EPA Membrane Filtration Guidance Manual", "authors": ["US EPA"], "year": 2005, "license_class": "public", "source": "agency_reports"}
+    {"path": "raw/chen-thesis.pdf", "title": "Chen PhD Thesis", "year": 2023, "license_class": "restricted", "source": "theses"}
+    ```
+
+Field notes, which apply either way:
 
 * `path` is relative to the manifest file. Only `path` is required.
 * `license_class` is one of `public`, `open_commercial`,
@@ -95,48 +120,71 @@ not for a corpus you will cite.
 
 ## Step 3: declare your ontology
 
-Open `domain/domain.yaml`. This one file tells the graph extractor what
-concepts matter in your field. Replace the demo's agricultural types
-with yours:
+`domain/domain.yaml` tells the graph extractor what concepts matter in your
+field. It ships configured for the demo's agricultural types; replace them with
+yours.
 
-```yaml title="domain/domain.yaml"
-name: "Membrane Materials KB"
-description: >
-  Membrane chemistry, fouling behavior, and separation performance for
-  water treatment applications.
+=== "Generate it"
 
-entity_types:
-  - name: Membrane
-    description: "A membrane type or product (thin-film composite, ceramic UF)"
-  - name: Material
-    description: "A polymer, ceramic, or coating material (polyamide, PVDF, graphene oxide)"
-  - name: Contaminant
-    description: "A species being removed (NaCl, boron, PFAS, natural organic matter)"
-  - name: FoulingMechanism
-    description: "A fouling mode (scaling, biofouling, organic adsorption)"
-  - name: Process
-    description: "A treatment process or operation (reverse osmosis, backwashing)"
-  - name: PerformanceMetric
-    description: "A measured performance quantity (flux, rejection, permeability)"
-  - name: Treatment
-    description: "A cleaning or surface modification (chlorination, zwitterionic coating)"
+    Once documents are on disk, the field's own vocabulary is right there, so
+    the useful question is not what this field might contain but what these
+    documents actually talk about.
 
-relation_types:
-  - name: MADE_OF
-    description: "Membrane is made of material"
-  - name: REMOVES
-    description: "Membrane or process removes contaminant"
-  - name: SUFFERS_FROM
-    description: "Membrane or material suffers from fouling mechanism"
-  - name: MITIGATED_BY
-    description: "Fouling mechanism is mitigated by treatment"
-  - name: MEASURED_AT
-    description: "Metric measured at a condition or value"
-  - name: IMPROVES
-    description: "Treatment or material improves a performance metric"
-```
+    ```bash title="Terminal"
+    uv run sci-rag draft ontology --from-corpus
+    ```
 
-How to choose well:
+    Review `domain/domain.yaml.proposed`, or re-run with `--apply`. Already
+    have an ontology you mostly like? `--refine` asks only what the model would
+    add and remove, with a reason for every removal. Your tuned `retrieval:`
+    and `compression:` blocks are carried over untouched either way.
+
+    This is also the fix for the symptom in step 5 below: near zero entities
+    after `graph extract` means the ontology and the corpus are talking past
+    each other.
+
+=== "Write it yourself"
+
+    Open `domain/domain.yaml` and replace the demo's types:
+
+    ```yaml title="domain/domain.yaml"
+    name: "Membrane Materials KB"
+    description: >
+      Membrane chemistry, fouling behavior, and separation performance for
+      water treatment applications.
+
+    entity_types:
+      - name: Membrane
+        description: "A membrane type or product (thin-film composite, ceramic UF)"
+      - name: Material
+        description: "A polymer, ceramic, or coating material (polyamide, PVDF, graphene oxide)"
+      - name: Contaminant
+        description: "A species being removed (NaCl, boron, PFAS, natural organic matter)"
+      - name: FoulingMechanism
+        description: "A fouling mode (scaling, biofouling, organic adsorption)"
+      - name: Process
+        description: "A treatment process or operation (reverse osmosis, backwashing)"
+      - name: PerformanceMetric
+        description: "A measured performance quantity (flux, rejection, permeability)"
+      - name: Treatment
+        description: "A cleaning or surface modification (chlorination, zwitterionic coating)"
+
+    relation_types:
+      - name: MADE_OF
+        description: "Membrane is made of material"
+      - name: REMOVES
+        description: "Membrane or process removes contaminant"
+      - name: SUFFERS_FROM
+        description: "Membrane or material suffers from fouling mechanism"
+      - name: MITIGATED_BY
+        description: "Fouling mechanism is mitigated by treatment"
+      - name: MEASURED_AT
+        description: "Metric measured at a condition or value"
+      - name: IMPROVES
+        description: "Treatment or material improves a performance metric"
+    ```
+
+How to choose well, either way:
 
 * **6 to 15 entity types.** Fewer and the graph is mush; more and the
   extractor dithers. Ask: what column headings would an expert use to
@@ -154,16 +202,35 @@ These steer the HyDE layer.
 
 ## Step 4: tune the prompts (lightly)
 
-Skim `domain/prompts/*.md`. They are deliberately short and readable.
-For most domains the only edits that matter are:
+Skim `domain/prompts/*.md`. They are deliberately short and readable, and for
+most domains only two of them are worth touching.
 
-* `entity_extraction.md`: keep the rules, adjust the example JSON names
-  to your field so the model sees the register you expect.
-* `answer.md`: add any domain-specific answer norms ("always report flux
-  in LMH", "state the test conditions with every rejection value").
+=== "Generate it"
+
+    ```bash title="Terminal"
+    uv run sci-rag draft prompts entity_extraction
+    uv run sci-rag draft prompts answer
+    ```
+
+    Rewords the template in your field's terms while keeping the job identical:
+    every `$SLOT` must survive, the output contract must not move, and the
+    rewrite is re-rendered against dummy values before it is written, because a
+    template that lost a slot loads fine and fails mid-run.
+
+    Only those two commands exist. The judge prompts and the compression prompt
+    are refused by name, with a reason.
+
+=== "Write it yourself"
+
+    * `entity_extraction.md`: keep the rules, adjust the example JSON names
+      to your field so the model sees the register you expect.
+    * `answer.md`: add any domain-specific answer norms ("always report flux
+      in LMH", "state the test conditions with every rejection value").
 
 Leave the judge prompts alone until you have read
-[evaluation.md](evaluation.md); their blindness rules are load-bearing.
+[evaluation.md](evaluation.md); their blindness rules are load-bearing. Prompt
+wording moves every downstream number, so re-run
+`sci-rag eval retrieval --ablation` after a rewrite and compare.
 
 ## Step 5: ingest and build
 
@@ -186,16 +253,39 @@ Sanity checks along the way:
   the corpus are talking past each other (types too abstract, or
   documents too thin); thousands means the types are too loose.
 
-## Step 6: write seed questions, then measure
+## Step 6: seed questions, then measure
 
-Replace `domain/eval_seed_questions.jsonl` with 10 to 20 questions a
-domain expert can vouch for. Each line:
+`domain/eval_seed_questions.jsonl` needs 10 to 20 questions a domain expert can
+vouch for. This is the biggest manual step in the tutorial, and the one where
+"vouch for" is doing the most work: these questions are what every retrieval
+and answer metric is computed against.
 
-```jsonl title="domain/eval_seed_questions.jsonl"
-{"id": "pfas-rejection", "question": "What PFAS rejection does a polyamide RO membrane achieve?", "reference_answer": "Above 99 percent for long-chain PFAS at typical seawater RO conditions, per Lee 2021.", "reference_titles": ["Membrane Fouling Mechanisms: A Review"], "evidence_phrases": ["99", "long-chain PFAS"], "tags": ["performance"]}
-```
+=== "Generate it"
 
-Three rules of thumb. Pick evidence phrases distinctive enough that
+    ```bash title="Terminal"
+    uv run sci-rag draft questions --count 10
+    ```
+
+    Samples real passages from your corpus, asks for questions grounded in
+    them, and then verifies in Python that every quoted evidence phrase
+    actually appears in a passage belonging to a document the question names.
+    Rows that fail are dropped and reported.
+
+    Every drafted row carries a `drafted` tag, and it travels: while any
+    remains, `sci-rag eval retrieval` and `sci-rag eval answers` say in the
+    report that their ground truth is unreviewed and their numbers provisional.
+    Read each question, check it against the document it cites, then delete the
+    tag. That deletion is your sign-off, and nothing does it for you.
+
+=== "Write it yourself"
+
+    Replace the file with your own lines:
+
+    ```jsonl title="domain/eval_seed_questions.jsonl"
+    {"id": "pfas-rejection", "question": "What PFAS rejection does a polyamide RO membrane achieve?", "reference_answer": "Above 99 percent for long-chain PFAS at typical seawater RO conditions, per Lee 2021.", "reference_titles": ["Membrane Fouling Mechanisms: A Review"], "evidence_phrases": ["99", "long-chain PFAS"], "tags": ["performance"]}
+    ```
+
+Three rules of thumb, either way. Pick evidence phrases distinctive enough that
 finding them means finding the answer, where numbers with units are
 perfect. Include one or two multi-hop questions whose answers span
 documents. And include one question the corpus **cannot** answer, tagged

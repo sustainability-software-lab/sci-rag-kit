@@ -8,13 +8,18 @@ live round-trip through the embedding and generation models.
 
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import typer
 from rich.console import Console
 from rich.table import Table
+
+from sci_rag.domain import DomainConfig
+from sci_rag.evals.seeds import SeedQuestion
 
 if TYPE_CHECKING:
     from sci_rag.config import Settings
@@ -39,6 +44,202 @@ class Check:
     status: str  # "ok" | "warn" | "fail"
     detail: str
     fix: str = ""
+
+
+#: Below this an ontology is too thin for the graph extractor to find structure:
+#: three types is the smallest set that can express a relation between two
+#: different things.
+_MIN_ENTITY_TYPES = 3
+
+_SCREAMING_SNAKE = re.compile(r"^[A-Z][A-Z0-9_]*$")
+
+
+def _ontology_coherence_check(config: DomainConfig) -> Check:
+    """Whether the ontology can do its job, not merely whether it parses.
+
+    An ontology of one type parses. So does one with the same name twice, where
+    the second silently shadows the first everywhere a name is looked up. Both
+    show up later as a graph that extracted nothing, which is a much harder
+    thing to diagnose than a row in this table.
+    """
+    duplicates: list[str] = []
+    for label, specs in (
+        ("entity type", config.entity_types),
+        ("relation type", config.relation_types),
+        ("query class", config.query_classes),
+    ):
+        seen: set[str] = set()
+        for spec in specs:
+            if spec.name in seen:
+                duplicates.append(f"{label} {spec.name!r}")
+            seen.add(spec.name)
+    if duplicates:
+        return Check(
+            "ontology",
+            "fail",
+            "duplicate name(s): " + ", ".join(duplicates),
+            "Names are looked up by string, so a duplicate silently shadows the first.",
+        )
+
+    if len(config.entity_types) < _MIN_ENTITY_TYPES:
+        return Check(
+            "ontology",
+            "warn",
+            f"{len(config.entity_types)} entity type(s); fewer than {_MIN_ENTITY_TYPES} "
+            "leaves the graph extractor almost nothing to find",
+            "uv run sci-rag draft ontology --from-corpus",
+        )
+
+    odd = [r.name for r in config.relation_types if not _SCREAMING_SNAKE.match(r.name)]
+    if odd:
+        return Check(
+            "ontology",
+            "warn",
+            "relation type(s) not in SCREAMING_SNAKE_CASE: " + ", ".join(odd),
+            "Relations read as 'source RELATION target'; the convention is what makes "
+            "extracted edges legible.",
+        )
+
+    return Check(
+        "ontology",
+        "ok",
+        f"{len(config.entity_types)} entity types, {len(config.relation_types)} relation "
+        f"types, {len(config.query_classes)} query classes, names unique",
+    )
+
+
+def _seed_coherence_check(questions: list[SeedQuestion]) -> Check:
+    """Whether the seed set can measure anything, not merely whether it loads.
+
+    ``load_seed_questions`` already rejects malformed JSON and duplicate ids.
+    What it cannot see is a set with nothing to check an answer against, or one
+    with no honesty probe, which is an evaluation that cannot tell you whether
+    the assistant admits a gap or fills it from model priors.
+    """
+    if not questions:
+        return Check(
+            "seed coherence",
+            "warn",
+            "no seed questions",
+            "uv run sci-rag draft questions, or write them by hand.",
+        )
+
+    probes = [q for q in questions if not q.answerable]
+    bare = [
+        q.id for q in questions if q.answerable and not (q.reference_titles or q.evidence_phrases)
+    ]
+    if bare:
+        return Check(
+            "seed coherence",
+            "warn",
+            f"{len(bare)} answerable question(s) cite nothing, so retrieval can never "
+            f"score them: {', '.join(sorted(bare)[:5])}",
+            "Give each one reference_titles, evidence_phrases, or both.",
+        )
+    if not probes:
+        return Check(
+            "seed coherence",
+            "warn",
+            "no question tagged `unanswerable`",
+            "Add one honesty probe: without it, nothing checks whether the assistant "
+            "admits a gap instead of inventing an answer.",
+        )
+    return Check(
+        "seed coherence",
+        "ok",
+        f"{len(questions)} question(s), {len(probes)} honesty probe(s), every answerable "
+        "one cites evidence",
+    )
+
+
+def _drafted_ground_truth_check(questions: list[SeedQuestion]) -> Check:
+    """How much of the ground truth is still model-drafted and unreviewed."""
+    drafted = [q.id for q in questions if q.drafted]
+    if not drafted:
+        return Check("ground truth", "ok", f"{len(questions)} question(s), none awaiting review")
+    return Check(
+        "ground truth",
+        "warn",
+        f"{len(drafted)} of {len(questions)} question(s) are model-drafted and "
+        f"unreviewed: {', '.join(sorted(drafted)[:5])}",
+        "Check each against the document it cites, then delete its `drafted` tag. "
+        "Until then every eval report says its numbers are provisional.",
+    )
+
+
+def _grounding_check(questions: list[SeedQuestion], titles: set[str]) -> Check:
+    """Whether the seed set and the ingested corpus are talking about each other.
+
+    Only meaningful once documents exist. A reference title that matches no
+    ingested document scores zero forever, and it looks exactly like a
+    retrieval failure in the report.
+    """
+    normalized = {" ".join(title.lower().split()) for title in titles}
+    unresolved = sorted(
+        {
+            title
+            for question in questions
+            for title in question.reference_titles
+            if " ".join(title.lower().split()) not in normalized
+        }
+    )
+    if unresolved:
+        return Check(
+            "ground truth vs corpus",
+            "warn",
+            f"{len(unresolved)} reference title(s) match no ingested document: "
+            + ", ".join(repr(title) for title in unresolved[:3]),
+            "Retrieval scores those questions zero forever, which reads as a retrieval "
+            "failure. Fix the titles or ingest the documents.",
+        )
+    return Check(
+        "ground truth vs corpus",
+        "ok",
+        "every reference title resolves to an ingested document",
+    )
+
+
+def _manifest_check(manifest_path: Path) -> Check | None:
+    """Paths that still exist, and how many rows nobody has classified.
+
+    Returns ``None`` when there is no manifest: a project that ingests by
+    folder never writes one, and a missing file it never promised is not a
+    finding.
+    """
+    if not manifest_path.exists():
+        return None
+    from sci_rag.ingest.manifest import load_manifest
+
+    try:
+        entries = load_manifest(manifest_path)
+    except Exception as exc:
+        return Check(
+            "manifest",
+            "fail",
+            f"{type(exc).__name__}: {exc}",
+            "Fix the JSONL (one valid JSON object per line).",
+        )
+    if not entries:
+        return Check("manifest", "warn", f"{manifest_path.name} has no rows", "")
+
+    missing = [entry.path.name for entry in entries if not entry.path.exists()]
+    if missing:
+        return Check(
+            "manifest",
+            "fail",
+            f"{len(missing)} path(s) no longer exist: " + ", ".join(sorted(missing)[:5]),
+            "Ingestion will fail on them. Restore the files or drop the rows.",
+        )
+    unknown = sum(1 for entry in entries if entry.license_class == "unknown")
+    if unknown:
+        return Check(
+            "manifest",
+            "warn",
+            f"{len(entries)} row(s), {unknown} with unknown rights",
+            "Unknown rights are excluded from scoped retrieval, which is the safe "
+            "default. Decide them: see docs/evidence-and-rights.md.",
+        )
+    return Check("manifest", "ok", f"{len(entries)} row(s), every path present, rights declared")
 
 
 def doctor(
@@ -247,11 +448,14 @@ async def _run_checks(*, probe: bool) -> list[Check]:
         )
         domain = None
 
+    seed_questions: list[SeedQuestion] = []
     if domain is not None:
+        checks.append(_ontology_coherence_check(domain.config))
         try:
             from sci_rag.evals import load_seed_questions
 
             questions = load_seed_questions(domain.seed_questions_path())
+            seed_questions = questions
             probes = sum(1 for q in questions if not q.answerable)
             status = "ok" if questions else "warn"
             note = f"{len(questions)} seed question(s), {probes} honesty probe(s)"
@@ -263,6 +467,8 @@ async def _run_checks(*, probe: bool) -> list[Check]:
                     "" if questions else "Write ground-truth questions before trusting any eval.",
                 )
             )
+            checks.append(_seed_coherence_check(questions))
+            checks.append(_drafted_ground_truth_check(questions))
         except FileNotFoundError:
             checks.append(
                 Check(
@@ -281,6 +487,11 @@ async def _run_checks(*, probe: bool) -> list[Check]:
                     "Fix the JSONL (one valid JSON object per line).",
                 )
             )
+
+    # --- corpus manifest ---------------------------------------------------
+    manifest_check = _manifest_check(settings.data_dir / "corpus.jsonl")
+    if manifest_check is not None:
+        checks.append(manifest_check)
 
     # --- parser availability ---------------------------------------------
     from sci_rag.ingest import docling_available
@@ -414,6 +625,16 @@ async def _run_checks(*, probe: bool) -> list[Check]:
             )
         else:
             checks.append(Check("corpus", "ok", f"{documents} documents, {chunks} chunks"))
+
+        # Only meaningful once documents exist: a reference title that matches
+        # nothing scores zero forever, and it reads as a retrieval failure.
+        if documents and seed_questions:
+            titles = {
+                row[0]
+                for row in (await conn.execute(text("SELECT title FROM documents"))).all()
+                if row[0]
+            }
+            checks.append(_grounding_check(seed_questions, titles))
 
         retracted = (
             await conn.scalar(

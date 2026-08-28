@@ -52,6 +52,7 @@ migrations, `domain/`, and data paths resolve predictably.
 | `sci-rag draft questions` | Draft seed questions grounded in your own documents, and verify them. |
 | `sci-rag draft manifest` | Read title, authors, year, and source off your documents. Rights stay yours. |
 | `sci-rag draft ontology` | Redraft or refine the ontology against what your documents actually say. |
+| `sci-rag draft prompts` | Reword a prompt for your field. Judge prompts are refused by name. |
 
 ## `sci-rag ingest`
 
@@ -613,6 +614,30 @@ $ sci-rag draft ontology [OPTIONS]
 | `--output` | path | unset | Where to write the proposal. Defaults to <domain.yaml>.proposed. |
 | `--apply` | boolean | false | Write domain.yaml itself instead of proposing a file. |
 | `--dry-run` | boolean | false | Show what would change without writing anything. |
+
+## `sci-rag draft prompts`
+
+Reword a prompt for your field. Judge prompts are refused by name.
+
+```console
+$ sci-rag draft prompts [OPTIONS] NAME
+```
+
+### Arguments
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `NAME` | text | required | Which prompt to reword: entity_extraction or answer. |
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--print-prompt` | boolean | false | Print the rendered prompt and exit. Paste it into any assistant. |
+| `--from-file` | path | unset | Read the model's reply from this file instead of calling a model. |
+| `--output` | path | unset | Where to write the proposal. Defaults to <prompt>.md.proposed. |
+| `--apply` | boolean | false | Write the prompt file itself instead of proposing one. |
+| `--dry-run` | boolean | false | Show the rewrite without writing anything. |
 
 ## Shell help is authoritative too
 

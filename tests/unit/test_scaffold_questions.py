@@ -37,6 +37,7 @@ EXPECTED_ORDER = [
     "include_demo_corpus",
     "open_source_license",
     "initialize_git",
+    "draft_domain_files",
 ]
 
 

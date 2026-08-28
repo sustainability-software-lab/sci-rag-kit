@@ -129,5 +129,23 @@ def _report(answers, changes: list[str], *, dry_run: bool) -> None:  # type: ign
     elif answers.corpus_source == "demo_only":
         console.print("  make demo")
     else:
+        if answers.draft_domain_files:
+            console.print(f"  {run('sci-rag draft manifest --folder data/raw')}")
         console.print(f"  {run('sci-rag ingest --manifest data/corpus.jsonl')}")
+
+    if answers.draft_domain_files:
+        console.print("\nThen let a model draft the rest of your domain files:\n")
+        console.print(f"  {run('sci-rag draft ontology --from-corpus')}")
+        console.print(f"  {run('sci-rag draft questions --count 10')}")
+        console.print(
+            "\nEach one proposes a file for you to review rather than writing one, and "
+            "each also prints its prompt (--print-prompt) if you would rather paste it "
+            "into an assistant you already have. Guide: docs/llm-assisted-setup.md"
+        )
+    else:
+        console.print(
+            "\nThen write domain/domain.yaml, data/corpus.jsonl, and "
+            "domain/eval_seed_questions.jsonl by hand. If you change your mind, "
+            "`sci-rag draft --help` does a first pass at all three."
+        )
     console.print("\nThe walkthrough: docs/bring-your-own-domain.md")

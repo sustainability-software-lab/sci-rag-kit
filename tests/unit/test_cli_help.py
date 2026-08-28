@@ -49,6 +49,7 @@ def test_subcommand_help_screens() -> None:
         ["draft", "questions", "--help"],
         ["draft", "manifest", "--help"],
         ["draft", "ontology", "--help"],
+        ["draft", "prompts", "--help"],
         ["eval", "--help"],
         ["eval", "retrieval", "--help"],
         ["eval", "answers", "--help"],

@@ -518,3 +518,72 @@ def test_ontology_cold_needs_no_corpus(project: Path, monkeypatch: pytest.Monkey
     assert "Grounded in" not in output, "the cold lane reads no documents at all"
     assert "Resulting ontology: Feedstock, Region, Property" in output
     assert "302,000" not in llm.calls[0]["prompt"], "no passage reached the cold prompt"
+
+
+# --- draft prompts: narrow by construction ---------------------------------
+
+
+def test_the_prompts_command_is_registered() -> None:
+    result = runner.invoke(app, ["draft", "prompts", "--help"])
+    assert result.exit_code == 0, result.output
+    help_text = _plain(result.output)
+    for flag in ("--print-prompt", "--from-file", "--apply", "--dry-run"):
+        assert flag in help_text
+
+
+@pytest.mark.parametrize(
+    "name", ["judge_grounding", "judge_correctness", "snippet_compression", "ontology_draft"]
+)
+def test_the_refused_prompts_are_refused_by_name(
+    project: Path, monkeypatch: pytest.MonkeyPatch, name: str
+) -> None:
+    _forbid_llm(monkeypatch)
+
+    result = runner.invoke(app, ["draft", "prompts", name])
+
+    assert result.exit_code != 0
+    output = _plain(result.output)
+    assert name in output
+    assert not (project / "domain" / "prompts" / f"{name}.md.proposed").exists()
+
+
+def test_a_rewrite_that_drops_a_slot_is_refused(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _mock_llm(monkeypatch, [json.dumps({"prompt": "Extract entities from $PASSAGES."})])
+
+    result = runner.invoke(app, ["draft", "prompts", "entity_extraction"])
+
+    assert result.exit_code != 0
+    assert "ENTITY_TYPES" in _plain(result.output)
+    assert not (project / "domain" / "prompts" / "entity_extraction.md.proposed").exists()
+
+
+def test_a_valid_rewrite_is_proposed_not_applied(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original = (project / "domain" / "prompts" / "entity_extraction.md").read_text(encoding="utf-8")
+    reworded = original.replace("knowledge graph", "knowledge network")
+    _mock_llm(monkeypatch, [json.dumps({"prompt": reworded})])
+
+    result = runner.invoke(app, ["draft", "prompts", "entity_extraction"])
+
+    assert result.exit_code == 0, result.output
+    proposed = project / "domain" / "prompts" / "entity_extraction.md.proposed"
+    assert proposed.read_text(encoding="utf-8") == reworded
+    assert (project / "domain" / "prompts" / "entity_extraction.md").read_text(
+        encoding="utf-8"
+    ) == original
+
+
+def test_prompts_print_prompt_carries_the_current_text_and_calls_no_model(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _forbid_llm(monkeypatch)
+
+    result = runner.invoke(app, ["draft", "prompts", "answer", "--print-prompt"])
+
+    assert result.exit_code == 0, result.output
+    stdout = _plain(result.stdout)
+    assert "$QUESTION" in stdout or "$SOURCES" in stdout, "the slots to keep are named"
+    assert "answer" in stdout

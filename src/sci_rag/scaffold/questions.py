@@ -147,6 +147,15 @@ QUESTIONS: tuple[Question, ...] = (
         choices=("BSD-3-Clause", "MIT", "Apache-2.0", "No license file"),
     ),
     Question("initialize_git", "initialize_git", "Yes", choices=("Yes", "No")),
+    Question(
+        "draft_domain_files",
+        "draft_domain_files",
+        "Yes",
+        choices=("Yes", "No"),
+        # An offline project has no model to draft with, and the copy-paste
+        # lane is a manual step nobody should be volunteered for by a default.
+        asked_when=lambda a: a.get("credentials") != "offline",
+    ),
 )
 
 

@@ -91,15 +91,21 @@ def main() -> int:
         f"""
 Done. {args.name} is yours. Next, in order:
 
-  1. Edit domain/domain.yaml: your entity types, relation types, and
-     query classes (the demo ontology is still there as a worked example).
-  2. Skim domain/prompts/ and tune the wording to your field.
-  3. Put documents in data/raw/ and write a corpus manifest.
-  4. Write your seed questions in domain/eval_seed_questions.jsonl.
+  1. Put documents in data/raw/.
+  2. uv run sci-rag draft manifest --folder data/raw
+  3. uv run sci-rag draft ontology --from-corpus
+  4. uv run sci-rag draft questions --count 10
   5. Rewrite README.md's opening for your project.
 
+Steps 2 to 4 each propose a file for you to review rather than writing one,
+and each also prints its prompt (--print-prompt) if you would rather paste it
+into an assistant you already have, no API key needed. Guide:
+docs/llm-assisted-setup.md
+
+Prefer to type them yourself? The full schema for every file is in
+docs/bring-your-own-domain.md, and nothing here requires the drafters.
+
 For the guided version of all of that, run `uv run sci-rag init`.
-The full walkthrough: docs/bring-your-own-domain.md
 """
     )
     return 0
