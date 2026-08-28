@@ -29,3 +29,21 @@ def test_py_typed_marker_ships() -> None:
     from pathlib import Path
 
     assert (Path(sci_rag.__file__).parent / "py.typed").exists()
+
+
+def test_version_matches_the_installed_distribution() -> None:
+    """One source of truth: v0.2.0 shipped reporting __version__ 0.1.0a0.
+
+    `sci-rag-new` resolves the template tag from this same metadata, so a
+    hand-maintained copy drifting from the distribution would make the
+    generator fetch a tag that does not describe the code it is running.
+    """
+    from importlib.metadata import version
+
+    assert sci_rag.__version__ == version("sci-rag-kit")
+
+
+def test_the_generator_asks_for_the_tag_of_its_own_version() -> None:
+    from sci_rag.scaffold.fetch import template_ref
+
+    assert template_ref() == f"v{sci_rag.__version__}"

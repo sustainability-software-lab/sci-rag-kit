@@ -18,7 +18,7 @@ hide:
 
 <p class="srag-home-masthead__lede">A template repository that ingests your literature, keeps provenance and rights attached, retrieves through five fused layers, generates cited answers, and evaluates the whole path.</p>
 
-<p class="srag-home-masthead__meta">v0.2.0, alpha, BSD-3-Clause. Install with pipx, the GitHub template, or a clone.</p>
+<p class="srag-home-masthead__meta">v0.3.0a1, alpha, BSD-3-Clause. Install with pipx, the GitHub template, or a clone.</p>
 
 </section>
 

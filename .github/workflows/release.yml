@@ -59,12 +59,28 @@ jobs:
       - name: Build the sdist and wheel
         run: uv build
 
+      # A README that fails to render is the classic way a first release
+      # lands on PyPI looking broken, and the version cannot be reuploaded.
+      - name: The package metadata renders
+        run: uvx twine check --strict dist/*
+
       - name: The built wheel exposes both entry points
         run: |
-          uv run --no-project python -m venv "$RUNNER_TEMP/probe"
-          "$RUNNER_TEMP/probe/bin/pip" install --quiet dist/*.whl
+          uv venv "$RUNNER_TEMP/probe"
+          VIRTUAL_ENV="$RUNNER_TEMP/probe" uv pip install --quiet dist/*.whl
           "$RUNNER_TEMP/probe/bin/sci-rag" --help > /dev/null
           "$RUNNER_TEMP/probe/bin/sci-rag-new" --help > /dev/null
+
+      # The generator fetches the template at the tag matching its version, so
+      # a release whose tag is not reachable on GitHub produces nothing.
+      - name: The generator resolves its own tag
+        run: |
+          "$RUNNER_TEMP/probe/bin/python" -c "
+          from sci_rag.scaffold.fetch import tarball_url, template_ref
+          ref = template_ref()
+          print(ref, tarball_url(ref))
+          assert ref == '${GITHUB_REF_NAME}', f'{ref} != ${GITHUB_REF_NAME}'
+          "
 
       - uses: actions/upload-artifact@v7
         with:
