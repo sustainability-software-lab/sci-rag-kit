@@ -74,14 +74,18 @@ def test_venv_pip_expects_an_activated_environment() -> None:
     assert "pip install" in venv.sync()
 
 
-def test_extras_reach_each_managers_sync_command() -> None:
-    """docling has to actually get installed, whichever manager is chosen."""
+def test_extras_go_where_each_manager_expects_them() -> None:
+    """docling has to actually get installed, whichever manager is chosen.
+
+    uv resolves extras on the install command line. The other three read them
+    from a manifest, so their sync command stays constant and the manifest
+    writer carries the selection.
+    """
     assert "docling" in get_runner("uv").sync(extras=("docling",))
-    assert "docling" in get_runner("venv+pip").sync(extras=("docling",))
-    # pixi and conda declare extras in their manifest, so the sync command
-    # stays plain; the manifest writer is what carries the selection.
     assert get_runner("pixi").sync(extras=("docling",)) == "pixi install"
     assert "docling" not in get_runner("conda").sync(extras=("docling",))
+    assert "docling" not in get_runner("venv+pip").sync(extras=("docling",))
+    assert "requirements-dev.txt" in get_runner("venv+pip").sync()
 
 
 def test_ci_setup_yaml_is_indented_for_a_workflow_step_list() -> None:

@@ -157,23 +157,21 @@ jobs:
             uv)       eval "$SYNC"; RUN="uv run" ;;
             pixi)     eval "$SYNC"; RUN="pixi run" ;;
             conda)    eval "$SYNC"; RUN="conda run -n generated-kb" ;;
-            venv+pip) eval "$SYNC"; RUN=".venv/bin/" ;;
+            # An activated venv has no prefix; putting its bin directory on PATH
+            # is how a user would work in it, and it keeps one code path here.
+            venv+pip) eval "$SYNC"; echo "$PWD/.venv/bin" >> "$GITHUB_PATH"; RUN="" ;;
           esac
           echo "RUN=$RUN" >> "$GITHUB_ENV"
-          if [ "${{ matrix.manager }}" = "venv+pip" ]; then
-            .venv/bin/ruff check src tests examples scripts
-            .venv/bin/mypy
-          else
-            $RUN ruff check src tests examples scripts
-            $RUN mypy
-          fi
+          $RUN ruff check src tests examples scripts
+          $RUN mypy
 
       - name: The offline demo runs in the generated project
         shell: bash -el {0}
         run: |
           cd "$RUNNER_TEMP/generated"
-          if [ "${{ matrix.manager }}" = "venv+pip" ]; then PREFIX=".venv/bin/"; RUN=""; else PREFIX=""; RUN="$RUN "; fi
-          ${RUN}${PREFIX}sci-rag db upgrade
-          ${RUN}${PREFIX}sci-rag doctor
-          ${RUN}${PREFIX}sci-rag ingest --manifest data/demo/manifest.jsonl
-          ${RUN}${PREFIX}sci-rag retrieve "How much rice straw was generated in the Colusa Basin in 2023?" --profile interactive --limit 3
+          $RUN sci-rag db upgrade
+          $RUN sci-rag ingest --manifest data/demo/manifest.jsonl
+          # doctor after ingest: it fails on an empty corpus, which is correct
+          # behaviour and would be a false negative here.
+          $RUN sci-rag doctor
+          $RUN sci-rag retrieve "How much rice straw was generated in the Colusa Basin in 2023?" --profile interactive --limit 3

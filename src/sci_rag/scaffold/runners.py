@@ -100,13 +100,9 @@ class RunnerProfile:
         if not self.extras_on_command_line:
             return self.sync_command
         command = self.sync_command
-        if self.key == "uv":
-            command += "".join(f" --extra {extra}" for extra in extras)
-            command += "".join(f" --group {group}" for group in groups)
-            return command
-        # venv+pip resolves the whole extra set in one editable install.
-        wanted = ["dev", *extras, *groups]
-        return command.replace('".[dev]"', f'".[{",".join(dict.fromkeys(wanted))}]"')
+        command += "".join(f" --extra {extra}" for extra in extras)
+        command += "".join(f" --group {group}" for group in groups)
+        return command
 
     def command_tokens(self) -> tuple[str, ...]:
         return self.tokens
@@ -296,7 +292,10 @@ PROFILES: dict[str, RunnerProfile] = {
         key="venv+pip",
         label="venv + pip",
         run_prefix="",
-        sync_command='python -m venv .venv && .venv/bin/pip install -e ".[dev]"',
+        # `dev` is a PEP 735 dependency-group, not an extra, so `pip install
+        # -e ".[dev]"` cannot resolve it. The generated requirements files
+        # carry the group and the selected extras instead.
+        sync_command="python -m venv .venv && .venv/bin/pip install -e . -r requirements-dev.txt",
         manifest="requirements.txt",
         lockfile=None,
         ci_setup_action="actions/setup-python@v5",
@@ -307,8 +306,7 @@ PROFILES: dict[str, RunnerProfile] = {
         install_url="https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/",
         version_command="python -m pip --version",
         interpreter_path="${containerWorkspaceFolder}/.venv/bin/python",
-        extras_on_command_line=True,
-        tokens=("python -m venv", "pip install -e", "actions/setup-python", "requirements.txt"),
+        tokens=("python -m venv", "pip install -e", "actions/setup-python", "requirements-dev.txt"),
     ),
 }
 
