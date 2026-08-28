@@ -157,9 +157,13 @@ jobs:
             uv)       eval "$SYNC"; RUN="uv run" ;;
             pixi)     eval "$SYNC"; RUN="pixi run" ;;
             conda)    eval "$SYNC"; RUN="conda run -n generated-kb" ;;
-            # An activated venv has no prefix; putting its bin directory on PATH
-            # is how a user would work in it, and it keeps one code path here.
-            venv+pip) eval "$SYNC"; echo "$PWD/.venv/bin" >> "$GITHUB_PATH"; RUN="" ;;
+            # An activated venv has no prefix; putting its bin directory on
+            # PATH is how a user works in it, and it keeps one code path here.
+            # GITHUB_PATH only applies to later steps, so export it here too.
+            venv+pip) eval "$SYNC"
+                      echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+                      export PATH="$PWD/.venv/bin:$PATH"
+                      RUN="" ;;
           esac
           echo "RUN=$RUN" >> "$GITHUB_ENV"
           $RUN ruff check src tests examples scripts
@@ -172,7 +176,9 @@ jobs:
           $RUN sci-rag db upgrade
           $RUN sci-rag ingest --manifest data/demo/manifest.jsonl
           $RUN sci-rag retrieve "How much rice straw was generated in the Colusa Basin in 2023?" --profile interactive --limit 3
-          $RUN sci-rag eval retrieval
+          # No `eval retrieval` here: the wizard resets the seed questions to a
+          # guided blank, so a freshly generated project has no ground truth
+          # yet. That is the point of the reset, not a regression.
 
       # Diagnostic, not a gate. `doctor` reports FAIL when an LLM model is
       # configured with no credentials behind it, which is exactly the state an
