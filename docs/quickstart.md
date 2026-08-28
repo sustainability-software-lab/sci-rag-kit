@@ -26,7 +26,7 @@ Every command runs from the repository root.
 | Docker | Local Postgres with pgvector | `docker version` |
 | Google credential, optional | Real semantic embeddings, graph extraction, and answers | AI Studio key or Vertex ADC |
 
-No Docker? Two of the four environment managers can run Postgres without it. [Run Postgres your way](run-postgres.md) covers all three paths.
+No Docker? [Run Postgres your way](run-postgres.md) has the two paths that do not need it. Step 3 says which one is yours.
 
 ## 1. Get the repository
 
