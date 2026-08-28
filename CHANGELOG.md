@@ -20,6 +20,16 @@ Notable changes to sci-rag-kit. The format follows
 
 ### Added
 
+- `sci-rag corpus license-report`: the corpus's rights posture, counted. License
+  classes already gate retrieval, but nothing summarized them. Counts by class
+  by document and by chunk (rights are declared per document, retrieval returns
+  chunks, and the two percentages differ), every class in the taxonomy listed
+  even at zero, and every `unknown` document named with the source bucket it
+  came from. `--json` for machine-readable output; `--strict` exits 1 when
+  anything is undeclared, so it can be a CI gate. Without `--strict` it always
+  exits 0: a report that breaks the build is a report nobody runs.
+- `sci_rag.licensing.UNKNOWN_CLASS`, naming the value the fail-closed rule is
+  keyed on.
 - `sci-rag draft seed-from-answers QUESTIONS.txt`: turn questions you already
   have into draft seed rows. `draft questions` invents the questions; this
   takes yours, one per line, answers each one, and proposes ground truth from

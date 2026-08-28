@@ -43,6 +43,7 @@ migrations, `domain/`, and data paths resolve predictably.
 | `sci-rag corpus enrich` | Add Crossref citation, journal, and retraction metadata to the corpus. |
 | `sci-rag corpus delete` | Delete documents and every graph trace of their evidence. Chunks cascade, entity evidence arrays are scrubbed, relationships evidenced by the documents go, and communities that aggregated that evidence are dropped (rebuild them with `sci-rag graph communities`). Run `sci-rag graph gc` afterwards to sweep entities left with no evidence at all. |
 | `sci-rag corpus snapshot` | Write a named corpus fingerprint manifest under data/snapshots/. Records counts, per-document content hashes, embedding versions, the git commit, and a single corpus digest. Reference it from eval runs with --snapshot NAME so reported numbers stay tied to exactly the corpus that produced them. |
+| `sci-rag corpus license-report` | The corpus's rights posture: what is declared, and what is not. License classes gate retrieval, but nothing summarized them. This counts the corpus by class, by document and by chunk, and names every document nobody has recorded rights for. |
 | `sci-rag corpus export` | Export documents, chunks, entities, and relationships to files. Scoping is fail-closed and applies to the graph too: an entity is exported only when every document it was extracted from is in scope, because its description is written from all of them. Communities are never exported; they aggregate with no per-document attribution to check. |
 | `sci-rag campaign` | Discover, build, and screen legal, resumable scientific-document campaigns. |
 | `sci-rag campaign discover` | Discover a deduplicated DOI list and save resumable state. |
@@ -465,6 +466,21 @@ $ sci-rag corpus snapshot [OPTIONS] [NAME]
 | Name | Type | Default | Description |
 |---|---|---|---|
 | `NAME` | text | unset | Snapshot name (default: UTC timestamp). |
+
+## `sci-rag corpus license-report`
+
+The corpus's rights posture: what is declared, and what is not. License classes gate retrieval, but nothing summarized them. This counts the corpus by class, by document and by chunk, and names every document nobody has recorded rights for.
+
+```console
+$ sci-rag corpus license-report [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--json` | boolean | false | Machine-readable output. |
+| `--strict` | boolean | false | Exit 1 when any document is still 'unknown'. For CI; the report itself never fails. |
 
 ## `sci-rag corpus export`
 
