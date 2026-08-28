@@ -20,6 +20,17 @@ Notable changes to sci-rag-kit. The format follows
 
 ### Added
 
+- `sci-rag profile`: where retrieval time goes. Replays the seed questions
+  against interactive, deep, and auto, and aggregates the per-stage durations
+  every request already records into p50/p95 per stage, with a verdict naming
+  the slowest stage and what `auto` routed to. `--json` for tracking over time.
+  Two caveats are reported rather than left to the reader: stages run
+  concurrently so the column does not sum to the request, and the
+  query-embedding cache is disabled while profiling so replays measure
+  retrieval rather than the cache. A stage the profile switched off is counted
+  but never reported as a degradation.
+- `sci_rag.evals.stats.percentile` is public, since the profiler reports latency
+  percentiles from the same implementation.
 - `sci-rag corpus license-report`: the corpus's rights posture, counted. License
   classes already gate retrieval, but nothing summarized them. Counts by class
   by document and by chunk (rights are declared per document, retrieval returns

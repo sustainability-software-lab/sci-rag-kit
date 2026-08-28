@@ -1788,6 +1788,83 @@ def graph_gc_command(
 
 
 @app.command()
+def profile(
+    questions_path: Path | None = typer.Option(
+        None, "--questions", help="Seed questions JSONL. Defaults to the domain's."
+    ),
+    runs: int = typer.Option(3, "--runs", help="Replays per question, per profile."),
+    limit: int = typer.Option(8, "--limit", help="Results per request."),
+    as_json: bool = typer.Option(False, "--json", help="Machine-readable output."),
+) -> None:
+    """Where retrieval time goes: p50/p95 per stage, for each profile.
+
+    Replays the seed questions against interactive, deep, and auto, and
+    aggregates the per-stage timings every request already records. Stages run
+    concurrently, so their durations do not sum to the request; wall-clock is
+    measured separately and reported beside them.
+    """
+    import json as _json
+
+    from sci_rag.retrieve import Retriever
+    from sci_rag.retrieve.profiler import profile_retrieval, report_payload, verdict
+
+    if runs < 1:
+        raise typer.BadParameter("--runs must be at least 1")
+
+    questions = _load_questions(questions_path)
+
+    async def run():  # type: ignore[no-untyped-def]
+        await _check_db()
+        return await profile_retrieval(Retriever(), questions, runs=runs, limit=limit)
+
+    report = run_async(run())
+
+    if as_json:
+        print(_json.dumps(report_payload(report), indent=2))
+        return
+
+    for timing in report.profiles:
+        table = Table(
+            title=(
+                f"{timing.profile}: {timing.p50:.0f} ms p50, {timing.p95:.0f} ms p95 "
+                f"per request ({timing.runs} runs)"
+            )
+        )
+        table.add_column("Stage")
+        table.add_column("p50 ms", justify="right")
+        table.add_column("p95 ms", justify="right")
+        table.add_column("Runs", justify="right")
+        table.add_column("Status")
+        for stage in timing.ordered_stages():
+            statuses = ", ".join(
+                f"{status} {count}" for status, count in sorted(stage.statuses.items())
+            )
+            colour = "red" if stage.degraded else None
+            table.add_row(
+                f"[{colour}]{stage.stage}[/{colour}]" if colour else stage.stage,
+                f"{stage.p50:.0f}" if stage.samples else "-",
+                f"{stage.p95:.0f}" if stage.samples else "-",
+                str(stage.runs),
+                statuses,
+            )
+        console.print(table)
+
+    console.print(
+        f"\n{report.questions} question(s) x {report.runs_per_question} run(s) per profile. "
+        "Stages run concurrently, so the stage column does not sum to the request time."
+    )
+    console.print(
+        "The query-embedding cache is off while profiling, so every run is cold and the "
+        "profiles are comparable; a warm interactive path is faster than this says."
+    )
+    for line in verdict(report):
+        console.print(
+            f"  {'[yellow]' if line.startswith('Warning') else ''}{line}"
+            f"{'[/yellow]' if line.startswith('Warning') else ''}"
+        )
+
+
+@app.command()
 def stats() -> None:
     """What is in the knowledge base right now."""
     from sqlalchemy import func, select

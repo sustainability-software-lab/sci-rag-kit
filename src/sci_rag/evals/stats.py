@@ -63,8 +63,13 @@ class PairedComparison:
         }
 
 
-def _percentile(sorted_values: list[float], q: float) -> float:
-    """Linear-interpolation percentile on pre-sorted values."""
+def percentile(sorted_values: list[float], q: float) -> float:
+    """Linear-interpolation percentile on pre-sorted values.
+
+    Public because the retrieval profiler reports latency percentiles from the
+    same implementation; two percentile functions in one codebase is one too
+    many.
+    """
     if not sorted_values:
         raise ValueError("no values")
     position = q * (len(sorted_values) - 1)
@@ -93,8 +98,8 @@ def bootstrap_ci(
     alpha = (1 - confidence) / 2
     return ConfidenceInterval(
         mean=mean,
-        lo=_percentile(means, alpha),
-        hi=_percentile(means, 1 - alpha),
+        lo=percentile(means, alpha),
+        hi=percentile(means, 1 - alpha),
         n=n,
     )
 
@@ -130,8 +135,8 @@ def paired_bootstrap_test(
     p_value = min(1.0, 2 * min(at_or_below_zero, at_or_above_zero))
     return PairedComparison(
         delta=delta_mean,
-        lo=_percentile(resampled, alpha),
-        hi=_percentile(resampled, 1 - alpha),
+        lo=percentile(resampled, alpha),
+        hi=percentile(resampled, 1 - alpha),
         p_value=p_value,
         n=n,
     )
