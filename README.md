@@ -105,6 +105,11 @@ exercised end to end before you commit your own documents.
 
 ## Customizing to your domain
 
+You do not have to write the specialization files cold. `sci-rag draft`
+creates corpus-grounded first passes; the
+[LLM-assisted setup guide](docs/llm-assisted-setup.md) also shows a copy-paste
+workflow that needs no model credentials.
+
 1. Put documents in `data/raw/` and describe them in a JSONL corpus
    manifest (title, authors, license class, source).
 2. Edit `domain/domain.yaml`: entity types, relationship types, and HyDE

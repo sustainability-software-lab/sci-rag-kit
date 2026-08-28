@@ -23,8 +23,9 @@ These pages take a clean clone to a running knowledge base, then point at the re
 
 1. Run the [quickstart](quickstart.md) with the offline embedder.
 2. Read the [repository tour](tour.md) before replacing the demo profile.
-3. Follow [Bring your own domain](bring-your-own-domain.md) with a small, well-understood corpus, or use a [corpus campaign](campaigns.md) to discover candidates and build a fail-closed open-access manifest.
-4. Review the campaign's rights distribution before ingestion, then run an [evaluation](evaluation.md) before changing retrieval weights or enabling the reranker.
+3. Draft the ontology, corpus manifest, seed questions, and prompt wording with [LLM-assisted setup](llm-assisted-setup.md). Its copy-paste workflow needs no model credentials.
+4. Follow [Bring your own domain](bring-your-own-domain.md) with a small, well-understood corpus, or use a [corpus campaign](campaigns.md) to discover candidates and build a fail-closed open-access manifest.
+5. Review the campaign's rights distribution before ingestion, then run an [evaluation](evaluation.md) before changing retrieval weights or enabling the reranker.
 
 Still deciding? The [FAQ](faq.md) answers what this is, who it is for, and why each design decision went the way it did, without sending you to a decision record first.
 

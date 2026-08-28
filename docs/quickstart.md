@@ -221,6 +221,10 @@ You now have one Postgres database containing source records, structure-aware ch
 
 ## Continue
 
+Ready to replace the fixture with your own field? Start with
+[LLM-assisted setup](llm-assisted-setup.md) to draft the domain files from
+your documents. Its copy-paste workflow needs no model credentials.
+
 - Replace the fixture with your field: [Bring your own domain](bring-your-own-domain.md)
 - Follow ownership through the code: [Architecture](architecture.md)
 - Understand provenance and license scope: [Evidence and rights](evidence-and-rights.md)
