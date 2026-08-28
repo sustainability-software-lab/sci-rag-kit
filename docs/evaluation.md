@@ -149,6 +149,15 @@ unchanged corpus from being mislabeled. Read every layer-ablation row against
   1.00 and only the differences matter. Expect real spread as the corpus
   grows.
 
+<div class="srag-checkpoint" markdown>
+**Checkpoint: you can name what each layer is worth**
+
+Point at one row of the ablation table and say what removing that layer cost
+you on your corpus. If every row equals `full_deep`, the ablation is telling
+you the corpus is too small or the ontology is not matching, and no weight you
+change from here will be measurable.
+</div>
+
 ## The judge, and why it is blind
 
 Grading a generated answer happens in two independent passes:
@@ -309,8 +318,16 @@ thresholds under your current numbers, and let regressions fail loudly.
 4. Keep the change only if the numbers (and your reading of the judged
    answers) agree it helped.
 
-When two people disagree about whether a change helped, the reports
-settle it.
+When two people disagree about whether a change helped, the reports settle it.
+
+<div class="srag-checkpoint" markdown>
+**Checkpoint: the numbers are citable**
+
+Your newest report names a corpus snapshot, a git commit, the answering and
+grading models, and the enabled layers, and no question in it still carries the
+`drafted` tag. A number missing any of those is a number you cannot put in a
+methods section.
+</div>
 
 ## Next steps
 

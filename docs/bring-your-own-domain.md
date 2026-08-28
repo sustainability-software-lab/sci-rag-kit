@@ -152,6 +152,15 @@ ingestion, it is normalized to `unknown` and scoped as unsafe, so a
 mistyped `CC-BY-NC-ND-4.0` silently removes a document from results you
 expected it in. The linter is the only place that difference is visible.
 
+<div class="srag-checkpoint" markdown>
+**Checkpoint: the manifest is clean and the rights are decided**
+
+`manifest lint` reports no problems, and no row still says `license_class:
+unknown` unless you meant it to. Every `unknown` is a document retrieval will
+treat as unsafe, so the count the linter prints is the number of decisions you
+still owe.
+</div>
+
 ## Step 3: declare your ontology
 
 `domain/domain.yaml` tells the graph extractor what concepts matter in your
@@ -271,17 +280,24 @@ uv run sci-rag graph communities
 uv run sci-rag stats
 ```
 
-Sanity checks along the way:
+<div class="srag-checkpoint" markdown>
+**Checkpoint: the corpus and the graph both look like your field**
 
-* `sci-rag stats` after ingest: does the chunk count look right (a dense
-  20-page PDF is typically 15 to 40 chunks)? Are your license classes
-  distributed the way you declared?
-* `sci-rag retrieve "some question" --profile interactive`: do the top
-  chunks look sane? The stage table shows you which layer found what.
-* After `graph extract`: `stats` should show entities in the low
-  hundreds for a 50-document corpus. Near zero means the ontology and
-  the corpus are talking past each other (types too abstract, or
-  documents too thin); thousands means the types are too loose.
+Three things to read, in this order.
+
+`sci-rag stats` after ingest: the chunk count should look plausible, since a
+dense 20-page PDF is usually 15 to 40 chunks, and the license classes should be
+distributed the way you declared them.
+
+`sci-rag retrieve "some question" --profile interactive`: the top chunks should
+be recognizable, and the stage table tells you which layer found each one.
+
+`sci-rag stats` after `graph extract`: a 50-document corpus should show entities
+in the low hundreds. Near zero means the ontology and the corpus are talking
+past each other, usually because the types are too abstract or the documents
+too thin. Thousands means the types are too loose. Either way, go back to
+step 3 and redraft with `--refine`.
+</div>
 
 ## Step 6: write seed questions, then measure
 
@@ -345,8 +361,16 @@ Before anyone else touches it, set API keys in `.env` (see
 semi-public endpoint should pin callers to
 `{"license_classes": ["public", "open_commercial"]}`, so your `restricted`
 and `unknown` documents stay internal. The
-[REST, MCP, and Python API](api.md) covers keys, scopes, and the MCP tools; the
+[REST, MCP, and Python API](api.md) covers keys, scopes, and the MCP tools, and
 [Deploy on Google Cloud](deploy-gcp.md) covers putting it on Cloud Run.
+
+<div class="srag-checkpoint" markdown>
+**Checkpoint: it is your knowledge base now**
+
+A question in your own field, asked through `sci-rag answer` or through
+`POST /v1/query`, comes back with numbered citations pointing at documents you
+put there. Ask one the corpus cannot answer, and it should say so.
+</div>
 
 ## The improvement loop
 

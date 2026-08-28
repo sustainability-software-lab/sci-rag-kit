@@ -5,7 +5,7 @@ description: Learn which Sci RAG Kit files define your scientific domain, which 
 
 # Tour the repository
 
-Sci RAG Kit is a working GitHub template repository, not a Cookiecutter or Copier generator. Your copy contains the application, its domain profile, its tests, and its operations code in one place.
+By the end of this page you can point at the file that owns each part of the system: your science, your documents, the pipeline, and what runs in production. Sci RAG Kit is a working GitHub template repository, so your copy holds the application, its domain profile, its tests, and its operations code in one place.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A map of what you own and what you run</div>
