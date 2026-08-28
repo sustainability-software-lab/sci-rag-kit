@@ -147,7 +147,20 @@ def test_external_link_checks_never_run_on_pull_requests() -> None:
     runs = " ".join(step.get("run", "") for step in steps)
     assert "make docs" in runs
 
-    lychee = next(step for step in steps if step.get("uses") == "lycheeverse/lychee-action@v2")
-    assert "--offline" not in lychee["with"]["args"]
-    assert "**/*.md" in lychee["with"]["args"]
-    assert "site/**/*.html" in lychee["with"]["args"]
+    lychee_steps = [step for step in steps if step.get("uses") == "lycheeverse/lychee-action@v2"]
+    assert len(lychee_steps) == 2, "Markdown and built HTML need different URL bases"
+
+    markdown = next(step for step in lychee_steps if "**/*.md" in step["with"]["args"])
+    site = next(step for step in lychee_steps if "site/**/*.html" in step["with"]["args"])
+
+    assert "--offline" not in markdown["with"]["args"]
+    assert "--exclude-loopback" in markdown["with"]["args"]
+
+    assert "--offline" not in site["with"]["args"]
+    assert "--exclude-loopback" in site["with"]["args"]
+    assert "--exclude-path" in site["with"]["args"]
+    assert "site/overrides" in site["with"]["args"]
+    assert "--exclude" in site["with"]["args"]
+    assert "sustainability-software-lab[.]github[.]io" in site["with"]["args"]
+    assert "--base-url" in site["with"]["args"]
+    assert "https://sustainability-software-lab.github.io/sci-rag-kit/" in site["with"]["args"]
