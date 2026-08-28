@@ -148,6 +148,7 @@ def test_renders_full_page(tmp_path: Path) -> None:
     assert "neither a retrieval gain nor a degradation" in page
     assert "Snippet-compression condition" in page and "prompt_tokens" in page
     assert "google:gemini-2.5-flash" in page and "anthropic:claude-haiku-4-5" in page
+    assert "fresh" in page and "isolated Postgres database" in page
     assert "1.00 [0.90, 1.00]" in page  # CI formatting
     assert "v0.2-demo" in page  # snapshot name
     assert "abc1234" in page  # commit

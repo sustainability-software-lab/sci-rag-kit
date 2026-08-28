@@ -95,32 +95,39 @@ docs-serve:
 # resolution + paired compression answers + calibration, then re-render
 # the page from the report JSONs.
 # Needs Docker and Google credentials (see .env.example).
-BENCH_SNAP := benchmark-$(shell date -u +%Y%m%d-%H%M%S)
+BENCH_RUN := $(shell date -u +%Y%m%d-%H%M%S)-$(shell printf '%s' $$$$)
+BENCH_SNAP := benchmark-$(BENCH_RUN)
+BENCH_DB := sci_rag_benchmark_$(subst -,_,$(BENCH_RUN))
 benchmark: db-up
-	uv run sci-rag db upgrade
-	uv run sci-rag ingest --manifest data/demo/manifest.jsonl
-	uv run sci-rag graph extract
-	uv run sci-rag graph communities
-	uv run sci-rag graph citations --apply
-	uv run sci-rag corpus snapshot $(BENCH_SNAP)-pre-resolution
-	uv run sci-rag eval retrieval --ablation --snapshot $(BENCH_SNAP)-pre-resolution
-	uv run python scripts/seed_resolution_benchmark.py
-	uv run sci-rag corpus snapshot $(BENCH_SNAP)-resolution-control
-	uv run sci-rag eval retrieval --snapshot $(BENCH_SNAP)-resolution-control
-	uv run sci-rag graph resolve-entities --apply --no-llm
-	uv run sci-rag graph communities
-	uv run sci-rag corpus snapshot $(BENCH_SNAP)-resolved
-	uv run sci-rag eval retrieval --condition resolved_entities \
-		--snapshot $(BENCH_SNAP)-resolved
-	uv run sci-rag eval answers --snapshot $(BENCH_SNAP)-resolved
-	uv run sci-rag eval answers --compressed --snapshot $(BENCH_SNAP)-resolved
-	uv run sci-rag eval calibrate --labels domain/eval_calibration_labels.jsonl \
-		--report $$(ls -td eval_results/*-answers | head -1)
-	uv run python scripts/render_benchmarks.py \
-		--retrieval $$(ls -td eval_results/*-retrieval-ablation | head -1) \
-		--resolution-baseline $$(ls -td eval_results/*-retrieval | head -1) \
-		--resolved-entities $$(ls -td eval_results/*-retrieval-condition | head -1) \
-		--answers $$(ls -td eval_results/*-answers | sed -n '2p') \
-		--compressed-answers $$(ls -td eval_results/*-answers | head -1) \
-		--output docs/benchmarks.md
-	@echo "docs/benchmarks.md regenerated."
+	@set -eu; \
+		benchmark_url="$$(uv run python scripts/create_benchmark_database.py \
+			--name $(BENCH_DB))"; \
+		export SCI_RAG_DATABASE_URL="$$benchmark_url"; \
+		echo "Benchmark database: $(BENCH_DB)"; \
+		uv run sci-rag db upgrade; \
+		uv run sci-rag ingest --manifest data/demo/manifest.jsonl; \
+		uv run sci-rag graph extract; \
+		uv run sci-rag graph communities; \
+		uv run sci-rag graph citations --apply; \
+		uv run sci-rag corpus snapshot $(BENCH_SNAP)-pre-resolution; \
+		uv run sci-rag eval retrieval --ablation --snapshot $(BENCH_SNAP)-pre-resolution; \
+		uv run python scripts/seed_resolution_benchmark.py; \
+		uv run sci-rag corpus snapshot $(BENCH_SNAP)-resolution-control; \
+		uv run sci-rag eval retrieval --snapshot $(BENCH_SNAP)-resolution-control; \
+		uv run sci-rag graph resolve-entities --apply --no-llm; \
+		uv run sci-rag graph communities; \
+		uv run sci-rag corpus snapshot $(BENCH_SNAP)-resolved; \
+		uv run sci-rag eval retrieval --condition resolved_entities \
+			--snapshot $(BENCH_SNAP)-resolved; \
+		uv run sci-rag eval answers --snapshot $(BENCH_SNAP)-resolved; \
+		uv run sci-rag eval answers --compressed --snapshot $(BENCH_SNAP)-resolved; \
+		uv run sci-rag eval calibrate --labels domain/eval_calibration_labels.jsonl \
+			--report "$$(ls -td eval_results/*-answers | head -1)"; \
+		uv run python scripts/render_benchmarks.py \
+			--retrieval "$$(ls -td eval_results/*-retrieval-ablation | head -1)" \
+			--resolution-baseline "$$(ls -td eval_results/*-retrieval | head -1)" \
+			--resolved-entities "$$(ls -td eval_results/*-retrieval-condition | head -1)" \
+			--answers "$$(ls -td eval_results/*-answers | sed -n '2p')" \
+			--compressed-answers "$$(ls -td eval_results/*-answers | head -1)" \
+			--output docs/benchmarks.md; \
+		echo "docs/benchmarks.md regenerated; database $(BENCH_DB) preserved."
