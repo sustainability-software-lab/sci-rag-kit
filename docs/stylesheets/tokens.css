@@ -155,6 +155,27 @@
   height: 1.35rem;
 }
 
+/* The wordmark links home like the mark does, and picks up the same quiet
+   hover fill the tabs and sidebar rows use. */
+.md-header__brand {
+  display: inline-block;
+  padding: 0.18rem 0.35rem;
+  border-radius: var(--srag-radius-sm);
+  transition: background-color 120ms ease;
+}
+
+.md-header__brand:is(:hover, :focus-visible) {
+  background: var(--srag-surface-soft);
+}
+
+[dir="ltr"] .md-header__title {
+  margin-left: -0.35rem;
+}
+
+.md-header__button.md-logo:hover {
+  opacity: 1;
+}
+
 /* The tabs render inside md-header__inner (see overrides/partials/header.html),
    so the chrome is one line: brand, sections, then search and the repo link. */
 .md-header__inner {
@@ -164,10 +185,23 @@
 /* Material stacks two absolutely positioned topics here and swaps them on
    scroll. Beside the tabs there is no room for that, so the brand stays put
    and the topics lay out in normal flow, letting the title size to content. */
+/* Material gives the title a fixed 2.4rem height and line-height. Combined
+   with the brand link's own padding that pushed the wordmark below the mark's
+   centre line, so the box is sized to its content and the flex row centres
+   both against each other. */
 .md-header__title {
   flex-grow: 0;
   width: auto;
+  height: auto;
   margin: 0;
+  line-height: 1.3;
+}
+
+.md-header__title,
+.md-header__ellipsis,
+.md-header__topic {
+  display: flex;
+  align-items: center;
 }
 
 .md-header__title > .md-header__ellipsis {
