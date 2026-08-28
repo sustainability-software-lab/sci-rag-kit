@@ -1,5 +1,13 @@
 # Deploying on Google Cloud
 
+!!! note "Optional, and you may have declined it"
+
+    `infra/terraform/` is one of the optional pieces the setup wizard asks
+    about. If you answered no to `include_terraform`, the directory and its
+    CI job are not in your project. Copy them from
+    [the template](https://github.com/sustainability-software-lab/sci-rag-kit/tree/main/infra/terraform)
+    if you want them back.
+
 The kit ships a small, honest Terraform module (`infra/terraform/`) that
 stands up a production-shaped instance: Cloud SQL Postgres (pgvector),
 one Cloud Run service serving REST and MCP, one Cloud Run job for

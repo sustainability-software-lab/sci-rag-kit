@@ -45,7 +45,7 @@ Package by package (`src/sci_rag/`):
 | `domain` | loads and validates `domain/` (ontology, prompts, tuning) | `DomainProfile` |
 | `db` | SQLAlchemy models, async engine, Alembic migrations | `session_scope()`, models |
 | `ingest` | parsers (Docling/pypdf/markdown), chunker, manifest, ingester | `ingest_entries()` |
-| `campaigns` | bounded discovery, explicit OA resolution, verified PDF download, manifest output, and append-only resumable state | `discover_by_topic()`, `build_campaign()`, `CampaignState` |
+| `campaigns` | bounded discovery, explicit OA resolution, verified PDF download, protocol screening, PRISMA-aligned reporting, manifest output, and append-only resumable state | `discover_by_topic()`, `build_campaign()`, `screen_campaign()`, `CampaignState` |
 | `enrich` | Crossref journal, citation-count, and explicit retraction metadata | `enrich_documents()` |
 | `embed` | `EmbeddingProvider` interface; Google + offline hash implementations | `get_embedder()` |
 | `llm` | `LLMClient` interface; Google implementation + `MockLLM` | `get_llm()` |
@@ -150,6 +150,9 @@ survives.
 * Anything a model returns is validated before it touches the database
   (ontology types, judge scores, JSON shapes) and dropped, not repaired,
   when malformed.
+* Campaign screening is stricter than ordinary retrieval degradation. A
+  malformed response, missing abstract, or low-confidence decision becomes a
+  human-review row. It can never become an exclusion implicitly.
 
 ## The server
 

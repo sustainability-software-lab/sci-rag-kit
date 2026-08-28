@@ -54,6 +54,8 @@ openai = ["openai>=1.40"]
 
 [project.scripts]
 sci-rag = "sci_rag.cli.main:app"
+# The factory entry point: runs from a parent directory, with nothing cloned.
+sci-rag-new = "sci_rag.cli.new:main"
 
 [project.urls]
 Homepage = "https://github.com/sustainability-software-lab/sci-rag-kit"

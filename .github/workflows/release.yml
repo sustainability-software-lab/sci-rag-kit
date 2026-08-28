@@ -1,0 +1,111 @@
+# Publish sci-rag-kit to PyPI on a version tag.
+#
+# Trusted Publishing (OIDC) rather than a long-lived API token: GitHub mints a
+# short-lived credential for this workflow, so there is no secret in the
+# repository to leak or rotate. The PyPI side of that trust has to be
+# configured once by a maintainer; see docs/VERSIONING.md.
+#
+# The tag is the source of truth for the version. `sci-rag-new` fetches the
+# template at the tag matching its own installed version, so a release whose
+# tag and pyproject version disagree would produce projects from the wrong
+# commit. The verify job below refuses that case.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      # A tag can be pushed to any commit, including one that never went
+      # through a pull request. Publishing is irreversible, so confirm the
+      # tagged commit is one CI already passed on.
+      - name: CI is green for the tagged commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CONCLUSION=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${GITHUB_SHA}&status=completed" \
+            --jq '[.workflow_runs[] | .conclusion] | first // "none"')
+          echo "ci conclusion for ${GITHUB_SHA}: $CONCLUSION"
+          if [ "$CONCLUSION" != "success" ]; then
+            echo "::error::the ci workflow has not passed for this commit (got: $CONCLUSION)"
+            exit 1
+          fi
+
+      - name: The tag matches the packaged version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PACKAGED=$(uv run --no-project python -c \
+            "import tomllib,pathlib;print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          echo "tag=$TAG packaged=$PACKAGED"
+          if [ "$TAG" != "$PACKAGED" ]; then
+            echo "::error::tag v$TAG does not match pyproject version $PACKAGED"
+            exit 1
+          fi
+
+      - name: Build the sdist and wheel
+        run: uv build
+
+      - name: The built wheel exposes both entry points
+        run: |
+          uv run --no-project python -m venv "$RUNNER_TEMP/probe"
+          "$RUNNER_TEMP/probe/bin/pip" install --quiet dist/*.whl
+          "$RUNNER_TEMP/probe/bin/sci-rag" --help > /dev/null
+          "$RUNNER_TEMP/probe/bin/sci-rag-new" --help > /dev/null
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  # TestPyPI first, always. It is the only way to find a packaging problem
+  # before the version number is burned: PyPI does not allow re-uploading a
+  # version, even a broken one.
+  testpypi:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/sci-rag-kit
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+  pypi:
+    needs: testpypi
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: pypi
+      url: https://pypi.org/p/sci-rag-kit
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

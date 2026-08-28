@@ -12,6 +12,7 @@ kit to a new field does not involve editing Python.
 | `prompts/answer.md` | How answers are written and cited |
 | `prompts/snippet_compression.md` | How retrieved chunks are relevance-scored and compressed before answering |
 | `prompts/community_summary.md` | How graph clusters are summarized |
+| `prompts/screening.md` | How campaign abstracts are screened against operator-stated criteria |
 | `prompts/judge_grounding.md`, `prompts/judge_correctness.md` | How the evaluation judge grades (keep the blindness rules intact) |
 | `eval_seed_questions.jsonl` | Your ground truth: the questions the harness scores against |
 

@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any, ClassVar
 
 from typer.testing import CliRunner
 
 from sci_rag.campaigns import http as campaign_http
+from sci_rag.campaigns.discovery import CandidateWork
+from sci_rag.campaigns.state import CampaignState
 from sci_rag.cli.main import app
+from sci_rag.llm import MockLLM
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "campaigns"
 runner = CliRunner()
@@ -85,3 +89,64 @@ def test_campaign_discover_requires_exactly_one_input(tmp_path: Path) -> None:
 
     assert result.exit_code != 0
     assert "exactly one" in result.output.lower()
+
+
+def test_campaign_screen_and_review_cli_preserve_a_human_decision(
+    tmp_path: Path, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    campaign_root = tmp_path / "campaigns"
+    state = CampaignState(campaign_root / "review-demo" / "state.jsonl")
+    work = CandidateWork(
+        doi="10.1000/review",
+        title="Uncertain fixture",
+        abstract="The abstract does not state the population clearly.",
+        source="fixture",
+    )
+    state.append(doi=work.doi, status="discovered", payload=asdict(work))
+    criteria = tmp_path / "criteria.txt"
+    criteria.write_text("Include studies of adults.\n", encoding="utf-8")
+    llm = MockLLM(
+        responses=[
+            '{"decisions":[{"index":1,"decision":"exclude",'
+            '"confidence":0.5,"reason":"Population unclear."}]}'
+        ]
+    )
+    monkeypatch.setattr("sci_rag.llm.get_llm", lambda _settings: llm)
+
+    screened = runner.invoke(
+        app,
+        [
+            "campaign",
+            "screen",
+            "--name",
+            "review-demo",
+            "--criteria-file",
+            str(criteria),
+            "--campaign-root",
+            str(campaign_root),
+        ],
+    )
+
+    assert screened.exit_code == 0, screened.output
+    assert "awaiting review" in screened.output.lower()
+    assert (campaign_root / "review-demo" / "screening-report.json").exists()
+
+    reviewed = runner.invoke(
+        app,
+        [
+            "campaign",
+            "review",
+            "--name",
+            "review-demo",
+            "--campaign-root",
+            str(campaign_root),
+        ],
+        input="include\nHuman review confirms the population.\n",
+    )
+
+    assert reviewed.exit_code == 0, reviewed.output
+    assert "1 included" in reviewed.output
+    assert "0 awaiting review" in reviewed.output
+    loaded = CampaignState(campaign_root / "review-demo" / "state.jsonl")
+    assert loaded.records[-1].status == "screen_included"
+    assert loaded.records[-1].payload["source"] == "human"

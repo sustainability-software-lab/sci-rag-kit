@@ -1,7 +1,7 @@
 # Convenience targets. Everything here is just the underlying command,
 # spelled out; run `make <target>` or copy the command, whichever you like.
 
-.PHONY: setup db-up db-down db-upgrade demo demo-cloud test lint typecheck check serve mcp eval eval-ablation docs docs-serve docs-reference clean-demo
+.PHONY: setup db-up db-down db-upgrade demo demo-cloud test lint typecheck check serve mcp eval eval-ablation docs docs-serve docs-reference cast clean-demo
 
 ## setup: install dependencies, start Postgres, create the schema
 setup:
@@ -67,10 +67,18 @@ docs-reference:
 	uv run python scripts/render_cli_docs.py --output docs/cli.md
 	uv run python scripts/render_config_docs.py --output docs/configuration.md
 
+## cast: regenerate the homepage sci-rag-new session and its terminal cast.
+## The session is produced by driving the real wizard with a scripted set of
+## answers, not typed by hand, so re-run this whenever the questions change.
+## `make docs` fails if it is stale, so you cannot forget.
+cast:
+	uv run python scripts/render_cast.py
+
 ## docs: build the documentation exactly as CI and GitHub Pages do.
 docs:
 	uv run python scripts/render_cli_docs.py --check --output docs/cli.md
 	uv run python scripts/render_config_docs.py --check --output docs/configuration.md
+	uv run python scripts/render_cast.py --check
 	uv run mkdocs build --strict
 	test ! -d site/planning
 	test ! -e site/assets/branding/README/index.html

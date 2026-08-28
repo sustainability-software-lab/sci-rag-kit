@@ -30,14 +30,23 @@ No Docker? Use PostgreSQL 15 or newer with pgvector, set `SCI_RAG_DATABASE_URL`,
 
 ## 1. Get the repository
 
-For your own project, click **Use this template** on GitHub and clone the repository it creates. To evaluate the kit directly:
+For your own project, run the wizard from whatever directory you keep projects in. It asks about your domain, credentials, ontology, corpus, and environment manager, then writes a configured, git-initialized project directory:
+
+```console title="Terminal"
+$ pipx install sci-rag-kit
+$ sci-rag-new
+```
+
+Every question has a default, so you can press Enter through the whole session and still get a project that runs. Steps 2 and 3 below are the questions it asked; read them to understand what it wrote, then skip to step 4.
+
+Evaluating the kit rather than starting a project? Clone it:
 
 ```console title="Terminal"
 $ git clone https://github.com/sustainability-software-lab/sci-rag-kit.git
 $ cd sci-rag-kit
 ```
 
-The included dev container is another supported path. In GitHub Codespaces it installs the project and starts Postgres, so continue with configuration.
+Clicking **Use this template** on GitHub also works. Inside a checkout you already have, `sci-rag init` runs the same wizard. The included dev container is another supported path. In GitHub Codespaces it installs the project and starts Postgres, so continue with configuration.
 
 ## 2. Choose a credential mode
 
@@ -49,7 +58,7 @@ $ cp .env.example .env
 
 Choose exactly one mode.
 
-### AI Studio: easiest real-model path
+### AI Studio: fastest real model
 
 Create an API key at [Google AI Studio](https://aistudio.google.com/apikey), then set:
 
@@ -57,7 +66,7 @@ Create an API key at [Google AI Studio](https://aistudio.google.com/apikey), the
 SCI_RAG_GOOGLE_API_KEY=your-key-here
 ```
 
-### Vertex AI: labs and Google Cloud teams
+### Vertex AI: labs & Google Cloud
 
 Authenticate Application Default Credentials once, then set the project:
 
@@ -79,7 +88,7 @@ SCI_RAG_EMBEDDING_PROVIDER=local-hash
 
 This mode exercises parsing, chunking, storage, ranking, and retrieval evaluation without network calls. Its similarity is lexical rather than semantic. Graph extraction, HyDE, community summaries, generated answers, and model-based judging remain unavailable until you add a model credential.
 
-## 3. Install and initialize
+## 3. Install & initialize
 
 With Docker:
 
@@ -108,7 +117,7 @@ Database schema is up to date.
 Run `uv run sci-rag doctor`. Configuration, domain, database, and schema should report healthy. An empty corpus or missing optional credential can still be informational at this point.
 </div>
 
-## 4. Ingest and inspect the demo
+## 4. Ingest & inspect the demo
 
 ```console
 $ make demo
@@ -147,7 +156,7 @@ The demo answer is approximately 302,000 dry tons and cites the synthetic resour
 
 In offline mode this command reports that no LLM is configured. That refusal is expected: the system does not fabricate an answer when generation is unavailable.
 
-## 6. Build the graph and run the deep path
+## 6. Build the graph & deep path
 
 With a Google credential:
 
@@ -163,7 +172,7 @@ The target extracts ontology-constrained entities and relationships, builds comm
 Open the newest retrieval report. It should identify the corpus fingerprint, models, profile, enabled layers, metrics, confidence intervals, and per-question records. Do not enable an expensive layer in your own profile merely because it worked on this fixture.
 </div>
 
-## 7. Serve humans and agents
+## 7. Serve humans & agents
 
 ```console
 $ uv run sci-rag serve

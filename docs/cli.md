@@ -43,9 +43,11 @@ migrations, `domain/`, and data paths resolve predictably.
 | `sci-rag corpus enrich` | Add Crossref citation, journal, and retraction metadata to the corpus. |
 | `sci-rag corpus delete` | Delete documents and every graph trace of their evidence. Chunks cascade, entity evidence arrays are scrubbed, relationships evidenced by the documents go, and communities that aggregated that evidence are dropped (rebuild them with `sci-rag graph communities`). Run `sci-rag graph gc` afterwards to sweep entities left with no evidence at all. |
 | `sci-rag corpus snapshot` | Write a named corpus fingerprint manifest under data/snapshots/. Records counts, per-document content hashes, embedding versions, the git commit, and a single corpus digest. Reference it from eval runs with --snapshot NAME so reported numbers stay tied to exactly the corpus that produced them. |
-| `sci-rag campaign` | Discover and build legal, resumable scientific-document campaigns. |
+| `sci-rag campaign` | Discover, build, and screen legal, resumable scientific-document campaigns. |
 | `sci-rag campaign discover` | Discover a deduplicated DOI list and save resumable state. |
 | `sci-rag campaign build` | Resolve rights, download direct OA PDFs, and write an ingest manifest. |
+| `sci-rag campaign screen` | Screen discovered abstracts and queue uncertain rows for human review. |
+| `sci-rag campaign review` | Walk pending screening rows and append explicit human decisions. |
 
 ## `sci-rag ingest`
 
@@ -457,7 +459,7 @@ $ sci-rag corpus snapshot [OPTIONS] [NAME]
 
 ## `sci-rag campaign`
 
-Discover and build legal, resumable scientific-document campaigns.
+Discover, build, and screen legal, resumable scientific-document campaigns.
 
 ```console
 $ sci-rag campaign [OPTIONS] COMMAND [ARGS]...
@@ -502,6 +504,39 @@ $ sci-rag campaign build [OPTIONS]
 | `--max-results` | integer range | 100 | Maximum total candidates for a topic campaign. |
 | `--max-pdf-mb` | integer range | 25 | Reject a PDF larger than this many MiB. |
 | `--campaign-root` | directory | data/campaigns | Parent directory for campaign state, PDFs, and manifest. |
+
+## `sci-rag campaign screen`
+
+Screen discovered abstracts and queue uncertain rows for human review.
+
+```console
+$ sci-rag campaign screen [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--name` | text | required | Campaign directory name to screen. |
+| `--criteria-file` | file | required | Plain-text inclusion and exclusion criteria. |
+| `--confidence-threshold` | float range | 0.8 | Model confidence below this value requires human review. |
+| `--batch-size` | integer range | 20 | Maximum abstracts in one model request. |
+| `--campaign-root` | directory | data/campaigns | Parent directory containing campaign state. |
+
+## `sci-rag campaign review`
+
+Walk pending screening rows and append explicit human decisions.
+
+```console
+$ sci-rag campaign review [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--name` | text | required | Campaign directory name to review. |
+| `--campaign-root` | directory | data/campaigns | Parent directory containing campaign state. |
 
 ## Shell help is authoritative too
 

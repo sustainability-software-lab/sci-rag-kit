@@ -1,4 +1,4 @@
-site_name: Sci-RAG Kit
+site_name: Sci RAG Kit
 site_description: Retrieval-augmented generation over scientific document collections, on one Postgres database
 site_author: Sustainability Software Lab
 site_url: https://sustainability-software-lab.github.io/sci-rag-kit/
@@ -11,6 +11,8 @@ docs_dir: docs
 exclude_docs: |
   planning/
   assets/branding/README.md
+  assets/vendor/asciinema-player/README.md
+  assets/vendor/asciinema-player/LICENSE
 not_in_nav: |
   index.md
   examples/demo-eval/*.md
@@ -19,9 +21,9 @@ theme:
   name: material
   custom_dir: docs/overrides
   language: en
-  logo: assets/branding/icon-sizes/sci-rag-kit-icon-transparent-128.png
   favicon: assets/branding/icon-sizes/favicon.ico
   icon:
+    logo: material/flask-outline
     repo: fontawesome/brands/github
   font:
     text: Inter
@@ -47,13 +49,13 @@ theme:
     - navigation.instant.progress
     - navigation.tabs
     - navigation.tabs.sticky
-    - navigation.sections
     - navigation.indexes
     - navigation.tracking
     - navigation.path
     - navigation.footer
     - navigation.top
     - toc.follow
+    - toc.integrate
     - search.suggest
     - search.highlight
     - content.tabs.link
@@ -101,6 +103,7 @@ nav:
           - Template repository, not Cookiecutter: adr/0004-template-repo-not-cookiecutter.md
           - Citation edges in their own table: adr/0005-citation-edges-as-a-document-table.md
           - Multi-provider LLMs: adr/0006-multi-provider-llms.md
+          - Interactive project generator: adr/0007-interactive-project-generator.md
       - Contributing: contributing.md
       - Changelog: changelog.md
       - How to cite: citation.md
@@ -143,7 +146,14 @@ markdown_extensions:
   - pymdownx.tasklist:
       custom_checkbox: true
 
+extra_javascript:
+  # Vendored, not a CDN: the docs build stays hermetic and the offline link
+  # check can see the asset. See docs/assets/vendor/asciinema-player/README.md.
+  - assets/vendor/asciinema-player/asciinema-player.min.js
+  - javascripts/cast.js
+
 extra_css:
+  - assets/vendor/asciinema-player/asciinema-player.css
   - stylesheets/tokens.css
   - stylesheets/typography.css
   - stylesheets/components.css

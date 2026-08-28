@@ -9,27 +9,40 @@ Worked example throughout: suppose you study membrane materials for
 water treatment, and you have 60 PDFs of papers, theses, and technical
 reports.
 
+If you got here from `sci-rag-new`, the wizard already asked you most of
+this. Every answer landed in a file you can keep editing. Nothing here is
+generated code, and nothing regenerates behind you:
+
+| What it asked | Where the answer went | How to change it |
+|---|---|---|
+| project name, description | `domain/domain.yaml`, `pyproject.toml`, `README.md` | edit the files, or re-run the wizard |
+| credentials, models, embedding dimension | `.env` | edit `.env`; changing the dimension needs a migration and re-embedding |
+| ontology | `domain/domain.yaml` | step 3 below |
+| corpus source | `data/corpus.jsonl`, `data/dois.txt`, or a `make corpus` target | steps 1 and 2 below |
+| PDF parser, reranker | `pyproject.toml` extras, `domain/domain.yaml` | step 5 below, and [Configuration](configuration.md) |
+| environment manager | `Makefile`, CI, `Dockerfile`, dev container, docs | re-run the wizard; it renders all five together |
+| license, git | `LICENSE`, the initial commit | ordinary files |
+
+The rest of this tutorial is the same work done by hand. Read it either
+way: the wizard picks defaults, and knowing which ones is how you decide
+whether to keep them.
+
 ## Step 0: run the setup wizard
 
 ```bash
 uv run sci-rag init
 ```
 
-The wizard asks about your project, your credentials, the ontology, where
-your corpus comes from, your PDF parser and reranker, and your license,
-then writes the answers into `domain/domain.yaml`, `.env`,
-`pyproject.toml`, the `Makefile`, and `README.md`. Every question has a
-default, so pressing Enter through the whole session gives you a working
-offline project. Add `--dry-run` to see what it would change first, or
-`--defaults` to take every default without being asked.
+Same questions as `sci-rag-new`, run against the checkout you are already
+standing in. Every question has a default, so pressing Enter through the
+session leaves you with something that runs offline. `--dry-run` shows
+what it would change without touching anything; `--defaults` skips the
+asking entirely.
 
-It is not a one-shot decision. Everything it writes is a file you keep
-editing, and re-running `sci-rag init` later is how you change an answer.
-The rest of this tutorial is the same work done by hand, which is worth
-reading whether or not you used the wizard.
+You can re-run it later. That is how you change several answers at once.
 
-If you only want the name and description stamped in, with the demo
-ontology's guided comments left intact, the narrow path still works:
+Want only the name and description stamped in, with the demo ontology's
+guided comments left intact? The narrow path still works:
 
 ```bash
 uv run python scripts/init_domain.py --name "Membrane Materials KB" \

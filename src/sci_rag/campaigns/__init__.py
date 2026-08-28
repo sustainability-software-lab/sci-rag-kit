@@ -1,4 +1,4 @@
-"""Build legal, reproducible scientific-document campaigns."""
+"""Build, screen, and report reproducible scientific-document campaigns."""
 
 from sci_rag.campaigns.build import (
     CampaignBuildReport,
@@ -16,6 +16,12 @@ from sci_rag.campaigns.download import DownloadOutcome, download_pdf, pdf_filena
 from sci_rag.campaigns.licensing_map import license_class_for
 from sci_rag.campaigns.manifest import ManifestItem, write_campaign_manifest
 from sci_rag.campaigns.resolve import OaResolution, resolve_unpaywall
+from sci_rag.campaigns.screen import (
+    ScreeningDecision,
+    ScreeningReport,
+    apply_human_review,
+    screen_campaign,
+)
 from sci_rag.campaigns.state import CampaignRecord, CampaignState
 
 __all__ = [
@@ -27,6 +33,9 @@ __all__ = [
     "DownloadOutcome",
     "ManifestItem",
     "OaResolution",
+    "ScreeningDecision",
+    "ScreeningReport",
+    "apply_human_review",
     "build_campaign",
     "discover_by_dois",
     "discover_by_topic",
@@ -36,5 +45,6 @@ __all__ = [
     "normalize_doi",
     "pdf_filename",
     "resolve_unpaywall",
+    "screen_campaign",
     "write_campaign_manifest",
 ]

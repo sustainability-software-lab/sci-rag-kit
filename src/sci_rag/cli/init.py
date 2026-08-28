@@ -61,8 +61,9 @@ def init(
     rewrites the configuration files in place. Everything it writes is a file
     you are meant to keep editing afterwards; nothing is generated code.
     """
+    from sci_rag.scaffold.answers import ProjectAnswers
     from sci_rag.scaffold.apply import apply_all
-    from sci_rag.scaffold.wizard import AnswerFileError, run_wizard
+    from sci_rag.scaffold.wizard import AnswerFileError, collect_answers, confirm_ontology_draft
 
     root = target.expanduser().resolve()
     if not (root / "pyproject.toml").exists() or not (root / "domain").is_dir():
@@ -74,10 +75,25 @@ def init(
         raise typer.Exit(1)
 
     try:
-        answers = run_wizard(defaults=defaults, answers_file=answers_file)
+        raw = collect_answers(defaults=defaults, answers_file=answers_file)
     except AnswerFileError as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
+
+    drafted = None
+    if raw.get("ontology") == "draft_with_llm" and raw.get("credentials") != "offline":
+        if defaults or answers_file is not None:
+            console.print(
+                "[yellow]Skipping the LLM ontology draft: accepting or redrafting one "
+                "needs an interactive session. Keeping the worked example.[/yellow]"
+            )
+        else:
+            drafted = confirm_ontology_draft(
+                root / "domain",
+                project_name=raw["project_name"],
+                description=raw.get("description", ""),
+            )
+    answers = ProjectAnswers.from_raw(raw, drafted_ontology=drafted)  # type: ignore[arg-type]
 
     if dry_run:
         with tempfile.TemporaryDirectory() as scratch:

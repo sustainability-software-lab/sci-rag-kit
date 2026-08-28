@@ -17,10 +17,14 @@ import json
 import os
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
 from rich.console import Console
 from rich.table import Table
+
+if TYPE_CHECKING:
+    from sci_rag.campaigns.screen import ScreeningReport
 
 app = typer.Typer(
     name="sci-rag",
@@ -51,7 +55,7 @@ corpus_app = typer.Typer(
 )
 app.add_typer(corpus_app, name="corpus")
 campaign_app = typer.Typer(
-    help="Discover and build legal, resumable scientific-document campaigns.",
+    help="Discover, build, and screen legal, resumable scientific-document campaigns.",
     no_args_is_help=True,
 )
 app.add_typer(campaign_app, name="campaign")
@@ -172,6 +176,40 @@ def _campaign_slug(value: str) -> str:
     if not slug:
         raise typer.BadParameter("campaign name must contain a letter or number")
     return slug[:80].rstrip("-")
+
+
+def _print_screening_report(report: ScreeningReport) -> None:
+    decisions = Table(title="Campaign screening decisions")
+    decisions.add_column("DOI")
+    decisions.add_column("Decision")
+    decisions.add_column("Confidence", justify="right")
+    decisions.add_column("Reason")
+    for item in report.decisions:
+        confidence = "" if item.confidence is None else f"{item.confidence:.2f}"
+        decisions.add_row(item.doi, item.decision, confidence, item.reason)
+    console.print(decisions)
+
+    prisma = Table(title="PRISMA-aligned screening counts")
+    prisma.add_column("Measure")
+    prisma.add_column("Count", justify="right")
+    for label, count in (
+        ("identified", report.prisma.identified),
+        ("duplicates removed", report.prisma.duplicates_removed),
+        ("screened", report.prisma.screened),
+        ("excluded", report.prisma.excluded),
+        ("included", report.prisma.included),
+        ("awaiting review", report.prisma.awaiting_review),
+    ):
+        prisma.add_row(label, str(count))
+    for reason, count in report.prisma.excluded_by_reason.items():
+        prisma.add_row(f"  excluded: {reason}", str(count))
+    console.print(prisma)
+    console.print(
+        f"{report.prisma.included} included, {report.prisma.excluded} excluded, "
+        f"{report.prisma.awaiting_review} awaiting review, "
+        f"{report.malformed_responses} malformed model response(s), "
+        f"{report.missing_abstracts} missing abstract(s)."
+    )
 
 
 def _scope(  # type: ignore[no-untyped-def]
@@ -1228,6 +1266,163 @@ def campaign_build(
     console.print(f"State: [bold]{state.path}[/bold]")
     if report.failed:
         raise typer.Exit(1)
+
+
+@campaign_app.command("screen")
+def campaign_screen(
+    name: str = typer.Option(..., "--name", help="Campaign directory name to screen."),
+    criteria_file: Path = typer.Option(
+        ...,
+        "--criteria-file",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+        help="Plain-text inclusion and exclusion criteria.",
+    ),
+    confidence_threshold: float = typer.Option(
+        0.8,
+        "--confidence-threshold",
+        min=0.0,
+        max=1.0,
+        help="Model confidence below this value requires human review.",
+    ),
+    batch_size: int = typer.Option(
+        20,
+        "--batch-size",
+        min=1,
+        help="Maximum abstracts in one model request.",
+    ),
+    campaign_root: Path = typer.Option(
+        Path("data/campaigns"),
+        "--campaign-root",
+        file_okay=False,
+        help="Parent directory containing campaign state.",
+    ),
+) -> None:
+    """Screen discovered abstracts and queue uncertain rows for human review."""
+    from sci_rag.campaigns.build import load_discovered_candidates
+    from sci_rag.campaigns.screen import screen_campaign
+    from sci_rag.campaigns.state import CampaignState
+    from sci_rag.config import get_settings
+    from sci_rag.domain import load_domain
+    from sci_rag.llm import get_llm
+
+    campaign_dir = campaign_root / _campaign_slug(name)
+    state = CampaignState(campaign_dir / "state.jsonl")
+    works = load_discovered_candidates(state)
+    if not works:
+        raise typer.BadParameter(
+            f"Campaign {campaign_dir.name!r} has no discovered works. Run campaign discover first."
+        )
+    criteria = criteria_file.read_text(encoding="utf-8").strip()
+    if not criteria:
+        raise typer.BadParameter("The criteria file must not be empty.")
+    settings = get_settings()
+    report_path = campaign_dir / "screening-report.json"
+    report = run_async(
+        screen_campaign(
+            works,
+            criteria=criteria,
+            llm=get_llm(settings),
+            domain=load_domain(settings.domain_dir),
+            state=state,
+            confidence_threshold=confidence_threshold,
+            batch_size=batch_size,
+            report_path=report_path,
+        )
+    )
+    _print_screening_report(report)
+    console.print(f"Report: [bold]{report_path}[/bold]")
+    console.print(f"State: [bold]{state.path}[/bold]")
+
+
+@campaign_app.command("review")
+def campaign_review(
+    name: str = typer.Option(..., "--name", help="Campaign directory name to review."),
+    campaign_root: Path = typer.Option(
+        Path("data/campaigns"),
+        "--campaign-root",
+        file_okay=False,
+        help="Parent directory containing campaign state.",
+    ),
+) -> None:
+    """Walk pending screening rows and append explicit human decisions."""
+    from sci_rag.campaigns.build import load_discovered_candidates
+    from sci_rag.campaigns.screen import (
+        apply_human_review,
+        load_screening_context,
+        screening_report_from_state,
+        write_screening_report,
+    )
+    from sci_rag.campaigns.state import CampaignState
+
+    campaign_dir = campaign_root / _campaign_slug(name)
+    state = CampaignState(campaign_dir / "state.jsonl")
+    works = load_discovered_candidates(state)
+    report_path = campaign_dir / "screening-report.json"
+    if not works:
+        raise typer.BadParameter(
+            f"Campaign {campaign_dir.name!r} has no discovered works. Run campaign discover first."
+        )
+    if not report_path.exists():
+        raise typer.BadParameter(
+            f"Campaign {campaign_dir.name!r} has no screening report. Run campaign screen first."
+        )
+    try:
+        context = load_screening_context(report_path)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    try:
+        before_review = screening_report_from_state(
+            works,
+            criteria=context.criteria,
+            state=state,
+            confidence_threshold=context.confidence_threshold,
+            duplicates_removed=context.duplicates_removed,
+            malformed_responses=context.malformed_responses,
+            missing_abstracts=context.missing_abstracts,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(f"{exc}. Run campaign screen again before review.") from exc
+    queue = before_review.review_queue
+    works_by_doi = {work.doi: work for work in works}
+    if not queue:
+        console.print("[green]No screening rows are awaiting review.[/green]")
+    for item in queue:
+        abstract = works_by_doi[item.doi].abstract or "Abstract unavailable."
+        console.print(
+            f"\n[bold]{item.title}[/bold]\nDOI: {item.doi}\n"
+            f"Abstract: {abstract}\nCurrent reason: {item.reason}"
+        )
+        while True:
+            choice = typer.prompt("Decision (include/exclude/skip)").strip().casefold()
+            if choice in {"include", "exclude", "skip"}:
+                break
+            console.print("Choose include, exclude, or skip.")
+        if choice == "skip":
+            continue
+        reason = typer.prompt("Reason", default=item.reason).strip()
+        apply_human_review(
+            state,
+            doi=item.doi,
+            criteria_sha256=context.criteria_sha256,
+            confidence_threshold=context.confidence_threshold,
+            decision=choice,
+            reason=reason,
+        )
+
+    report = screening_report_from_state(
+        works,
+        criteria=context.criteria,
+        state=state,
+        confidence_threshold=context.confidence_threshold,
+        duplicates_removed=context.duplicates_removed,
+        malformed_responses=context.malformed_responses,
+        missing_abstracts=context.missing_abstracts,
+    )
+    write_screening_report(report, report_path)
+    _print_screening_report(report)
+    console.print(f"Report: [bold]{report_path}[/bold]")
 
 
 @corpus_app.command("enrich")
