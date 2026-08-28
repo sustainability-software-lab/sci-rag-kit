@@ -6,6 +6,7 @@ Usage (what `make benchmark` runs after the eval passes):
         --retrieval eval_results/<run>-retrieval-ablation/report.json \
         --answers eval_results/<run>-answers/report.json \
         --compressed-answers eval_results/<run>-answers/report.json \
+        --resolution-baseline eval_results/<run>-retrieval/report.json \
         --resolved-entities eval_results/<run>-retrieval-condition/report.json \
         --output docs/benchmarks.md
 
@@ -137,12 +138,14 @@ def render_benchmarks(
     answers_path: Path | None,
     *,
     compressed_answers_path: Path | None = None,
+    resolution_baseline_path: Path | None = None,
     resolved_entities_path: Path | None = None,
 ) -> str:
     retrieval = _load(retrieval_path)
     assert retrieval is not None
     answers = _load(answers_path)
     compressed_answers = _load(compressed_answers_path)
+    resolution_baseline = _load(resolution_baseline_path)
     resolved_entities = _load(resolved_entities_path)
     calibration_path = compressed_answers_path or answers_path
     calibration = _calibration_for(calibration_path)
@@ -213,9 +216,13 @@ def render_benchmarks(
     ]
 
     if resolved_entities is not None:
-        deltas, common_n = _retrieval_condition_pair(retrieval, resolved_entities)
+        if resolution_baseline is None:
+            raise ValueError("resolved entities need a separate controlled baseline report")
+        deltas, common_n = _retrieval_condition_pair(resolution_baseline, resolved_entities)
         baseline_config = next(
-            config for config in retrieval.get("configs", []) if config["name"] == "full_deep"
+            config
+            for config in resolution_baseline.get("configs", [])
+            if config["name"] == "full_deep"
         )
         resolved_config = next(
             config
@@ -226,8 +233,10 @@ def render_benchmarks(
             "## Entity-resolution condition",
             "",
             "Entity resolution changes persisted corpus state, so it is shown separately",
-            "from same-state layer ablations. The post-resolution command requires at least",
-            "one audit row; this is not an unchanged corpus relabeled as resolved.",
+            "from same-state layer ablations. Because natural model extraction may have no",
+            "duplicates, this pair starts after inserting one explicitly labeled exact-alias",
+            "control entity. The resolver must create an audit row; unchanged state cannot be",
+            "relabeled as resolved.",
             "",
             "| Condition | " + " | ".join(METRIC_LABELS[m] for m in METRICS) + " | n |",
             "|---|" + "---:|" * len(METRICS) + "---:|",
@@ -253,8 +262,9 @@ def render_benchmarks(
             )
         lines += [
             "",
-            f"Pre-resolution snapshot: `{retrieval.get('snapshot')}`. Post-resolution snapshot: ",
+            f"Control snapshot: `{resolution_baseline.get('snapshot')}`. Post-resolution snapshot: ",
             f"`{resolved_entities.get('snapshot')}`.",
+            f"Both resolution reports were measured at commit `{resolved_entities.get('git_commit')}`.",
             "",
         ]
 
@@ -364,6 +374,7 @@ def main() -> None:
     parser.add_argument("--retrieval", type=Path, required=True)
     parser.add_argument("--answers", type=Path, default=None)
     parser.add_argument("--compressed-answers", type=Path, default=None)
+    parser.add_argument("--resolution-baseline", type=Path, default=None)
     parser.add_argument("--resolved-entities", type=Path, default=None)
     parser.add_argument("--output", type=Path, default=Path("docs/benchmarks.md"))
     args = parser.parse_args()
@@ -371,6 +382,7 @@ def main() -> None:
         args.retrieval,
         args.answers,
         compressed_answers_path=args.compressed_answers,
+        resolution_baseline_path=args.resolution_baseline,
         resolved_entities_path=args.resolved_entities,
     )
     args.output.write_text(page, encoding="utf-8")

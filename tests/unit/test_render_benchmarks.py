@@ -115,19 +115,30 @@ def resolved_entities_fixture() -> dict:
     return fixture
 
 
+def resolution_baseline_fixture() -> dict:
+    fixture = retrieval_fixture()
+    fixture["snapshot"] = "v0.2-demo-resolution-control"
+    fixture["corpus"] = {**fixture["corpus"], "entities": 77}
+    fixture["configs"] = [fixture["configs"][0]]
+    return fixture
+
+
 def test_renders_full_page(tmp_path: Path) -> None:
     retrieval = tmp_path / "retrieval.json"
     answers = tmp_path / "answers.json"
     compressed_answers = tmp_path / "compressed-answers.json"
+    resolution_baseline = tmp_path / "resolution-baseline.json"
     resolved_entities = tmp_path / "resolved-entities.json"
     retrieval.write_text(json.dumps(retrieval_fixture()))
     answers.write_text(json.dumps(answers_fixture()))
     compressed_answers.write_text(json.dumps(answers_fixture(compressed=True)))
+    resolution_baseline.write_text(json.dumps(resolution_baseline_fixture()))
     resolved_entities.write_text(json.dumps(resolved_entities_fixture()))
     page = render_benchmarks(
         retrieval,
         answers,
         compressed_answers_path=compressed_answers,
+        resolution_baseline_path=resolution_baseline,
         resolved_entities_path=resolved_entities,
     )
     assert "full_deep" in page and "with_rerank" in page and "auto_routed" in page

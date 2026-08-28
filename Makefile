@@ -104,7 +104,10 @@ benchmark: db-up
 	uv run sci-rag graph citations --apply
 	uv run sci-rag corpus snapshot $(BENCH_SNAP)-pre-resolution
 	uv run sci-rag eval retrieval --ablation --snapshot $(BENCH_SNAP)-pre-resolution
-	uv run sci-rag graph resolve-entities --apply
+	uv run python scripts/seed_resolution_benchmark.py
+	uv run sci-rag corpus snapshot $(BENCH_SNAP)-resolution-control
+	uv run sci-rag eval retrieval --snapshot $(BENCH_SNAP)-resolution-control
+	uv run sci-rag graph resolve-entities --apply --no-llm
 	uv run sci-rag graph communities
 	uv run sci-rag corpus snapshot $(BENCH_SNAP)-resolved
 	uv run sci-rag eval retrieval --condition resolved_entities \
@@ -115,6 +118,7 @@ benchmark: db-up
 		--report $$(ls -td eval_results/*-answers | head -1)
 	uv run python scripts/render_benchmarks.py \
 		--retrieval $$(ls -td eval_results/*-retrieval-ablation | head -1) \
+		--resolution-baseline $$(ls -td eval_results/*-retrieval | head -1) \
 		--resolved-entities $$(ls -td eval_results/*-retrieval-condition | head -1) \
 		--answers $$(ls -td eval_results/*-answers | sed -n '2p') \
 		--compressed-answers $$(ls -td eval_results/*-answers | head -1) \
