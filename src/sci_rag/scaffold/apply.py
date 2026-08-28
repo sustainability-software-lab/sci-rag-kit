@@ -504,6 +504,28 @@ def _drop_phony(line: str) -> str:
 # --- git --------------------------------------------------------------------
 
 
+def _git_identity(root: Path, answers: ProjectAnswers) -> list[str]:
+    """`-c` overrides for the commit, only when git has no identity of its own.
+
+    A fresh machine, a container, and a CI runner all commonly have no
+    ``user.email`` configured, and `git commit` refuses to run without one.
+    Falling back to the name and email the user just typed into the wizard
+    beats not making the first commit at all. A configured identity always
+    wins: overriding someone's own git config would be worse than the problem.
+    """
+    try:
+        configured = subprocess.run(
+            ["git", "config", "user.email"], cwd=root, capture_output=True, text=True
+        )
+    except OSError:
+        return []
+    if configured.returncode == 0 and configured.stdout.strip():
+        return []
+    name = answers.author_name or "sci-rag-kit"
+    email = answers.contact_email or "noreply@example.invalid"
+    return ["-c", f"user.name={name}", "-c", f"user.email={email}"]
+
+
 def apply_git(answers: ProjectAnswers, root: Path) -> list[str]:
     """Initialize a repository, but never touch one that already exists.
 
@@ -513,8 +535,12 @@ def apply_git(answers: ProjectAnswers, root: Path) -> list[str]:
     if not answers.initialize_git or (root / ".git").exists():
         return []
     try:
-        for command in (["init"], ["add", "-A"], ["commit", "-m", "Initial commit"]):
-            subprocess.run(["git", *command], cwd=root, check=True, capture_output=True, text=True)
+        subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True, text=True)
+        identity = _git_identity(root, answers)
+        for command in (["add", "-A"], ["commit", "-m", "Initial commit"]):
+            subprocess.run(
+                ["git", *identity, *command], cwd=root, check=True, capture_output=True, text=True
+            )
     except (OSError, subprocess.CalledProcessError) as exc:
         return [_log("git", f"not initialized ({type(exc).__name__})")]
     return [_log("git", "initialized, 1 commit")]
@@ -544,6 +570,7 @@ def apply_all(
     changes += apply_env_file(answers, root)
     changes += apply_pyproject(answers, root)
     changes += apply_makefile(answers, root)
+    changes += apply_docs(answers, root)
     changes += apply_runner(answers, root)
     changes += apply_corpus_scaffold(answers, root)
     changes += apply_license(answers, root, year=year)
@@ -688,6 +715,75 @@ def _write_devcontainer(answers: ProjectAnswers, root: Path) -> None:
         )
     _write(path, json.dumps(config, indent=2) + "\n")
     (root / ".devcontainer" / "devcontainer-lock.json").unlink(missing_ok=True)
+
+
+# The kit's own onboarding surface: how to install sci-rag-kit and what its
+# wizard looks like. A project made with that wizard has already been
+# onboarded, so carrying it would put someone else's install instructions on
+# the user's homepage. The regions are marked in docs/index.md rather than
+# matched by heading text, so editing the copy cannot break this.
+_ONBOARDING_BEGIN = "<!-- BEGIN KIT ONBOARDING"
+_ONBOARDING_END = "<!-- END KIT ONBOARDING -->"
+
+KIT_ONLY_DOCS = (
+    "docs/assets/casts",
+    "docs/assets/vendor/asciinema-player",
+    "docs/javascripts/cast.js",
+    "scripts/render_cast.py",
+    "tests/unit/test_docs_transcript.py",
+)
+
+
+def _strip_marked_regions(text: str) -> str:
+    while _ONBOARDING_BEGIN in text:
+        head, _, rest = text.partition(_ONBOARDING_BEGIN)
+        _, _, tail = rest.partition(_ONBOARDING_END)
+        text = head.rstrip("\n") + "\n" + tail.lstrip("\n")
+    return text
+
+
+def apply_docs(answers: ProjectAnswers, root: Path) -> list[str]:
+    """Remove the kit's own onboarding material from a generated project.
+
+    Everything here is about installing and running *sci-rag-kit*, not about
+    the user's project: the pipx instructions, the recorded wizard session, the
+    vendored player that shows it, and the renderer that keeps it current.
+    Their supporting entries in ``mkdocs.yml`` and the ``Makefile`` go with
+    them, because a dangling ``extra_javascript`` entry or a ``make docs`` step
+    calling a deleted script breaks the generated project's documentation build.
+    """
+    del answers  # unconditional: no answer makes the kit's own pitch relevant
+
+    index = root / "docs" / "index.md"
+    if index.exists():
+        _write(index, _strip_marked_regions(index.read_text(encoding="utf-8")))
+
+    for relative in KIT_ONLY_DOCS:
+        path = root / relative
+        if path.is_dir():
+            shutil.rmtree(path, ignore_errors=True)
+        else:
+            path.unlink(missing_ok=True)
+
+    config = root / "mkdocs.yml"
+    if config.exists():
+        text = config.read_text(encoding="utf-8")
+        text = re.sub(r"(?ms)^extra_javascript:\n(?:[ #].*\n|\n(?=[ #]))*", "", text)
+        text = "\n".join(
+            line
+            for line in text.splitlines()
+            if "asciinema-player" not in line and "assets/casts" not in line
+        )
+        _write(config, text.rstrip("\n") + "\n")
+
+    makefile = root / "Makefile"
+    if makefile.exists():
+        text = _remove_make_target(makefile.read_text(encoding="utf-8"), "cast")
+        text = "\n".join(line for line in text.splitlines() if "render_cast.py" not in line)
+        text = text.replace(" docs-reference cast ", " docs-reference ")
+        _write(makefile, text.rstrip("\n") + "\n")
+
+    return [_log("docs/", "kit onboarding, player, and cast removed")]
 
 
 def apply_runner(answers: ProjectAnswers, root: Path) -> list[str]:

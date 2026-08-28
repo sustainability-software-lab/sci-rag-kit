@@ -125,7 +125,7 @@ name, description, seed-question reset).
 ```
 domain/            Ontology, prompts, seed questions (the specialization surface)
 src/sci_rag/       ingest, embed, graph, retrieve, answer, evals, server, cli
-data/demo/         Demo corpus (synthetic, CC0)
+data/demo/         Demo corpus (synthetic, CC0; optional)
 migrations/        Alembic schema (pgvector + HNSW + FTS indexes)
 tests/             Offline test suite (runs against the docker-compose Postgres)
 infra/terraform/   Optional GCP deployment (Cloud SQL + Cloud Run)

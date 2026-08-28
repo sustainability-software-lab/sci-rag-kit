@@ -378,3 +378,36 @@ def test_apply_all_leaves_no_template_placeholder_behind(template: Path) -> None
     for path in template.rglob("*"):
         if path.is_file() and path.suffix in {".md", ".toml", ".yaml", ".yml", ".jsonl"}:
             assert not placeholder.search(path.read_text(encoding="utf-8", errors="ignore")), path
+
+
+def test_git_init_works_where_git_has_no_configured_identity(template: Path) -> None:
+    """A fresh machine, a container, and a CI runner all often have none.
+
+    `git commit` refuses to run without a user.email, so without a fallback the
+    first commit of a generated project silently does not happen.
+    """
+    import subprocess
+
+    changes = apply.apply_git(_answers(initialize_git="Yes", author_name="Berkeley Lab"), template)
+
+    assert changes == [apply._log("git", "initialized, 1 commit")]
+    log = subprocess.run(
+        ["git", "log", "-1", "--format=%an <%ae>"],
+        cwd=template,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert log.stdout.strip()
+
+
+def test_a_configured_git_identity_is_not_overridden(template: Path) -> None:
+    import subprocess
+
+    subprocess.run(["git", "init"], cwd=template, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "mine@example.org"], cwd=template, check=True)
+    subprocess.run(["git", "config", "user.name", "Mine"], cwd=template, check=True)
+
+    identity = apply._git_identity(template, _answers(author_name="Someone Else"))
+
+    assert identity == []

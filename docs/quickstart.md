@@ -37,16 +37,16 @@ $ pipx install sci-rag-kit
 $ sci-rag-new
 ```
 
-Every question has a default, so pressing Enter through the whole session gives you a working offline project. Steps 2 and 3 below are the answers it collects; read them to understand what it wrote, then skip to step 4.
+Every question has a default, so you can press Enter through the whole session and still get a project that runs. Steps 2 and 3 below are the questions it asked; read them to understand what it wrote, then skip to step 4.
 
-To evaluate the kit itself rather than start a project, clone it:
+Evaluating the kit rather than starting a project? Clone it:
 
 ```console title="Terminal"
 $ git clone https://github.com/sustainability-software-lab/sci-rag-kit.git
 $ cd sci-rag-kit
 ```
 
-Clicking **Use this template** on GitHub also works, and `sci-rag init` runs the same wizard inside a checkout you already have. The included dev container is another supported path. In GitHub Codespaces it installs the project and starts Postgres, so continue with configuration.
+Clicking **Use this template** on GitHub also works. Inside a checkout you already have, `sci-rag init` runs the same wizard. The included dev container is another supported path. In GitHub Codespaces it installs the project and starts Postgres, so continue with configuration.
 
 ## 2. Choose a credential mode
 
