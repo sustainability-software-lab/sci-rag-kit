@@ -14,11 +14,20 @@ about anyone else.
 
 ## The landscape, honestly
 
+These readings were last checked **as of 2026-08-28**. Another project's
+status is the claim on this page most likely to go stale, so it carries a
+date you can weigh rather than an undated assertion.
+
 **Microsoft GraphRAG** established the pattern this whole space builds
 on (entity extraction, communities, global/local search) and its papers
-remain the reference reading. As of mid-2026 the repository is in
-maintenance mode: fine for study, a hard sell for a new deployment that
-expects fixes and evolution.
+remain the reference reading. Its README says the project "is largely in
+maintenance mode, and won't be accepting new PRs or implementing new
+features", with bug fixes and dependency updates continuing, particularly
+for CVEs. That is the maintainers' own description rather than ours, and
+it matches what ships: v3.1.2 in August 2026, and releases before it that
+are dependency sweeps and fixes. Fine for study, and a considered choice
+rather than a default for a new deployment that expects the feature set
+to grow.
 
 **LightRAG** is the most active general-purpose GraphRAG library:
 incremental insert/delete, dual-level retrieval, multiple storage
@@ -33,8 +42,9 @@ retrieve-summarize-answer loops over papers, with strong published
 results on literature tasks. It is an agent with per-query LLM loops
 (cost and latency to match), not an infrastructure template. For
 "answer this hard question from the literature, take your time," pick
-PaperQA2. Its evidence-summarization pattern is a Wave 2 candidate
-here, credited.
+PaperQA2. Its evidence-summarization pattern shipped here in v0.3 as
+contextual snippet compression, credited, and the paired gate it has to
+pass left it off by default.
 
 **LlamaIndex (+ Neo4j)** gives maximal flexibility: every RAG pattern,
 every store, endless composability. The flip side is that **you** are the
@@ -45,25 +55,30 @@ want those decisions made well and defensibly, once.
 
 ## What sci-rag-kit actually is
 
-This page answers "how does it compare to them". For "why did we build it this
-way", the [FAQ](faq.md) has the short version of every decision record, and
-this section's questions are answered there at more length.
+A GitHub template repository. `pipx install sci-rag-kit` then `sci-rag-new`
+runs a wizard that asks about your domain, credentials, ontology, corpus,
+and environment manager, then writes a configured project. Inside a
+checkout you already have, `sci-rag init` runs the same wizard, and
+`scripts/init_domain.py` is the narrow path when all you want is to reset
+the name and the seed questions. What you get is a running, served,
+evaluated knowledge base.
 
-A GitHub template repository. You instantiate it, run
-`scripts/init_domain.py`, edit three domain files (ontology, prompts, and
-seed questions), and point it at your documents. What you get is a
-running, served, evaluated knowledge base, and every architectural
-decision behind it is written down with its reasoning in
-`docs/methodology.md` and `docs/adr/`.
+That is the short version. This page is about how the kit compares to
+other systems; for what it is, who it is for, and why each decision went
+the way it did, the [FAQ](faq.md) answers all three, and the
+[decision records](adr/0001-graph-in-postgres.md) hold the full arguments.
 
 The bets it makes for you, and where they hold:
 
 | Axis | The kit's position | Choose differently if |
 |------|--------------------|----------------------|
-| Shape | Template repo you own and modify; ~60 files you can read in an afternoon | You want a pip-installable framework with a plugin ecosystem (LlamaIndex, LightRAG) |
+| Shape | Template repo you own and modify; one Python package, no plugin layer between you and it | You want a pip-installable framework with a plugin ecosystem (LlamaIndex, LightRAG) |
 | Storage | One Postgres database (pgvector + full-text + graph-as-rows); no second system to operate | Your graph needs >10M edges or dedicated graph algorithms (then a graph database earns its ops cost) |
+| Corpus building | Campaign discovery from a topic or DOI list, fail-closed open-access resolution, verified PDF download, PRISMA-aligned screening with a human review queue | You already have the documents and the rights answer, and want nothing between you and ingestion |
+| Graph | Ontology-constrained extraction, reviewable entity resolution with an audit row per merge, and citation traversal over resolved DOI edges | You want an unconstrained graph and will do the disambiguation downstream |
 | Evaluation | First-class: seed questions, layer ablations, bootstrap CIs, blind two-pass judge, kappa calibration, report diffing; the harness is citable in a methods section | You will never run an eval (be honest); any framework is fine and none will save you |
 | License governance | Fail-closed license classes enforced inside every layer's SQL, before ranking; built for mixed-rights scientific corpora | Everything you index is uniformly licensed and served to one audience |
+| Model wiring | Gemini, Claude, and any OpenAI-compatible endpoint, chosen per role, so the model that answers need not be the model that grades | You want an embedding provider you can swap too; here that is a data migration (see the concessions) |
 | Serving | REST + MCP from one FastAPI service; agents are first-class consumers | You need a hosted, managed product with an SLA (this is self-hosted infrastructure) |
 | Retrieval philosophy | Fused layers + adaptive routing, no per-query agentic loop; latency and cost are predictable | You want deep multi-step agentic answering per query (PaperQA2) |
 
@@ -75,10 +90,24 @@ The bets it makes for you, and where they hold:
   or add an agent **on top of** the kit's API.
 - **Postgres-only.** One database is the point. If that is a blocker,
   the kit is not for you; we will not grow a storage abstraction layer.
-- **Google-first model wiring.** Gemini through AI Studio or Vertex is
-  what ships and what gets tested. The `LLMClient`/`EmbeddingProvider`
-  seams are small and other providers are a contribution away, but
-  today that work is yours.
+- **Embeddings are Google-only.** Generation is not: `google`,
+  `anthropic`, and `openai-compatible` adapters all ship, so Claude,
+  Grok, Llama, Mistral, DeepSeek, OpenAI, and a self-hosted vLLM or
+  Ollama server all work today, selected per role with a
+  `provider:model` setting. Embeddings are the half that stays Google's,
+  and deliberately: a migration bakes the dimension into the pgvector
+  column, so changing embedder means a migration, a full re-embed, and
+  an index rebuild. That is a data migration, and a provider flag would
+  advertise it as a configuration change. See
+  [ADR 0006](adr/0006-multi-provider-llms.md).
+- **Compression and reranking are off until your own corpus says
+  otherwise.** Both ship, and neither is a default, because a paired
+  ablation has to hold on the corpus in front of you. Compression's gate
+  was re-run for v0.3 and did not hold, and
+  [benchmarks.md](benchmarks.md) publishes the run that failed rather
+  than the one that flattered it. If you want features that default on
+  because they usually help, this project will keep disappointing you on
+  purpose.
 - **Early stage.** 0.x, small community, no history of external
   deployments yet. The eval harness and docs are ahead of the adoption
   curve on purpose; judge accordingly, and see
