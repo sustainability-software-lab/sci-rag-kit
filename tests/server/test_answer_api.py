@@ -15,7 +15,12 @@ pytestmark = pytest.mark.integration
 async def test_answer_json_mode(client) -> None:  # type: ignore[no-untyped-def]
     response = await client.post(
         "/v1/answer",
-        json={"query": "rice straw availability", "stream": False, "profile": "interactive"},
+        json={
+            "query": "rice straw availability",
+            "stream": False,
+            "profile": "interactive",
+            "include_compression": False,
+        },
     )
     assert response.status_code == 200
     body = response.json()
@@ -105,7 +110,7 @@ async def test_answer_sse_event_sequence(client) -> None:  # type: ignore[no-unt
     assert any(c["cited"] for c in citations["citations"])
 
     compression = next(data for name, data in events if name == "compression_done")
-    assert compression["enabled"] is False
+    assert compression["enabled"] is True
     assert not any(key.startswith("_") for key in compression)
 
 

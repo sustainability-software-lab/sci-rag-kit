@@ -69,12 +69,12 @@ class AnswerCompressionLLM(LLMClient):
 
 
 @pytest.mark.asyncio
-async def test_answer_with_compression_uses_exact_prompt_view_and_preserves_citations() -> None:
+async def test_adopted_domain_default_compresses_exact_prompt_and_preserves_citations() -> None:
     retriever = StaticRetriever()
     llm = AnswerCompressionLLM()
     engine = AnswerEngine(retriever=retriever, llm=llm)  # type: ignore[arg-type]
 
-    result = await engine.answer("What yield was measured?", include_compression=True)
+    result = await engine.answer("What yield was measured?")
 
     assert "Yield was 42 kg per tonne." in llm.answer_prompt
     assert "Background material." not in llm.answer_prompt

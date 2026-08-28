@@ -141,6 +141,28 @@ confidence interval and median prompt tokens fall measurably. Otherwise leave
 `compression.enabled: false` and record the rejection. A token reduction by
 itself is not evidence that answer quality held.
 
+The shipped demo passed that gate on its 10 seed questions. Both conditions used
+the same 5-document, 34-chunk corpus fingerprint and `local-hash-v1@64`
+retrieval, with real `gemini-2.5-flash` answers and an independent
+`claude-haiku-4-5` judge on Vertex AI. All 10 questions were graded with no
+evaluation failures.
+
+| Metric | Uncompressed | Compressed | Paired delta [95% CI] |
+|---|---:|---:|---:|
+| groundedness | 2.00 | 2.00 | +0.00 [+0.00, +0.00] |
+| citation accuracy | 2.00 | 2.00 | +0.00 [+0.00, +0.00] |
+| completeness | 2.00 | 1.90 | -0.10 [-0.30, +0.00] |
+| correctness | 1.80 | 2.00 | +0.20 [+0.00, +0.60] |
+| prompt tokens | 1,352 median | 309.5 median | -928.9 [-1065.4, -706.2] |
+
+Every quality interval includes zero while the prompt-token interval excludes
+zero, so the demo adopts `compression.enabled: true`. The condition token values
+are medians; the paired delta is the mean per-question change. The compressed
+run recorded seven chunk fallbacks in one question and 58 low-relevance drops.
+Those are visible in the report rather than hidden; the fallback question
+retained its complete source text. These small-corpus results justify the demo
+default only, not a general quality claim for other corpora.
+
 ## Calibrating the judge
 
 The judged-answers table is only as citable as the judge behind it, so

@@ -105,7 +105,7 @@ A grounded, cited answer. Two modes in one endpoint:
 ```
 event: retrieval_started   data: {"profile": "deep"}
 event: retrieval_done      data: {"item_count": 8, "degraded_stages": [], "traces": [...]}
-event: compression_done    data: {"enabled": false, "prompt_tokens_before": 1840, "prompt_tokens_after": 1840, ...}
+event: compression_done    data: {"enabled": true, "prompt_tokens_before": 1408, "prompt_tokens_after": 462, ...}
 event: generation_started  data: {"model": "gemini-2.5-flash"}
 event: delta               data: {"text": "Given its ash content, ..."}   (repeats)
 event: citations           data: {"citations": [{"index": 1, "title": "...", "cited": true, ...}]}
@@ -121,11 +121,12 @@ An `error` event (`code`, `message`) replaces the tail on failure.
 
 Set `include_compression` to `true` or `false` to override the domain's
 `compression.enabled` setting. Compression relevance-scores ordinary chunks
-and summarizes them before prompt assembly. It is off by default. Failed,
-malformed, empty, duplicate, or over-budget model output falls back to the
-complete chunk and increments `compression_failure_count`; it never silently
-removes the evidence. Citations always retain the original document and chunk
-identity.
+and summarizes them before prompt assembly. The shipped demo enables it after
+the paired judged-answer gate documented in [Evaluation](evaluation.md); a new
+domain should run the same gate before enabling its default. Failed, malformed,
+empty, duplicate, or over-budget model output falls back to the complete chunk
+and increments `compression_failure_count`; it never silently removes the
+evidence. Citations always retain the original document and chunk identity.
 
 Known retracted documents are excluded from answers by default. The flag
 comes from explicit Crossref metadata written by `sci-rag corpus enrich`;

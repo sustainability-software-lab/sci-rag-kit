@@ -113,7 +113,8 @@ class AnswerRequest(BaseModel):
     include_compression: bool | None = Field(
         None,
         description=(
-            "Override question-aware source compression. It is off unless the domain enables it."
+            "Override question-aware source compression. Otherwise use the evaluated domain "
+            "default."
         ),
     )
     license_classes: list[str] | None = None

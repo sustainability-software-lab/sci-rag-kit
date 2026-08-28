@@ -114,10 +114,11 @@ retrieval:
     pool: 20
     timeout_s: 15.0
 
-# Optional question-aware compression between retrieval and answer prompt
-# assembly. OFF until paired judged-answer evidence on this corpus shows all
-# quality dimensions holding while measured prompt tokens fall.
+# Question-aware compression between retrieval and answer prompt assembly.
+# Enabled for the shipped demo after the paired n=10 judged-answer gate held
+# every quality dimension while measured prompt tokens fell. Re-run the gate
+# before carrying this default into a different domain or corpus.
 compression:
-  enabled: false
+  enabled: true
   relevance_floor: 0.3
   max_tokens_per_chunk: 160
