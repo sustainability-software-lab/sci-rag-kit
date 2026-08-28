@@ -1,6 +1,6 @@
 ---
 title: Glossary
-description: Definitions for the retrieval, graph, evidence, evaluation, and operations terms used throughout Sci-RAG Kit.
+description: Definitions for the retrieval, graph, evidence, evaluation, and operations terms used throughout Sci RAG Kit.
 ---
 
 # Glossary
@@ -28,7 +28,7 @@ These definitions describe how the project uses each term. They are intentionall
 : A fixed-length numeric vector representing text for similarity search. The default Google embedding is truncated and normalized to 1536 dimensions.
 
 **Fusion**
-: Combining ranked lists from several retrieval layers. Sci-RAG Kit uses weighted reciprocal rank fusion once per request.
+: Combining ranked lists from several retrieval layers. Sci RAG Kit uses weighted reciprocal rank fusion once per request.
 
 **HyDE**
 : Hypothetical Document Embeddings. A model writes the kind of passage that would answer the query; the system embeds that passage and searches near it.

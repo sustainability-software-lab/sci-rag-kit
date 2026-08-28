@@ -18,7 +18,7 @@ Cookiecutter Data Science puts a Quick Start front and center on its docs homepa
 answer a short Q&A. No directory to create first, no files to hand-edit -- the tool is
 the factory.
 
-Sci-RAG Kit today has no equivalent. Onboarding is "click **Use this template** on
+Sci RAG Kit today has no equivalent. Onboarding is "click **Use this template** on
 GitHub → clone → `cp .env.example .env` → `make setup` → read
 `docs/bring-your-own-domain.md` (200 lines, 7 manual steps) → hand-edit
 `domain/domain.yaml`". The only automation is `scripts/init_domain.py`, which sets a
@@ -337,7 +337,7 @@ $ sci-rag-new
 
 ### Prose that must change
 
-- **`docs/index.md:165`** currently reads *"Sci-RAG Kit is not a code generator."* Reword
+- **`docs/index.md:165`** currently reads *"Sci RAG Kit is not a code generator."* Reword
   to draw the real distinction: it specializes one working repository rather than
   rendering placeholders -- the generator configures, it does not template.
 - **`docs/index.md:48`** -- "install by template or clone" → mention `pipx`.

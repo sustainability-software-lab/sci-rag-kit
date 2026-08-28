@@ -29,3 +29,16 @@ def test_configuration_reference_matches_complete_env_example() -> None:
     assert "`SCI_RAG_EXTRACTION_MODEL`" in page
     assert "`SCI_RAG_CORS_ORIGINS`" in page
     assert "`retrieval.reranker.timeout_s`" in page
+
+
+def test_generated_pages_spell_the_display_name_without_a_hyphen() -> None:
+    """The generated pages carry the product name too, so they need the same rule.
+
+    ``docs/cli.md`` cannot be hand-fixed: ``make docs`` re-renders it under
+    ``--check``, so the spelling has to be correct in the renderer.
+    """
+    render_cli_docs = _renderer("scripts/render_cli_docs.py", "render_cli_docs")
+    render_config_docs = _renderer("scripts/render_config_docs.py", "render_config_docs")
+
+    for page in (render_cli_docs(), render_config_docs(Path(".env.example"))):
+        assert "Sci-RAG Kit" not in page
