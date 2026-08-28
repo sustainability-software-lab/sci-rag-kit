@@ -52,11 +52,13 @@ There is no separate generated project tree. Clicking **Use this template** copi
 │   └── enrich.py            Crossref metadata and retraction assertions
 ├── migrations/              Alembic history for Postgres and pgvector
 ├── tests/                   offline unit, integration, server, and smoke evidence
-├── examples/                runnable library and notebook entry points
+├── examples/                runnable library and notebook entry points (optional)
 ├── infra/terraform/         optional Cloud SQL and Cloud Run deployment
 ├── docs/                    this site, methodology, guides, and decisions
 ├── docker-compose.yml       local Postgres with pgvector
 └── Makefile                 readable shortcuts over the real commands</div>
+
+Entries marked optional are the ones the setup wizard asks about. Answer no to `include_terraform` or `include_demo_corpus` and they are not in your project, and neither the `Makefile` nor CI mentions them.
 
 ## The specialization surface
 

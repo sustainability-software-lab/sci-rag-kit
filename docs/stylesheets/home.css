@@ -188,3 +188,28 @@
     padding: 0.6rem;
   }
 }
+
+/* Recorded sci-rag-new session on the homepage. The player brings its own
+   ANSI palette, but its background and body text come from the same tokens as
+   the console blocks above it, so the two sit on one surface instead of two. */
+.srag-cast {
+  margin: 1.25rem 0 1rem;
+  border: 1px solid var(--srag-border);
+  border-radius: var(--srag-radius-md);
+  overflow: hidden;
+  background: var(--srag-surface-tinted);
+}
+
+.srag-cast:empty {
+  display: none;
+}
+
+.srag-cast .ap-player {
+  font-size: 0.82rem;
+}
+
+.srag-cast .ap-terminal {
+  --term-color-background: var(--md-code-bg-color);
+  --term-color-foreground: var(--md-code-fg-color);
+  background-color: var(--md-code-bg-color);
+}
