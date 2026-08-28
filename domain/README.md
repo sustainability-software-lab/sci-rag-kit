@@ -5,11 +5,12 @@ kit to a new field does not involve editing Python.
 
 | File | What it controls |
 |------|------------------|
-| `domain.yaml` | Your name and description, the ontology (entity and relationship types the graph extractor looks for), HyDE query classes, and retrieval tuning (fusion weights, candidate limits) |
+| `domain.yaml` | Your name and description, ontology, HyDE query classes, retrieval tuning, and optional answer compression tuning |
 | `prompts/entity_extraction.md` | How chunks become graph entities and relationships |
 | `prompts/query_entities.md` | How a question's entities are spotted for graph traversal |
 | `prompts/hyde.md` | How the hypothetical-answer search probe is written |
 | `prompts/answer.md` | How answers are written and cited |
+| `prompts/snippet_compression.md` | How retrieved chunks are relevance-scored and compressed before answering |
 | `prompts/community_summary.md` | How graph clusters are summarized |
 | `prompts/judge_grounding.md`, `prompts/judge_correctness.md` | How the evaluation judge grades (keep the blindness rules intact) |
 | `eval_seed_questions.jsonl` | Your ground truth: the questions the harness scores against |

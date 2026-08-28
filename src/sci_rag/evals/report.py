@@ -201,6 +201,7 @@ def answers_payload(
     *,
     snapshot: str | None = None,
     models: dict[str, str] | None = None,
+    config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "kind": "answers",
@@ -208,6 +209,7 @@ def answers_payload(
         "git_commit": git_commit(),
         "snapshot": snapshot,
         "models": models or {},
+        "config": config or {},
         "corpus": fingerprint,
         "summary": summarize_answer_records(records),
         "summary_ci": summarize_answers_ci(records),
@@ -220,6 +222,7 @@ def answers_markdown(
     fingerprint: dict[str, Any],
     *,
     models: dict[str, str] | None = None,
+    config: dict[str, Any] | None = None,
 ) -> str:
     summary = summarize_answer_records(records)
     lines = [
@@ -233,6 +236,11 @@ def answers_markdown(
             "Answered by `{}`; graded by `{}`.".format(
                 models.get("answer", "unknown"), models.get("judge", "unknown")
             ),
+            "",
+        ]
+    if config and "compression" in config:
+        lines += [
+            f"Contextual compression: `{'enabled' if config['compression'] else 'disabled'}`.",
             "",
         ]
     lines += [
@@ -254,6 +262,11 @@ def answers_markdown(
     lines += [
         f"| graded / total | {int(summary['graded'])} / {int(summary['n'])} |",
     ]
+    if "prompt_tokens_before_median" in summary and "prompt_tokens_after_median" in summary:
+        lines += [
+            f"| median prompt tokens before | {summary['prompt_tokens_before_median']:.1f} |",
+            f"| median prompt tokens after | {summary['prompt_tokens_after_median']:.1f} |",
+        ]
     lines += small_n_warning(int(summary["graded"]))
     lines += [
         "",

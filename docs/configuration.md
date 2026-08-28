@@ -88,6 +88,10 @@ show the shape of each entry.
 | `retrieval.reranker.pool` | int | 20 | Number of fused candidates presented to the reranker. |
 | `retrieval.reranker.timeout_s` | float | 15.0 | Maximum reranker duration before fused-order fallback. |
 | `retrieval.reranker.model` | str \| NoneType | unset | Optional model override for the local cross-encoder. |
+| `compression` | CompressionTuning | see nested fields | Question-aware chunk compression before answer prompt assembly; off by default. |
+| `compression.enabled` | bool | false | Domain default for contextual compression. Enable only after paired judged-answer evidence. |
+| `compression.relevance_floor` | float | 0.3 | Drop a model-scored chunk below this relevance score. |
+| `compression.max_tokens_per_chunk` | int | 160 | Maximum accepted tokens in each compressed chunk; over-budget output falls back to full text. |
 
 ## Files beside the YAML profile
 

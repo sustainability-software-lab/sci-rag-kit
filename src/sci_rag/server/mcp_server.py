@@ -105,6 +105,7 @@ def build_mcp_server(
         query: str,
         top_k: int = 8,
         license_classes: list[str] | None = None,
+        include_compression: bool | None = None,
     ) -> dict[str, Any]:
         """Ask the knowledge base a question and get a grounded, cited answer.
 
@@ -112,13 +113,19 @@ def build_mcp_server(
         list maps each number to its document. If the corpus does not
         contain the answer, the response says so rather than guessing.
         This spends LLM tokens; for raw evidence without generation, use
-        search_corpus instead.
+        search_corpus instead. Set include_compression only to override the
+        domain default; the response reports measured prompt-token counts and
+        any full-text fallbacks.
         """
         text_parts: list[str] = []
         citations: list[dict[str, Any]] = []
         error: dict[str, Any] | None = None
+        compression: dict[str, Any] | None = None
         async for event in service.answer_stream(
-            query, top_k=max(1, min(top_k, 20)), license_classes=license_classes
+            query,
+            top_k=max(1, min(top_k, 20)),
+            license_classes=license_classes,
+            include_compression=include_compression,
         ):
             if event.type == "delta":
                 text_parts.append(event.data["text"])
@@ -126,6 +133,8 @@ def build_mcp_server(
                 citations = event.data["citations"]
             elif event.type == "error":
                 error = {k: v for k, v in event.data.items() if not k.startswith("_")}
+            elif event.type == "compression_done":
+                compression = {k: v for k, v in event.data.items() if not k.startswith("_")}
         if error:
             return {"error": error, "query": query}
         return {
@@ -133,6 +142,7 @@ def build_mcp_server(
             "answer": "".join(text_parts),
             "citations": [c for c in citations if c["cited"]],
             "all_sources": citations,
+            "compression": compression,
         }
 
     async def get_document(document_id: str) -> dict[str, Any]:

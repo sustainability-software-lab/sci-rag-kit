@@ -120,6 +120,27 @@ intact, and spot-check a handful of judged answers by hand afterward
 (read the rationale strings in `report.json`; they are kept for exactly
 this).
 
+## Deciding whether to adopt snippet compression
+
+Contextual snippet compression is an answer-generation condition, not a
+retrieval ablation. Compare two real runs on the same corpus fingerprint,
+question set, answer model, and independent judge model:
+
+```bash
+uv run sci-rag eval answers --snapshot uncompressed
+uv run sci-rag eval answers --compressed --snapshot compressed
+uv run sci-rag eval diff eval_results/<uncompressed>/report.json \
+  eval_results/<compressed>/report.json
+```
+
+Each record contains measured prompt-token counts, compression fallbacks, and
+dropped-source counts. The report gives median prompt tokens before and after;
+the diff pairs judge dimensions and prompt-token deltas by question. Adopt the
+domain default only when every judged dimension remains inside the comparison
+confidence interval and median prompt tokens fall measurably. Otherwise leave
+`compression.enabled: false` and record the rejection. A token reduction by
+itself is not evidence that answer quality held.
+
 ## Calibrating the judge
 
 The judged-answers table is only as citable as the judge behind it, so

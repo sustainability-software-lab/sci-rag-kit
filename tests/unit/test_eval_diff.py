@@ -46,6 +46,27 @@ def retrieval_payload_fixture(name: str, ranks: dict[str, int | None]) -> dict:
     }
 
 
+def answers_payload_fixture(name: str, scores: list[int], tokens: list[int]) -> dict:
+    return {
+        "kind": "answers",
+        "generated_at": "2026-08-27T00:00:00+00:00",
+        "git_commit": name,
+        "records": [
+            {
+                "question_id": f"q{index}",
+                "grounding": {
+                    "groundedness": score,
+                    "citation_accuracy": score,
+                    "completeness": score,
+                },
+                "correctness": {"correctness": score},
+                "prompt_tokens_after": token_count,
+            }
+            for index, (score, token_count) in enumerate(zip(scores, tokens, strict=True))
+        ],
+    }
+
+
 class TestDiffRetrieval:
     def test_per_question_changes_classified(self) -> None:
         a = retrieval_payload_fixture("aaa", {"q1": 3, "q2": 1, "q3": None, "q4": 2, "q5": None})
@@ -106,6 +127,19 @@ class TestDiffRetrieval:
         assert "improved" in md and "appeared" in md
         assert "hit_at_5" in md
         assert "aaa" in md and "bbb" in md
+
+
+def test_answers_diff_pairs_judge_dimensions_and_prompt_tokens() -> None:
+    baseline = answers_payload_fixture("aaa", [2, 2, 1], [1000, 800, 900])
+    compressed = answers_payload_fixture("bbb", [2, 2, 1], [400, 300, 350])
+
+    diff = diff_reports(baseline, compressed)
+
+    metrics = diff.configs[0].metric_deltas
+    assert metrics["groundedness"]["delta"] == 0.0
+    assert metrics["correctness"]["delta"] == 0.0
+    assert metrics["prompt_tokens"]["delta"] == pytest.approx(-550.0)
+    assert "prompt_tokens" in diff_markdown(diff)
 
 
 class TestDiffCli:
