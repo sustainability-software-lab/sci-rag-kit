@@ -1588,6 +1588,72 @@ def corpus_snapshot(
     console.print(f"[green]Snapshot [bold]{info.name}[/bold] written to {info.path}.[/green]")
 
 
+@corpus_app.command("export")
+def corpus_export(
+    outdir: Path = typer.Argument(..., help="Directory to write the export files into."),
+    fmt: str = typer.Option(
+        "jsonl", "--format", help="jsonl (no extra dependency) or parquet (needs --extra export)."
+    ),
+    license_classes: list[str] = typer.Option(
+        [],
+        "--license",
+        help="Export only these license classes (repeatable). Omit for everything. "
+        "An export is a redistribution, so a scope excludes 'unknown' unless you name it.",
+    ),
+    include_embeddings: bool = typer.Option(
+        False, "--include-embeddings", help="Include chunk vectors (large, rarely wanted)."
+    ),
+) -> None:
+    """Export documents, chunks, entities, and relationships to files.
+
+    Scoping is fail-closed and applies to the graph too: an entity is
+    exported only when every document it was extracted from is in scope,
+    because its description is written from all of them. Communities are
+    never exported; they aggregate with no per-document attribution to check.
+    """
+    from sci_rag.db import get_session_factory
+    from sci_rag.export import FORMATS, ParquetUnavailableError, export_corpus
+    from sci_rag.retrieve.types import RetrievalScope
+
+    if fmt not in FORMATS:
+        console.print(f"[red]Unknown format {fmt!r}.[/red] Known: {', '.join(FORMATS)}")
+        raise typer.Exit(1)
+
+    scope = RetrievalScope(license_classes=tuple(license_classes)) if license_classes else None
+
+    async def run():  # type: ignore[no-untyped-def]
+        await _check_db()
+        return await export_corpus(
+            get_session_factory(),
+            directory=outdir,
+            fmt=fmt,  # type: ignore[arg-type]
+            scope=scope,
+            include_embeddings=include_embeddings,
+        )
+
+    try:
+        result = run_async(run())
+    except ParquetUnavailableError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+
+    table = Table(title=f"Exported to {result.directory}")
+    table.add_column("Table")
+    table.add_column("Rows", justify="right")
+    table.add_column("File")
+    for name, path in zip(result.counts, result.files, strict=True):
+        table.add_row(name, str(result.counts[name]), path.name)
+    console.print(table)
+    if result.scoped:
+        console.print(
+            "[yellow]Scoped export.[/yellow] Documents and chunks outside the license "
+            "allowlist were excluded, along with every entity whose evidence touched one "
+            "of them."
+        )
+    if not include_embeddings:
+        console.print("Chunk embeddings were omitted; pass --include-embeddings to keep them.")
+
+
 @graph_app.command("gc")
 def graph_gc_command(
     dry_run: bool = typer.Option(

@@ -20,6 +20,18 @@ Notable changes to sci-rag-kit. The format follows
 
 ### Added
 
+- `sci-rag corpus export OUTDIR`: write documents, chunks, entities, and
+  relationships to one file per table, as JSONL (no extra dependency) or
+  Parquet (`uv sync --extra export`). Chunk embeddings are omitted unless
+  `--include-embeddings`. `--license` takes the same fail-closed allowlist
+  retrieval takes, because an export is a redistribution and the copy that
+  leaves the database is the one nobody re-checks. The graph gets a stricter
+  rule than the rows, since it aggregates: an entity survives a scope only if
+  every document it was extracted from survived, and a relationship only if
+  its own document and both endpoints did. Communities are never exported,
+  for the same reason the community retrieval layer disables itself under any
+  scope. Replaces the DuckDB one-liner that `docs/operations.md` used to
+  sketch, which had no notion of rights at all.
 - `sci-rag manifest lint PATH`: check a corpus manifest before ingesting it.
   Reports every problem at once with line numbers, rather than one per failed
   document partway through a run: missing files, duplicate paths, unparseable

@@ -51,6 +51,9 @@ anthropic = ["anthropic[vertex]>=1.2"]
 # Any OpenAI-compatible endpoint. On Google Cloud this is the route to the
 # non-Google Vertex partner models (Grok, Llama, Mistral, DeepSeek).
 openai = ["openai>=1.40"]
+# Parquet output for `sci-rag corpus export`. JSONL needs nothing, so this
+# stays optional rather than putting Arrow in every install.
+export = ["pyarrow>=17.0"]
 
 [project.scripts]
 sci-rag = "sci_rag.cli.main:app"
@@ -69,6 +72,9 @@ dev = [
   "mypy>=1.10",
   "ruff>=0.4",
   "types-pyyaml",
+  # The `export` extra, pulled into dev so CI actually exercises the Parquet
+  # writer rather than skipping it. A skipped test is not evidence.
+  "pyarrow>=17.0",
 ]
 docs = [
   "mkdocs==1.6.*",
