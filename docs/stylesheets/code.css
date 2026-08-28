@@ -13,16 +13,44 @@
   margin: 0;
 }
 
+/* Material carries a code block's vertical rhythm on the inner pre, which the
+   rule above zeroes so the code sits flush inside the bordered box. Put that
+   rhythm back on the wrapper: a step that shows a command and then the file it
+   writes renders two blocks in a row, and without this they touch and read as
+   one block with a stray divider. */
+.md-typeset .highlight,
+.md-typeset .highlighttable {
+  margin: 1em 0;
+}
+
+/* Inside a line-numbered table the wrapper is a cell, so its own rhythm belongs
+   to the table above, not to each cell. */
+.md-typeset .highlighttable .highlight {
+  margin: 0;
+}
+
 .md-typeset .highlighttable {
   border: 1px solid var(--srag-border);
   border-radius: var(--srag-radius-sm);
   box-shadow: none;
 }
 
-/* The filename bar above a titled block. */
+/* The filename bar above a titled block. It inherits prose line height from the
+   body, which leaves a one-line label sitting in far more space than it needs,
+   so set the height from the label itself. Only the vertical padding is set:
+   the horizontal padding is what lines the label up with the code beneath it. */
+.md-typeset .highlight .filename,
 .md-typeset .highlighttable .filename {
+  /* Material carries a paragraph's top margin here. Because the wrapper hides
+     overflow, that margin cannot collapse away and instead renders as a band of
+     empty bar above the label, which is most of the height the bar appears to
+     have. */
+  margin-top: 0;
+  padding-top: 0.45em;
+  padding-bottom: 0.45em;
   color: var(--srag-muted-600);
   font-weight: 500;
+  line-height: 1.35;
   border-bottom: 1px solid var(--srag-border);
   background: var(--srag-surface-soft);
 }
