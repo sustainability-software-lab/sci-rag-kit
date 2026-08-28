@@ -48,6 +48,8 @@ migrations, `domain/`, and data paths resolve predictably.
 | `sci-rag campaign build` | Resolve rights, download direct OA PDFs, and write an ingest manifest. |
 | `sci-rag campaign screen` | Screen discovered abstracts and queue uncertain rows for human review. |
 | `sci-rag campaign review` | Walk pending screening rows and append explicit human decisions. |
+| `sci-rag manifest` | Corpus manifests: check one before you ingest it. |
+| `sci-rag manifest lint` | Check a corpus manifest before ingesting it. Ingestion reports a bad manifest one document at a time, after the run has already started. This reports every problem at once, before anything is parsed, embedded, or written. |
 | `sci-rag draft` | Draft the domain files you would otherwise hand-write. Every drafter can also print its prompt for any assistant (--print-prompt) and read the reply back (--from-file), so no API key is required. |
 | `sci-rag draft questions` | Draft seed questions grounded in your own documents, and verify them. |
 | `sci-rag draft manifest` | Read title, authors, year, and source off your documents. Rights stay yours. |
@@ -542,6 +544,28 @@ $ sci-rag campaign review [OPTIONS]
 |---|---|---|---|
 | `--name` | text | required | Campaign directory name to review. |
 | `--campaign-root` | directory | data/campaigns | Parent directory containing campaign state. |
+
+## `sci-rag manifest`
+
+Corpus manifests: check one before you ingest it.
+
+```console
+$ sci-rag manifest [OPTIONS] COMMAND [ARGS]...
+```
+
+## `sci-rag manifest lint`
+
+Check a corpus manifest before ingesting it. Ingestion reports a bad manifest one document at a time, after the run has already started. This reports every problem at once, before anything is parsed, embedded, or written.
+
+```console
+$ sci-rag manifest lint [OPTIONS] PATH
+```
+
+### Arguments
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `PATH` | path | required | The JSONL corpus manifest to check. |
 
 ## `sci-rag draft`
 
