@@ -33,15 +33,6 @@ flowchart LR
   A --> E
   A --> API --> U
   R --> API
-
-  classDef source stroke:#00a8d6,stroke-width:2px
-  classDef process stroke:#005bfd,stroke-width:2px
-  classDef graphNode stroke:#8b5cf6,stroke-width:2px
-  classDef verify stroke:#22a06b,stroke-width:2px
-  class S,D,I source
-  class DB,R,A,API process
-  class G graphNode
-  class E,X verify
 ```
 
 The domain profile shapes extraction, retrieval, answering, and evaluation without becoming a second application. Both network interfaces call the same service facade, and every evidence-bearing path returns to the same document and chunk rows.
@@ -103,15 +94,6 @@ flowchart LR
   RR -->|no or failure| B[Fused top-k]
   P --> O[Items + traces + degraded stages]
   B --> O
-
-  classDef source stroke:#00a8d6,stroke-width:2px
-  classDef process stroke:#005bfd,stroke-width:2px
-  classDef graphNode stroke:#8b5cf6,stroke-width:2px
-  classDef verify stroke:#22a06b,stroke-width:2px
-  class Q source
-  class ROUTE,V,K,F,RR,B process
-  class G,C,H,P graphNode
-  class O verify
 ```
 
 Vector and community retrieval share one shielded query-embedding task. Graph and HyDE use the configured model when enabled. A stage owns its timeout and session; its failure becomes a trace while other candidates continue.

@@ -1,114 +1,160 @@
-:root {
-  /* Sampled from the approved full-color logo, not chosen independently. */
-  --srag-cyan-500: #00c8ff;
-  --srag-blue-600: #005bfd;
-  --srag-violet-600: #5400ed;
-  --srag-cyan-soft: #e6faff;
-  --srag-blue-soft: #edf3ff;
-  --srag-violet-soft: #f3edff;
+/*
+ * Near-monochrome token set.
+ *
+ * One desaturated accent, used only where color carries information: links,
+ * active navigation, focus rings. Neutrals are true greys, not blue-tinted,
+ * so long technical pages read as paper rather than as a product surface.
+ */
 
-  --srag-ink-950: #081225;
-  --srag-ink-900: #0e1a30;
-  --srag-ink-800: #1d2a40;
-  --srag-muted-700: #40516a;
-  --srag-muted-600: #586a83;
-  --srag-muted-500: #617087;
+/*
+ * Material writes its scheme variables onto <body> through
+ * [data-md-color-scheme], which outranks a bare :root block. Both selectors are
+ * listed so the light scheme wins the same way the slate one does.
+ */
+:root,
+[data-md-color-scheme="default"] {
+  --srag-accent: #2f5fb3;
+  --srag-accent-strong: #234a90;
+
+  --srag-ink-950: #16181d;
+  --srag-ink-900: #24272e;
+  --srag-ink-800: #3f4451;
+  --srag-muted-700: #5c6270;
+  --srag-muted-600: #676d7b;
+  --srag-muted-500: #6e7480;
 
   --srag-surface: #ffffff;
-  --srag-surface-soft: #f7f9fc;
-  --srag-surface-tinted: #f1f5fb;
-  --srag-border: #dde5ef;
-  --srag-border-strong: #c6d2e1;
-  --srag-panel-dark: #081225;
-  --srag-focus-ring: #007fa8;
+  --srag-surface-soft: #fafafa;
+  --srag-surface-tinted: #f4f4f5;
+  --srag-border: #e4e4e7;
+  --srag-border-strong: #d4d4d8;
+  --srag-focus-ring: #2f5fb3;
 
-  --srag-success: #147a48;
-  --srag-warning: #a55308;
-  --srag-danger: #b4233c;
+  --srag-success: #17663f;
+  --srag-warning: #8a4b0a;
+  --srag-danger: #a32236;
 
-  --srag-radius-sm: 0.45rem;
-  --srag-radius-md: 0.7rem;
-  --srag-radius-lg: 1rem;
-  --srag-shadow-soft: 0 1px 2px rgb(8 18 37 / 5%), 0 12px 32px rgb(8 18 37 / 7%);
-  --srag-gradient: linear-gradient(112deg, var(--srag-cyan-500), var(--srag-blue-600) 48%, var(--srag-violet-600));
+  --srag-radius-sm: 4px;
+  --srag-radius-md: 6px;
+  --srag-radius-lg: 8px;
 
-  --md-primary-fg-color: var(--srag-ink-950);
-  --md-primary-fg-color--light: #182a49;
-  --md-primary-fg-color--dark: #050b16;
-  --md-accent-fg-color: var(--srag-blue-600);
-  --md-typeset-a-color: #004fdf;
+  /* Material header and tab bar: light surface, ink foreground. */
+  --md-primary-fg-color: #ffffff;
+  --md-primary-fg-color--light: #fafafa;
+  --md-primary-fg-color--dark: #f4f4f5;
+  --md-primary-bg-color: var(--srag-ink-900);
+  --md-primary-bg-color--light: var(--srag-muted-600);
+
+  --md-accent-fg-color: var(--srag-accent-strong);
+  --md-typeset-a-color: var(--srag-accent);
   --md-default-bg-color: var(--srag-surface);
   --md-default-fg-color: var(--srag-ink-900);
   --md-default-fg-color--light: var(--srag-muted-700);
   --md-default-fg-color--lighter: var(--srag-muted-500);
-  --md-code-bg-color: #f3f6fa;
-  --md-code-fg-color: #17253b;
-  --md-grid-width: 92rem;
+  --md-code-bg-color: #f6f6f7;
+  --md-code-fg-color: #2b2f38;
+  --md-typeset-table-color: var(--srag-border);
+  --md-typeset-table-color--light: var(--srag-surface-soft);
+  --md-footer-bg-color: var(--srag-surface-soft);
+  --md-footer-bg-color--dark: var(--srag-surface-soft);
+  --md-footer-fg-color: var(--srag-ink-900);
+  --md-footer-fg-color--light: var(--srag-muted-700);
+  --md-footer-fg-color--lighter: var(--srag-muted-500);
+  --md-grid-width: 88rem;
 }
 
 [data-md-color-scheme="slate"] {
-  --srag-cyan-soft: #082e3d;
-  --srag-blue-soft: #101f42;
-  --srag-violet-soft: #231343;
-  --srag-ink-950: #eff5ff;
-  --srag-ink-900: #e2ebf7;
-  --srag-ink-800: #cfdaea;
-  --srag-muted-700: #b2c0d2;
-  --srag-muted-600: #9babc0;
-  --srag-muted-500: #8496ad;
-  --srag-surface: #08111f;
-  --srag-surface-soft: #0d192a;
-  --srag-surface-tinted: #112038;
-  --srag-border: #25354b;
-  --srag-border-strong: #354963;
-  --srag-focus-ring: #69dfff;
-  --srag-success: #54d594;
-  --srag-warning: #ffb563;
-  --srag-danger: #ff8798;
+  --srag-accent: #8fb0e8;
+  --srag-accent-strong: #a8c2f0;
 
-  --md-primary-fg-color: #050c18;
-  --md-primary-fg-color--light: #101f35;
-  --md-primary-fg-color--dark: #03070e;
-  --md-accent-fg-color: #69a1ff;
-  --md-typeset-a-color: #79a9ff;
+  --srag-ink-950: #f0f3f7;
+  --srag-ink-900: #e2e7ee;
+  --srag-ink-800: #c9ced6;
+  --srag-muted-700: #9aa3b0;
+  --srag-muted-600: #8d95a3;
+  --srag-muted-500: #828b99;
+
+  --srag-surface: #0d1117;
+  --srag-surface-soft: #161b22;
+  --srag-surface-tinted: #1c222b;
+  --srag-border: #2a2f37;
+  --srag-border-strong: #3a4049;
+  --srag-focus-ring: #8fb0e8;
+
+  --srag-success: #5fbb85;
+  --srag-warning: #d9a05b;
+  --srag-danger: #e08494;
+
+  /* The header stays dark here; only the light scheme inverts. */
+  --md-primary-fg-color: #0d1117;
+  --md-primary-fg-color--light: #161b22;
+  --md-primary-fg-color--dark: #090d12;
+  --md-primary-bg-color: var(--srag-ink-900);
+  --md-primary-bg-color--light: var(--srag-muted-700);
+
+  --md-code-bg-color: #161b22;
+  --md-code-fg-color: #d5dae2;
+  --md-accent-fg-color: var(--srag-accent-strong);
+  --md-typeset-a-color: var(--srag-accent);
   --md-default-bg-color: var(--srag-surface);
   --md-default-fg-color: var(--srag-ink-900);
   --md-default-fg-color--light: var(--srag-muted-700);
   --md-default-fg-color--lighter: var(--srag-muted-500);
-  --md-code-bg-color: #0d192a;
-  --md-code-fg-color: #dce8f7;
+  --md-typeset-table-color: var(--srag-border);
+  --md-typeset-table-color--light: var(--srag-surface-soft);
+  --md-footer-bg-color: var(--srag-surface-soft);
+  --md-footer-bg-color--dark: var(--srag-surface-soft);
+  --md-footer-fg-color: var(--srag-ink-900);
+  --md-footer-fg-color--light: var(--srag-muted-700);
+  --md-footer-fg-color--lighter: var(--srag-muted-500);
 }
 
 .md-grid {
   max-width: var(--md-grid-width);
 }
 
-.md-header {
-  --srag-focus-ring: #69dfff;
+/* ── Header and tab bar ─────────────────────────────────────────────── */
 
-  border-bottom: 1px solid rgb(255 255 255 / 10%);
+.md-header {
+  border-bottom: 1px solid var(--srag-border);
   box-shadow: none;
 }
 
-.md-tabs {
-  --srag-focus-ring: #69dfff;
+/* Material raises a drop shadow once the page scrolls; a hairline is enough. */
+.md-header--shadow {
+  box-shadow: none;
+}
 
-  border-bottom: 1px solid rgb(255 255 255 / 10%);
+.md-header__title {
+  font-weight: 600;
+}
+
+.md-tabs {
+  border-bottom: 1px solid var(--srag-border);
   background: var(--md-primary-fg-color);
 }
 
+/* With navigation.tabs.sticky the bar lives inside the header, so the header's
+   own rule already closes the band. Two hairlines would read as a 2px rule. */
+.md-header .md-tabs {
+  border-bottom: 0;
+}
+
 .md-tabs__link {
-  font-weight: 600;
+  margin-top: 0.75rem;
+  font-weight: 500;
   letter-spacing: -0.005em;
-  opacity: 0.75;
+  opacity: 1;
+  color: var(--srag-muted-700);
 }
 
 .md-tabs__item--active .md-tabs__link,
 .md-tabs__link:is(:focus-visible, :hover) {
+  color: var(--srag-ink-950);
   opacity: 1;
 }
 
-.md-tabs__item--active {
+.md-tabs__item {
   position: relative;
 }
 
@@ -118,22 +164,69 @@
   bottom: 0;
   left: 0.6rem;
   height: 2px;
-  background: var(--srag-gradient);
+  background: var(--srag-accent);
   content: "";
 }
 
+/* ── Search field ───────────────────────────────────────────────────── */
+
 .md-search__form {
-  border: 1px solid rgb(255 255 255 / 11%);
+  border: 1px solid var(--srag-border-strong);
   border-radius: var(--srag-radius-sm);
+  background: var(--srag-surface-soft);
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.md-search__form:hover {
+  border-color: var(--srag-muted-500);
+  background: var(--srag-surface-soft);
+}
+
+[data-md-toggle="search"]:checked ~ .md-header .md-search__form {
+  border-color: var(--srag-border-strong);
+  border-radius: var(--srag-radius-sm) var(--srag-radius-sm) 0 0;
+  background: var(--md-default-bg-color);
+  box-shadow: none;
+}
+
+[data-md-color-scheme="slate"] .md-search__form {
+  border-color: var(--srag-border-strong);
+  background: var(--srag-surface-soft);
+}
+
+/* Full-screen search on small viewports drops the field border entirely. */
+@media screen and (max-width: 59.984375em) {
+  .md-search__form,
+  [data-md-toggle="search"]:checked ~ .md-header .md-search__form {
+    border: 0;
+    border-radius: 0;
+    background: var(--md-default-bg-color);
+  }
 }
 
 .md-main__inner {
   gap: 1rem;
 }
 
+/* ── Footer ─────────────────────────────────────────────────────────── */
+
+.md-footer,
+.md-footer-meta {
+  border-top: 1px solid var(--srag-border);
+}
+
+.md-footer__title {
+  font-weight: 500;
+}
+
+.md-footer__direction {
+  color: var(--srag-muted-600);
+  opacity: 1;
+}
+
 *:focus-visible {
-  outline: 3px solid var(--srag-focus-ring);
-  outline-offset: 3px;
+  outline: 2px solid var(--srag-focus-ring);
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {

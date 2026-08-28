@@ -1,126 +1,104 @@
-.srag-kicker {
-  margin: 0 0 0.7rem;
-  color: var(--srag-blue-600);
-  font-family: var(--md-code-font-family);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-}
+/* ── Section index rows ─────────────────────────────────────────────────
+ *
+ * Hub pages list their child pages as hairline-separated rows: title, one
+ * line of description, chevron. No box, no fill, no shadow.
+ */
 
-[data-md-color-scheme="slate"] .srag-kicker {
-  color: #8fb7ff;
-}
-
-.srag-section-intro {
-  max-width: 38rem;
-  margin-bottom: 2rem;
-  color: var(--srag-muted-700);
-  font-size: 0.98rem;
-}
-
-.srag-card-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.8rem;
+.srag-rows {
   margin: 1.5rem 0 2rem;
+  border-top: 1px solid var(--srag-border);
 }
 
-.srag-card-grid > p,
-.srag-pathway-grid > p {
-  display: flex;
+.srag-rows > p {
   margin: 0;
 }
 
-.srag-card-grid > p > .srag-card,
-.srag-pathway-grid > p > .srag-card {
-  width: 100%;
-}
-
-.md-typeset a.srag-card {
-  display: flex;
-  min-height: 7.2rem;
-  flex-direction: column;
-  padding: 1rem 1.05rem;
+.md-typeset a.srag-row {
+  display: grid;
+  align-items: center;
+  column-gap: 1.2rem;
+  grid-template-columns: minmax(0, 1fr) 0.4rem;
+  padding: 0.85rem 0.1rem;
   color: var(--srag-ink-800);
   text-decoration: none;
-  border: 1px solid var(--srag-border);
-  border-radius: var(--srag-radius-md);
-  background: var(--srag-surface);
-  box-shadow: 0 1px 1px rgb(8 18 37 / 2%);
-  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  border-bottom: 1px solid var(--srag-border);
 }
 
-.md-typeset a.srag-card:is(:hover, :focus-visible) {
-  color: var(--srag-ink-950);
-  border-color: color-mix(in srgb, var(--srag-blue-600) 55%, var(--srag-border));
-  box-shadow: var(--srag-shadow-soft);
-  transform: translateY(-2px);
-}
-
-.srag-card__eyebrow {
-  margin-bottom: 0.45rem;
-  color: var(--srag-violet-600);
-  font-family: var(--md-code-font-family);
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-
-[data-md-color-scheme="slate"] .srag-card__eyebrow {
-  color: #b69bff;
-}
-
-.srag-card__title {
+.srag-row__title {
   display: block;
-  margin-bottom: 0.3rem;
+  grid-column: 1;
   color: var(--srag-ink-950);
-  font-size: 0.9rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
 }
 
-.srag-card__copy {
+.srag-row__copy {
+  display: block;
+  grid-column: 1;
+  margin-top: 0.15rem;
   color: var(--srag-muted-700);
   font-size: 0.76rem;
-  line-height: 1.55;
+  line-height: 1.5;
 }
+
+.md-typeset a.srag-row::after {
+  width: 0.34rem;
+  height: 0.34rem;
+  align-self: center;
+  justify-self: end;
+  grid-row: 1 / -1;
+  grid-column: 2;
+  border-top: 1.5px solid var(--srag-muted-500);
+  border-right: 1.5px solid var(--srag-muted-500);
+  content: "";
+  transform: rotate(45deg);
+  transition: border-color 150ms ease, transform 150ms ease;
+}
+
+.md-typeset a.srag-row:is(:hover, :focus-visible) .srag-row__title {
+  color: var(--srag-accent);
+  text-decoration: underline;
+  text-decoration-thickness: 0.06em;
+  text-underline-offset: 0.16em;
+}
+
+.md-typeset a.srag-row:is(:hover, :focus-visible)::after {
+  border-color: var(--srag-accent);
+  transform: rotate(45deg) translate(1px, -1px);
+}
+
+/* ── Page metadata strip ────────────────────────────────────────────── */
 
 .srag-meta-strip {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem 1.25rem;
+  gap: 0.55rem 1.6rem;
   margin: 1.2rem 0 2rem;
-  padding: 0.8rem 1rem;
-  color: var(--srag-muted-700);
-  font-size: 0.72rem;
+  padding: 0.75rem 0;
+  color: var(--srag-ink-800);
+  font-size: 0.76rem;
   border-block: 1px solid var(--srag-border);
 }
 
 .srag-meta-strip strong {
   display: block;
-  margin-bottom: 0.08rem;
-  color: var(--srag-muted-500);
-  font-family: var(--md-code-font-family);
-  font-size: 0.57rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  margin-bottom: 0.05rem;
+  color: var(--srag-muted-600);
+  font-size: 0.68rem;
+  font-weight: 500;
 }
+
+/* ── Checkpoint and evidence panels ─────────────────────────────────── */
 
 .srag-checkpoint,
 .srag-evidence-panel {
   margin: 1.4rem 0;
-  padding: 1rem 1.1rem;
+  padding: 0.9rem 1.05rem;
   border: 1px solid var(--srag-border);
-  border-left: 3px solid var(--srag-success);
-  border-radius: 0 var(--srag-radius-md) var(--srag-radius-md) 0;
-  background: color-mix(in srgb, var(--srag-success) 6%, var(--srag-surface));
-}
-
-.srag-evidence-panel {
-  border-left-color: var(--srag-violet-600);
-  background: color-mix(in srgb, var(--srag-violet-600) 5%, var(--srag-surface));
+  border-left: 2px solid var(--srag-accent);
+  border-radius: 0 var(--srag-radius-sm) var(--srag-radius-sm) 0;
+  background: var(--srag-surface);
 }
 
 .srag-checkpoint > :first-child,
@@ -133,34 +111,27 @@
   margin-bottom: 0;
 }
 
+/* ── Annotated directory tree ───────────────────────────────────────── */
+
 .srag-tree {
   overflow-x: auto;
   margin: 1.5rem 0;
-  padding: 1.1rem 1.2rem;
+  padding: 1.05rem 1.15rem;
   color: var(--srag-ink-800);
   font-family: var(--md-code-font-family);
   font-size: 0.72rem;
-  line-height: 1.75;
+  line-height: 1.7;
   white-space: pre;
   border: 1px solid var(--srag-border);
-  border-radius: var(--srag-radius-md);
+  border-radius: var(--srag-radius-sm);
   background: var(--srag-surface-soft);
 }
 
-.srag-badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 1.45rem;
-  padding: 0.14rem 0.48rem;
-  color: var(--srag-blue-600);
-  font-family: var(--md-code-font-family);
-  font-size: 0.57rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  border: 1px solid color-mix(in srgb, var(--srag-blue-600) 30%, var(--srag-border));
-  border-radius: 999px;
-  background: var(--srag-blue-soft);
+/* ── Admonitions ────────────────────────────────────────────────────── */
+
+:root {
+  --md-admonition-icon--scientific: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 19a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1c0-.21-.07-.41-.18-.57L13 8.35V4h-2v4.35L5.18 18.43c-.11.16-.18.36-.18.57m1 3a3 3 0 0 1-3-3c0-.6.18-1.16.5-1.63L9 7.81V6a1 1 0 0 1-1-1V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1v1.81l5.5 9.56c.32.47.5 1.03.5 1.63a3 3 0 0 1-3 3zm7-6 1.34-1.34L16.27 18H7.73l2.66-4.61zm-.5-4a.5.5 0 0 1 .5.5.5.5 0 0 1-.5.5.5.5 0 0 1-.5-.5.5.5 0 0 1 .5-.5"/></svg>');
+  --md-admonition-icon--why: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11 18h2v-2h-2zm1-16A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2m0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8m0-14a4 4 0 0 0-4 4h2a2 2 0 0 1 2-2 2 2 0 0 1 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5a4 4 0 0 0-4-4"/></svg>');
 }
 
 .md-typeset .admonition,
@@ -168,53 +139,100 @@
   border: 1px solid var(--srag-border);
   border-radius: var(--srag-radius-sm);
   box-shadow: none;
+  font-size: 0.7rem;
 }
 
-.md-typeset .admonition.scientific,
-.md-typeset details.scientific {
-  border-color: color-mix(in srgb, var(--srag-violet-600) 32%, var(--srag-border));
+.md-typeset .admonition:focus-within,
+.md-typeset details:focus-within {
+  box-shadow: none;
 }
 
-.md-typeset .scientific > .admonition-title,
-.md-typeset .scientific > summary {
-  background: var(--srag-violet-soft);
+.md-typeset .admonition-title,
+.md-typeset summary {
+  color: var(--srag-ink-950);
+  font-weight: 600;
+  border-bottom: 1px solid var(--srag-border);
+  background: var(--srag-surface-soft);
 }
 
-.md-typeset .admonition.why,
-.md-typeset details.why {
-  border-color: color-mix(in srgb, var(--srag-cyan-500) 45%, var(--srag-border));
+.md-typeset .admonition-title::before,
+.md-typeset summary::before {
+  background-color: var(--srag-muted-600);
 }
 
-.md-typeset .why > .admonition-title,
-.md-typeset .why > summary {
-  background: var(--srag-cyan-soft);
+.md-typeset .admonition.scientific > .admonition-title::before,
+.md-typeset details.scientific > summary::before {
+  mask-image: var(--md-admonition-icon--scientific);
+  -webkit-mask-image: var(--md-admonition-icon--scientific);
 }
+
+.md-typeset .admonition.why > .admonition-title::before,
+.md-typeset details.why > summary::before {
+  mask-image: var(--md-admonition-icon--why);
+  -webkit-mask-image: var(--md-admonition-icon--why);
+}
+
+/* Semantic types keep a muted signal colour; everything else stays neutral. */
+.md-typeset .admonition:is(.warning, .caution, .attention, .danger, .failure, .error, .bug),
+.md-typeset details:is(.warning, .caution, .attention, .danger, .failure, .error, .bug) {
+  border-color: color-mix(in srgb, var(--srag-warning) 35%, var(--srag-border));
+}
+
+.md-typeset :is(.warning, .caution, .attention, .danger, .failure, .error, .bug) > :is(.admonition-title, summary) {
+  border-bottom-color: color-mix(in srgb, var(--srag-warning) 35%, var(--srag-border));
+  background: color-mix(in srgb, var(--srag-warning) 7%, var(--srag-surface));
+}
+
+.md-typeset :is(.warning, .caution, .attention, .danger, .failure, .error, .bug) > :is(.admonition-title, summary)::before {
+  background-color: var(--srag-warning);
+}
+
+/* ── Tables ─────────────────────────────────────────────────────────── */
 
 .md-typeset table:not([class]) {
+  font-size: 0.7rem;
   border: 1px solid var(--srag-border);
   border-radius: var(--srag-radius-sm);
   box-shadow: none;
 }
 
 .md-typeset table:not([class]) th {
+  padding: 0.62em 0.9em;
   color: var(--srag-ink-950);
-  background: var(--srag-surface-tinted);
+  font-weight: 600;
+  background: var(--srag-surface-soft);
 }
+
+/* Generated reference tables carry long unbreakable defaults (connection URLs,
+   dotted paths). Without this they claim most of the row and squeeze the
+   description column down to two or three characters per line. */
+.md-typeset table:not([class]) td {
+  padding: 0.62em 0.9em;
+  overflow-wrap: anywhere;
+  border-top: 1px solid var(--srag-border);
+}
+
+.md-typeset table:not([class]) tbody tr:hover {
+  background: var(--srag-surface-soft);
+  box-shadow: none;
+}
+
+/* Names in the first column read as identifiers, not as inline snippets, and
+   they never wrap mid-name the way auto table layout otherwise forces. */
+.md-typeset table:not([class]) td:first-child > code {
+  padding: 0;
+  color: var(--srag-ink-950);
+  white-space: nowrap;
+  border: 0;
+  background: transparent;
+}
+
+/* ── Navigation ─────────────────────────────────────────────────────── */
 
 .md-sidebar__scrollwrap {
   scrollbar-width: thin;
 }
 
 .md-nav__link--active {
-  font-weight: 650;
-}
-
-@media screen and (max-width: 44.984375em) {
-  .srag-card-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .md-typeset a.srag-card {
-    min-height: 0;
-  }
+  font-weight: 600;
 }

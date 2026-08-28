@@ -1,21 +1,21 @@
 ---
 title: Get started
-description: Choose the shortest path from a clean clone to an inspectable Sci-RAG Kit knowledge base.
+description: Install Sci-RAG Kit, run the demo corpus, and find the page that matches what you need next.
 ---
 
 # Get started
 
-Get a working system first, then decide how much of its architecture you need to understand or change.
+These pages take a clean clone to a running knowledge base, then point at the reference or guide you need next.
 
-<div class="srag-card-grid" markdown>
+<div class="srag-rows" markdown>
 
-[<span class="srag-card__eyebrow">10 minutes</span><span class="srag-card__title">Quickstart</span><span class="srag-card__copy">Install the kit, ingest the synthetic CC0 corpus, inspect retrieval, and expose the same service over REST and MCP.</span>](quickstart.md){ .srag-card }
+[<span class="srag-row__title">Quickstart</span><span class="srag-row__copy">Install the kit, ingest the synthetic CC0 corpus, inspect retrieval, and expose the same service over REST and MCP. About 10 minutes.</span>](quickstart.md){ .srag-row }
 
-[<span class="srag-card__eyebrow">Orientation</span><span class="srag-card__title">Tour the repository</span><span class="srag-card__copy">See what you specialize, what you run, and why this is a live template repository rather than a generator.</span>](tour.md){ .srag-card }
+[<span class="srag-row__title">Tour the repository</span><span class="srag-row__copy">See what you specialize, what you run, and why this is a live template repository rather than a generator.</span>](tour.md){ .srag-row }
 
-[<span class="srag-card__eyebrow">Decision</span><span class="srag-card__title">Choosing Sci-RAG Kit</span><span class="srag-card__copy">Compare the kit honestly with LightRAG, PaperQA2, LlamaIndex, and Microsoft GraphRAG.</span>](choosing-sci-rag-kit.md){ .srag-card }
+[<span class="srag-row__title">Choosing Sci-RAG Kit</span><span class="srag-row__copy">Compare the kit honestly with LightRAG, PaperQA2, LlamaIndex, and Microsoft GraphRAG.</span>](choosing-sci-rag-kit.md){ .srag-row }
 
-[<span class="srag-card__eyebrow">When it differs</span><span class="srag-card__title">Troubleshooting</span><span class="srag-card__copy">Start from the symptom, run `sci-rag doctor`, and follow the specific check or recovery path.</span>](troubleshooting.md){ .srag-card }
+[<span class="srag-row__title">Troubleshooting</span><span class="srag-row__copy">Start from the symptom, run `sci-rag doctor`, and follow the specific check or recovery path.</span>](troubleshooting.md){ .srag-row }
 
 </div>
 

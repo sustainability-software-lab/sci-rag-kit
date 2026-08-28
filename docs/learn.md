@@ -3,19 +3,19 @@ title: Learn
 description: Understand the architecture, retrieval method, and evidence contract behind Sci-RAG Kit.
 ---
 
-# Learn how the system earns trust
+# Learn
 
 These pages explain what happens between a source document and a cited answer, including the decisions that deliberately keep the system small.
 
-<div class="srag-card-grid" markdown>
+<div class="srag-rows" markdown>
 
-[<span class="srag-card__eyebrow">Software map</span><span class="srag-card__title">Architecture</span><span class="srag-card__copy">Follow ownership across packages, storage, concurrency, serving, and the five supported extension seams.</span>](architecture.md){ .srag-card }
+[<span class="srag-row__title">Architecture</span><span class="srag-row__copy">Follow ownership across packages, storage, concurrency, serving, and the five supported extension seams.</span>](architecture.md){ .srag-row }
 
-[<span class="srag-card__eyebrow">Method specification</span><span class="srag-card__title">Methodology</span><span class="srag-card__copy">Judge chunking, graph extraction, fusion, answering, and evaluation from the reasoning and evidence behind each choice.</span>](methodology.md){ .srag-card }
+[<span class="srag-row__title">Methodology</span><span class="srag-row__copy">Judge chunking, graph extraction, fusion, answering, and evaluation from the reasoning and evidence behind each choice.</span>](methodology.md){ .srag-row }
 
-[<span class="srag-card__eyebrow">Scientific contract</span><span class="srag-card__title">Evidence and rights</span><span class="srag-card__copy">See how provenance, citations, license classes, and metadata scope remain attached before and after ranking.</span>](evidence-and-rights.md){ .srag-card }
+[<span class="srag-row__title">Evidence and rights</span><span class="srag-row__copy">See how provenance, citations, license classes, and metadata scope remain attached before and after ranking.</span>](evidence-and-rights.md){ .srag-row }
 
-[<span class="srag-card__eyebrow">Vocabulary</span><span class="srag-card__title">Glossary</span><span class="srag-card__copy">Translate RAG, RRF, HyDE, ablation, calibration, and corpus fingerprints into the meanings used by this project.</span>](glossary.md){ .srag-card }
+[<span class="srag-row__title">Glossary</span><span class="srag-row__copy">Translate RAG, RRF, HyDE, ablation, calibration, and corpus fingerprints into the meanings used by this project.</span>](glossary.md){ .srag-row }
 
 </div>
 

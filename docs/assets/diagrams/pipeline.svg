@@ -1,162 +1,119 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="600" viewBox="30 130 1360 600" role="img" aria-labelledby="title desc">
   <title id="title">Sci-RAG Kit evidence pipeline</title>
   <desc id="desc">Scientific papers, reports, and tables are parsed and chunked into Postgres. Five retrieval layers are fused into cited answers, and evaluation measures the result.</desc>
   <defs>
-    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#00c8ff"/>
-      <stop offset="0.52" stop-color="#005bfd"/>
-      <stop offset="1" stop-color="#5400ed"/>
-    </linearGradient>
-    <linearGradient id="wash" x1="0" y1="0" x2="1" y2="1">
-      <stop stop-color="#edfaff"/>
-      <stop offset="1" stop-color="#f4efff"/>
-    </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#0e1a30" flood-opacity="0.08"/>
-    </filter>
-    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
-      <path d="M0,0 L10,5 L0,10 Z" fill="#005bfd"/>
-    </marker>
-    <marker id="arrow-violet" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
-      <path d="M0,0 L10,5 L0,10 Z" fill="#5400ed"/>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L9,4.5 L0,9 Z" fill="#a1a4ac"/>
     </marker>
     <style>
-      .label { font: 700 18px Inter, system-ui, sans-serif; fill: #0e1a30; }
-      .copy { font: 500 14px Inter, system-ui, sans-serif; fill: #586a83; }
-      .micro { font: 700 11px "Space Mono", ui-monospace, monospace; letter-spacing: .08em; fill: #718198; }
-      .pill { font: 650 12px Inter, system-ui, sans-serif; fill: #1d2a40; }
-      .stage { fill: #fff; stroke: #dde5ef; stroke-width: 2; }
-      .flow { fill: none; stroke: #005bfd; stroke-width: 3; marker-end: url(#arrow-blue); }
-      .flow-violet { fill: none; stroke: #5400ed; stroke-width: 3; marker-end: url(#arrow-violet); }
+      .eyebrow { font: 500 13px Inter, system-ui, sans-serif; fill: #6e7480; }
+      .label { font: 600 18px Inter, system-ui, sans-serif; fill: #16181d; }
+      .copy { font: 400 14px Inter, system-ui, sans-serif; fill: #5c6270; }
+      .pill { font: 500 13px Inter, system-ui, sans-serif; fill: #3f4451; }
+      .stage { fill: #ffffff; stroke: #e4e4e7; stroke-width: 1.5; }
+      .chip { fill: #f4f4f5; }
+      .ink { fill: none; stroke: #9b9ea6; stroke-width: 2.5; }
+      .hair { fill: #f7f7f8; stroke: #d4d4d8; stroke-width: 1.5; }
+      .flow { fill: none; stroke: #a1a4ac; stroke-width: 2; marker-end: url(#arrow); }
     </style>
   </defs>
 
-  <rect width="1400" height="760" rx="26" fill="#f8fbff"/>
-  <path d="M0 3 H1400" stroke="url(#accent)" stroke-width="6"/>
-  <circle cx="1255" cy="102" r="180" fill="#5400ed" opacity="0.045"/>
-  <circle cx="142" cy="660" r="210" fill="#00c8ff" opacity="0.055"/>
-
-  <text x="54" y="70" class="micro">SCIENTIFIC EVIDENCE, PRESERVED END TO END</text>
-  <text x="54" y="108" class="label" style="font-size:26px">From source document to measured answer</text>
-
   <!-- Scientific sources -->
-  <g filter="url(#shadow)">
-    <rect class="stage" x="54" y="154" width="224" height="476" rx="20"/>
-  </g>
-  <rect x="54" y="154" width="7" height="476" rx="3.5" fill="#00c8ff"/>
-  <text x="82" y="195" class="micro">INPUT</text>
-  <text x="82" y="226" class="label">Scientific sources</text>
-  <text x="82" y="252" class="copy">Files stay traceable.</text>
+  <rect class="stage" x="54" y="154" width="224" height="476" rx="12"/>
+  <text x="82" y="196" class="eyebrow">Input</text>
+  <text x="82" y="227" class="label">Scientific sources</text>
+  <text x="82" y="253" class="copy">Files stay traceable.</text>
 
   <g transform="translate(82 292)">
-    <rect width="68" height="84" rx="7" fill="#edfaff" stroke="#80e3ff" stroke-width="2"/>
-    <path d="M15 20h38M15 31h29M15 46h38M15 57h23" stroke="#007fa7" stroke-width="3" stroke-linecap="round"/>
-    <path d="M49 0v18h19" fill="#d2f5ff" stroke="#80e3ff" stroke-width="2"/>
+    <rect class="hair" width="68" height="84" rx="6"/>
+    <path d="M15 20h38M15 31h29M15 46h38M15 57h23" class="ink" stroke-linecap="round"/>
+    <path d="M49 0v18h19" fill="#eaeaec" stroke="#d4d4d8" stroke-width="1.5"/>
     <text x="87" y="35" class="pill">Papers</text>
     <text x="87" y="57" class="copy">PDF · Markdown</text>
   </g>
   <g transform="translate(82 410)">
-    <path d="M20 4h28M27 4v25L10 63c-4 9 2 17 12 17h39c10 0 16-8 12-17L55 29V4" fill="#f3edff" stroke="#5400ed" stroke-width="3" stroke-linejoin="round"/>
-    <path d="M18 58h48" stroke="#5400ed" stroke-width="3"/>
-    <circle cx="34" cy="49" r="4" fill="#00c8ff"/>
-    <circle cx="52" cy="66" r="5" fill="#005bfd"/>
+    <path d="M20 4h28M27 4v25L10 63c-4 9 2 17 12 17h39c10 0 16-8 12-17L55 29V4" fill="#f7f7f8" stroke="#9b9ea6" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M18 58h48" class="ink"/>
+    <circle cx="34" cy="49" r="4" fill="#c4c6cb"/>
+    <circle cx="52" cy="66" r="5" fill="#b4b6bc"/>
     <text x="87" y="35" class="pill">Reports</text>
     <text x="87" y="57" class="copy">Methods · results</text>
   </g>
   <g transform="translate(82 526)">
-    <rect x="2" y="5" width="68" height="70" rx="7" fill="#edf3ff" stroke="#6d9cff" stroke-width="2"/>
-    <path d="M2 29h68M25 5v70M48 5v70" stroke="#6d9cff" stroke-width="2"/>
+    <rect class="hair" x="2" y="5" width="68" height="70" rx="6"/>
+    <path d="M2 29h68M25 5v70M48 5v70" fill="none" stroke="#d4d4d8" stroke-width="1.5"/>
     <text x="87" y="35" class="pill">Tables</text>
     <text x="87" y="57" class="copy">Structure intact</text>
   </g>
 
   <!-- Ingestion -->
   <path class="flow" d="M278 345 C306 345 306 345 330 345"/>
-  <g filter="url(#shadow)">
-    <rect class="stage" x="332" y="194" width="242" height="302" rx="20"/>
-  </g>
-  <rect x="332" y="194" width="242" height="8" rx="4" fill="#00c8ff"/>
-  <text x="360" y="239" class="micro">INGESTION</text>
-  <text x="360" y="270" class="label">Parse and chunk</text>
-  <text x="360" y="299" class="copy">Structure-aware blocks</text>
+  <rect class="stage" x="332" y="194" width="242" height="302" rx="12"/>
+  <text x="360" y="240" class="eyebrow">Ingestion</text>
+  <text x="360" y="271" class="label">Parse and chunk</text>
+  <text x="360" y="300" class="copy">Structure-aware blocks</text>
   <g transform="translate(360 332)">
-    <rect width="186" height="42" rx="8" fill="#e6faff"/>
-    <circle cx="21" cy="21" r="7" fill="#00a8d6"/>
+    <rect class="chip" width="186" height="42" rx="6"/>
+    <circle cx="21" cy="21" r="5" fill="#9b9ea6"/>
     <text x="39" y="26" class="pill">section paths</text>
-    <rect y="53" width="186" height="42" rx="8" fill="#e6faff"/>
-    <circle cx="21" cy="74" r="7" fill="#00a8d6"/>
+    <rect class="chip" y="53" width="186" height="42" rx="6"/>
+    <circle cx="21" cy="74" r="5" fill="#9b9ea6"/>
     <text x="39" y="79" class="pill">source metadata</text>
-    <rect y="106" width="186" height="42" rx="8" fill="#e6faff"/>
-    <circle cx="21" cy="127" r="7" fill="#00a8d6"/>
+    <rect class="chip" y="106" width="186" height="42" rx="6"/>
+    <circle cx="21" cy="127" r="5" fill="#9b9ea6"/>
     <text x="39" y="132" class="pill">license class</text>
   </g>
 
   <!-- Postgres -->
   <path class="flow" d="M574 345 C600 345 600 345 626 345"/>
-  <g filter="url(#shadow)">
-    <rect class="stage" x="628" y="194" width="256" height="302" rx="20"/>
-  </g>
-  <rect x="628" y="194" width="256" height="8" rx="4" fill="#005bfd"/>
-  <text x="656" y="239" class="micro">ONE DATABASE</text>
-  <text x="656" y="270" class="label">Postgres</text>
-  <text x="656" y="299" class="copy">Every index, one source of truth</text>
+  <rect class="stage" x="628" y="194" width="256" height="302" rx="12"/>
+  <text x="656" y="240" class="eyebrow">One database</text>
+  <text x="656" y="271" class="label">Postgres</text>
+  <text x="656" y="300" class="copy">Every index, one source of truth</text>
   <g transform="translate(656 329)">
-    <ellipse cx="42" cy="12" rx="42" ry="12" fill="#dce8ff" stroke="#005bfd" stroke-width="2"/>
-    <path d="M0 12v64c0 7 19 13 42 13s42-6 42-13V12" fill="#edf3ff" stroke="#005bfd" stroke-width="2"/>
-    <path d="M0 43c0 7 19 13 42 13s42-6 42-13M0 72c0 7 19 13 42 13s42-6 42-13" fill="none" stroke="#005bfd" stroke-width="2"/>
+    <ellipse cx="42" cy="12" rx="42" ry="12" fill="#eaeaec" stroke="#9b9ea6" stroke-width="1.5"/>
+    <path d="M0 12v64c0 7 19 13 42 13s42-6 42-13V12" fill="#f7f7f8" stroke="#9b9ea6" stroke-width="1.5"/>
+    <path d="M0 43c0 7 19 13 42 13s42-6 42-13M0 72c0 7 19 13 42 13s42-6 42-13" fill="none" stroke="#9b9ea6" stroke-width="1.5"/>
     <g transform="translate(118 5)">
-      <path d="M11 28L45 9l34 19v38L45 85 11 66Z" fill="#f3edff" stroke="#5400ed" stroke-width="2"/>
-      <circle cx="45" cy="24" r="7" fill="#5400ed"/>
-      <circle cx="26" cy="55" r="7" fill="#005bfd"/>
-      <circle cx="64" cy="55" r="7" fill="#00c8ff"/>
-      <path d="M40 30L30 48M50 30l10 18M33 55h24" stroke="#40516a" stroke-width="2"/>
+      <path d="M11 28L45 9l34 19v38L45 85 11 66Z" fill="#f7f7f8" stroke="#9b9ea6" stroke-width="1.5"/>
+      <circle cx="45" cy="24" r="6" fill="#9b9ea6"/>
+      <circle cx="26" cy="55" r="6" fill="#b4b6bc"/>
+      <circle cx="64" cy="55" r="6" fill="#b4b6bc"/>
+      <path d="M40 30L30 48M50 30l10 18M33 55h24" stroke="#b4b6bc" stroke-width="1.5"/>
     </g>
     <text x="0" y="126" class="pill">vectors · FTS · graph</text>
   </g>
 
   <!-- Retrieval -->
-  <path class="flow-violet" d="M884 345 C910 345 910 345 936 345"/>
-  <g filter="url(#shadow)">
-    <rect class="stage" x="938" y="154" width="300" height="382" rx="20"/>
-  </g>
-  <rect x="938" y="154" width="300" height="8" rx="4" fill="url(#accent)"/>
-  <text x="966" y="199" class="micro">RETRIEVAL</text>
-  <text x="966" y="230" class="label">Five layers, fused once</text>
-  <text x="966" y="258" class="copy">Scope is applied before ranking.</text>
+  <path class="flow" d="M884 345 C910 345 910 345 936 345"/>
+  <rect class="stage" x="938" y="154" width="300" height="382" rx="12"/>
+  <text x="966" y="200" class="eyebrow">Retrieval</text>
+  <text x="966" y="231" class="label">Five layers, fused once</text>
+  <text x="966" y="259" class="copy">Scope is applied before ranking.</text>
   <g transform="translate(966 291)">
-    <rect width="116" height="38" rx="19" fill="#edf3ff"/><text x="58" y="24" class="pill" text-anchor="middle">vector</text>
-    <rect x="128" width="116" height="38" rx="19" fill="#edfaff"/><text x="186" y="24" class="pill" text-anchor="middle">keyword</text>
-    <rect y="50" width="116" height="38" rx="19" fill="#f3edff"/><text x="58" y="74" class="pill" text-anchor="middle">graph</text>
-    <rect x="128" y="50" width="116" height="38" rx="19" fill="#f3edff"/><text x="186" y="74" class="pill" text-anchor="middle">community</text>
-    <rect x="64" y="100" width="116" height="38" rx="19" fill="#edf3ff"/><text x="122" y="124" class="pill" text-anchor="middle">HyDE</text>
-    <path d="M20 168h204" stroke="url(#accent)" stroke-width="4" stroke-linecap="round"/>
+    <rect class="chip" width="116" height="38" rx="6"/><text x="58" y="24" class="pill" text-anchor="middle">vector</text>
+    <rect class="chip" x="128" width="116" height="38" rx="6"/><text x="186" y="24" class="pill" text-anchor="middle">keyword</text>
+    <rect class="chip" y="50" width="116" height="38" rx="6"/><text x="58" y="74" class="pill" text-anchor="middle">graph</text>
+    <rect class="chip" x="128" y="50" width="116" height="38" rx="6"/><text x="186" y="74" class="pill" text-anchor="middle">community</text>
+    <rect class="chip" x="64" y="100" width="116" height="38" rx="6"/><text x="122" y="124" class="pill" text-anchor="middle">HyDE</text>
+    <path d="M20 168h204" fill="none" stroke="#c4c6cb" stroke-width="2" stroke-linecap="round"/>
     <text x="122" y="198" class="pill" text-anchor="middle">weighted RRF + rerank</text>
   </g>
 
   <!-- Outputs -->
   <path class="flow" d="M1238 315 C1261 315 1261 315 1280 315"/>
-  <g filter="url(#shadow)">
-    <rect class="stage" x="1280" y="230" width="88" height="172" rx="18"/>
-  </g>
-  <circle cx="1324" cy="273" r="20" fill="#edf3ff" stroke="#005bfd" stroke-width="2"/>
-  <path d="M1314 273l7 7 14-17" fill="none" stroke="#005bfd" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect class="stage" x="1280" y="230" width="88" height="172" rx="12"/>
+  <circle cx="1324" cy="273" r="20" fill="#ffffff" stroke="#2f5fb3" stroke-width="1.5"/>
+  <path d="M1314 273l7 7 14-17" fill="none" stroke="#2f5fb3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   <text x="1324" y="320" class="pill" text-anchor="middle">Cited</text>
   <text x="1324" y="341" class="pill" text-anchor="middle">answer</text>
   <text x="1324" y="370" class="copy" text-anchor="middle">[1] [2]</text>
 
-  <path class="flow-violet" d="M1088 536 C1088 569 1068 586 1039 604"/>
+  <!-- Evaluation -->
+  <path class="flow" d="M1088 536 C1088 569 1068 586 1039 604"/>
   <path class="flow" d="M1176 536 C1176 569 1198 586 1228 604"/>
-  <g filter="url(#shadow)">
-    <rect class="stage" x="938" y="604" width="300" height="102" rx="18"/>
-  </g>
-  <rect x="938" y="604" width="7" height="102" rx="3.5" fill="#147a48"/>
-  <text x="966" y="643" class="micro">EVALUATION</text>
-  <text x="966" y="674" class="label">Measure what earned its place</text>
-  <text x="966" y="697" class="copy">Ablations · confidence intervals · calibration</text>
-
-  <text x="54" y="705" class="micro">TRACEABLE INPUTS</text>
-  <path d="M54 720H278" stroke="#00c8ff" stroke-width="3"/>
-  <text x="332" y="705" class="micro">VISIBLE INTERMEDIATE STATE</text>
-  <path d="M332 720H884" stroke="#005bfd" stroke-width="3"/>
-  <text x="938" y="742" class="micro">INSPECTABLE OUTPUTS</text>
+  <rect class="stage" x="938" y="604" width="300" height="102" rx="12"/>
+  <text x="966" y="644" class="eyebrow">Evaluation</text>
+  <text x="966" y="675" class="label">Ablations and judged answers</text>
+  <text x="966" y="698" class="copy">Confidence intervals · calibration</text>
 </svg>

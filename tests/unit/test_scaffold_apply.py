@@ -336,10 +336,10 @@ def test_readme_opening_is_rewritten_for_the_project(template: Path) -> None:
     readme = (template / "README.md").read_text(encoding="utf-8")
     assert readme.startswith("# Membrane Materials KB")
     assert "Membrane chemistry" in readme
-    # The kit's own marketing opening is gone.
-    assert "A template repository for building" not in readme
+    # The kit's own opening is gone.
+    assert "A template repository for retrieval-augmented generation" not in readme
     # Everything from the first section heading onward survives.
-    assert "## What's in the kit" in readme
+    assert "## Components" in readme
 
 
 # --- Makefile ---------------------------------------------------------------
