@@ -504,6 +504,28 @@ def _drop_phony(line: str) -> str:
 # --- git --------------------------------------------------------------------
 
 
+def _git_identity(root: Path, answers: ProjectAnswers) -> list[str]:
+    """`-c` overrides for the commit, only when git has no identity of its own.
+
+    A fresh machine, a container, and a CI runner all commonly have no
+    ``user.email`` configured, and `git commit` refuses to run without one.
+    Falling back to the name and email the user just typed into the wizard
+    beats not making the first commit at all. A configured identity always
+    wins: overriding someone's own git config would be worse than the problem.
+    """
+    try:
+        configured = subprocess.run(
+            ["git", "config", "user.email"], cwd=root, capture_output=True, text=True
+        )
+    except OSError:
+        return []
+    if configured.returncode == 0 and configured.stdout.strip():
+        return []
+    name = answers.author_name or "sci-rag-kit"
+    email = answers.contact_email or "noreply@example.invalid"
+    return ["-c", f"user.name={name}", "-c", f"user.email={email}"]
+
+
 def apply_git(answers: ProjectAnswers, root: Path) -> list[str]:
     """Initialize a repository, but never touch one that already exists.
 
@@ -513,8 +535,12 @@ def apply_git(answers: ProjectAnswers, root: Path) -> list[str]:
     if not answers.initialize_git or (root / ".git").exists():
         return []
     try:
-        for command in (["init"], ["add", "-A"], ["commit", "-m", "Initial commit"]):
-            subprocess.run(["git", *command], cwd=root, check=True, capture_output=True, text=True)
+        subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True, text=True)
+        identity = _git_identity(root, answers)
+        for command in (["add", "-A"], ["commit", "-m", "Initial commit"]):
+            subprocess.run(
+                ["git", *identity, *command], cwd=root, check=True, capture_output=True, text=True
+            )
     except (OSError, subprocess.CalledProcessError) as exc:
         return [_log("git", f"not initialized ({type(exc).__name__})")]
     return [_log("git", "initialized, 1 commit")]
