@@ -100,7 +100,7 @@ Evaluation
 
 ## One repository, specialized
 
-The generator configures; it does not template. `sci-rag-new` fetches this repository at a pinned tag and rewrites its configuration files in place, so there are no placeholders to render and nothing that only becomes real code after generation. The repository you can read is the application you run, before and after.
+The generator configures; it does not template. `sci-rag-new` fetches this repository at a pinned tag and rewrites its configuration files in place. There are no placeholders to render, and nothing that only becomes real code after generation. The repository you can read is the application you run, before and after.
 
 <!-- BEGIN KIT ONBOARDING -->
 `pipx install sci-rag-kit`, the GitHub template button, and a plain clone all leave you with the same tree.

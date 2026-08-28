@@ -31,11 +31,11 @@ numbers.
   short, stating context, decision, consequences). Existing ADRs are
   the format reference. A change that contradicts an ADR updates or
   supersedes the ADR in the same pull request.
-- **Direction-level proposals** (new subsystems, roadmap changes,
-  anything touching the five public surfaces in
-  [VERSIONING.md](VERSIONING.md)) start as an RFC: a GitHub Discussion
-  in the "Ideas" category, titled "RFC: ...", laying out the problem, the proposal, and the
-  alternatives considered. When an RFC converges, it becomes an ADR
+- **Direction-level proposals** start as an RFC. That covers new
+  subsystems, roadmap changes, and anything touching the five public
+  surfaces in [VERSIONING.md](VERSIONING.md). An RFC is a GitHub
+  Discussion in the "Ideas" category, titled "RFC: ...", laying out the
+  problem, the proposal, and the alternatives considered. When an RFC converges, it becomes an ADR
   plus issues; when it does not, the Discussion records why, which is
   worth as much.
 - **Tie-breaks**: maintainers decide, in the open, with the reasoning

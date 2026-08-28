@@ -7,8 +7,8 @@ description: Discover a resumable DOI list, resolve explicit open-access rights,
 
 A campaign turns a research topic or a seed DOI file into a reproducible
 list of scientific works. Discovery is deliberately separate from ingestion:
-you can inspect the candidates and resume network work before any document is
-added to the corpus.
+you can inspect the candidates and resume network work before anything lands
+in the corpus.
 
 ## Discover from a topic
 
@@ -22,14 +22,15 @@ uv run sci-rag campaign discover \
   --max-results 100
 ```
 
-Topic discovery searches OpenAlex and follows cursor pagination. Casual
-keyless use is supported. For a larger API budget, set `OPENALEX_API_KEY` in
-the environment; the key is never printed or written to campaign state.
+Topic discovery searches OpenAlex and follows cursor pagination. Casual use
+works without a key. For a larger API budget, set `OPENALEX_API_KEY` in the
+environment. The kit never prints that key and never writes it to campaign
+state.
 
 ## Discover from DOI seeds
 
-Put one bare DOI, DOI URL, or `doi:` value on each line. Blank lines and lines
-beginning with `#` are ignored.
+Put one bare DOI, DOI URL, or `doi:` value on each line. The reader skips
+blank lines and lines beginning with `#`.
 
 ```text
 10.7717/peerj.4375
@@ -46,19 +47,19 @@ uv run sci-rag campaign discover \
 ```
 
 DOI-file discovery normalizes and deduplicates the values, then retrieves
-bibliographic metadata from Crossref. Invalid lines and malformed upstream
-records are counted in the report instead of disappearing silently.
+bibliographic metadata from Crossref. The report counts invalid lines and
+malformed upstream records rather than letting them disappear.
 
 ## Resume behavior
 
-The default state path is `data/campaigns/<name>/state.jsonl`. Each completed
-DOI step is appended and flushed to disk. Repeating the command skips DOI
-records already present in state. If a process dies during the final write,
+The default state path is `data/campaigns/<name>/state.jsonl`. The run appends
+each completed DOI step and flushes it to disk. Repeating the command skips
+DOI records already present in state. If a process dies during the final write,
 the next run ignores only the truncated tail and safely continues appending.
 
 OpenAlex and Crossref calls are rate limited and identify the contact address
-in both the query and User-Agent. HTTP 429 and server errors are retried with
-bounded backoff. Exhausted retries fail visibly; they never become an empty
+in both the query and User-Agent. The client retries HTTP 429 and server
+errors with bounded backoff. Exhausted retries fail visibly; they never become an empty
 success report.
 
 Discovery metadata is not proof that a document may be redistributed. Resolve
@@ -79,9 +80,10 @@ create `pdfs/` or `corpus.jsonl`.
 
 ## Fail-closed rights mapping
 
-Availability and redistribution rights are different signals. A work marked
-green or gold by Unpaywall is not assigned an open license class unless its
-selected location also carries an explicit recognized license:
+Availability and redistribution rights are different signals. Unpaywall
+marking a work green or gold is not enough on its own. A work earns an open
+license class only when its selected location also carries an explicit,
+recognized license:
 
 | Explicit location license | Corpus class |
 | --- | --- |
@@ -101,12 +103,12 @@ record marked open access. It never visits a landing page to scrape through a
 paywall.
 
 Each response must declare `application/pdf`, stay within `--max-pdf-mb`, and
-begin with a PDF signature. Files are written through a temporary path and
-renamed only after validation. Verified existing files are reused after an
-interruption instead of downloaded again.
+begin with a PDF signature. The builder writes files through a temporary path
+and renames them only after validation. After an interruption it reuses files
+it has already verified rather than downloading them again.
 
-Successful downloads produce `data/campaigns/<name>/corpus.jsonl`. It is the
-same format consumed by:
+Successful downloads produce `data/campaigns/<name>/corpus.jsonl`, in the same
+format `sci-rag ingest` reads:
 
 ```bash
 uv run sci-rag ingest --manifest data/campaigns/rice-straw/corpus.jsonl
@@ -147,9 +149,9 @@ does not trust that output blindly:
   the affected batch `review`;
 * no failure path silently excludes a work.
 
-Decisions append to `state.jsonl`. The current protocol, its SHA-256 digest,
-the confidence floor, every per-work reason, failure counts, and the current
-PRISMA-aligned totals are written to `screening-report.json`. Repeating the
+Decisions append to `state.jsonl`. `screening-report.json` records the current
+protocol, its SHA-256 digest, the confidence floor, every per-work reason,
+failure counts, and the current PRISMA-aligned totals. Repeating the
 same protocol resumes without calling the model again. Changing the criteria
 or confidence floor starts a new set of decisions while preserving the old
 append-only history.
@@ -157,8 +159,8 @@ append-only history.
 The screening report begins at the deduplicated campaign-state boundary.
 `identified`, `screened`, and the sum of `included`, `excluded`, and
 `awaiting_review` therefore reconcile against the unique discovered works.
-Upstream duplicates were already removed and reported by `campaign discover`,
-so `duplicates_removed` is zero at this boundary. Exclusions also include a
+`campaign discover` already removed and reported the upstream duplicates, so
+`duplicates_removed` is zero at this boundary. Exclusions also include a
 reason breakdown rather than only an aggregate count.
 
 ## Review uncertain rows
@@ -171,6 +173,6 @@ uv run sci-rag campaign review --name rice-straw
 
 For each row, choose `include`, `exclude`, or `skip`, then record a reason.
 Human decisions append after the model suggestion instead of overwriting it,
-and the report is regenerated from the latest decision under that protocol.
+and the report regenerates from the latest decision under that protocol.
 Skipping leaves the row in `awaiting_review`, so the totals continue to
 reconcile without pretending the campaign is complete.

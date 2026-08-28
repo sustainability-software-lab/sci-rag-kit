@@ -19,10 +19,10 @@ sci-rag-kit follows [Semantic Versioning](https://semver.org/) with the
   `report.json`/`calibration.json`; existing keys do not change meaning
   or type within 0.x. External tooling (the UW SSEC evaluation platform
   seam) can rely on that.
-- **Domain profiles are forward-compatible**: a `domain/` directory
-  written for an older 0.x keeps working; new capabilities arrive as
-  optional keys with safe defaults (the reranker block is the model:
-  absent means off).
+- **Domain profiles are forward-compatible.** A `domain/` directory
+  written for an older 0.x keeps working. New capabilities arrive as
+  optional keys with safe defaults; the reranker block is the model, where
+  absent means off.
 
 ## What is public API
 
@@ -70,11 +70,11 @@ entry, and (once the maintainer enables it; see the launch-gated list in
 Pushing the tag runs [`.github/workflows/release.yml`](https://github.com/sustainability-software-lab/sci-rag-kit/blob/main/.github/workflows/release.yml),
 which verifies, publishes to TestPyPI, then publishes to PyPI:
 
-1. `verify` confirms the `ci` workflow already passed for the tagged
-   commit, confirms the tag matches `project.version` in `pyproject.toml`,
-   runs `uv build`, and installs the built wheel into a throwaway
-   environment to check that both `sci-rag` and `sci-rag-new` are on the
-   path.
+1. `verify` runs four checks. It confirms the `ci` workflow already
+   passed for the tagged commit, confirms the tag matches
+   `project.version` in `pyproject.toml`, runs `uv build`, and installs
+   the built wheel into a throwaway environment to check that both
+   `sci-rag` and `sci-rag-new` are on the path.
 2. `testpypi` publishes to TestPyPI. It runs first on every release
    because PyPI does not allow re-uploading a version, even a broken one,
    so a packaging mistake found on PyPI costs a version number.

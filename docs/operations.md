@@ -1,8 +1,8 @@
 # Operations: snapshots, backup, restore
 
-Everything the kit knows lives in one Postgres database, which makes
-operational discipline short: snapshot what the corpus IS, back up what
-the database HOLDS, and rehearse the restore before you need it.
+Everything the kit knows lives in one Postgres database, which keeps the
+operational discipline short. Snapshot what the corpus **is**, back up what
+the database **holds**, and rehearse the restore before you need it.
 
 ## Crossref enrichment and retraction review
 
@@ -142,9 +142,9 @@ duckdb -c "
 "
 ```
 
-Parquet export is a convenience for analysis, not a restore path:
-vectors round-trip as text and the full-text columns are regenerated,
-so restores always go through `pg_restore` or Cloud SQL backups.
+Parquet export is a convenience for analysis, not a restore path. Vectors
+round-trip as text and the full-text columns get rebuilt, so restores
+always go through `pg_restore` or Cloud SQL backups.
 
 ## The habits that matter
 
