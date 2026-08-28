@@ -92,7 +92,7 @@ Patterns already proven elsewhere in GraphRAG. They land once the kit
 has users whose corpora need them:
 
 - Lazy, cached community summaries with graph-change invalidation
-- Per-document extraction caching for cheap update/delete
+- Per-document extraction caching for cheap update/delete (the LightRAG pattern)
 - Bi-temporal edge validity with `as_of` scoping
 - Multi-corpus deployments (schema-per-corpus) behind corpus routing,
   feeding the federation seam
