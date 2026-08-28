@@ -172,7 +172,7 @@ def test_a_failing_compression_gate_is_reported_as_failing(tmp_path: Path) -> No
     assert "the gate does not hold" in page
     assert "70% lower" in page, "the token saving is still reported"
     assert "Sources dropped by the relevance floor: 61" in page
-    assert "stays `false`" in page
+    assert "no longer support its default" in page
 
 
 def test_a_holding_compression_gate_says_so(tmp_path: Path) -> None:
@@ -183,6 +183,7 @@ def test_a_holding_compression_gate_says_so(tmp_path: Path) -> None:
     )
 
     assert "the gate holds" in page
+    assert "Compression defaults on" in page
     assert "THIS corpus only" in page
 
 

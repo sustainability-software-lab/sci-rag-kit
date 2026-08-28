@@ -43,8 +43,8 @@ what the code actually did:
 
 The release that makes the kit better for science than a general-purpose
 RAG framework. Every item below landed ([epic #38](https://github.com/sustainability-software-lab/sci-rag-kit/issues/38)),
-including the stretch item. Two of them ship switched off, and the
-reasons are the interesting part:
+including the stretch item. The evidence reached two different verdicts
+on the gated work, and the reasons are the interesting part:
 
 - **Campaign corpus builder.** `sci-rag campaign build --topic|--doi-file`:
   OpenAlex/Crossref discovery, Unpaywall open-access resolution, verified
@@ -73,15 +73,21 @@ reasons are the interesting part:
   human-review queue and PRISMA-aligned counts. Landed despite being
   marked stretch.
 
-Two of those are ablation-gated and the v0.3 benchmark decided against
-turning them on:
+Two of those are ablation-gated, and the follow-up evidence reached a
+different answer for each:
 
-- **Compression defaults off.** The paired judged-answer gate cut median
+- **Compression defaults on at `relevance_floor: 0.0`.** The original
+  paired judged-answer gate, at floor 0.3, cut median
   prompt tokens 1280 to 378, but all four judged dimensions moved down.
   At n=10 no single drop separates from noise, and that is exactly why
-  the default stays off: the gate asks for evidence that quality holds,
-  and overlapping intervals are not that evidence. Tuning the relevance
-  floor and re-running is [#90](https://github.com/sustainability-software-lab/sci-rag-kit/issues/90).
+  that run remains a rejection: the gate asks for evidence that quality
+  holds, and overlapping intervals are not that evidence. The follow-up
+  floor sweep in [#90](https://github.com/sustainability-software-lab/sci-rag-kit/issues/90)
+  found the setting where the gate holds. At 0.0, three independent
+  paired runs kept every judged dimension at or above baseline while
+  median prompt tokens fell 25% to 28%. The shipped profile therefore
+  enables compression at floor 0.0. Raising the floor needs another
+  paired run.
 - **Entity resolution is unexercised by the demo corpus.** Resolution
   finds no automatic pairs and plans no merges across 67 extracted
   entities, so the `resolved_entities` condition cannot be measured here

@@ -56,9 +56,11 @@ its dimension additionally requires a schema migration.
 
 ## `domain/domain.yaml`
 
-The committed demo values are examples, while the types and defaults
-below come from the live validation models. List paths use `[]` to
-show the shape of each entry.
+The types and schema defaults below come from the live validation
+models. `compression.enabled` is different by design: it is a
+corpus-gated setting, so the table reads its shipped value from
+`domain/domain.yaml`. List paths use `[]` to show the shape of
+each entry.
 
 | Field path | Type | Default | Purpose |
 |---|---|---|---|
@@ -89,7 +91,7 @@ show the shape of each entry.
 | `retrieval.reranker.timeout_s` | float | 15.0 | Maximum reranker duration before fused-order fallback. |
 | `retrieval.reranker.model` | str \| NoneType | unset | Optional model override for the local cross-encoder. |
 | `compression` | CompressionTuning | see nested fields | Question-aware chunk compression before answer prompt assembly. |
-| `compression.enabled` | bool | false | Domain default; enable only after paired judged-answer evidence. |
+| `compression.enabled` | bool | true | Shipped domain-profile default; change only after paired judged-answer evidence. |
 | `compression.relevance_floor` | float | 0.0 | Drop a model-scored chunk below this relevance score. The default 0.0 drops nothing, because summarizing a source is safe and discarding one is not: a v0.3 sweep found groundedness and citation accuracy both fall off their ceiling at 0.15 and above. Raise it only behind a paired judged-answer run that holds. See docs/evaluation.md. |
 | `compression.max_tokens_per_chunk` | int | 160 | Maximum accepted tokens per summary; over-budget output falls back to full text. |
 

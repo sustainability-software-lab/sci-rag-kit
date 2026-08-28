@@ -83,9 +83,11 @@ is graded in a separate reference-only pass (docs/evaluation.md).
 
 ## Contextual compression: the paired gate
 
+Compression defaults on for the shipped demo at `relevance_floor: 0.0`.
+
 Two judged-answer runs over the same questions and the same corpus,
-one with `--compressed` and one without. Compression may default on
-only when judged quality HOLDS while measured prompt tokens fall. A
+one with `--compressed` and one without. The gate requires judged
+quality to HOLD while measured prompt tokens fall. A
 token saving on its own is not evidence; it is half of a trade.
 
 Measured at `relevance_floor: 0.0`, which is the load-bearing

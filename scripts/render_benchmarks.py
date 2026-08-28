@@ -249,15 +249,27 @@ def _compression_section(answers: dict[str, Any], compressed: dict[str, Any]) ->
 
         tuning = load_domain(_Path(get_settings().domain_dir)).config.compression
         floor = f"{tuning.relevance_floor}"
+        enabled = tuning.enabled
     except Exception:
         floor = "unknown"
+        enabled = None
+
+    if enabled is None:
+        default_claim = "The shipped compression default could not be loaded."
+    else:
+        state = "on" if enabled else "off"
+        default_claim = (
+            f"Compression defaults {state} for the shipped demo at `relevance_floor: {floor}`."
+        )
 
     lines = [
         "## Contextual compression: the paired gate",
         "",
+        default_claim,
+        "",
         "Two judged-answer runs over the same questions and the same corpus,",
-        "one with `--compressed` and one without. Compression may default on",
-        "only when judged quality HOLDS while measured prompt tokens fall. A",
+        "one with `--compressed` and one without. The gate requires judged",
+        "quality to HOLD while measured prompt tokens fall. A",
         "token saving on its own is not evidence; it is half of a trade.",
         "",
         f"Measured at `relevance_floor: {floor}`, which is the load-bearing",
@@ -295,8 +307,7 @@ def _compression_section(answers: dict[str, Any], compressed: dict[str, Any]) ->
             f" ({', '.join(fell)}). At this sample size no single drop is"
             " distinguishable from noise, and that is the point: the gate asks"
             " for evidence that quality holds, and overlapping intervals are"
-            " not that evidence. `compression.enabled` therefore stays `false`"
-            " in the shipped domain profile.",
+            " not that evidence.",
             "",
             "The mechanism is the relevance floor rather than the summarizer,"
             " which the counters above separate: sources were dropped, none"
@@ -304,6 +315,19 @@ def _compression_section(answers: dict[str, Any], compressed: dict[str, Any]) ->
             " before turning compression on for any corpus.",
             "",
         ]
+        if enabled:
+            lines += [
+                "The shipped domain profile currently enables compression, so",
+                "this run would no longer support its default. Re-run the gate",
+                "or turn compression off before publishing it for that corpus.",
+                "",
+            ]
+        else:
+            lines += [
+                "`compression.enabled` therefore stays `false` in the shipped",
+                "domain profile.",
+                "",
+            ]
     else:
         lines += [
             "On this run the gate holds: no judged dimension fell while prompt"
