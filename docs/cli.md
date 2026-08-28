@@ -50,6 +50,8 @@ migrations, `domain/`, and data paths resolve predictably.
 | `sci-rag campaign review` | Walk pending screening rows and append explicit human decisions. |
 | `sci-rag draft` | Draft the domain files you would otherwise hand-write. Every drafter can also print its prompt for any assistant (--print-prompt) and read the reply back (--from-file), so no API key is required. |
 | `sci-rag draft questions` | Draft seed questions grounded in your own documents, and verify them. |
+| `sci-rag draft manifest` | Read title, authors, year, and source off your documents. Rights stay yours. |
+| `sci-rag draft ontology` | Redraft or refine the ontology against what your documents actually say. |
 
 ## `sci-rag ingest`
 
@@ -568,6 +570,49 @@ $ sci-rag draft questions [OPTIONS]
 | `--apply` | boolean | false | Append the verified questions to the seed file. |
 | `--dry-run` | boolean | false | Show what would be drafted without writing anything. |
 | `--repair, --no-repair` | boolean | true | Ask the model once more to replace rows that failed grounding verification. |
+
+## `sci-rag draft manifest`
+
+Read title, authors, year, and source off your documents. Rights stay yours.
+
+```console
+$ sci-rag draft manifest [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--folder` | path | unset | Documents to describe. Defaults to <data_dir>/raw. |
+| `--print-prompt` | boolean | false | Print the rendered prompt and exit. Paste it into any assistant. |
+| `--from-file` | path | unset | Read the model's reply from this file instead of calling a model. |
+| `--output` | path | unset | Where to write the proposal. Defaults to <manifest>.proposed. |
+| `--manifest` | path | unset | The manifest being drafted. Defaults to <data_dir>/corpus.jsonl. |
+| `--apply` | boolean | false | Write the manifest itself instead of proposing one. |
+| `--dry-run` | boolean | false | Show what would be drafted without writing anything. |
+| `--batch-size` | integer | unset | Documents per model call. Defaults to 12. |
+
+## `sci-rag draft ontology`
+
+Redraft or refine the ontology against what your documents actually say.
+
+```console
+$ sci-rag draft ontology [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--from-corpus` | boolean | false | Redraft the ontology from real passages. The default when documents exist. |
+| `--refine` | boolean | false | Show the model your ontology and ask only what it would add and remove. |
+| `--cold` | boolean | false | Draft from the description alone, without reading any document. |
+| `--folder` | path | unset | Draft from documents in this folder instead of the ingested corpus. |
+| `--print-prompt` | boolean | false | Print the rendered prompt and exit. Paste it into any assistant. |
+| `--from-file` | path | unset | Read the model's reply from this file instead of calling a model. |
+| `--output` | path | unset | Where to write the proposal. Defaults to <domain.yaml>.proposed. |
+| `--apply` | boolean | false | Write domain.yaml itself instead of proposing a file. |
+| `--dry-run` | boolean | false | Show what would change without writing anything. |
 
 ## Shell help is authoritative too
 

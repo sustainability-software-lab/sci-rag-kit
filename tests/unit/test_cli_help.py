@@ -47,6 +47,8 @@ def test_subcommand_help_screens() -> None:
         ["graph", "resolve-entities", "--help"],
         ["draft", "--help"],
         ["draft", "questions", "--help"],
+        ["draft", "manifest", "--help"],
+        ["draft", "ontology", "--help"],
         ["eval", "--help"],
         ["eval", "retrieval", "--help"],
         ["eval", "answers", "--help"],

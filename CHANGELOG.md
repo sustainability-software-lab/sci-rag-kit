@@ -32,6 +32,21 @@ Notable changes to sci-rag-kit. The format follows
   expert sign-off; nothing in the kit removes it for you.
 - `docs/llm-assisted-setup.md`: the three lanes, the copy-paste path, the
   review discipline, and the honesty rules for drafted ground truth.
+- `sci-rag draft manifest`: reads title, authors, year, DOI, journal, and a
+  source bucket off each document's opening pages, through the same parsers
+  ingestion uses, and proposes `data/corpus.jsonl.proposed`. Source buckets are
+  chosen across the whole batch rather than one per file. **`license_class` is
+  never guessed**: every drafted row is written `unknown`, the command reports
+  how many documents need a rights decision, and a license sentence is kept in
+  `license_source` as evidence only, and only when it appears verbatim in the
+  document.
+- `sci-rag draft ontology`: `--from-corpus` redrafts the ontology from real
+  passages, `--refine` asks only for additions and removals with a reason for
+  each, and `--cold` is the wizard's description-only draft on its own. The
+  tuned `retrieval:` and `compression:` blocks are carried over untouched, and
+  a refinement that would leave no entity type is rejected. Writes
+  `domain/domain.yaml.proposed` with a summary diff; `--apply` writes in place.
+- `domain/prompts/manifest_metadata.md` and `domain/prompts/ontology_from_corpus.md`.
 
 ## [0.3.0] - 2026-08-28
 

@@ -48,7 +48,13 @@ MAX_LABEL_CODE_OFFSET_PX = 4
 MEASURE_JS = """
 () => {
   const wrappers = [...document.querySelectorAll('.md-typeset .highlight')];
-  const boxes = wrappers.map(w => w.getBoundingClientRect());
+  // An inactive tab panel is in the DOM collapsed to zero height. It is not
+  // visually adjacent to anything, and two of them in a row sit at the same
+  // point, which reads as a zero-pixel gap between blocks nobody can see at
+  // the same time. Measure only what is laid out.
+  const boxes = wrappers
+    .map(w => w.getBoundingClientRect())
+    .filter(box => box.height > 0);
   return {
     blocks: wrappers.length,
     // Only pairs close enough to be visually adjacent; anything further apart
