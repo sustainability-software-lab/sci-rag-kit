@@ -102,7 +102,7 @@ def render_cli_docs() -> str:
     lines = [
         "---",
         "title: CLI reference",
-        "description: Every Sci-RAG Kit command, argument, option, type, and default, generated from the live Typer application.",
+        "description: Every Sci RAG Kit command, argument, option, type, and default, generated from the live Typer application.",
         "---",
         "",
         "# CLI reference",

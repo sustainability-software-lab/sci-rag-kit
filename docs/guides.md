@@ -1,6 +1,6 @@
 ---
 title: Guides
-description: Complete a specific Sci-RAG Kit task, from domain specialization to deployment and operations.
+description: Complete a specific Sci RAG Kit task, from domain specialization to deployment and operations.
 ---
 
 # Guides

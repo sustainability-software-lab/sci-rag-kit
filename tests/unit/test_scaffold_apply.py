@@ -342,6 +342,14 @@ def test_readme_opening_is_rewritten_for_the_project(template: Path) -> None:
     assert "## Components" in readme
 
 
+def test_readme_attribution_uses_the_unhyphenated_display_name(template: Path) -> None:
+    """A generated project inherits this line, so the kit's name is spelled once here."""
+    apply.apply_readme(_answers(), template)
+    readme = (template / "README.md").read_text(encoding="utf-8")
+    assert "[Sci RAG Kit](" in readme
+    assert "Sci-RAG Kit" not in readme
+
+
 # --- Makefile ---------------------------------------------------------------
 
 

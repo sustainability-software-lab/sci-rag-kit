@@ -1,11 +1,11 @@
 ---
 title: Extend the seams
-description: Add a parser, corpus collector, reranker, model provider, or authentication backend at Sci-RAG Kit's supported extension boundaries.
+description: Add a parser, corpus collector, reranker, model provider, or authentication backend at Sci RAG Kit's supported extension boundaries.
 ---
 
 # Extend the seams
 
-Sci-RAG Kit has no plug-in registry. It has five small boundaries where real projects commonly vary. Extend the narrowest one that matches the change, then keep its surrounding invariants visible in tests and evaluation.
+Sci RAG Kit has no plug-in registry. It has five small boundaries where real projects commonly vary. Extend the narrowest one that matches the change, then keep its surrounding invariants visible in tests and evaluation.
 
 ## Choose the seam
 

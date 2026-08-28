@@ -10,8 +10,8 @@ hide:
 <section class="srag-home-section srag-home-masthead" markdown>
 
 <div class="srag-home-masthead__brand">
-  <img class="srag-home-masthead__logo srag-logo--light" src="assets/branding/full-logo/sci-rag-kit-full-color-transparent.png" alt="Sci-RAG Kit" width="2048" height="768">
-  <img class="srag-home-masthead__logo srag-logo--dark" src="assets/branding/monochrome/sci-rag-kit-full-white-transparent.png" alt="Sci-RAG Kit" width="2048" height="768">
+  <img class="srag-home-masthead__logo srag-logo--light" src="assets/branding/full-logo/sci-rag-kit-full-color-transparent.png" alt="Sci RAG Kit" width="2048" height="768">
+  <img class="srag-home-masthead__logo srag-logo--dark" src="assets/branding/monochrome/sci-rag-kit-full-white-transparent.png" alt="Sci RAG Kit" width="2048" height="768">
 </div>
 
 # Retrieval-augmented generation over scientific document collections, on one Postgres database
@@ -137,7 +137,7 @@ The generator configures; it does not template. `sci-rag-new` fetches this repos
 
 [<span class="srag-row__title">Evaluate your pipeline</span><span class="srag-row__copy">Run layer ablations, compare reports, calibrate the judge, and keep the corpus fingerprint attached.</span>](evaluation.md){ .srag-row }
 
-[<span class="srag-row__title">Choosing Sci-RAG Kit</span><span class="srag-row__copy">Compare the kit with LightRAG, PaperQA2, LlamaIndex, and Microsoft GraphRAG before you commit to it.</span>](choosing-sci-rag-kit.md){ .srag-row }
+[<span class="srag-row__title">Choosing Sci RAG Kit</span><span class="srag-row__copy">Compare the kit with LightRAG, PaperQA2, LlamaIndex, and Microsoft GraphRAG before you commit to it.</span>](choosing-sci-rag-kit.md){ .srag-row }
 
 </div>
 

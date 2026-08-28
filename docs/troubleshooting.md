@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting
-description: Diagnose Sci-RAG Kit setup, database, credential, parsing, retrieval, scope, and serving problems from the observed symptom.
+description: Diagnose Sci RAG Kit setup, database, credential, parsing, retrieval, scope, and serving problems from the observed symptom.
 ---
 
 # Troubleshooting

@@ -1,6 +1,6 @@
 ---
 title: Quickstart
-description: Set up Sci-RAG Kit, ingest the synthetic demo corpus, inspect retrieval, produce a cited answer, and serve REST and MCP.
+description: Set up Sci RAG Kit, ingest the synthetic demo corpus, inspect retrieval, produce a cited answer, and serve REST and MCP.
 ---
 
 # Quickstart

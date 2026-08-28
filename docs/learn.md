@@ -1,6 +1,6 @@
 ---
 title: Learn
-description: Understand the architecture, retrieval method, and evidence contract behind Sci-RAG Kit.
+description: Understand the architecture, retrieval method, and evidence contract behind Sci RAG Kit.
 ---
 
 # Learn

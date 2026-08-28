@@ -68,7 +68,7 @@ nav:
       - get-started.md
       - Quickstart: quickstart.md
       - Tour the repository: tour.md
-      - Choosing Sci-RAG Kit: choosing-sci-rag-kit.md
+      - Choosing Sci RAG Kit: choosing-sci-rag-kit.md
       - Troubleshooting: troubleshooting.md
   - Learn:
       - learn.md
@@ -166,4 +166,4 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/sustainability-software-lab/sci-rag-kit
-      name: Sci-RAG Kit on GitHub
+      name: Sci RAG Kit on GitHub

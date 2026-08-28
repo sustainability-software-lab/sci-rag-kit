@@ -1,11 +1,11 @@
 ---
 title: Tour the repository
-description: Learn which Sci-RAG Kit files define your scientific domain, which implement the pipeline, and what runs in production.
+description: Learn which Sci RAG Kit files define your scientific domain, which implement the pipeline, and what runs in production.
 ---
 
 # Tour the repository
 
-Sci-RAG Kit is a working GitHub template repository, not a Cookiecutter or Copier generator. Your copy contains the application, its domain profile, its tests, and its operations code in one place.
+Sci RAG Kit is a working GitHub template repository, not a Cookiecutter or Copier generator. Your copy contains the application, its domain profile, its tests, and its operations code in one place.
 
 <div class="srag-meta-strip">
   <div><strong>Page type</strong>Orientation</div>

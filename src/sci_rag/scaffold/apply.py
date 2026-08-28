@@ -296,7 +296,7 @@ def apply_readme(answers: ProjectAnswers, root: Path) -> list[str]:
         "\n"
         f"{answers.description}\n"
         "\n"
-        f"Built from [Sci-RAG Kit]({_KIT_URL}): hybrid GraphRAG retrieval on PostgreSQL,\n"
+        f"Built from [Sci RAG Kit]({_KIT_URL}): hybrid GraphRAG retrieval on PostgreSQL,\n"
         "grounded answers with citations, an evaluation harness, and REST plus MCP\n"
         "endpoints. What makes it this project rather than the kit lives in `domain/`.\n"
         "\n"

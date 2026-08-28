@@ -1,6 +1,6 @@
 ---
 title: Reference
-description: Look up the exact Sci-RAG Kit command, configuration field, API contract, benchmark, or term.
+description: Look up the exact Sci RAG Kit command, configuration field, API contract, benchmark, or term.
 ---
 
 # Reference

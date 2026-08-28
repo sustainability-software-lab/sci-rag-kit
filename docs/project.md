@@ -1,11 +1,11 @@
 ---
 title: Project
-description: Understand Sci-RAG Kit's status, principles, roadmap, governance, decisions, releases, and contribution process.
+description: Understand Sci RAG Kit's status, principles, roadmap, governance, decisions, releases, and contribution process.
 ---
 
 # Project
 
-Sci-RAG Kit is alpha software with an explicit compatibility promise, an evidence-first roadmap, and short decision records for the architectural bets that shape every deployment.
+Sci RAG Kit is alpha software with an explicit compatibility promise, an evidence-first roadmap, and short decision records for the architectural bets that shape every deployment.
 
 <div class="srag-rows" markdown>
 

@@ -1,19 +1,21 @@
 # Roadmap
 
-Where sci-rag-kit is going, in the order the evidence supports. Wave 1
-(v0.2 "Credibility") is shipped; waves 2 and 3 are committed directions
-whose details get their own planning pass before implementation, and
-every retrieval-affecting item lands the same way: behind an ablation
-config, with before/after evidence on a benchmark page, or not at all.
+Where the kit is going, in the order the evidence supports.
 
-Dates are deliberately absent. The kit is developed in the open; the
-milestones on the issue tracker are the source of truth for sequencing,
-and this page is the source of truth for intent.
+Wave 1, v0.2 "Credibility", has shipped. Waves 2 and 3 are committed
+directions, and each one gets its own planning pass before anyone writes
+code. Anything that touches retrieval lands the same way: behind an
+ablation config, with before and after numbers on a benchmark page. If
+the numbers do not hold up, it does not land.
+
+You will not find dates here. That is deliberate. Development happens in
+the open, so the milestones on the issue tracker say what comes next.
+This page says why.
 
 ## Shipped: v0.2 "Credibility"
 
-The release that closed the gap between what the methodology document
-promised and what the code did:
+This release closed the gap between what the methodology promised and
+what the code actually did:
 
 - Post-fusion reranker (LLM adapter by default, local cross-encoder
   behind the `rerank` extra), off until the ablation justifies it
@@ -34,8 +36,8 @@ promised and what the code did:
 
 ## Wave 2: v0.3 "Campaigns" (the scientific differentiators)
 
-The release that makes the kit specifically better for SCIENCE than a
-general-purpose RAG framework:
+The release that makes the kit better for science than a general-purpose
+RAG framework:
 
 - **Campaign corpus builder.** `sci-rag campaign build --topic|--doi-file`:
   OpenAlex/Crossref discovery, Unpaywall open-access resolution, verified
@@ -65,7 +67,7 @@ general-purpose RAG framework:
 
 ## Wave 3: v0.4+ "Scale and intelligence"
 
-Proven patterns from the wider GraphRAG landscape, adopted once the kit
+Patterns already proven elsewhere in GraphRAG. They land once the kit
 has users whose corpora need them:
 
 - Lazy, cached community summaries with graph-change invalidation
@@ -79,15 +81,15 @@ has users whose corpora need them:
 - A visual-retrieval seam (image chunks + vision embeddings), last,
   behind an extra
 
-Deliberately out of scope, with reasons recorded in
-[docs/methodology.md](methodology.md) and the planning docs: a Neo4j or
-dedicated graph-database migration, RAPTOR, agentic retrieval loops on
-every query, index-time contextual embedding, and learned fusion.
+Five things stay out of scope: a Neo4j or dedicated graph-database
+migration, RAPTOR, agentic retrieval loops on every query, index-time
+contextual embedding, and learned fusion. The reasons are written down in
+the [methodology](methodology.md) and the planning docs.
 
 ## Collaboration seams
 
-The kit is built to be extended at named seams rather than forked. Two
-collaborations define the near-term ones:
+Extend the kit at a named seam instead of forking it. Two collaborations
+shape which seams come first:
 
 **UW SSEC** (University of Washington Scientific Software Engineering
 Center). Three workstreams plug into seams that exist today, on their
@@ -103,16 +105,16 @@ timeline, not ours:
   (`/v1/corpus-manifest`), the machine-readable descriptor a multi-RAG
   router reads to decide which knowledge base fits a query
 
-**BioCirV** (LBL) is the flagship domain deployment: an agricultural
-residues and bioeconomy corpus built with the kit. It supplies the
-things a template cannot generate for itself: a real corpus at real
-scale, domain-expert calibration labels to supersede the shipped
-non-expert seed set, and the first public case study.
+**BioCirV** (LBL) is the flagship deployment: an agricultural residues
+and bioeconomy corpus built with the kit. It supplies three things a
+template cannot generate for itself. A real corpus at real scale.
+Calibration labels from domain experts, which replace the non-expert seed
+set that ships in the box. And the first public case study.
 
 ## Launch-gated decisions (owner: maintainer, not automation)
 
-Recorded here so they are visible, and deliberately NOT executed by
-tooling; each is a judgment call with public-facing consequences:
+These are listed here so they stay visible. No tooling executes them,
+because each one is a judgment call with public consequences:
 
 - Restoring `CITATION.cff` and attribution wording
 - Minting a Zenodo DOI on the next tagged release
