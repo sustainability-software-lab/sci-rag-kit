@@ -97,6 +97,17 @@ Notable changes to sci-rag-kit. The format follows
 
 ### Fixed
 
+- `sci-rag doctor` no longer reports FAIL for a project that runs offline on
+  purpose. A project with the local-hash embedder, no credentials anywhere,
+  and the shipped generation defaults now sees warnings that name the
+  unavailable features, and exits 0. Reaching for a model still fails: a
+  Google embedder without credentials, or a deliberately named generation
+  model such as `anthropic:claude-opus-5` with no key behind it, reports FAIL
+  as before. The generated-project matrix gates on `doctor` again.
+- `sci-rag doctor` prints its table when the configured embedder cannot be
+  built. It looked up the embedder to report embedding-version drift, so a
+  Google embedder without credentials aborted the whole command with a
+  traceback, hiding the credentials row that explained the cause.
 - `sci-rag doctor --probe` no longer warns on a healthy setup. Its generation
   probe capped output at 10 tokens, which reasoning models spend on thought
   before writing anything, so a working provider looked like it returned
