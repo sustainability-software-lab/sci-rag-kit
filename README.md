@@ -170,6 +170,7 @@ The complete, searchable site is published at
 | | |
 |---|---|
 | [Quickstart](docs/quickstart.md) | Setup, first run, troubleshooting |
+| [FAQ](docs/faq.md) | Short answers, and the reasoning behind each design decision |
 | [Bring your own domain](docs/bring-your-own-domain.md) | Specialization tutorial |
 | [Corpus campaigns](docs/campaigns.md) | Polite, resumable discovery from topics or DOI seeds |
 | [Methodology](docs/methodology.md) | Design rationale for every component |

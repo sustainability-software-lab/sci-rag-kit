@@ -9,6 +9,8 @@ These pages explain what happens between a source document and a cited answer, i
 
 <div class="srag-rows" markdown>
 
+[<span class="srag-row__title">FAQ</span><span class="srag-row__copy">Short answers to the questions people actually ask, and the reasoning behind each design decision.</span>](faq.md){ .srag-row }
+
 [<span class="srag-row__title">Architecture</span><span class="srag-row__copy">Follow ownership across packages, storage, concurrency, serving, and the five supported extension seams.</span>](architecture.md){ .srag-row }
 
 [<span class="srag-row__title">Methodology</span><span class="srag-row__copy">Judge chunking, graph extraction, fusion, answering, and evaluation from the reasoning and evidence behind each choice.</span>](methodology.md){ .srag-row }
@@ -19,4 +21,4 @@ These pages explain what happens between a source document and a cited answer, i
 
 </div>
 
-Start with [Architecture](architecture.md) if you want to modify code. Start with [Methodology](methodology.md) if you need to defend the approach in a research or engineering review.
+Start with the [FAQ](faq.md) if you are still deciding whether the kit fits. Start with [Architecture](architecture.md) if you want to modify code. Start with [Methodology](methodology.md) if you need to defend the approach in a research or engineering review.

@@ -137,6 +137,8 @@ The generator configures; it does not template. `sci-rag-new` fetches this repos
 
 [<span class="srag-row__title">Evaluate your pipeline</span><span class="srag-row__copy">Run layer ablations, compare reports, calibrate the judge, and keep the corpus fingerprint attached.</span>](evaluation.md){ .srag-row }
 
+[<span class="srag-row__title">FAQ</span><span class="srag-row__copy">Answer what this is, who it is for, and why each design decision went the way it did, in five minutes.</span>](faq.md){ .srag-row }
+
 [<span class="srag-row__title">Choosing Sci RAG Kit</span><span class="srag-row__copy">Compare the kit with LightRAG, PaperQA2, LlamaIndex, and Microsoft GraphRAG before you commit to it.</span>](choosing-sci-rag-kit.md){ .srag-row }
 
 </div>
