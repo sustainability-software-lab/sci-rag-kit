@@ -155,6 +155,27 @@
   height: 1.35rem;
 }
 
+/* The wordmark links home like the mark does, and picks up the same quiet
+   hover fill the tabs and sidebar rows use. */
+.md-header__brand {
+  display: inline-block;
+  padding: 0.18rem 0.35rem;
+  border-radius: var(--srag-radius-sm);
+  transition: background-color 120ms ease;
+}
+
+.md-header__brand:is(:hover, :focus-visible) {
+  background: var(--srag-surface-soft);
+}
+
+[dir="ltr"] .md-header__title {
+  margin-left: -0.35rem;
+}
+
+.md-header__button.md-logo:hover {
+  opacity: 1;
+}
+
 /* The tabs render inside md-header__inner (see overrides/partials/header.html),
    so the chrome is one line: brand, sections, then search and the repo link. */
 .md-header__inner {
