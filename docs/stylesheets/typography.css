@@ -13,7 +13,18 @@
   width: calc(100% - 1.6rem);
   max-width: 42rem;
   margin-inline: auto;
+  padding-top: 0.4rem;
   padding-bottom: 4rem;
+}
+
+/* Material reserves a wide gap above the first heading; the hairline under the
+   header already separates the chrome, so the page can start closer to it. */
+.md-content__inner > :first-child {
+  margin-top: 0;
+}
+
+.md-content__inner::before {
+  display: none;
 }
 
 .md-typeset h1,

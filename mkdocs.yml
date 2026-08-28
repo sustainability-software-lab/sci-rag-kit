@@ -1,4 +1,4 @@
-site_name: Sci-RAG Kit
+site_name: Sci RAG Kit
 site_description: Retrieval-augmented generation over scientific document collections, on one Postgres database
 site_author: Sustainability Software Lab
 site_url: https://sustainability-software-lab.github.io/sci-rag-kit/
@@ -19,9 +19,9 @@ theme:
   name: material
   custom_dir: docs/overrides
   language: en
-  logo: assets/branding/icon-sizes/sci-rag-kit-icon-transparent-128.png
   favicon: assets/branding/icon-sizes/favicon.ico
   icon:
+    logo: material/flask-outline
     repo: fontawesome/brands/github
   font:
     text: Inter
@@ -47,13 +47,13 @@ theme:
     - navigation.instant.progress
     - navigation.tabs
     - navigation.tabs.sticky
-    - navigation.sections
     - navigation.indexes
     - navigation.tracking
     - navigation.path
     - navigation.footer
     - navigation.top
     - toc.follow
+    - toc.integrate
     - search.suggest
     - search.highlight
     - content.tabs.link

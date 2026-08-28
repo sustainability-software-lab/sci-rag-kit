@@ -1,6 +1,6 @@
 ---
 template: home.html
-title: Sci-RAG Kit
+title: Sci RAG Kit
 description: Retrieval-augmented generation over scientific document collections, on one Postgres database.
 hide:
   - navigation
