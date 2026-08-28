@@ -1,8 +1,13 @@
-# Choosing sci-rag-kit (or not)
+---
+title: Choosing Sci RAG Kit
+description: Compare Sci RAG Kit against LightRAG, PaperQA2, LlamaIndex, and Microsoft GraphRAG, then decide which one fits the work in front of you.
+---
+
+# Choosing Sci RAG Kit
 
 An honest comparison against the systems you should also consider.
 Short version: sci-rag-kit is an opinionated, evaluated **template** you
-specialize into your field's knowledge base. If you want a library to
+configure into your field's knowledge base. If you want a library to
 compose, a managed product, or an agentic literature assistant, better
 options exist and are named below.
 
@@ -43,8 +48,8 @@ results on literature tasks. It is an agent with per-query LLM loops
 (cost and latency to match), not an infrastructure template. For
 "answer this hard question from the literature, take your time," pick
 PaperQA2. Its evidence-summarization pattern shipped here in v0.3 as
-contextual snippet compression, credited, and the paired gate it has to
-pass left it off by default.
+contextual snippet compression, credited, and it cleared the paired
+judged-answer gate at a relevance floor of 0.0.
 
 **LlamaIndex (+ Neo4j)** gives maximal flexibility: every RAG pattern,
 every store, endless composability. The flip side is that **you** are the
@@ -100,14 +105,13 @@ The bets it makes for you, and where they hold:
   an index rebuild. That is a data migration, and a provider flag would
   advertise it as a configuration change. See
   [ADR 0006](adr/0006-multi-provider-llms.md).
-- **Compression and reranking are off until your own corpus says
-  otherwise.** Both ship, and neither is a default, because a paired
-  ablation has to hold on the corpus in front of you. Compression's gate
-  was re-run for v0.3 and did not hold, and
-  [benchmarks.md](benchmarks.md) publishes the run that failed rather
-  than the one that flattered it. If you want features that default on
-  because they usually help, this project will keep disappointing you on
-  purpose.
+- **Nothing turns on until a paired run on your corpus says it
+  should.** Compression and reranking both ship. Compression is on for
+  the demo because its gate held there, at a relevance floor of 0.0; the
+  same gate failed at 0.15 and 0.3, and [benchmarks.md](benchmarks.md)
+  publishes those runs too. Reranking is still off, waiting for an
+  ablation to earn it. If you want features that default on because they
+  usually help, this project will keep disappointing you on purpose.
 - **Early stage.** 0.x, small community, no history of external
   deployments yet. The eval harness and docs are ahead of the adoption
   curve on purpose; judge accordingly, and see

@@ -9,7 +9,7 @@ and expects these kinds of question:
 
 $QUERY_CLASSES
 
-Below are real passages from the collection, each numbered and labelled with
+Below are real passages from the collection, each numbered and labeled with
 the document it came from.
 
 $PASSAGES
@@ -23,7 +23,7 @@ Rules, in order of importance:
   do not round a number, do not fix a typo. A phrase you cannot copy is a
   phrase you must not use.
 - **Name the right documents.** Every title in "reference_titles" must be one of
-  the document titles labelled above, spelled the same way, and it must be a
+  the document titles labeled above, spelled the same way, and it must be a
   document whose passages actually contain the evidence you quoted.
 - **Ask what the passages answer.** If the passages do not settle the question,
   do not ask it.

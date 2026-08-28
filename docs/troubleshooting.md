@@ -5,13 +5,30 @@ description: Diagnose Sci RAG Kit setup, database, credential, parsing, retrieva
 
 # Troubleshooting
 
-Start with the system's own diagnosis instead of inferring a cause from an empty retrieval result.
+Every entry on this page starts from a symptom you can see and ends at the one command that fixes it. Work from the symptom map, and let the kit tell you which layer is missing.
+
+<div class="srag-meta-strip">
+  <div><strong>You'll build</strong>A diagnosis, from a symptom to its cause</div>
+  <div><strong>You'll need</strong>The failing command and its output</div>
+  <div><strong>Time</strong>Usually under 5 minutes</div>
+  <div><strong>Tested with</strong>v0.3</div>
+</div>
+
+## Before you start
+
+Run the kit's own diagnosis first. Guessing a cause from an empty retrieval result is how an afternoon disappears.
 
 ```console title="Repository root"
 $ uv run sci-rag doctor
 ```
 
-`doctor` checks configuration, domain validation, database connectivity, migrations, corpus state, graph state, and credentials without spending model tokens. Add `--probe` only when you want one live embedding and generation round trip.
+`doctor` checks configuration, domain validation, database connectivity, migrations, corpus state, graph state, and credentials, and it spends no model tokens doing it. Add `--probe` when you want one live embedding and generation round trip on top.
+
+<div class="srag-checkpoint" markdown>
+**Checkpoint: you know which layer is unhappy**
+
+`doctor` names the failing check. Take that name to the symptom map below. If every check is healthy and the behavior is still wrong, the problem is in your domain profile or your seed questions, not in the plumbing.
+</div>
 
 ## Fast symptom map
 
@@ -65,7 +82,7 @@ Use `uv run sci-rag doctor --probe` after configuring a credential. The probe sp
 
 A project that sets `SCI_RAG_EMBEDDING_PROVIDER=local-hash`, configures no credential for any provider, and leaves `SCI_RAG_LLM_MODEL` and its siblings at their shipped defaults is a supported mode, not a half-finished setup. The setup wizard writes exactly that for `credentials: offline`. `doctor` reports the unavailable generation features as warnings and exits `0`, so a green run means the offline pipeline is healthy rather than that a model is reachable.
 
-Reaching for a model and missing the credential is still a failure. `doctor` reports `FAIL` when the Google embedding provider is selected without credentials, and when a generation model is named explicitly, such as `SCI_RAG_LLM_MODEL=anthropic:claude-opus-5`, with no key or project behind it. Writing a model id is how you say you intend to generate, so the diagnosis follows what the configuration asks for rather than what happens to be missing.
+Reaching for a model with no credential behind it is still a failure. `doctor` reports `FAIL` when the Google embedding provider is selected without credentials, and when a generation model is named explicitly, such as `SCI_RAG_LLM_MODEL=anthropic:claude-opus-5`, with no key or project behind it. Writing a model id is how you say you intend to generate, so the diagnosis follows what the configuration asks for rather than what happens to be missing.
 
 ## Retrieval is empty or unexpectedly narrow
 
@@ -91,7 +108,7 @@ $ uv sync --extra docling
 $ uv run sci-rag ingest --manifest path/to/manifest.jsonl
 ```
 
-An identical source will still deduplicate. Remove the previously ingested document with the corpus lifecycle commands before replacing its stored parse; the [operations guide](operations.md) explains snapshots and backups to take first.
+An identical source will still deduplicate. Remove the previously ingested document with the corpus lifecycle commands before replacing its stored parse; the [Operate a live corpus](operations.md) explains snapshots and backups to take first.
 
 ## Embeddings no longer match
 
@@ -120,3 +137,9 @@ $ uv run sci-rag retrieve "a representative question" --profile interactive --li
 ```
 
 Include the doctor table, stage traces, package version, operating system, and whether Postgres is compose-managed or external. Never paste `.env`, bearer keys, database passwords, or model credentials into an issue.
+
+## Next steps
+
+- Nothing here matched: [open an issue](https://github.com/sustainability-software-lab/sci-rag-kit/issues) with the output above
+- The database is the problem: [Run Postgres your way](run-postgres.md)
+- Retrieval works but the answers are wrong: [Evaluate your pipeline](evaluation.md)

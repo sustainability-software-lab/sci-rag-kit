@@ -5,7 +5,22 @@ description: Add a parser, corpus collector, reranker, model provider, or authen
 
 # Extend the seams
 
-Sci RAG Kit has no plug-in registry. It has five small boundaries where real projects commonly vary. Extend the narrowest one that matches the change, then keep its surrounding invariants visible in tests and evaluation.
+Sci RAG Kit has no plug-in registry. It has five small boundaries where real projects vary, and by the end of this page you will know which one your change belongs behind and what evidence it owes. Extend the narrowest seam that fits, then keep its surrounding invariants visible in tests and evaluation.
+
+<div class="srag-meta-strip">
+  <div><strong>You'll build</strong>A new parser, collector, reranker, provider, or auth backend</div>
+  <div><strong>You'll need</strong>A working checkout and its test suite</div>
+  <div><strong>Time</strong>An hour to a day, depending on the seam</div>
+  <div><strong>Tested with</strong>v0.3</div>
+</div>
+
+## Before you start
+
+| Requirement | Why | Check |
+|---|---|---|
+| `make check` green on an unmodified checkout | So a failure afterwards is yours | `make check` |
+| A read of [Architecture](architecture.md) | The seams only make sense against the ownership map | |
+| An evaluation baseline, for anything touching ranking | A retrieval change without a before is not measurable | `uv run sci-rag eval retrieval --ablation` |
 
 ## Choose the seam
 
@@ -26,7 +41,7 @@ Keep these properties:
 - A parser reports the route it used when a fallback changes fidelity.
 - Tables remain one block when feasible.
 - The first document title is not duplicated into every section path.
-- Unsupported suffixes fail with the supported list rather than returning blank text.
+- Unsupported suffixes fail with the supported list. Blank text is not an acceptable answer.
 - A fixture test demonstrates the block order and metadata.
 
 Add the suffix to `SUPPORTED_SUFFIXES`, add a branch in `parse_file()`, and let the existing ingester handle deduplication, embedding, and transactions.
@@ -96,7 +111,7 @@ Three adapters live beside each other in `src/sci_rag/llm/`, selected by a `prov
 | `anthropic` | Claude, on Vertex or the direct API | `SCI_RAG_GCP_PROJECT` (ADC) or `SCI_RAG_ANTHROPIC_API_KEY` | `anthropic` |
 | `openai-compatible` | Vertex partner models (Grok, Llama, Mistral, DeepSeek), OpenAI, self-hosted vLLM/Ollama | `SCI_RAG_GCP_PROJECT` (ADC) or `SCI_RAG_OPENAI_API_KEY` (+ optional `SCI_RAG_OPENAI_BASE_URL`) | `openai` |
 
-On Google Cloud the third row is the only route to the non-Google partner models: Vertex serves them behind an OpenAI-compatible endpoint rather than a native API, so one adapter covers every current and future partner model. Model ids there keep their publisher prefix, as in `xai/grok-4.1-fast-reasoning`; sending the bare id is rejected as a malformed publisher model.
+On Google Cloud the third row is the only route to the non-Google partner models: Vertex serves them behind an OpenAI-compatible endpoint and not a native API, so one adapter covers every current and future partner model. Model ids there keep their publisher prefix, as in `xai/grok-4.1-fast-reasoning`; sending the bare id is rejected as a malformed publisher model.
 
 !!! warning "Partner models are not served from every region"
 
@@ -106,7 +121,7 @@ On Google Cloud the third row is the only route to the non-Google partner models
 
 ### What a new adapter has to normalize
 
-`LLMClient` presents one signature to every call site, so an adapter absorbs the differences between providers rather than exposing them:
+`LLMClient` presents one signature to every call site, so an adapter absorbs the differences between providers and never exposes them:
 
 | `generate()` argument | google | anthropic | openai-compatible |
 |---|---|---|---|
@@ -121,7 +136,7 @@ Two of those cells are easy to get wrong:
 - **Lowering effort is not the same as disabling thinking.** Disabling it on current Claude models can leak reasoning tags or write a tool call into visible text, which would corrupt the JSON the extraction and judge call sites parse.
 - **Not every Claude model accepts the effort knob.** `claude-sonnet-5` takes it; `claude-haiku-4-5` rejects it with `400 output_config.effort: Extra inputs are not permitted`. The adapter probes once per client and remembers the result, because re-learning it per call would double the request count across a graph-extraction run.
 
-Where a provider may reject a knob, the adapters retry once without it rather than failing the call. Retry policy itself is shared: `retry_async()` in `llm/client.py` owns the backoff, and the SDK clients are constructed with `max_retries=0` so their own retries do not compound with it.
+Where a provider may reject a knob, the adapters retry once without it before failing the call. Retry policy itself is shared: `retry_async()` in `llm/client.py` owns the backoff, and the SDK clients are constructed with `max_retries=0` so their own retries do not compound with it.
 
 ### Embeddings are Google-only on purpose
 
@@ -141,7 +156,7 @@ A deployment that adds OAuth or institutional identity should:
 4. Preserve stable `application/problem+json` error codes.
 5. Test REST and MCP access together.
 
-The current `create_app()` constructs the shipped backend from settings; it is not a run-time plug-in registry. Keep any factory change explicit rather than importing arbitrary authentication code from configuration.
+The current `create_app()` constructs the shipped backend from settings; it is not a run-time plug-in registry. Keep any factory change explicit, and do not import arbitrary authentication code from configuration.
 
 ## The invariants around every seam
 
@@ -152,4 +167,18 @@ The current `create_app()` constructs the shipped backend from settings; it is n
 - **Tests run offline by default.** Put credentialed smoke coverage behind the `cloud` marker.
 - **Retrieval changes bring receipts.** Include ablation results in the pull request.
 
-See [Architecture](architecture.md#extension-points-in-order-of-likely-need) for ownership, [Contributing](contributing.md) for the change bar, and [Evaluation](evaluation.md) for the measurement workflow.
+See [Architecture](architecture.md#extension-points-in-order-of-likely-need) for ownership, [Contributing](contributing.md) for the change bar, and [Evaluate your pipeline](evaluation.md) for the measurement workflow.
+
+<div class="srag-checkpoint" markdown>
+**Checkpoint: the seam holds**
+
+`make check` is green, your new code is exercised by an offline test, and if
+you touched ranking you have two ablation tables from the same corpus
+fingerprint. If any of those three is missing, the change is not done.
+</div>
+
+## Next steps
+
+- Produce the before-and-after your change needs: [Evaluate your pipeline](evaluation.md)
+- Check the ownership map before widening a seam: [Architecture](architecture.md)
+- Read the bar a contribution has to clear: [Contributing](contributing.md)

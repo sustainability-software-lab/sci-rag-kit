@@ -3,7 +3,7 @@
 Everything is driven by environment variables with the ``SCI_RAG_`` prefix
 (or a local ``.env`` file; see ``.env.example`` for a guided tour). Domain
 semantics (ontology, prompts, retrieval weights) live in ``domain/domain.yaml``
-instead, so that specializing the kit to a new field never means editing
+instead, so that pointing the kit at a new field never means editing
 Python.
 """
 

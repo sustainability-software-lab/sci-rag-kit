@@ -1,3 +1,8 @@
+---
+title: Roadmap
+description: See what has shipped, what comes next, and which calls the project deliberately leaves to a human.
+---
+
 # Roadmap
 
 Where the kit is going, in the order the evidence supports.

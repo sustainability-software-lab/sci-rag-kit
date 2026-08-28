@@ -40,7 +40,7 @@ console = Console()
 
 def init(
     target: Path = typer.Option(
-        Path("."), "--target", help="The checkout to specialize. Defaults to the current directory."
+        Path("."), "--target", help="The checkout to configure. Defaults to the current directory."
     ),
     defaults: bool = typer.Option(
         False, "--defaults", help="Take every default without asking. Useful in CI."
@@ -55,7 +55,7 @@ def init(
         False, "--dry-run", help="Show what would change without writing anything."
     ),
 ) -> None:
-    """Specialize this checkout for your own domain.
+    """Configure this checkout for your own field.
 
     Asks about your project, credentials, ontology, corpus, and stack, then
     rewrites the configuration files in place. Everything it writes is a file

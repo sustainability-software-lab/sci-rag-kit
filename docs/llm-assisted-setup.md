@@ -1,15 +1,36 @@
+---
+title: LLM-assisted setup
+description: Draft your ontology, corpus manifest, seed questions, and prompts with a model, or by copy-paste with no credentials at all.
+---
+
 # LLM-assisted setup
 
-Specializing the kit to your field means writing four files: the ontology in
+Pointing the kit at your field means writing four files: the ontology in
 `domain/domain.yaml`, the corpus manifest, the seed questions in
 `domain/eval_seed_questions.jsonl`, and the prompt wording in
 `domain/prompts/`. Written cold, that is an afternoon of typing before you can
 tell whether anything works.
 
 The `sci-rag draft` commands do the first pass for you, grounded in the
-documents you already have. What they produce is a draft, not ground truth,
-and the kit is built to keep that distinction visible rather than to let you
-forget it.
+documents you already have. What they produce is a draft, never ground truth,
+and the kit is built to keep that distinction visible so you cannot forget it.
+
+<div class="srag-meta-strip">
+  <div><strong>You'll build</strong>Four drafted domain files, ready to review</div>
+  <div><strong>You'll need</strong>Your documents on disk</div>
+  <div><strong>Time</strong>About 30 minutes, plus review</div>
+  <div><strong>Credentials</strong>Optional, there is a copy-paste path</div>
+  <div><strong>Tested with</strong>v0.3</div>
+</div>
+
+## Before you start
+
+| Requirement | Why | Check |
+|---|---|---|
+| Documents on disk, usually `data/raw/` | Every drafter reads them; none invents a field from its name | `ls data/raw` |
+| A database, for the corpus-grounded drafters | Ontology and question drafting sample real ingested passages | `uv run sci-rag doctor` |
+| A model credential, or an assistant you can paste into | `--print-prompt` and `--from-file` cover the second case completely | `grep SCI_RAG_GOOGLE .env` |
+| A domain expert who will read the output | The drafters mark their work provisional until a person signs it off | |
 
 ## Three lanes, one system
 
@@ -95,7 +116,7 @@ these documents actually talk about?
 
 === "Cold, from the description"
 
-    The wizard's behaviour, available on its own. Reads no documents at all.
+    The wizard's behavior, available on its own. Reads no documents at all.
 
     ```bash title="Terminal"
     uv run sci-rag draft ontology --cold
@@ -106,7 +127,7 @@ entities after `sci-rag graph extract` means the ontology and the corpus are
 talking past each other.
 
 Two things it will not do. The `retrieval:` and `compression:` blocks are tuned
-numbers an ablation earned rather than domain semantics, so they are carried over
+numbers an ablation earned, and not domain semantics, so they are carried over
 untouched. And a refinement that would leave no entity type at all is rejected: a
 model asking to remove everything is a bad refinement, not an instruction.
 
@@ -125,13 +146,13 @@ uv run sci-rag draft manifest --folder data/raw
 Each document's opening pages go through the same parsers ingestion uses, and the
 model reports title, authors, year, DOI, journal, and a source bucket. Buckets are
 chosen across the whole batch, so a sixty-document folder converges on a handful
-of shared sources rather than sixty.
+of shared sources, and not sixty.
 
 **`license_class` is never guessed.** Every drafted row is written `unknown`,
 which is the fail-closed default, and the command tells you how many documents
 need a rights decision. If the text contains an explicit license sentence, it is
 quoted into `license_source` as evidence for you, and only if it appears verbatim
-in the document; a sentence the model composed is dropped rather than recorded.
+in the document; a sentence the model composed is dropped.
 
 That is not caution for its own sake. `license_class` is the input to a scoping
 boundary that decides what a public endpoint may quote, and
@@ -144,12 +165,12 @@ counts, and retraction status from Crossref afterwards.
 
 A drafting run writes `<file>.proposed` and prints a summary. Reviewing that
 file and moving it into place is your step, not the tool's. `--apply` skips the
-proposal, and for seed questions it appends rather than replaces, so a question
+proposal, and for seed questions it appends, never replaces, so a question
 a human wrote is never displaced by one a model wrote.
 
 `--dry-run` shows you the whole result and writes nothing at all.
 
-## Drafted ground truth is labelled, everywhere
+## Drafted ground truth is labeled, everywhere
 
 `sci-rag draft questions` tags every row it writes `drafted`:
 
@@ -218,10 +239,10 @@ only when it appears verbatim in **both** the answer and a chunk that answer
 cited: a span only in the answer is the model's words, and a span only in the
 chunk is evidence the answer did not use. Every finished row is then run
 through the same relevance predicate the evaluation itself uses, and a row that
-would score zero against its own evidence is dropped with a reason rather than
+would score zero against its own evidence is dropped with a reason and not
 proposed.
 
-Two things get dropped rather than guessed at. A question whose answer cited
+Two things get dropped, and neither is guessed at. A question whose answer cited
 nothing has no evidence to propose, so it is reported for you to write by hand
 or tag `unanswerable`. So is a question whose answer paraphrased rather than
 quoted.
@@ -301,7 +322,22 @@ Prompt wording moves every downstream number. Re-run
 
 ## What is not drafted
 
-`domain/eval_calibration_labels.jsonl` stays hand-labelled. Those labels exist
-to calibrate the LLM judge against human judgement; generating them with an LLM
+`domain/eval_calibration_labels.jsonl` stays hand-labeled. Those labels exist
+to calibrate the LLM judge against human judgment; generating them with an LLM
 would be circular and would destroy the only measurement they provide. See
 [Evaluate your pipeline](evaluation.md).
+
+<div class="srag-checkpoint" markdown>
+**Checkpoint: the drafts are yours now**
+
+`uv run sci-rag doctor` reports domain coherence: ontology size, questions
+grounded against the ingested corpus, and how many rows still carry the
+`drafted` tag. Every one of those tags is a question nobody has vouched for
+yet, and the evaluation reports will keep saying so.
+</div>
+
+## Next steps
+
+- Work the drafts into a finished domain: [Bring your own domain](bring-your-own-domain.md)
+- Sign off on the seed questions and measure: [Evaluate your pipeline](evaluation.md)
+- See what a drafted manifest does and does not decide: [Evidence and rights](evidence-and-rights.md)

@@ -1,4 +1,11 @@
-# ADR 0001: The knowledge graph lives in Postgres, not a graph database
+---
+title: "ADR 0001: The graph lives in Postgres"
+description: Why entities, relationships, and communities are rows in the same database as the chunks, and what that costs.
+---
+
+# ADR 0001: The graph lives in Postgres
+
+Entities, relationships, and communities are rows in the same PostgreSQL database as the chunks they came from. There is no second database.
 
 **Status:** accepted
 
@@ -34,5 +41,14 @@ Postgres-native, no graph engine, for three reasons:
 * The seam is clean: the graph layer is one stage behind the retrieval
   facade. Swapping in a graph engine later means reimplementing one
   stage, not the kit.
-* Revisit if a corpus reaches millions of entities or the product needs
-  3+ hop traversal at query time.
+
+## Reversal conditions
+
+* A corpus reaches millions of entities, where a two-hop recursive query
+  over indexed foreign keys stops being comfortably fast.
+* The product needs traversal three or more hops deep at query time, or
+  needs centrality and path analytics as a live feature and not as an
+  export.
+
+Either one means reimplementing the graph stage behind the retrieval
+facade. It does not mean moving the chunks.

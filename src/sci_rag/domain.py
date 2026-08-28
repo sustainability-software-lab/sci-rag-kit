@@ -1,7 +1,7 @@
 """The domain profile: everything that makes YOUR corpus yours.
 
 The kit's code is domain-agnostic. All the domain semantics live in one
-directory (``domain/`` by default) that you edit when specializing:
+directory (``domain/`` by default) that you edit to point the kit at a field:
 
 * ``domain.yaml``: the ontology (entity and relationship types the graph
   extractor looks for), HyDE query classes, and retrieval tuning.
@@ -114,12 +114,11 @@ class CompressionTuning(BaseModel):
         ge=0.0,
         le=1.0,
         description=(
-            "Drop a model-scored chunk below this relevance score. Defaults to 0.0, "
-            "which drops nothing: summarizing a source is safe, discarding one is "
-            "not. A v0.3 floor sweep found groundedness and citation accuracy both "
-            "fall off their ceiling at 0.15 and above, because the answer loses "
-            "evidence it needs to ground itself in. Raise it only behind a paired "
-            "judged-answer run that still holds."
+            "Drop a model-scored chunk below this relevance score. The default 0.0 "
+            "drops nothing, because summarizing a source is safe and discarding one "
+            "is not: a v0.3 sweep found groundedness and citation accuracy both fall "
+            "off their ceiling at 0.15 and above. Raise it only behind a paired "
+            "judged-answer run that holds. See docs/evaluation.md."
         ),
     )
     max_tokens_per_chunk: int = Field(

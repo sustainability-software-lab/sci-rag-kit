@@ -1,3 +1,8 @@
+---
+title: Governance
+description: See who decides what, how a proposal becomes a decision, and what any reviewer is empowered to block.
+---
+
 # Governance
 
 Lightweight on purpose: a small project pretending to be the Apache

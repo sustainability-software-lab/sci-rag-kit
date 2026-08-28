@@ -1,6 +1,6 @@
 """`sci-rag-new`: start a project from a parent directory.
 
-The other half of the factory. `sci-rag init` specializes a checkout you
+The other half of the factory. `sci-rag init` configures a checkout you
 already have; this one runs where there is nothing yet, fetches the template
 at the tag matching its own version, and then applies the same answers through
 the same appliers.

@@ -28,3 +28,9 @@ Sci RAG Kit is alpha software with an explicit compatibility promise, an evidenc
 - **Named seams, not a plug-in framework.** Extend the few contracts that correspond to real variation, and keep everything else readable.
 
 Continue with the [decision records](adr/0001-graph-in-postgres.md), [changelog](changelog.md), or [contribution guide](contributing.md).
+
+Reading in order: [Roadmap](ROADMAP.md) for where this is going,
+[Versioning](VERSIONING.md) for what will not break under you, and the
+[decision records](adr/0001-graph-in-postgres.md) for why the shape is the shape.
+If you are here to contribute, start with [Contributing](contributing.md) and
+then [Documentation style](STYLE.md).

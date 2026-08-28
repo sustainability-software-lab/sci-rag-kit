@@ -1,4 +1,11 @@
-# ADR 0005: Citation edges live in their own table
+---
+title: "ADR 0005: Citation edges in their own table"
+description: Why a citation is not the kind of edge the knowledge graph stores, and where it goes instead.
+---
+
+# ADR 0005: Citation edges in their own table
+
+Citations between documents live in `document_citations`, their own table. The knowledge graph stays a graph of concepts.
 
 **Status:** accepted
 
@@ -42,7 +49,7 @@ reference to a paper nobody ingested is not a graph edge, it is a dangling
 pointer, and the corpus should not carry pointers it cannot resolve.
 
 Citation traversal joins the existing graph stage as an optional
-expansion rather than becoming a sixth retrieval layer. Two reasons. The
+expansion, and not a sixth retrieval layer. Two reasons. The
 fusion weights, the router, and the public trace contract all enumerate
 five layers. And a citation walk is a variant of "walk from here to
 related evidence", not a new kind of evidence.
@@ -60,3 +67,12 @@ related evidence", not a new kind of evidence.
   ingest, without re-fetching Crossref.
 * The knowledge graph stays a graph of concepts. That was the point of
   ADR 0001, and this keeps it true.
+
+## Reversal conditions
+
+* The domain ontology gains a document-level entity type for reasons of
+  its own, at which point a citation would be an ordinary edge between
+  two entities the ontology already declares.
+* Citation traversal needs to run in the same recursive query as concept
+  traversal, and the join across two tables becomes the bottleneck. Show
+  the query plan first.

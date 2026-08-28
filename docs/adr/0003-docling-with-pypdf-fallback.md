@@ -1,4 +1,11 @@
-# ADR 0003: Docling for PDFs, as an extra, with a pypdf fallback
+---
+title: "ADR 0003: Docling for PDFs, with a pypdf fallback"
+description: Why the best PDF parser is an optional extra and a smaller one is always available.
+---
+
+# ADR 0003: Docling for PDFs, with a pypdf fallback
+
+Docling is the recommended PDF parser and an optional extra. pypdf is always available, and both routes produce the same block model.
 
 **Status:** accepted
 
@@ -32,3 +39,12 @@ CI miserable if it were a hard dependency.
 * Docling API drift is contained to one function
   (`_parse_pdf_docling`), because everything after "export to Markdown"
   is ours.
+
+## Reversal conditions
+
+* Docling's install footprint drops far enough that carrying it by
+  default stops being a tax on everyone who never opens a PDF.
+* A lighter parser reaches Docling's table fidelity on scientific PDFs,
+  measured on real documents and not on a vendor's benchmark.
+* Docling's Markdown export changes shape often enough that containing
+  the drift in one function stops being containment.

@@ -53,14 +53,7 @@ $ sci-rag-new
 
 The same session is written out under [Example](#example), so you can read and copy it without JavaScript.
 
-Want to try the kit before starting anything? Clone it and run the demo. The bundled five-document corpus is synthetic, CC0, and small enough to run locally, and the offline embedder exercises ingestion, ranking, and retrieval evaluation without sending text to a model provider. No credentials.
-
-```console title="Terminal"
-$ git clone https://github.com/sustainability-software-lab/sci-rag-kit.git
-$ cd sci-rag-kit
-$ make setup
-$ SCI_RAG_EMBEDDING_PROVIDER=local-hash make demo
-```
+Want to look before you start anything? Clone the kit and run the demo instead. It ingests five synthetic CC0 documents, retrieves against them, and scores the result, all offline and with no credentials.
 
 [Quickstart](quickstart.md)
 
@@ -98,7 +91,7 @@ Evaluation
 
 <section class="srag-home-section" id="repository" markdown>
 
-## One repository, specialized
+## One repository, configured
 
 The generator configures; it does not template. `sci-rag-new` fetches this repository at a pinned tag and rewrites its configuration files in place. There are no placeholders to render, and nothing that only becomes real code after generation. The repository you can read is the application you run, before and after.
 
@@ -106,7 +99,7 @@ The generator configures; it does not template. `sci-rag-new` fetches this repos
 `pipx install sci-rag-kit`, the GitHub template button, and a plain clone all leave you with the same tree.
 <!-- END KIT ONBOARDING -->
 
-`domain/` is the specialization surface: ontology, prompts, retrieval tuning, and evaluation questions. The rest of the tree stays ordinary Python that you can inspect, test, and change.
+`domain/` is where your field lives: ontology, prompts, retrieval tuning, and evaluation questions. The rest of the tree stays ordinary Python that you can inspect, test, and change.
 
 <pre class="srag-home-tree" aria-label="Annotated repository tree"><code>your-sci-rag/
 ├── domain/           ontology, prompts, eval questions
@@ -133,7 +126,7 @@ The generator configures; it does not template. `sci-rag-new` fetches this repos
 
 [<span class="srag-row__title">Bring your own domain</span><span class="srag-row__copy">Define your ontology, prompts, source manifest, and questions without inventing a second framework.</span>](bring-your-own-domain.md){ .srag-row }
 
-[<span class="srag-row__title">Discover a corpus</span><span class="srag-row__copy">Discover DOI candidates, review fail-closed rights resolution, then download verified direct PDFs into an ingestible manifest.</span>](campaigns.md){ .srag-row }
+[<span class="srag-row__title">Run a corpus campaign</span><span class="srag-row__copy">Discover DOI candidates, review fail-closed rights resolution, then download verified direct PDFs into an ingestible manifest.</span>](campaigns.md){ .srag-row }
 
 [<span class="srag-row__title">Evaluate your pipeline</span><span class="srag-row__copy">Run layer ablations, compare reports, calibrate the judge, and keep the corpus fingerprint attached.</span>](evaluation.md){ .srag-row }
 

@@ -9,7 +9,7 @@ Current ontology:
 
 $EXISTING_ONTOLOGY
 
-Real passages from the collection, numbered and labelled with the document they
+Real passages from the collection, numbered and labeled with the document they
 came from:
 
 $PASSAGES

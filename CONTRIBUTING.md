@@ -4,9 +4,9 @@ Contributions are welcome! Thanks for helping us improve sci-rag-kit. These may 
 
 * **Improvements to the kit itself**: the pipeline, retrieval layers,
   evaluation harness, server, docs. Very welcome.
-* **Your domain specialization**: that belongs in **your** copy of the
+* **Your own domain profile**: that belongs in **your** copy of the
   template, not here. If you built something reusable while
-  specializing (a parser, a collector, an eval pattern), extract the
+  configuring yours (a parser, a collector, an eval pattern), extract the
   reusable part and bring that.
 
 ## Development setup

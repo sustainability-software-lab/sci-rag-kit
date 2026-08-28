@@ -682,7 +682,7 @@ def graph_resolve_entities(
     no_llm: bool = typer.Option(
         False,
         "--no-llm",
-        help="Skip borderline pairs instead of asking the configured LLM.",
+        help="Skip borderline pairs. Nothing is sent to a model.",
     ),
     threshold: float = typer.Option(
         0.92,

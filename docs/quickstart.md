@@ -8,11 +8,11 @@ description: Set up Sci RAG Kit, ingest the synthetic demo corpus, inspect retri
 Set up a served, agent-accessible knowledge base over the bundled demo corpus. You will see the evidence returned by each retrieval stage before you add your own literature.
 
 <div class="srag-meta-strip">
-  <div><strong>Level</strong>Beginner</div>
+  <div><strong>You'll build</strong>A served knowledge base over the demo corpus</div>
+  <div><strong>You'll need</strong>Python, uv, and Docker</div>
   <div><strong>Time</strong>About 10 minutes</div>
-  <div><strong>Services</strong>Docker + Postgres</div>
   <div><strong>Credentials</strong>Optional</div>
-  <div><strong>Tested with</strong>v0.2</div>
+  <div><strong>Tested with</strong>v0.3</div>
 </div>
 
 Every command runs from the repository root.
@@ -26,7 +26,7 @@ Every command runs from the repository root.
 | Docker | Local Postgres with pgvector | `docker version` |
 | Google credential, optional | Real semantic embeddings, graph extraction, and answers | AI Studio key or Vertex ADC |
 
-No Docker? There are two ways past it, and which one applies depends on your environment manager. See [without Docker](#without-docker) in step 3.
+No Docker? [Run Postgres your way](run-postgres.md) has the two paths that do not need it. Step 3 says which one is yours.
 
 ## 1. Get the repository
 
@@ -39,14 +39,14 @@ $ sci-rag-new
 
 Every question has a default, so you can press Enter through the whole session and still get a project that runs. Steps 2 and 3 below are the questions it asked; read them to understand what it wrote, then skip to step 4.
 
-Evaluating the kit rather than starting a project? Clone it:
+Just evaluating the kit? Clone it:
 
 ```console title="Terminal"
 $ git clone https://github.com/sustainability-software-lab/sci-rag-kit.git
 $ cd sci-rag-kit
 ```
 
-Clicking **Use this template** on GitHub also works. Inside a checkout you already have, `sci-rag init` runs the same wizard. The included dev container is another supported path. In GitHub Codespaces it installs the project and starts Postgres, so continue with configuration.
+Three other routes end up in the same place, if one of them fits better: GitHub's **Use this template** button, `sci-rag init` inside a checkout you already have, or the included dev container. Opened in GitHub Codespaces, the dev container installs the project and starts Postgres for you, so skip ahead to step 2.
 
 ## 2. Choose a credential mode
 
@@ -56,19 +56,19 @@ Create the local environment file:
 $ cp .env.example .env
 ```
 
-Choose exactly one mode.
+Pick exactly one. **Start with AI Studio** unless your organization already runs on Google Cloud, in which case use Vertex. Offline mode is for machines that cannot reach a model at all, and it costs you the graph and every generated answer.
 
-### AI Studio: fastest real model
+### AI Studio: start here
 
-Create an API key at [Google AI Studio](https://aistudio.google.com/apikey), then set:
+One key, no cloud project, real embeddings and real answers. Create an API key at [Google AI Studio](https://aistudio.google.com/apikey), then set:
 
 ```dotenv title="~/.env"
 SCI_RAG_GOOGLE_API_KEY=your-key-here
 ```
 
-### Vertex AI: labs & Google Cloud
+### Vertex AI: if your lab is already on Google Cloud
 
-Authenticate Application Default Credentials once, then set the project:
+Same models, billed through your existing project, no key to hand around. Authenticate Application Default Credentials once, then set the project:
 
 ```console
 $ gcloud auth application-default login
@@ -78,7 +78,7 @@ $ gcloud auth application-default login
 SCI_RAG_GCP_PROJECT=your-project-id
 ```
 
-### Offline: no credentials
+### Offline: when no model is reachable
 
 Use the deterministic local embedder:
 
@@ -86,39 +86,15 @@ Use the deterministic local embedder:
 SCI_RAG_EMBEDDING_PROVIDER=local-hash
 ```
 
-This mode exercises parsing, chunking, storage, ranking, and retrieval evaluation without network calls. Its similarity is lexical rather than semantic. Graph extraction, HyDE, community summaries, generated answers, and model-based judging remain unavailable until you add a model credential.
+This mode exercises parsing, chunking, storage, ranking, and retrieval evaluation without network calls. Its similarity is lexical, which is a real quality difference. Graph extraction, HyDE, community summaries, generated answers, and model-based judging remain unavailable until you add a model credential.
 
-## 3. Install & initialize
+## 3. Install the project and create the schema
 
-With Docker:
-
-```console
+```console title="Terminal"
 $ make setup
 ```
 
-The target runs `uv sync`, starts the compose Postgres on host port `5433`, and applies every Alembic migration.
-
-### Without Docker
-
-**With pixi or conda**, the server comes from conda-forge along with everything else, so there is nothing extra to install. Those two managers put `postgresql` and `pgvector` in the project manifest, and `make setup` starts that server instead of a container:
-
-```console
-$ make setup
-$ make db-down    # stops it again
-```
-
-The data lives in `.pgdata/` inside the project, and the server listens on `127.0.0.1:5433`, which is the address `.env.example` already carries. Nothing to configure and no connection string to edit.
-
-This path is not available to **uv or venv+pip** projects. PyPI has no PostgreSQL server, so those two need either Docker or a Postgres you already run.
-
-**With an external PostgreSQL service**, any supported server works. Point `SCI_RAG_DATABASE_URL` at it, make sure the pgvector extension is available, then run the two non-Docker steps directly:
-
-```console
-$ uv sync
-$ uv run sci-rag db upgrade
-```
-
-Supported servers are **PostgreSQL 16 through 18**. CI proves 16 through the container image on every change and 18 through the conda-forge path, so both ends of that range are tested rather than assumed. [ADR 0008](adr/0008-supported-postgresql-versions.md) records why the range exists.
+That installs dependencies, starts the compose Postgres on host port `5433`, and applies every migration.
 
 **Expected output**
 
@@ -126,13 +102,15 @@ Supported servers are **PostgreSQL 16 through 18**. CI proves 16 through the con
 Database schema is up to date.
 ```
 
+No Docker? Supported servers are **PostgreSQL 16 through 18**, and there are two other ways to get one. pixi and conda projects run theirs from conda-forge with the same `make setup`; uv and venv projects point at a server you already have. [Run Postgres your way](run-postgres.md) has both.
+
 <div class="srag-checkpoint" markdown>
 **Checkpoint: the foundation is healthy**
 
 Run `uv run sci-rag doctor`. Configuration, domain, database, and schema should report healthy. An empty corpus or missing optional credential can still be informational at this point.
 </div>
 
-## 4. Ingest & inspect the demo
+## 4. Ingest the demo corpus and inspect what came back
 
 ```console
 $ make demo
@@ -167,11 +145,11 @@ With a Google credential:
 $ uv run sci-rag answer "How much rice straw was generated in the Colusa Basin in 2023?"
 ```
 
-The demo answer is approximately 302,000 dry tons and cites the synthetic resource assessment. Check the cited passage rather than treating the number alone as success.
+The demo answer is approximately 302,000 dry tons and cites the synthetic resource assessment. Check the cited passage. The number alone is not success.
 
 In offline mode this command reports that no LLM is configured. That refusal is expected: the system does not fabricate an answer when generation is unavailable.
 
-## 6. Build the graph & deep path
+## 6. Build the graph and run the deep path
 
 With a Google credential:
 
@@ -187,7 +165,7 @@ The target extracts ontology-constrained entities and relationships, builds comm
 Open the newest retrieval report. It should identify the corpus fingerprint, models, profile, enabled layers, metrics, confidence intervals, and per-question records. Do not enable an expensive layer in your own profile merely because it worked on this fixture.
 </div>
 
-## 7. Serve humans & agents
+## 7. Serve it to humans and agents
 
 ```console
 $ uv run sci-rag serve
@@ -213,21 +191,18 @@ For a local agent over stdio:
 $ claude mcp add demo-corpus -- uv run --directory "$(pwd)" sci-rag mcp
 ```
 
-Ask the agent to use `demo-corpus` for a question. You should see a `search_corpus` or `answer_question` tool call rather than an answer from the agent's unaided memory.
+Ask the agent to use `demo-corpus` for a question. You should see a `search_corpus` or `answer_question` tool call. An answer from the agent's own memory means the tool never fired.
 
-## What you built
+<div class="srag-checkpoint" markdown>
+**Checkpoint: one database, two front doors**
 
-You now have one Postgres database containing source records, structure-aware chunks, dense vectors, full-text search, and, if enabled, a concept graph and community summaries. One service exposes the same retrieval and answer behavior to CLI users, REST clients, and MCP agents. The evaluation artifacts record what that system did on known questions.
+You have one Postgres database holding source records, structure-aware chunks, dense vectors, full-text search, and, if you ran step 6, a concept graph and community summaries. One service serves the same retrieval and answer behavior to the CLI, to REST clients, and to MCP agents, and the reports under `eval_results/` record what it did on known questions.
+</div>
 
-## Continue
+## Next steps
 
-Ready to replace the fixture with your own field? Start with
-[LLM-assisted setup](llm-assisted-setup.md) to draft the domain files from
-your documents. Its copy-paste workflow needs no model credentials.
+**Replace the fixture with your own field.** That is what the kit is for, and the shortest route is [LLM-assisted setup](llm-assisted-setup.md), which drafts the domain files from your own documents. Its copy-paste workflow needs no model credentials. [Bring your own domain](bring-your-own-domain.md) is the same work laid out end to end.
 
-- Replace the fixture with your field: [Bring your own domain](bring-your-own-domain.md)
+- Something did not match this page: [Troubleshooting](troubleshooting.md)
 - Follow ownership through the code: [Architecture](architecture.md)
-- Understand provenance and license scope: [Evidence and rights](evidence-and-rights.md)
-- Diagnose a mismatch: [Troubleshooting](troubleshooting.md)
-- Enrich DOI metadata and review known retractions: [Operations](operations.md#crossref-enrichment-and-retraction-review)
-- Deploy the service: [Google Cloud guide](deploy-gcp.md)
+- Put the service somewhere other people can reach: [Deploy on Google Cloud](deploy-gcp.md)

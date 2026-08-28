@@ -1,11 +1,32 @@
-# The evaluation guide
+---
+title: Evaluate your pipeline
+description: Run retrieval ablations and judged-answer evaluation, compare two reports, and calibrate the judge against human labels.
+---
 
-The harness is built to make results hard to game, including by accident.
-Three things do that work: mechanical retrieval metrics against expert
-ground truth, per-layer ablations that show what each component
-contributes, and a judge whose prompts structurally separate grounding
-from correctness. This page covers how to use it and why it is shaped
-this way.
+# Evaluate your pipeline
+
+By the end of this page you can say, with evidence, whether a change to your
+pipeline helped. The harness is built to make that hard to fake, including by
+accident: mechanical retrieval metrics against expert ground truth, per-layer
+ablations showing what each component contributes, and a judge whose prompts
+structurally separate grounding from correctness.
+
+<div class="srag-meta-strip">
+  <div><strong>You'll build</strong>A reproducible before-and-after on your own corpus</div>
+  <div><strong>You'll need</strong>An ingested corpus and seed questions</div>
+  <div><strong>Time</strong>About 20 minutes for the first run</div>
+  <div><strong>Credentials</strong>Required for judged answers</div>
+  <div><strong>Tested with</strong>v0.3</div>
+</div>
+
+## Before you start
+
+| Requirement | Why | Check |
+|---|---|---|
+| An ingested corpus | Every metric is computed against real chunks | `uv run sci-rag stats` |
+| `domain/eval_seed_questions.jsonl`, reviewed | This file is the ground truth. Drafted rows still tagged `drafted` make every number provisional | `uv run sci-rag doctor` |
+| A model credential | Retrieval metrics run offline; judged answers do not | `grep SCI_RAG_GOOGLE .env` |
+| A corpus snapshot, for anything you will cite | A number without a corpus identity is not reproducible | `uv run sci-rag corpus snapshot` |
 
 ## The two commands
 
@@ -127,6 +148,15 @@ unchanged corpus from being mislabeled. Read every layer-ablation row against
 * Small corpora saturate: with five demo documents, most configs hit
   1.00 and only the differences matter. Expect real spread as the corpus
   grows.
+
+<div class="srag-checkpoint" markdown>
+**Checkpoint: you can name what each layer is worth**
+
+Point at one row of the ablation table and say what removing that layer cost
+you on your corpus. If every row equals `full_deep`, the ablation is telling
+you the corpus is too small or the ontology is not matching, and no weight you
+change from here will be measurable.
+</div>
 
 ## The judge, and why it is blind
 
@@ -288,5 +318,19 @@ thresholds under your current numbers, and let regressions fail loudly.
 4. Keep the change only if the numbers (and your reading of the judged
    answers) agree it helped.
 
-When two people disagree about whether a change helped, the reports
-settle it.
+When two people disagree about whether a change helped, the reports settle it.
+
+<div class="srag-checkpoint" markdown>
+**Checkpoint: the numbers are citable**
+
+Your newest report names a corpus snapshot, a git commit, the answering and
+grading models, and the enabled layers, and no question in it still carries the
+`drafted` tag. A number missing any of those is a number you cannot put in a
+methods section.
+</div>
+
+## Next steps
+
+- Turn a measured improvement into a shipped default: [Methodology](methodology.md)
+- See what the same harness produced on the demo corpus: [Benchmarks](benchmarks.md)
+- Add a retrieval stage the ablation can measure: [Extend the seams](extend.md)

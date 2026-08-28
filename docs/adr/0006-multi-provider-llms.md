@@ -1,4 +1,11 @@
-# ADR 0006: Hand-written provider adapters, and embeddings that stay Google-only
+---
+title: "ADR 0006: Hand-written provider adapters"
+description: Why each generation provider gets its own adapter, and why embeddings stay Google-only.
+---
+
+# ADR 0006: Hand-written provider adapters
+
+Each generation provider gets a hand-written adapter, selected per role. Embeddings stay Google-only, because changing them is a data migration.
 
 **Status:** accepted
 
@@ -39,12 +46,12 @@ Claude equivalent is `output_config={"effort": "low"}`. That is a different
 knob with different semantics, *not* a translation of the same one. Disabling
 thinking on current Claude models can leak reasoning tags into the JSON these
 call sites parse. Those models also removed the sampling parameters outright,
-so the adapter drops `temperature` rather than forwarding it. Reaching all of
+so the adapter drops `temperature` entirely. Reaching all of
 that through a normalizing layer is harder than writing the hundred lines
 directly, and writing them keeps the supported set visible in one file, which
 is the same trade-off `get_embedder()` already makes.
 
-`openai-compatible` is the third adapter rather than a dedicated OpenAI one
+`openai-compatible` is the third adapter, and not a dedicated OpenAI one
 because Vertex serves its non-Google partner models behind an
 OpenAI-compatible endpoint instead of native APIs. One adapter therefore
 covers Grok, Llama, Mistral, DeepSeek, every future partner model on that
@@ -64,7 +71,7 @@ configuration change for what is really a data migration.
 * Roles resolve independently, so a run can extract with cheap Gemini Flash,
   answer with Claude, and judge with a third provider. Cross-provider judging
   is now a config change, and reports name the answering and grading models so
-  the choice is auditable rather than merely available.
+  the choice is auditable and not merely available.
 * Adding a fourth provider means writing an adapter, not registering a plugin.
   The capability table in [extend.md](../extend.md) is the checklist; the
   `temperature` and effort rows are where a new adapter is most likely to get
@@ -72,8 +79,18 @@ configuration change for what is really a data migration.
 * The SDKs are optional extras (`--extra anthropic`, `--extra openai`) that
   the kit imports lazily, so an offline or Google-only install carries neither.
 * `retry_async()` holds the one retry policy, and the kit builds the provider
-  SDKs with `max_retries=0`, so there is one backoff to reason about instead of
+  SDKs with `max_retries=0`, so there is one backoff to reason about and not
   three that compound.
 * Bring-your-own-key stays meaningful per provider. It has no meaning against
   Vertex, which authenticates with the operator's Google credentials, so that
-  combination raises rather than silently ignoring the caller's key.
+  combination raises, and never silently ignores the caller's key.
+
+## Reversal conditions
+
+* The provider SDKs converge far enough that the differences this
+  decision exists to preserve, JSON-mode thinking budgets and sampling
+  parameters among them, stop being real.
+* A translation layer starts shipping those knobs faithfully and stops
+  smoothing them into a lowest common denominator.
+* A managed non-Google text-embedding API arrives on Vertex, which is
+  what makes the embedding half of this decision worth revisiting.

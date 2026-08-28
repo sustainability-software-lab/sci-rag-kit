@@ -5,14 +5,23 @@ description: Learn which Sci RAG Kit files define your scientific domain, which 
 
 # Tour the repository
 
-Sci RAG Kit is a working GitHub template repository, not a Cookiecutter or Copier generator. Your copy contains the application, its domain profile, its tests, and its operations code in one place.
+By the end of this page you can point at the file that owns each part of the system: your science, your documents, the pipeline, and what runs in production. Sci RAG Kit is a working GitHub template repository, so your copy holds the application, its domain profile, its tests, and its operations code in one place.
 
 <div class="srag-meta-strip">
-  <div><strong>Page type</strong>Orientation</div>
-  <div><strong>Time</strong>10 minutes</div>
-  <div><strong>Prerequisites</strong>None</div>
-  <div><strong>Tested with</strong>v0.2</div>
+  <div><strong>You'll build</strong>A map of what you own and what you run</div>
+  <div><strong>You'll need</strong>A checkout, open in an editor</div>
+  <div><strong>Time</strong>About 10 minutes</div>
+  <div><strong>Tested with</strong>v0.3</div>
 </div>
+
+## Before you start
+
+| Requirement | Why | Check |
+|---|---|---|
+| A checkout of the kit, or a generated project | Every path below is one you can open | `ls domain src/sci_rag` |
+| Nothing else | No database, no credentials, no install | |
+
+Reading is enough. Nothing on this page changes a file.
 
 ## Three contexts, one repository
 
@@ -21,7 +30,7 @@ Use these terms consistently when reading the docs:
 | Context | What it means | Typical action |
 |---|---|---|
 | **Upstream template** | The Sustainability Software Lab repository before you create your copy | Evaluate the method, read changes, pull improvements |
-| **Your repository** | The copy your team owns and specializes | Edit `domain/`, add corpus manifests, run tests, deploy |
+| **Your repository** | The copy your team owns and configures | Edit `domain/`, add corpus manifests, run tests, deploy |
 | **Runtime system** | The Postgres database and Sci-RAG service created from your repository | Ingest, retrieve, answer, evaluate, serve REST and MCP |
 
 There is no separate generated project tree. Clicking **Use this template** copies the live tree; `scripts/init_domain.py` then changes project-facing names and resets the domain seed material in that copy.
@@ -60,7 +69,7 @@ There is no separate generated project tree. Clicking **Use this template** copi
 
 Entries marked optional are the ones the setup wizard asks about. Answer no to `include_terraform` or `include_demo_corpus` and they are not in your project, and neither the `Makefile` nor CI mentions them.
 
-## The specialization surface
+## What you change
 
 Most teams begin with four changes:
 
@@ -94,4 +103,8 @@ The [Bring your own domain](bring-your-own-domain.md) guide works through those 
 You should now be able to point to the file that owns each of these four things. Scientific vocabulary lives in `domain/domain.yaml`, source rights in the manifest JSONL, runtime defaults in `src/sci_rag/config.py` or `.env`, and measured quality in `domain/eval_seed_questions.jsonl` plus `eval_results/`.
 </div>
 
-Next, [run the quickstart](quickstart.md) or [specialize the demo domain](bring-your-own-domain.md).
+## Next steps
+
+- Put a running database behind the map: [Quickstart](quickstart.md)
+- Replace the demo profile with your field: [Bring your own domain](bring-your-own-domain.md)
+- See why the tree is shaped this way: [Architecture](architecture.md)

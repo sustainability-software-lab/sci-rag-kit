@@ -3,7 +3,7 @@ title: How to cite
 description: Cite the Sci RAG Kit software today and understand the archival DOI boundary for future releases.
 ---
 
-# How to cite Sci RAG Kit
+# How to cite
 
 Sci RAG Kit does not currently publish an archival DOI or a `CITATION.cff`. Minting a Zenodo DOI is a maintainer-owned launch decision recorded in the [roadmap](ROADMAP.md#launch-gated-decisions-owner-maintainer-not-automation). Do not cite a placeholder as if an archive exists.
 

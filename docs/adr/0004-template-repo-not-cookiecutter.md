@@ -1,4 +1,11 @@
-# ADR 0004: A runnable GitHub template repo, not a cookiecutter
+---
+title: "ADR 0004: A runnable template, not a cookiecutter"
+description: Why this repository is the application you run, and not a tree of placeholders that becomes one.
+---
+
+# ADR 0004: A runnable template, not a cookiecutter
+
+This repository is the application you run. It is a GitHub template you copy and configure, and it contains no placeholders waiting to be rendered.
 
 **Status:** accepted
 
@@ -15,7 +22,7 @@ are only found by generating.
 
 sci-rag-kit is a **GitHub template repository that is itself a working
 application**: real code, a real demo corpus, green CI, "Use this
-template" to copy it. You specialize it by editing data and
+template" to copy it. You configure it by editing data and
 configuration, meaning the `domain/` folder, the corpus manifest, and
 `.env`, rather than by renaming Python packages. A small
 `scripts/init_domain.py` handles the cosmetic rebranding: project name,
@@ -35,5 +42,12 @@ improvements from it.
   choice and layout variants. That is acceptable: this template has
   opinions, and disagreeing with one costs you a normal code change in
   your own copy.
-* A cookiecutter wrapper could be generated mechanically later if a
-  downstream community wants one; nothing in this decision blocks it.
+
+## Reversal conditions
+
+* Enough of the tree needs per-project parameterization that configuring
+  files in place stops being expressible, and a real placeholder syntax
+  becomes the smaller cost.
+* A downstream community needs a cookiecutter wrapper. That can be
+  generated mechanically from this repository, so it is an addition and
+  not a reversal.

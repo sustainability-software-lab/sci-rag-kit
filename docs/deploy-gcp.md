@@ -1,8 +1,21 @@
-# Deploying on Google Cloud
+---
+title: Deploy on Google Cloud
+description: Provision Cloud SQL and Cloud Run from the included Terraform, then verify the running service end to end.
+---
 
-Stand up a production-shaped instance on Cloud Run and Cloud SQL with the
-Terraform module the kit ships, then hand the same service to REST and MCP
-clients.
+# Deploy on Google Cloud
+
+By the end of this guide the same service you have been running locally is on
+Cloud Run, backed by Cloud SQL with pgvector, reachable by REST and MCP
+clients, and destroyable in one command.
+
+<div class="srag-meta-strip">
+  <div><strong>You'll build</strong>One Cloud Run service and one Cloud SQL instance</div>
+  <div><strong>You'll need</strong>A Google Cloud project and billing enabled</div>
+  <div><strong>Time</strong>About 45 minutes, most of it waiting</div>
+  <div><strong>Cost</strong>Tens of dollars a month while it is up</div>
+  <div><strong>Tested with</strong>v0.3</div>
+</div>
 
 !!! note "Optional, and you may have declined it"
 
@@ -25,7 +38,7 @@ tier runs a few tens of dollars a month, so tear down experiments with
 console. The Terraform is 300 readable lines, and reading it **is** the
 architecture documentation.
 
-## Prerequisites
+## Before you start
 
 * A Google Cloud project with billing, and `gcloud` authenticated
   (`gcloud auth login` plus `gcloud auth application-default login`).
@@ -127,3 +140,18 @@ Remote agents connect to `$URL/mcp/` with the same bearer key.
 * **Teardown**: `terraform destroy` (the database has deletion
   protection on by default; flip `-var deletion_protection=false`
   first when you really mean it).
+
+<div class="srag-checkpoint" markdown>
+**Checkpoint: the deployed service answers**
+
+A `POST /v1/query` against the Cloud Run URL returns scoped results with
+citations, `/v1/corpus-manifest` lists the documents you ingested, and
+`terraform destroy` is a command you have read and understood before you need
+it.
+</div>
+
+## Next steps
+
+- Lock down what an external caller can reach: [Evidence and rights](evidence-and-rights.md)
+- Back up the Cloud SQL instance before the first migration: [Operate a live corpus](operations.md)
+- Wire a client to the deployed endpoints: [REST, MCP, and Python API](api.md)

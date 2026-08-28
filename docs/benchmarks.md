@@ -1,11 +1,16 @@
+---
+title: Benchmarks
+description: Measured results on the shipped demo corpus, with confidence intervals, snapshot provenance, model identifiers, and the command that reproduces them.
+---
+
 # Benchmarks
 
-Measured results on the shipped demo corpus, regenerated with one
-command. This page exists to prove the evaluation harness end to
-end and to publish honest numbers for THIS template on ITS demo
-corpus; it makes no state-of-the-art claim and does not compare
-against other systems (see docs/choosing-sci-rag-kit.md for the
-honest comparison on axes other than benchmark scores).
+Measured results on the shipped demo corpus, regenerated with one command.
+This page proves the evaluation harness end to end and publishes honest
+numbers for this template on its own demo corpus. It makes no
+state-of-the-art claim and compares against no other system; see
+[Choosing Sci RAG Kit](choosing-sci-rag-kit.md) for that comparison, on
+axes other than benchmark scores.
 
 ## What was measured
 
@@ -21,7 +26,7 @@ Cells are mean [95% bootstrap CI], resampled per question. The
 demo corpus has single-digit questions, so intervals are wide by
 construction: treat differences whose intervals overlap heavily as
 noise, and read the table for the qualitative story (which layers
-earn their keep) rather than decimal places. On a small sample
+earn their keep), and not decimal places. On a small sample
 like this, that qualitative story is the only defensible claim.
 
 | Config | hit@5 | hit@10 | MRR | nDCG@10 | n |
@@ -40,14 +45,14 @@ like this, that qualitative story is the only defensible claim.
 | auto_routed | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.88, 0.98] | 9 |
 | no_retracted | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.92 [0.86, 0.97] | 9 |
 
-`resolved_entities` is absent, and that is a result rather than an
+`resolved_entities` is absent, and that is a result and not an
 omission. It is a separate condition (`sci-rag eval retrieval
 --condition resolved_entities`) measured on a post-resolution
 snapshot, and it requires at least one persisted resolution audit
 row. On this corpus `sci-rag graph resolve-entities` finds no
 automatic pairs and plans no merges: 67 extracted entities with
 nothing duplicated enough to merge. The command refuses to run the
-condition rather than report a number that would just be
+condition, and reports no number that would just be
 `full_deep` under another name. A corpus with real alias variation
 is what would exercise it.
 
@@ -85,7 +90,7 @@ token saving on its own is not evidence; it is half of a trade.
 
 Measured at `relevance_floor: 0.0`, which is the load-bearing
 setting rather than a detail. The floor decides whether a source is
-dropped instead of summarized, and dropping evidence is what an
+dropped or summarized, and dropping evidence is what an
 answer cannot recover from. Raising it trades groundedness for
 tokens; that is a different trade from summarizing, and it needs its
 own paired run.

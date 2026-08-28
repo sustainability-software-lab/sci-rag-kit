@@ -1,8 +1,13 @@
+---
+title: Architecture
+description: Follow ownership through the packages, the storage layer, the concurrency model, the two front doors, and the five extension seams.
+---
+
 # Architecture
 
 How the code fits together, what talks to what, and where the seams are.
 For the reasoning behind the retrieval design itself, read
-[methodology.md](methodology.md) first; this page is about the software.
+[Methodology](methodology.md) first; this page is about the software.
 
 ## The map
 
@@ -74,7 +79,7 @@ visible failure count. The shipped demo enables compression at
 `relevance_floor: 0.0`, which summarizes every source and drops none: that is the
 setting where its paired judged-answer gate holds, and the numbers are on the
 [benchmarks page](benchmarks.md). A higher floor discards sources and the gate
-stops holding, so a specialized domain runs that gate before changing either
+stops holding, so your own domain profile runs that gate before changing either
 value. Compression has no authority to create citation targets.
 
 ## Retrieval flow

@@ -1,4 +1,11 @@
-# ADR 0008: PostgreSQL 16 through 18, and a Docker-free path for the managers that have one
+---
+title: "ADR 0008: PostgreSQL 16 through 18"
+description: Why the supported server range spans three majors, and what tests each end of it.
+---
+
+# ADR 0008: PostgreSQL 16 through 18
+
+Sci RAG Kit supports PostgreSQL 16 through 18, and both ends of that range are tested on every change.
 
 **Status:** accepted
 
@@ -61,7 +68,7 @@ Support **PostgreSQL 16 through 18**, and test both ends.
   editing a connection string.
 * `docker-free-postgres.yml` runs the integration and server suites
   against a conda-forge server on linux-64 and osx-arm64, and fails if
-  the suite skips rather than runs. Between it and `ci.yml`, 16 and 18
+  the suite skips. Between that job and `ci.yml`, 16 and 18
   are both proven on every release.
 * uv and venv+pip get none of this and keep Docker. PyPI ships no
   PostgreSQL server, and a manager that cannot take the path must not
@@ -76,7 +83,7 @@ with no container runtime and no second tool. That is the audience that
 asked for those managers in the first place.
 
 The cost is that two server majors are now in play. A change that depends
-on version-specific behaviour will pass on one and fail on the other, and
+on version-specific behavior will pass on one and fail on the other, and
 the Docker-free job is what surfaces it. That job is not in the required
 set for `main`, so a failure there is visible but not blocking; promoting
 it is a repository settings change, not a code one.
@@ -91,14 +98,14 @@ PostgreSQL 15 will very likely keep running the schema, and the quickstart
 said so before this ADR, but nothing exercises it, so the floor is now the
 version CI proves.
 
-## Revisit if
+## Reversal conditions
 
 * conda-forge builds pgvector against more than one server major at a
   time. The bound exists only because it cannot today; if that changes,
   aligning the Docker-free path with compose becomes free.
 * Anything in the schema, the queries, or the migrations starts depending
-  on a version-specific behaviour. At that point the range is a liability
-  rather than a convenience, and the project should pick one major and
+  on a version-specific behavior. At that point the range is a liability
+  and no longer a convenience, so the project should pick one major and
   supply a migration path.
 * PostgreSQL 19 lands and conda-forge follows. Extending the bound needs
   a green Docker-free run on the new major, not just an edited number.
