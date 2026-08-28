@@ -5,14 +5,30 @@ description: Replace the demo ontology, prompts, corpus manifest, and seed quest
 
 # Bring your own domain
 
-This tutorial covers pointing the kit at your own field. Budget an
-afternoon for a first serious pass. Nothing here requires editing
-Python; the domain is defined by the `domain/` folder, a corpus
-manifest, and environment variables.
+By the end of this tutorial your own literature is in the database, your
+own concepts are in the graph, and your own questions are scoring the
+result. None of it requires editing Python. The domain is a folder, a
+corpus manifest, and a few environment variables.
 
-Worked example throughout: suppose you study membrane materials for
-water treatment, and you have 60 PDFs of papers, theses, and technical
-reports.
+<div class="srag-meta-strip">
+  <div><strong>You'll build</strong>A knowledge base over your own corpus</div>
+  <div><strong>You'll need</strong>Documents on disk and a working quickstart</div>
+  <div><strong>Time</strong>An afternoon for a first serious pass</div>
+  <div><strong>Credentials</strong>Recommended, and there is a path without them</div>
+  <div><strong>Tested with</strong>v0.3</div>
+</div>
+
+Worked example throughout: you study membrane materials for water
+treatment, and you have 60 PDFs of papers, theses, and technical reports.
+
+## Before you start
+
+| Requirement | Why | Check |
+|---|---|---|
+| A finished [quickstart](quickstart.md) | The database and schema have to exist before anything here lands in them | `uv run sci-rag doctor` |
+| Your documents on disk, usually under `data/raw/` | Every step below reads them | `ls data/raw \| wc -l` |
+| A model credential | The drafters and the graph extractor call a model. Without one, use `--print-prompt` and `--from-file` throughout | `grep SCI_RAG_GOOGLE .env` |
+| A domain expert's attention, for one hour | Step 6 needs questions somebody can vouch for, and nothing substitutes | |
 
 If you got here from `sci-rag-new`, the wizard already asked you most of
 this. Every answer landed in a file you can keep editing. Nothing here is
@@ -72,7 +88,7 @@ learned the hard way:
   thousand. Start with 20 to 50 good ones; you will learn more from a
   curated small corpus plus the evaluation harness than from a dump.
 
-## Step 2: the corpus manifest
+## Step 2: write the corpus manifest
 
 A manifest is one JSON line per document, and it is where licensing and
 citations come from. It lives at `data/corpus.jsonl`.
@@ -267,7 +283,7 @@ Sanity checks along the way:
   the corpus are talking past each other (types too abstract, or
   documents too thin); thousands means the types are too loose.
 
-## Step 6: seed questions, then measure
+## Step 6: write seed questions, then measure
 
 `domain/eval_seed_questions.jsonl` needs 10 to 20 questions a domain expert can
 vouch for. This is the biggest manual step in the tutorial, and the one where
@@ -334,8 +350,15 @@ and `unknown` documents stay internal. The
 
 ## The improvement loop
 
-Corpus and ontology changes are cheap; the eval reports are the
-evidence that a change helped. A workable rhythm: add or fix a handful
-of documents, re-run ingest and graph, re-run the two eval commands,
-read the diffs. When a real user asks a question the system misses,
-add it as a seed question first, then fix the miss.
+Corpus and ontology changes are cheap, and the eval reports are what tell
+you a change helped. A rhythm that works: add or fix a handful of
+documents, re-run ingest and graph, re-run the two eval commands, read the
+diffs. When a real user asks a question the system misses, add it as a seed
+question first, then go fix the miss.
+
+## Next steps
+
+- Get more out of the drafters, including the no-credentials workflow: [LLM-assisted setup](llm-assisted-setup.md)
+- Read the ablation table properly before you touch a retrieval weight: [Evaluate your pipeline](evaluation.md)
+- Grow the corpus from a topic or a DOI list: [Run a corpus campaign](campaigns.md)
+- Put the service somewhere your group can reach it: [Deploy on Google Cloud](deploy-gcp.md)

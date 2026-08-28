@@ -1,5 +1,5 @@
 ---
-title: ADR 0002: 1536-dimensional embeddings
+title: "ADR 0002: 1536-dimensional embeddings"
 description: Why vectors are truncated to 1536 dimensions, and what would happen to query latency without it.
 ---
 

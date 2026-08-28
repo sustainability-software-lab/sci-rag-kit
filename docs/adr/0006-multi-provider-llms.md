@@ -1,5 +1,5 @@
 ---
-title: ADR 0006: Hand-written provider adapters
+title: "ADR 0006: Hand-written provider adapters"
 description: Why each generation provider gets its own adapter, and why embeddings stay Google-only.
 ---
 

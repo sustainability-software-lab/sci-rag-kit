@@ -1,11 +1,16 @@
+---
+title: Benchmarks
+description: Measured results on the shipped demo corpus, with confidence intervals, snapshot provenance, model identifiers, and the command that reproduces them.
+---
+
 # Benchmarks
 
-Measured results on the shipped demo corpus, regenerated with one
-command. This page exists to prove the evaluation harness end to
-end and to publish honest numbers for THIS template on ITS demo
-corpus; it makes no state-of-the-art claim and does not compare
-against other systems (see docs/choosing-sci-rag-kit.md for the
-honest comparison on axes other than benchmark scores).
+Measured results on the shipped demo corpus, regenerated with one command.
+This page proves the evaluation harness end to end and publishes honest
+numbers for this template on its own demo corpus. It makes no
+state-of-the-art claim and compares against no other system; see
+[Choosing Sci RAG Kit](choosing-sci-rag-kit.md) for that comparison, on
+axes other than benchmark scores.
 
 ## What was measured
 

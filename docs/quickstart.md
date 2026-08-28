@@ -8,11 +8,11 @@ description: Set up Sci RAG Kit, ingest the synthetic demo corpus, inspect retri
 Set up a served, agent-accessible knowledge base over the bundled demo corpus. You will see the evidence returned by each retrieval stage before you add your own literature.
 
 <div class="srag-meta-strip">
-  <div><strong>Level</strong>Beginner</div>
+  <div><strong>You'll build</strong>A served knowledge base over the demo corpus</div>
+  <div><strong>You'll need</strong>Python, uv, and Docker</div>
   <div><strong>Time</strong>About 10 minutes</div>
-  <div><strong>Services</strong>Docker + Postgres</div>
   <div><strong>Credentials</strong>Optional</div>
-  <div><strong>Tested with</strong>v0.2</div>
+  <div><strong>Tested with</strong>v0.3</div>
 </div>
 
 Every command runs from the repository root.
@@ -66,7 +66,7 @@ Create an API key at [Google AI Studio](https://aistudio.google.com/apikey), the
 SCI_RAG_GOOGLE_API_KEY=your-key-here
 ```
 
-### Vertex AI: labs & Google Cloud
+### Vertex AI: labs and Google Cloud
 
 Authenticate Application Default Credentials once, then set the project:
 
@@ -110,7 +110,7 @@ No Docker? Supported servers are **PostgreSQL 16 through 18**, and there are two
 Run `uv run sci-rag doctor`. Configuration, domain, database, and schema should report healthy. An empty corpus or missing optional credential can still be informational at this point.
 </div>
 
-## 4. Ingest & inspect the demo
+## 4. Ingest the demo corpus and inspect what came back
 
 ```console
 $ make demo
@@ -149,7 +149,7 @@ The demo answer is approximately 302,000 dry tons and cites the synthetic resour
 
 In offline mode this command reports that no LLM is configured. That refusal is expected: the system does not fabricate an answer when generation is unavailable.
 
-## 6. Build the graph & deep path
+## 6. Build the graph and run the deep path
 
 With a Google credential:
 
@@ -165,7 +165,7 @@ The target extracts ontology-constrained entities and relationships, builds comm
 Open the newest retrieval report. It should identify the corpus fingerprint, models, profile, enabled layers, metrics, confidence intervals, and per-question records. Do not enable an expensive layer in your own profile merely because it worked on this fixture.
 </div>
 
-## 7. Serve humans & agents
+## 7. Serve it to humans and agents
 
 ```console
 $ uv run sci-rag serve
@@ -193,19 +193,16 @@ $ claude mcp add demo-corpus -- uv run --directory "$(pwd)" sci-rag mcp
 
 Ask the agent to use `demo-corpus` for a question. You should see a `search_corpus` or `answer_question` tool call rather than an answer from the agent's unaided memory.
 
-## What you built
+<div class="srag-checkpoint" markdown>
+**Checkpoint: one database, two front doors**
 
-You now have one Postgres database containing source records, structure-aware chunks, dense vectors, full-text search, and, if enabled, a concept graph and community summaries. One service exposes the same retrieval and answer behavior to CLI users, REST clients, and MCP agents. The evaluation artifacts record what that system did on known questions.
+You have one Postgres database holding source records, structure-aware chunks, dense vectors, full-text search, and, if you ran step 6, a concept graph and community summaries. One service serves the same retrieval and answer behavior to the CLI, to REST clients, and to MCP agents, and the reports under `eval_results/` record what it did on known questions.
+</div>
 
-## Continue
+## Next steps
 
-Ready to replace the fixture with your own field? Start with
-[LLM-assisted setup](llm-assisted-setup.md) to draft the domain files from
-your documents. Its copy-paste workflow needs no model credentials.
+**Replace the fixture with your own field.** That is what the kit is for, and the shortest route is [LLM-assisted setup](llm-assisted-setup.md), which drafts the domain files from your own documents. Its copy-paste workflow needs no model credentials. [Bring your own domain](bring-your-own-domain.md) is the same work laid out end to end.
 
-- Replace the fixture with your field: [Bring your own domain](bring-your-own-domain.md)
+- Something did not match this page: [Troubleshooting](troubleshooting.md)
 - Follow ownership through the code: [Architecture](architecture.md)
-- Understand provenance and license scope: [Evidence and rights](evidence-and-rights.md)
-- Diagnose a mismatch: [Troubleshooting](troubleshooting.md)
-- Enrich DOI metadata and review known retractions: [Operations](operations.md#crossref-enrichment-and-retraction-review)
-- Deploy the service: [Google Cloud guide](deploy-gcp.md)
+- Put the service somewhere other people can reach: [Deploy on Google Cloud](deploy-gcp.md)

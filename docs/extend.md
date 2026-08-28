@@ -5,7 +5,22 @@ description: Add a parser, corpus collector, reranker, model provider, or authen
 
 # Extend the seams
 
-Sci RAG Kit has no plug-in registry. It has five small boundaries where real projects commonly vary. Extend the narrowest one that matches the change, then keep its surrounding invariants visible in tests and evaluation.
+Sci RAG Kit has no plug-in registry. It has five small boundaries where real projects vary, and by the end of this page you will know which one your change belongs behind and what evidence it owes. Extend the narrowest seam that fits, then keep its surrounding invariants visible in tests and evaluation.
+
+<div class="srag-meta-strip">
+  <div><strong>You'll build</strong>A new parser, collector, reranker, provider, or auth backend</div>
+  <div><strong>You'll need</strong>A working checkout and its test suite</div>
+  <div><strong>Time</strong>An hour to a day, depending on the seam</div>
+  <div><strong>Tested with</strong>v0.3</div>
+</div>
+
+## Before you start
+
+| Requirement | Why | Check |
+|---|---|---|
+| `make check` green on an unmodified checkout | So a failure afterwards is yours | `make check` |
+| A read of [Architecture](architecture.md) | The seams only make sense against the ownership map | |
+| An evaluation baseline, for anything touching ranking | A retrieval change without a before is not measurable | `uv run sci-rag eval retrieval --ablation` |
 
 ## Choose the seam
 
@@ -153,3 +168,17 @@ The current `create_app()` constructs the shipped backend from settings; it is n
 - **Retrieval changes bring receipts.** Include ablation results in the pull request.
 
 See [Architecture](architecture.md#extension-points-in-order-of-likely-need) for ownership, [Contributing](contributing.md) for the change bar, and [Evaluation](evaluation.md) for the measurement workflow.
+
+<div class="srag-checkpoint" markdown>
+**Checkpoint: the seam holds**
+
+`make check` is green, your new code is exercised by an offline test, and if
+you touched ranking you have two ablation tables from the same corpus
+fingerprint. If any of those three is missing, the change is not done.
+</div>
+
+## Next steps
+
+- Produce the before-and-after your change needs: [Evaluate your pipeline](evaluation.md)
+- Check the ownership map before widening a seam: [Architecture](architecture.md)
+- Read the bar a contribution has to clear: [Contributing](contributing.md)

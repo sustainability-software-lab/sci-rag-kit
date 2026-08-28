@@ -1,5 +1,5 @@
 ---
-title: ADR 0008: PostgreSQL 16 through 18
+title: "ADR 0008: PostgreSQL 16 through 18"
 description: Why the supported server range spans three majors, and what tests each end of it.
 ---
 

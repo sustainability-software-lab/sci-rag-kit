@@ -9,6 +9,22 @@ Everything the kit knows lives in one Postgres database, which keeps the
 operational discipline short. Snapshot what the corpus **is**, back up what
 the database **holds**, and rehearse the restore before you need it.
 
+<div class="srag-meta-strip">
+  <div><strong>You'll build</strong>A backup, a restore drill, and a snapshot habit</div>
+  <div><strong>You'll need</strong>Database access and `pg_dump`</div>
+  <div><strong>Time</strong>About 30 minutes for the first pass</div>
+  <div><strong>Tested with</strong>v0.3</div>
+</div>
+
+## Before you start
+
+| Requirement | Why | Check |
+|---|---|---|
+| A corpus worth protecting | Most of this page is unnecessary on the demo fixture | `uv run sci-rag stats` |
+| `pg_dump` and `psql` on your path | The backup and restore paths are ordinary Postgres tools | `pg_dump --version` |
+| Somewhere to put a dump that is not the database host | A backup on the same disk is not a backup | |
+| A disposable database for the restore drill | You are going to restore into it, and it will be overwritten | |
+
 ## Crossref enrichment and retraction review
 
 After ingesting DOI-bearing papers, preview the Crossref enrichment set:
@@ -219,3 +235,17 @@ its place; the profiler only tells you what it costs.
 3. Run the restore drill when you set the project up, not during the
    incident.
 4. `sci-rag doctor` after every restore.
+
+<div class="srag-checkpoint" markdown>
+**Checkpoint: the restore actually works**
+
+You have run the drill at least once: dump, restore into a scratch database,
+`sci-rag doctor` clean, and a corpus digest that matches the snapshot you took
+before the dump. A backup you have never restored is a hypothesis.
+</div>
+
+## Next steps
+
+- Re-embed after changing a model or a dimension: [Configuration](configuration.md)
+- Understand what a snapshot pins, and why a citation needs one: [Evidence and rights](evidence-and-rights.md)
+- Run the same service on managed infrastructure: [Deploy on Google Cloud](deploy-gcp.md)

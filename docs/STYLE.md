@@ -1,6 +1,6 @@
 ---
 title: Documentation style
-description: How to write a page for this site: which type it is, what shape it takes, and the words this project does and does not use.
+description: "How to write a page for this site: which type it is, what shape it takes, and the words this project does and does not use."
 ---
 
 # Documentation style

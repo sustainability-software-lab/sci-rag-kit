@@ -1,5 +1,5 @@
 ---
-title: ADR 0004: A runnable template, not a cookiecutter
+title: "ADR 0004: A runnable template, not a cookiecutter"
 description: Why this repository is the application you run, and not a tree of placeholders that becomes one.
 ---
 

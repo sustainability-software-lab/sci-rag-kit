@@ -12,9 +12,25 @@ Pointing the kit at your field means writing four files: the ontology in
 tell whether anything works.
 
 The `sci-rag draft` commands do the first pass for you, grounded in the
-documents you already have. What they produce is a draft, not ground truth,
-and the kit is built to keep that distinction visible rather than to let you
-forget it.
+documents you already have. What they produce is a draft, never ground truth,
+and the kit is built to keep that distinction visible so you cannot forget it.
+
+<div class="srag-meta-strip">
+  <div><strong>You'll build</strong>Four drafted domain files, ready to review</div>
+  <div><strong>You'll need</strong>Your documents on disk</div>
+  <div><strong>Time</strong>About 30 minutes, plus review</div>
+  <div><strong>Credentials</strong>Optional, there is a copy-paste path</div>
+  <div><strong>Tested with</strong>v0.3</div>
+</div>
+
+## Before you start
+
+| Requirement | Why | Check |
+|---|---|---|
+| Documents on disk, usually `data/raw/` | Every drafter reads them; none invents a field from its name | `ls data/raw` |
+| A database, for the corpus-grounded drafters | Ontology and question drafting sample real ingested passages | `uv run sci-rag doctor` |
+| A model credential, or an assistant you can paste into | `--print-prompt` and `--from-file` cover the second case completely | `grep SCI_RAG_GOOGLE .env` |
+| A domain expert who will read the output | The drafters mark their work provisional until a person signs it off | |
 
 ## Three lanes, one system
 
@@ -310,3 +326,18 @@ Prompt wording moves every downstream number. Re-run
 to calibrate the LLM judge against human judgment; generating them with an LLM
 would be circular and would destroy the only measurement they provide. See
 [Evaluate your pipeline](evaluation.md).
+
+<div class="srag-checkpoint" markdown>
+**Checkpoint: the drafts are yours now**
+
+`uv run sci-rag doctor` reports domain coherence: ontology size, questions
+grounded against the ingested corpus, and how many rows still carry the
+`drafted` tag. Every one of those tags is a question nobody has vouched for
+yet, and the evaluation reports will keep saying so.
+</div>
+
+## Next steps
+
+- Work the drafts into a finished domain: [Bring your own domain](bring-your-own-domain.md)
+- Sign off on the seed questions and measure: [Evaluate your pipeline](evaluation.md)
+- See what a drafted manifest does and does not decide: [Evidence and rights](evidence-and-rights.md)

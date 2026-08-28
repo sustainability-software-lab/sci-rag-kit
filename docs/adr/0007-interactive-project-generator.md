@@ -1,5 +1,5 @@
 ---
-title: ADR 0007: A generator that configures
+title: "ADR 0007: A generator that configures"
 description: Why the project wizard rewrites real configuration files and renders no placeholders.
 ---
 

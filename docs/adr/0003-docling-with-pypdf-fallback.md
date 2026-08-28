@@ -1,5 +1,5 @@
 ---
-title: ADR 0003: Docling for PDFs, with a pypdf fallback
+title: "ADR 0003: Docling for PDFs, with a pypdf fallback"
 description: Why the best PDF parser is an optional extra and a smaller one is always available.
 ---
 

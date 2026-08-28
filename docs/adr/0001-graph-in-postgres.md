@@ -1,5 +1,5 @@
 ---
-title: ADR 0001: The graph lives in Postgres
+title: "ADR 0001: The graph lives in Postgres"
 description: Why entities, relationships, and communities are rows in the same database as the chunks, and what that costs.
 ---
 

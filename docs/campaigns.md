@@ -5,10 +5,32 @@ description: Discover a resumable DOI list, resolve explicit open-access rights,
 
 # Run a corpus campaign
 
-A campaign turns a research topic or a seed DOI file into a reproducible
-list of scientific works. Discovery is deliberately separate from ingestion:
-you can inspect the candidates and resume network work before anything lands
-in the corpus.
+A campaign turns a research topic or a seed DOI file into a reproducible list
+of scientific works, with an explicit rights answer attached to every one.
+Discovery stays separate from ingestion on purpose, so you can inspect the
+candidates and resume interrupted network work before anything lands in the
+corpus.
+
+<div class="srag-meta-strip">
+  <div><strong>You'll build</strong>A screened, rights-resolved corpus manifest</div>
+  <div><strong>You'll need</strong>A topic or a DOI list, and a contact email</div>
+  <div><strong>Time</strong>Minutes to run, longer to review</div>
+  <div><strong>Credentials</strong>Optional, for the screening model only</div>
+  <div><strong>Tested with</strong>v0.3</div>
+</div>
+
+## Before you start
+
+| Requirement | Why | Check |
+|---|---|---|
+| A working database | The manifest is only useful once you ingest it | `uv run sci-rag doctor` |
+| A contact email you monitor | OpenAlex, Crossref, and Unpaywall all want one, and rate-limit anonymous callers hard | |
+| A topic phrase or a file of DOIs | The two ways to start a campaign | |
+| Network access | Every step here talks to an external index | |
+
+Campaigns never decide rights for you. Discovery produces candidates and an
+explicit open-access signal; anything unestablished stays `unknown`, which
+retrieval treats as unsafe.
 
 ## Discover from a topic
 
@@ -179,3 +201,17 @@ Human decisions append after the model suggestion instead of overwriting it,
 and the report regenerates from the latest decision under that protocol.
 Skipping leaves the row in `awaiting_review`, so the totals continue to
 reconcile without pretending the campaign is complete.
+
+<div class="srag-checkpoint" markdown>
+**Checkpoint: every row has a decision or a reason**
+
+`sci-rag campaign report --name rice-straw` should reconcile: included plus
+excluded plus `awaiting_review` equals the candidate count. No row is missing,
+and no row is included without a rights answer you can point at.
+</div>
+
+## Next steps
+
+- Ingest the manifest this produced: [Bring your own domain](bring-your-own-domain.md#step-5-ingest-and-build)
+- Understand what a license class does to retrieval: [Evidence and rights](evidence-and-rights.md)
+- Enrich the DOIs and check for retractions: [Operate a live corpus](operations.md)

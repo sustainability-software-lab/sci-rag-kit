@@ -1,5 +1,5 @@
 ---
-title: ADR 0005: Citation edges in their own table
+title: "ADR 0005: Citation edges in their own table"
 description: Why a citation is not the kind of edge the knowledge graph stores, and where it goes instead.
 ---
 
