@@ -1,6 +1,6 @@
 ---
 title: Guides
-description: Complete a specific Sci RAG Kit task, from domain specialization to deployment and operations.
+description: Complete a specific Sci RAG Kit task, from configuring your domain to deploying and operating the service.
 ---
 
 # Guides
@@ -11,7 +11,7 @@ Each guide starts from an outcome. Use the reference section when you need an ex
 
 [<span class="srag-row__title">Bring your own domain</span><span class="srag-row__copy">Replace the ontology, prompts, source manifest, and seed questions while keeping the pipeline testable.</span>](bring-your-own-domain.md){ .srag-row }
 
-[<span class="srag-row__title">LLM-assisted setup</span><span class="srag-row__copy">Draft the ontology, manifest, seed questions, and prompts with a model, or with any assistant by copy-paste, and keep drafted ground truth labelled as such.</span>](llm-assisted-setup.md){ .srag-row }
+[<span class="srag-row__title">LLM-assisted setup</span><span class="srag-row__copy">Draft the ontology, manifest, seed questions, and prompts with a model, or with any assistant by copy-paste, and keep drafted ground truth labeled as such.</span>](llm-assisted-setup.md){ .srag-row }
 
 [<span class="srag-row__title">Run an open-access campaign</span><span class="srag-row__copy">Discover DOI candidates, resolve explicit rights through Unpaywall, and download only verified direct PDFs into a manifest.</span>](campaigns.md){ .srag-row }
 
@@ -24,3 +24,10 @@ Each guide starts from an outcome. Use the reference section when you need an ex
 [<span class="srag-row__title">Deploy on Google Cloud</span><span class="srag-row__copy">Provision Cloud SQL and Cloud Run from the included Terraform and verify the running service.</span>](deploy-gcp.md){ .srag-row }
 
 </div>
+
+Most people arrive here after the quickstart, wanting their own corpus in the
+database. Take them in this order: [Bring your own domain](bring-your-own-domain.md)
+for the shape of the work, [LLM-assisted setup](llm-assisted-setup.md) to draft
+the four domain files against your documents, then
+[Evaluate your pipeline](evaluation.md) before you change a single retrieval
+weight. The other four guides are there when you need them, and not before.

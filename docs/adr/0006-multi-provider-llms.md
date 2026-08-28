@@ -1,4 +1,11 @@
-# ADR 0006: Hand-written provider adapters, and embeddings that stay Google-only
+---
+title: ADR 0006: Hand-written provider adapters
+description: Why each generation provider gets its own adapter, and why embeddings stay Google-only.
+---
+
+# ADR 0006: Hand-written provider adapters
+
+Each generation provider gets a hand-written adapter, selected per role. Embeddings stay Google-only, because changing them is a data migration.
 
 **Status:** accepted
 
@@ -77,3 +84,13 @@ configuration change for what is really a data migration.
 * Bring-your-own-key stays meaningful per provider. It has no meaning against
   Vertex, which authenticates with the operator's Google credentials, so that
   combination raises rather than silently ignoring the caller's key.
+
+## Reversal conditions
+
+* The provider SDKs converge far enough that the differences this
+  decision exists to preserve, JSON-mode thinking budgets and sampling
+  parameters among them, stop being real.
+* A translation layer starts shipping those knobs faithfully rather than
+  smoothing them into a lowest common denominator.
+* A managed non-Google text-embedding API arrives on Vertex, which is
+  what makes the embedding half of this decision worth revisiting.

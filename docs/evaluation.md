@@ -1,4 +1,9 @@
-# The evaluation guide
+---
+title: Evaluate your pipeline
+description: Run retrieval ablations and judged-answer evaluation, compare two reports, and calibrate the judge against human labels.
+---
+
+# Evaluate your pipeline
 
 The harness is built to make results hard to game, including by accident.
 Three things do that work: mechanical retrieval metrics against expert

@@ -1,4 +1,9 @@
-# Deploying on Google Cloud
+---
+title: Deploy on Google Cloud
+description: Provision Cloud SQL and Cloud Run from the included Terraform, then verify the running service end to end.
+---
+
+# Deploy on Google Cloud
 
 Stand up a production-shaped instance on Cloud Run and Cloud SQL with the
 Terraform module the kit ships, then hand the same service to REST and MCP

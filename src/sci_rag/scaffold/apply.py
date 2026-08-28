@@ -576,7 +576,7 @@ def apply_all(
     to be deleted, and the corpus scaffold goes after the Makefile writer so
     its new target lands at the end.
 
-    ``allow_git`` is off for `sci-rag init`, which specializes a checkout the
+    ``allow_git`` is off for `sci-rag init`, which configures a checkout the
     user already has. The ``initialize_git`` answer belongs to a run that
     creates the directory, and honouring it in an existing repository would
     mean initializing on top of the user's own history.

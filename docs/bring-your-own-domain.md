@@ -1,6 +1,11 @@
+---
+title: Bring your own domain
+description: Replace the demo ontology, prompts, corpus manifest, and seed questions with your own field, and prove the pipeline still works.
+---
+
 # Bring your own domain
 
-This tutorial covers specializing the kit to your own field. Budget an
+This tutorial covers pointing the kit at your own field. Budget an
 afternoon for a first serious pass. Nothing here requires editing
 Python; the domain is defined by the `domain/` folder, a corpus
 manifest, and environment variables.
@@ -72,36 +77,34 @@ learned the hard way:
 A manifest is one JSON line per document, and it is where licensing and
 citations come from. It lives at `data/corpus.jsonl`.
 
-=== "Generate it"
+**Draft it, then review it.** The drafter reads each document's opening pages
+through the same parsers ingestion uses, and proposes title, authors, year,
+DOI, journal, and a shared source bucket per document. Typing sixty of those
+by hand is how a manifest ends up with three spellings of one journal.
 
-    Reads each document's opening pages through the same parsers ingestion
-    uses, and proposes a manifest with title, authors, year, DOI, journal, and
-    a shared source bucket per document.
+```bash title="Terminal"
+uv run sci-rag draft manifest --folder data/raw
+```
 
-    ```bash title="Terminal"
-    uv run sci-rag draft manifest --folder data/raw
-    ```
+Review `data/corpus.jsonl.proposed`, then move it into place, or re-run with
+`--apply`. No API key is fine: `--print-prompt` gives you the prompt to paste
+into any assistant, and `--from-file` reads the reply back through identical
+validation. [LLM-assisted setup](llm-assisted-setup.md) has that workflow in
+full.
 
-    Review `data/corpus.jsonl.proposed`, then move it into place, or re-run
-    with `--apply`. No API key? Add `--print-prompt`, paste the result into any
-    assistant, and feed the reply back with `--from-file`. See
-    [LLM-assisted setup](llm-assisted-setup.md).
+**The rights column stays yours.** Every drafted row says `license_class:
+unknown`, the fail-closed default, and the command tells you how many
+documents are waiting on a decision. A license sentence found verbatim in a
+document is quoted into `license_source` as evidence for you to read.
 
-    **The rights column is yours.** Every drafted row says `license_class:
-    unknown`, which is the fail-closed default, and the command tells you how
-    many documents need a decision. A license sentence found verbatim in a
-    document is quoted into `license_source` as evidence for you to read. The
-    field reference below is what you are editing.
+Writing it by hand is a reasonable choice for a handful of documents. One JSON
+object per line, in `data/corpus.jsonl`:
 
-=== "Write it yourself"
-
-    Create `data/corpus.jsonl`:
-
-    ```jsonl title="data/corpus.jsonl"
-    {"path": "raw/lee-2021-fouling-review.pdf", "title": "Membrane Fouling Mechanisms: A Review", "authors": ["Lee, S.", "Park, J."], "year": 2021, "doi": "10.1000/example", "license_class": "open_commercial", "source": "journal_papers"}
-    {"path": "raw/epa-membrane-guidance.pdf", "title": "EPA Membrane Filtration Guidance Manual", "authors": ["US EPA"], "year": 2005, "license_class": "public", "source": "agency_reports"}
-    {"path": "raw/chen-thesis.pdf", "title": "Chen PhD Thesis", "year": 2023, "license_class": "restricted", "source": "theses"}
-    ```
+```jsonl title="data/corpus.jsonl"
+{"path": "raw/lee-2021-fouling-review.pdf", "title": "Membrane Fouling Mechanisms: A Review", "authors": ["Lee, S.", "Park, J."], "year": 2021, "doi": "10.1000/example", "license_class": "open_commercial", "source": "journal_papers"}
+{"path": "raw/epa-membrane-guidance.pdf", "title": "EPA Membrane Filtration Guidance Manual", "authors": ["US EPA"], "year": 2005, "license_class": "public", "source": "agency_reports"}
+{"path": "raw/chen-thesis.pdf", "title": "Chen PhD Thesis", "year": 2023, "license_class": "restricted", "source": "theses"}
+```
 
 Field notes, which apply either way:
 
@@ -139,67 +142,63 @@ expected it in. The linter is the only place that difference is visible.
 field. It ships configured for the demo's agricultural types; replace them with
 yours.
 
-=== "Generate it"
+**Draft it from the corpus, then edit.** Once your documents are on disk the
+field's vocabulary is already there, and the useful question stops being what
+this field might contain and becomes what these documents talk about.
 
-    Once documents are on disk, the field's own vocabulary is right there, so
-    the useful question is not what this field might contain but what these
-    documents actually talk about.
+```bash title="Terminal"
+uv run sci-rag draft ontology --from-corpus
+```
 
-    ```bash title="Terminal"
-    uv run sci-rag draft ontology --from-corpus
-    ```
+Review `domain/domain.yaml.proposed`, or re-run with `--apply`. Already have an
+ontology you mostly like? `--refine` asks only what the model would add and
+remove, with a reason for every removal. Your tuned `retrieval:` and
+`compression:` blocks carry over untouched either way.
 
-    Review `domain/domain.yaml.proposed`, or re-run with `--apply`. Already
-    have an ontology you mostly like? `--refine` asks only what the model would
-    add and remove, with a reason for every removal. Your tuned `retrieval:`
-    and `compression:` blocks are carried over untouched either way.
+This is also the fix for the symptom in step 5 below. Near zero entities after
+`graph extract` means the ontology and the corpus are talking past each other.
 
-    This is also the fix for the symptom in step 5 below: near zero entities
-    after `graph extract` means the ontology and the corpus are talking past
-    each other.
+Whichever way you get there, you end up editing this file by hand, so here is
+what it looks like filled in:
 
-=== "Write it yourself"
+```yaml title="domain/domain.yaml"
+name: "Membrane Materials KB"
+description: >
+  Membrane chemistry, fouling behavior, and separation performance for
+  water treatment applications.
 
-    Open `domain/domain.yaml` and replace the demo's types:
+entity_types:
+  - name: Membrane
+    description: "A membrane type or product (thin-film composite, ceramic UF)"
+  - name: Material
+    description: "A polymer, ceramic, or coating material (polyamide, PVDF, graphene oxide)"
+  - name: Contaminant
+    description: "A species being removed (NaCl, boron, PFAS, natural organic matter)"
+  - name: FoulingMechanism
+    description: "A fouling mode (scaling, biofouling, organic adsorption)"
+  - name: Process
+    description: "A treatment process or operation (reverse osmosis, backwashing)"
+  - name: PerformanceMetric
+    description: "A measured performance quantity (flux, rejection, permeability)"
+  - name: Treatment
+    description: "A cleaning or surface modification (chlorination, zwitterionic coating)"
 
-    ```yaml title="domain/domain.yaml"
-    name: "Membrane Materials KB"
-    description: >
-      Membrane chemistry, fouling behavior, and separation performance for
-      water treatment applications.
+relation_types:
+  - name: MADE_OF
+    description: "Membrane is made of material"
+  - name: REMOVES
+    description: "Membrane or process removes contaminant"
+  - name: SUFFERS_FROM
+    description: "Membrane or material suffers from fouling mechanism"
+  - name: MITIGATED_BY
+    description: "Fouling mechanism is mitigated by treatment"
+  - name: MEASURED_AT
+    description: "Metric measured at a condition or value"
+  - name: IMPROVES
+    description: "Treatment or material improves a performance metric"
+```
 
-    entity_types:
-      - name: Membrane
-        description: "A membrane type or product (thin-film composite, ceramic UF)"
-      - name: Material
-        description: "A polymer, ceramic, or coating material (polyamide, PVDF, graphene oxide)"
-      - name: Contaminant
-        description: "A species being removed (NaCl, boron, PFAS, natural organic matter)"
-      - name: FoulingMechanism
-        description: "A fouling mode (scaling, biofouling, organic adsorption)"
-      - name: Process
-        description: "A treatment process or operation (reverse osmosis, backwashing)"
-      - name: PerformanceMetric
-        description: "A measured performance quantity (flux, rejection, permeability)"
-      - name: Treatment
-        description: "A cleaning or surface modification (chlorination, zwitterionic coating)"
-
-    relation_types:
-      - name: MADE_OF
-        description: "Membrane is made of material"
-      - name: REMOVES
-        description: "Membrane or process removes contaminant"
-      - name: SUFFERS_FROM
-        description: "Membrane or material suffers from fouling mechanism"
-      - name: MITIGATED_BY
-        description: "Fouling mechanism is mitigated by treatment"
-      - name: MEASURED_AT
-        description: "Metric measured at a condition or value"
-      - name: IMPROVES
-        description: "Treatment or material improves a performance metric"
-    ```
-
-How to choose well, either way:
+How to choose well:
 
 * **6 to 15 entity types.** Fewer and the graph is mush; more and the
   extractor dithers. Ask: what column headings would an expert use to
@@ -220,27 +219,27 @@ These steer the HyDE layer.
 Skim `domain/prompts/*.md`. They are deliberately short and readable, and for
 most domains only two of them are worth touching.
 
-=== "Generate it"
+**Let the drafter reword them, then read the diff.** It keeps the job
+identical while moving the register into your field:
 
-    ```bash title="Terminal"
-    uv run sci-rag draft prompts entity_extraction
-    uv run sci-rag draft prompts answer
-    ```
+```bash title="Terminal"
+uv run sci-rag draft prompts entity_extraction
+uv run sci-rag draft prompts answer
+```
 
-    Rewords the template in your field's terms while keeping the job identical:
-    every `$SLOT` must survive, the output contract must not move, and the
-    rewrite is re-rendered against dummy values before it is written, because a
-    template that lost a slot loads fine and fails mid-run.
+Every `$SLOT` has to survive, the output contract cannot move, and the rewrite
+is re-rendered against dummy values before it is written, because a template
+that lost a slot loads fine and fails mid-run. Only those two commands exist.
+The judge prompts and the compression prompt are refused by name, with a
+reason.
 
-    Only those two commands exist. The judge prompts and the compression prompt
-    are refused by name, with a reason.
+Editing them yourself is a small job, and there are only two things worth
+doing:
 
-=== "Write it yourself"
-
-    * `entity_extraction.md`: keep the rules, adjust the example JSON names
-      to your field so the model sees the register you expect.
-    * `answer.md`: add any domain-specific answer norms ("always report flux
-      in LMH", "state the test conditions with every rejection value").
+* `entity_extraction.md`: keep the rules, adjust the example JSON names to
+  your field so the model sees the register you expect.
+* `answer.md`: add any domain-specific answer norms ("always report flux in
+  LMH", "state the test conditions with every rejection value").
 
 Leave the judge prompts alone until you have read
 [evaluation.md](evaluation.md); their blindness rules are load-bearing. Prompt
@@ -275,30 +274,29 @@ vouch for. This is the biggest manual step in the tutorial, and the one where
 "vouch for" is doing the most work: these questions are what every retrieval
 and answer metric is computed against.
 
-=== "Generate it"
+**Draft the first ten, then sign off on each one.** Writing good seed questions
+from a blank file is slow, and the drafter gives you something to react to:
 
-    ```bash title="Terminal"
-    uv run sci-rag draft questions --count 10
-    ```
+```bash title="Terminal"
+uv run sci-rag draft questions --count 10
+```
 
-    Samples real passages from your corpus, asks for questions grounded in
-    them, and then verifies in Python that every quoted evidence phrase
-    actually appears in a passage belonging to a document the question names.
-    Rows that fail are dropped and reported.
+It samples real passages from your corpus, asks for questions grounded in them,
+then verifies in Python that every quoted evidence phrase actually appears in a
+passage belonging to a document the question names. Rows that fail are dropped
+and reported.
 
-    Every drafted row carries a `drafted` tag, and it travels: while any
-    remains, `sci-rag eval retrieval` and `sci-rag eval answers` say in the
-    report that their ground truth is unreviewed and their numbers provisional.
-    Read each question, check it against the document it cites, then delete the
-    tag. That deletion is your sign-off, and nothing does it for you.
+Every drafted row carries a `drafted` tag, and the tag travels. While any
+remain, `sci-rag eval retrieval` and `sci-rag eval answers` state in the report
+that their ground truth is unreviewed and their numbers provisional. Read each
+question, check it against the document it cites, then delete the tag. That
+deletion is your sign-off, and nothing does it for you.
 
-=== "Write it yourself"
+Adding your own is the same file, one JSON object per line:
 
-    Replace the file with your own lines:
-
-    ```jsonl title="domain/eval_seed_questions.jsonl"
-    {"id": "pfas-rejection", "question": "What PFAS rejection does a polyamide RO membrane achieve?", "reference_answer": "Above 99 percent for long-chain PFAS at typical seawater RO conditions, per Lee 2021.", "reference_titles": ["Membrane Fouling Mechanisms: A Review"], "evidence_phrases": ["99", "long-chain PFAS"], "tags": ["performance"]}
-    ```
+```jsonl title="domain/eval_seed_questions.jsonl"
+{"id": "pfas-rejection", "question": "What PFAS rejection does a polyamide RO membrane achieve?", "reference_answer": "Above 99 percent for long-chain PFAS at typical seawater RO conditions, per Lee 2021.", "reference_titles": ["Membrane Fouling Mechanisms: A Review"], "evidence_phrases": ["99", "long-chain PFAS"], "tags": ["performance"]}
+```
 
 Three rules of thumb, either way. Pick evidence phrases distinctive enough that
 finding them means finding the answer, where numbers with units are

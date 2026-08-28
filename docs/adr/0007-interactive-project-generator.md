@@ -1,4 +1,11 @@
-# ADR 0007: An interactive generator that configures, not templates
+---
+title: ADR 0007: A generator that configures
+description: Why the project wizard rewrites real configuration files and renders no placeholders.
+---
+
+# ADR 0007: A generator that configures
+
+`sci-rag-new` fetches this repository at a pinned tag and rewrites its configuration files in place. Nothing is templated and nothing is rendered.
 
 **Status:** accepted
 

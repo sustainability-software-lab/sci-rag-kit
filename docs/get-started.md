@@ -11,7 +11,7 @@ These pages take a clean clone to a running knowledge base, then point at the re
 
 [<span class="srag-row__title">Quickstart</span><span class="srag-row__copy">Install the kit, ingest the synthetic CC0 corpus, inspect retrieval, and expose the same service over REST and MCP. About 10 minutes.</span>](quickstart.md){ .srag-row }
 
-[<span class="srag-row__title">Tour the repository</span><span class="srag-row__copy">See what you specialize, what you run, and why this is a live template repository rather than a generator.</span>](tour.md){ .srag-row }
+[<span class="srag-row__title">Tour the repository</span><span class="srag-row__copy">See what you configure, what you run, and why this is a live template repository rather than a generator.</span>](tour.md){ .srag-row }
 
 [<span class="srag-row__title">Choosing Sci RAG Kit</span><span class="srag-row__copy">Compare the kit honestly with LightRAG, PaperQA2, LlamaIndex, and Microsoft GraphRAG.</span>](choosing-sci-rag-kit.md){ .srag-row }
 
@@ -27,6 +27,6 @@ These pages take a clean clone to a running knowledge base, then point at the re
 4. Follow [Bring your own domain](bring-your-own-domain.md) with a small, well-understood corpus, or use a [corpus campaign](campaigns.md) to discover candidates and build a fail-closed open-access manifest.
 5. Review the campaign's rights distribution before ingestion, then run an [evaluation](evaluation.md) before changing retrieval weights or enabling the reranker.
 
-Still deciding? The [FAQ](faq.md) answers what this is, who it is for, and why each design decision went the way it did, without sending you to a decision record first.
+Still deciding whether this is the right tool? Read the [FAQ](faq.md) first. It answers what this is, who it is for, and why each design decision went the way it did, without sending you to a decision record.
 
 If Postgres, credentials, or parsing gets in the way, do not guess from an empty result. Run `uv run sci-rag doctor`; the kit is designed to tell you which layer is missing.

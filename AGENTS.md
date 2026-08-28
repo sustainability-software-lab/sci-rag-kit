@@ -210,10 +210,10 @@ configured for external model calls.
 
 ## Architecture invariants
 
-### Keep domain specialization out of Python
+### Keep domain semantics out of Python
 
 Domain semantics belong in `domain/domain.yaml`, `domain/prompts/`, and the evaluation JSONL files.
-A user specializing the kit should not need to edit package code. General reusable capability
+A user configuring the kit for their field should not need to edit package code. General reusable capability
 belongs in `src/sci_rag/`; corpus-specific ontology, prompt wording, and ground truth do not.
 
 Prompt templates use `string.Template` with `$UPPER_CASE` slots. Preserve required slots, validate
@@ -222,7 +222,7 @@ preserve the separation between grounding and correctness.
 
 ### Draft the domain files, do not hand-write them
 
-A user specializing this kit has four files to produce: `domain/domain.yaml`,
+A user configuring this kit for a field has four files to produce: `domain/domain.yaml`,
 `data/corpus.jsonl`, `domain/eval_seed_questions.jsonl`, and light edits to
 `domain/prompts/*.md`. If you are working inside a generated project and about to
 author any of them from scratch, stop and run the drafter instead. It is grounded in
@@ -249,7 +249,7 @@ Three rules the drafters enforce, which apply to you as well:
 - Drafted seed questions carry a `drafted` tag. Evaluation reports repeat it until a
   domain expert removes it. Do not remove the tag on a user's behalf, and do not
   quote a metric from a report that still carries the warning.
-- `domain/eval_calibration_labels.jsonl` is hand-labelled by design. Generating it
+- `domain/eval_calibration_labels.jsonl` is hand-labeled by design. Generating it
   would make the judge calibrate against itself.
 
 `sci-rag doctor` reports domain coherence: ontology size and naming, seed-question

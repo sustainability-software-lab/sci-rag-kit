@@ -26,7 +26,7 @@ Every command runs from the repository root.
 | Docker | Local Postgres with pgvector | `docker version` |
 | Google credential, optional | Real semantic embeddings, graph extraction, and answers | AI Studio key or Vertex ADC |
 
-No Docker? There are two ways past it, and which one applies depends on your environment manager. See [without Docker](#without-docker) in step 3.
+No Docker? Two of the four environment managers can run Postgres without it. [Run Postgres your way](run-postgres.md) covers all three paths.
 
 ## 1. Get the repository
 
@@ -88,43 +88,21 @@ SCI_RAG_EMBEDDING_PROVIDER=local-hash
 
 This mode exercises parsing, chunking, storage, ranking, and retrieval evaluation without network calls. Its similarity is lexical rather than semantic. Graph extraction, HyDE, community summaries, generated answers, and model-based judging remain unavailable until you add a model credential.
 
-## 3. Install & initialize
+## 3. Install the project and create the schema
 
-With Docker:
-
-```console
+```console title="Terminal"
 $ make setup
 ```
 
-The target runs `uv sync`, starts the compose Postgres on host port `5433`, and applies every Alembic migration.
-
-### Without Docker
-
-**With pixi or conda**, the server comes from conda-forge along with everything else, so there is nothing extra to install. Those two managers put `postgresql` and `pgvector` in the project manifest, and `make setup` starts that server instead of a container:
-
-```console
-$ make setup
-$ make db-down    # stops it again
-```
-
-The data lives in `.pgdata/` inside the project, and the server listens on `127.0.0.1:5433`, which is the address `.env.example` already carries. Nothing to configure and no connection string to edit.
-
-This path is not available to **uv or venv+pip** projects. PyPI has no PostgreSQL server, so those two need either Docker or a Postgres you already run.
-
-**With an external PostgreSQL service**, any supported server works. Point `SCI_RAG_DATABASE_URL` at it, make sure the pgvector extension is available, then run the two non-Docker steps directly:
-
-```console
-$ uv sync
-$ uv run sci-rag db upgrade
-```
-
-Supported servers are **PostgreSQL 16 through 18**. CI proves 16 through the container image on every change and 18 through the conda-forge path, so both ends of that range are tested rather than assumed. [ADR 0008](adr/0008-supported-postgresql-versions.md) records why the range exists.
+That installs dependencies, starts the compose Postgres on host port `5433`, and applies every migration.
 
 **Expected output**
 
 ```text
 Database schema is up to date.
 ```
+
+No Docker? Supported servers are **PostgreSQL 16 through 18**, and there are two other ways to get one. pixi and conda projects run theirs from conda-forge with the same `make setup`; uv and venv projects point at a server you already have. [Run Postgres your way](run-postgres.md) has both.
 
 <div class="srag-checkpoint" markdown>
 **Checkpoint: the foundation is healthy**

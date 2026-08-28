@@ -80,11 +80,12 @@ nav:
       - guides.md
       - Bring your own domain: bring-your-own-domain.md
       - LLM-assisted setup: llm-assisted-setup.md
-      - Discover a corpus: campaigns.md
+      - Run a corpus campaign: campaigns.md
       - Evaluate your pipeline: evaluation.md
       - Extend the seams: extend.md
-      - Operations: operations.md
+      - Operate a live corpus: operations.md
       - Deploy on Google Cloud: deploy-gcp.md
+      - Run Postgres your way: run-postgres.md
   - Reference:
       - reference.md
       - CLI: cli.md
@@ -99,15 +100,16 @@ nav:
       - Governance: GOVERNANCE.md
       - Adopters: adopters.md
       - Decision records:
-          - Graph in Postgres: adr/0001-graph-in-postgres.md
-          - 1536-dimensional embeddings: adr/0002-embeddings-1536-hnsw.md
-          - Docling with fallback: adr/0003-docling-with-pypdf-fallback.md
-          - Template repository, not Cookiecutter: adr/0004-template-repo-not-cookiecutter.md
-          - Citation edges in their own table: adr/0005-citation-edges-as-a-document-table.md
-          - Multi-provider LLMs: adr/0006-multi-provider-llms.md
-          - Interactive project generator: adr/0007-interactive-project-generator.md
-          - Supported PostgreSQL versions: adr/0008-supported-postgresql-versions.md
+          - "ADR 0001: The graph lives in Postgres": adr/0001-graph-in-postgres.md
+          - "ADR 0002: 1536-dimensional embeddings": adr/0002-embeddings-1536-hnsw.md
+          - "ADR 0003: Docling for PDFs, with a pypdf fallback": adr/0003-docling-with-pypdf-fallback.md
+          - "ADR 0004: A runnable template, not a cookiecutter": adr/0004-template-repo-not-cookiecutter.md
+          - "ADR 0005: Citation edges in their own table": adr/0005-citation-edges-as-a-document-table.md
+          - "ADR 0006: Hand-written provider adapters": adr/0006-multi-provider-llms.md
+          - "ADR 0007: A generator that configures": adr/0007-interactive-project-generator.md
+          - "ADR 0008: PostgreSQL 16 through 18": adr/0008-supported-postgresql-versions.md
       - Contributing: contributing.md
+      - Documentation style: STYLE.md
       - Changelog: changelog.md
       - How to cite: citation.md
 

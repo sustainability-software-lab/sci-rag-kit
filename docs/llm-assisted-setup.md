@@ -1,6 +1,11 @@
+---
+title: LLM-assisted setup
+description: Draft your ontology, corpus manifest, seed questions, and prompts with a model, or by copy-paste with no credentials at all.
+---
+
 # LLM-assisted setup
 
-Specializing the kit to your field means writing four files: the ontology in
+Pointing the kit at your field means writing four files: the ontology in
 `domain/domain.yaml`, the corpus manifest, the seed questions in
 `domain/eval_seed_questions.jsonl`, and the prompt wording in
 `domain/prompts/`. Written cold, that is an afternoon of typing before you can
@@ -95,7 +100,7 @@ these documents actually talk about?
 
 === "Cold, from the description"
 
-    The wizard's behaviour, available on its own. Reads no documents at all.
+    The wizard's behavior, available on its own. Reads no documents at all.
 
     ```bash title="Terminal"
     uv run sci-rag draft ontology --cold
@@ -149,7 +154,7 @@ a human wrote is never displaced by one a model wrote.
 
 `--dry-run` shows you the whole result and writes nothing at all.
 
-## Drafted ground truth is labelled, everywhere
+## Drafted ground truth is labeled, everywhere
 
 `sci-rag draft questions` tags every row it writes `drafted`:
 
@@ -301,7 +306,7 @@ Prompt wording moves every downstream number. Re-run
 
 ## What is not drafted
 
-`domain/eval_calibration_labels.jsonl` stays hand-labelled. Those labels exist
-to calibrate the LLM judge against human judgement; generating them with an LLM
+`domain/eval_calibration_labels.jsonl` stays hand-labeled. Those labels exist
+to calibrate the LLM judge against human judgment; generating them with an LLM
 would be circular and would destroy the only measurement they provide. See
 [Evaluate your pipeline](evaluation.md).

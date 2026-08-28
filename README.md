@@ -106,7 +106,7 @@ exercised end to end before you commit your own documents.
 
 ## Customizing to your domain
 
-You do not have to write the specialization files cold. `sci-rag draft`
+You do not have to write the domain files cold. `sci-rag draft`
 creates corpus-grounded first passes; the
 [LLM-assisted setup guide](docs/llm-assisted-setup.md) also shows a copy-paste
 workflow that needs no model credentials.
@@ -129,7 +129,7 @@ name, description, seed-question reset).
 ## Repository layout
 
 ```
-domain/            Ontology, prompts, seed questions (the specialization surface)
+domain/            Ontology, prompts, seed questions (everything specific to your field)
 src/sci_rag/       ingest, embed, graph, retrieve, answer, evals, server, cli
 data/demo/         Demo corpus (synthetic, CC0; optional)
 migrations/        Alembic schema (pgvector + HNSW + FTS indexes)
@@ -177,7 +177,7 @@ The complete, searchable site is published at
 |---|---|
 | [Quickstart](docs/quickstart.md) | Setup, first run, troubleshooting |
 | [FAQ](docs/faq.md) | Short answers, and the reasoning behind each design decision |
-| [Bring your own domain](docs/bring-your-own-domain.md) | Specialization tutorial |
+| [Bring your own domain](docs/bring-your-own-domain.md) | Configure the kit for your field |
 | [Corpus campaigns](docs/campaigns.md) | Polite, resumable discovery from topics or DOI seeds |
 | [Methodology](docs/methodology.md) | Design rationale for every component |
 | [Architecture](docs/architecture.md) | Code layout, data model, extension points |

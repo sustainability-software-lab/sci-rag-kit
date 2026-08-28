@@ -20,3 +20,9 @@ Generated pages derive from the current Typer and Pydantic definitions. Human-wr
 [<span class="srag-row__title">Glossary</span><span class="srag-row__copy">Project-specific meanings for retrieval, graph, evidence, evaluation, and deployment vocabulary.</span>](glossary.md){ .srag-row }
 
 </div>
+
+If you are looking something up and do not know where it lives: commands are in
+[CLI](cli.md), anything with an `SCI_RAG_` prefix or a `domain.yaml` key is in
+[Configuration](configuration.md), and request and response shapes are in
+[REST, MCP, and Python API](api.md). A word you do not recognize is probably in
+the [Glossary](glossary.md).

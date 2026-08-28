@@ -1,4 +1,9 @@
-# Operations: snapshots, backup, restore
+---
+title: Operate a live corpus
+description: Back up, restore, snapshot, delete, garbage-collect, and re-embed a corpus that keeps changing under a running service.
+---
+
+# Operate a live corpus
 
 Everything the kit knows lives in one Postgres database, which keeps the
 operational discipline short. Snapshot what the corpus **is**, back up what

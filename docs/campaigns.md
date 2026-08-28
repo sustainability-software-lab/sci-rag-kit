@@ -1,9 +1,9 @@
 ---
-title: Corpus campaigns
+title: Run a corpus campaign
 description: Discover a resumable DOI list, resolve explicit open-access rights, download verified PDFs, and write an ingestible corpus manifest.
 ---
 
-# Corpus campaigns
+# Run a corpus campaign
 
 A campaign turns a research topic or a seed DOI file into a reproducible
 list of scientific works. Discovery is deliberately separate from ingestion:

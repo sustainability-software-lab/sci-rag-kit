@@ -1,7 +1,7 @@
 """The domain profile: everything that makes YOUR corpus yours.
 
 The kit's code is domain-agnostic. All the domain semantics live in one
-directory (``domain/`` by default) that you edit when specializing:
+directory (``domain/`` by default) that you edit to point the kit at a field:
 
 * ``domain.yaml``: the ontology (entity and relationship types the graph
   extractor looks for), HyDE query classes, and retrieval tuning.

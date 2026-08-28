@@ -1,3 +1,8 @@
+---
+title: Versioning
+description: Learn which five public surfaces hold stable inside 0.x, and what evidence a 1.0 promise is waiting on.
+---
+
 # Versioning
 
 sci-rag-kit follows [Semantic Versioning](https://semver.org/) with the

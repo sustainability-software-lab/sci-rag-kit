@@ -1,4 +1,9 @@
-# The sci-rag methodology
+---
+title: Methodology
+description: Read the specification behind chunking, graph extraction, fusion, answer generation, and evaluation, with the reasoning for every choice.
+---
+
+# Methodology
 
 This document is the kit's specification. It describes every design
 decision that matters, in plain language. You should be able to judge
@@ -138,11 +143,17 @@ embeddings blur.
 
 ### 6.3 Knowledge-graph traversal
 
+Four things happen in this layer, at two different times. Extraction and
+entity resolution run when documents are ingested. The walk and its scope
+rules run on every query that reaches the stage.
+
+#### 6.3.1 Extraction
+
 At ingestion time, an LLM extracts entities and typed relationships from
 each chunk. A **domain ontology you declare** constrains it: entity types
 and relation types with one-line descriptions, in a YAML file. The
 extractor drops unknown types and dangling endpoints rather than
-guessing them. Entities
+guessing at them. Entities
 are canonical by name, accumulate evidence pointers (the chunks they were
 extracted from), and retain surface-form aliases actually present in the
 source. Relationships keep the quoted phrase that stated them and a
@@ -152,6 +163,8 @@ aliases and preserves the highest confidence observed for a repeated typed
 edge from the same evidence surface. Edges with different document or chunk
 provenance remain separate so retrieval scope cannot erase otherwise eligible
 relationship evidence.
+
+#### 6.3.2 Entity resolution
 
 Extraction can still fragment one concept across several names. Run
 `sci-rag graph resolve-entities --dry-run` to inspect a conservative
@@ -166,6 +179,8 @@ tombstones. Because community summaries materialize entity membership and
 relationships, an applied merge clears them; rebuild with
 `sci-rag graph communities` after reviewing the resolution receipts.
 
+#### 6.3.3 The two-hop walk
+
 At query time, a fast LLM call extracts entity names from the question.
 The walk follows matching graph entities up to **two hops** in either
 direction, and the chunks those entities point to re-enter the candidate
@@ -179,10 +194,12 @@ citation hop in either direction. This is off by default. It uses only
 `document_citations` rows whose target resolves to a corpus document, and it
 applies the request scope to the neighboring document before chunk ranking.
 The `with_citations` ablation measures it. Unresolved DOI pointers remain
-visible provenance but never enter retrieval.
-This is what makes multi-hop questions work: the connecting entity brings
-its evidence with it even when the question's words never appear in that
-text.
+visible provenance and never enter retrieval.
+
+This is what makes multi-hop questions work. The connecting entity brings its
+evidence with it even when the question's words never appear in that text.
+
+#### 6.3.4 Scope inside the walk
 
 Alias strings currently do not carry per-surface document provenance, so only
 an unrestricted graph walk may expand them. A restricted walk may seed from an

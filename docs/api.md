@@ -1,4 +1,9 @@
-# API reference
+---
+title: REST, MCP, and Python API
+description: Look up authentication scopes, endpoint shapes, streaming events, agent tools, error codes, and importable entry points.
+---
+
+# REST, MCP, and Python API
 
 One server, two front doors, one service behind both. Start it with
 `sci-rag serve`; interactive OpenAPI docs live at `/docs`.

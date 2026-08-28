@@ -1,4 +1,11 @@
-# ADR 0002: 1536-dimension embeddings, so HNSW indexing actually works
+---
+title: ADR 0002: 1536-dimensional embeddings
+description: Why vectors are truncated to 1536 dimensions, and what would happen to query latency without it.
+---
+
+# ADR 0002: 1536-dimensional embeddings
+
+Embeddings are truncated to 1536 dimensions and re-normalized, so every vector column stays inside pgvector's HNSW index limit.
 
 **Status:** accepted
 
@@ -37,6 +44,14 @@ matches.
 
 * Vector search stays indexed as the corpus grows. The demo's ~2 second
   vector stage is connection and API latency, not scan time.
-* Full 3072 dimensions would retrieve slightly better. If that ever
-  matters for a corpus, measure the gap with the ablation harness before
-  paying the exact-scan price.
+
+## Reversal conditions
+
+* pgvector raises the HNSW dimension limit past 3072, which removes the
+  constraint this decision exists to work around.
+* An ablation on a real corpus shows the 1536-to-3072 quality gap
+  mattering more than the exact-scan cost it would buy back. Measure it
+  before assuming it.
+
+Reversing means a migration, a full re-embed, and an index rebuild, so
+the evidence has to be worth that.

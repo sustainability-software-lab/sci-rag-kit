@@ -45,7 +45,7 @@ assistant and feed the reply back with `--from-file`, no API key required.
 Two things stay yours. `license_class` is never set by a model, and drafted
 seed questions carry a `drafted` tag that every evaluation report repeats until
 a domain expert removes it. `eval_calibration_labels.jsonl` is not drafted at
-all: it exists to calibrate the judge against human judgement, so generating it
+all: it exists to calibrate the judge against human judgment, so generating it
 would defeat the measurement.
 
 See [docs/llm-assisted-setup.md](../docs/llm-assisted-setup.md).
