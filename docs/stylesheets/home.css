@@ -28,6 +28,12 @@
   border-top: 1px solid var(--srag-border);
 }
 
+/* The figure carries detail that rewards width, so it runs wider than the
+   prose sections rather than being held to a reading measure. */
+.srag-home-section--figure {
+  max-width: 64rem;
+}
+
 .srag-home-section > :first-child {
   margin-top: 0;
 }
@@ -54,7 +60,7 @@
 
 .srag-home-masthead__logo {
   display: block;
-  width: 11rem;
+  width: 14rem;
   height: auto;
 }
 
@@ -76,12 +82,12 @@
 }
 
 .md-typeset .srag-home-masthead h1 {
-  max-width: 34ch;
-  margin: 0 0 0.85rem;
+  max-width: 42ch;
+  margin: 0 0 0.9rem;
 }
 
 .md-typeset .srag-home-masthead__lede {
-  max-width: 46ch;
+  max-width: 54ch;
   margin: 0;
   color: var(--srag-muted-700);
   font-size: 0.92rem;

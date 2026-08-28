@@ -32,10 +32,14 @@
       <text x="87" y="57" class="copy">PDF · Markdown</text>
     </g>
     <g transform="translate(28 256)">
-      <path d="M20 4h28M27 4v25L10 63c-4 9 2 17 12 17h39c10 0 16-8 12-17L55 29V4" fill="#f7f7f8" stroke="#9b9ea6" stroke-width="2.5" stroke-linejoin="round"/>
-      <path d="M18 58h48" class="ink"/>
-      <circle cx="34" cy="49" r="4" fill="#c4c6cb"/>
-      <circle cx="52" cy="66" r="5" fill="#b4b6bc"/>
+      <!-- Symmetric about x=41: neck walls at 27 and 55, lip and body centred
+           on the same axis. The lip used to run 20..48 against a neck at
+           27..55, so it overhung one side and fell short on the other. -->
+      <path d="M27 4v25L10 63c-4 9 2 17 12 17h38c10 0 16-8 12-17L55 29V4" fill="#f7f7f8" stroke="#9b9ea6" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M23 4h36" class="ink" stroke-linecap="round"/>
+      <path d="M17 58h48" class="ink"/>
+      <circle cx="31" cy="49" r="4" fill="#c4c6cb"/>
+      <circle cx="50" cy="67" r="5" fill="#b4b6bc"/>
       <text x="87" y="35" class="pill">Reports</text>
       <text x="87" y="57" class="copy">Methods · results</text>
     </g>
@@ -77,10 +81,13 @@
     <text x="28" y="77" class="label">Postgres</text>
     <text x="28" y="106" class="copy">Every index, one source of truth</text>
     <g transform="translate(28 135)">
+      <!-- Three evenly spaced layers, 24 apart, so it reads as a stack rather
+           than a cylinder with two arbitrary lines across it. -->
       <ellipse cx="42" cy="12" rx="42" ry="12" fill="#eaeaec" stroke="#9b9ea6" stroke-width="1.5"/>
-      <path d="M0 12v64c0 7 19 13 42 13s42-6 42-13V12" fill="#f7f7f8" stroke="#9b9ea6" stroke-width="1.5"/>
-      <path d="M0 43c0 7 19 13 42 13s42-6 42-13M0 72c0 7 19 13 42 13s42-6 42-13" fill="none" stroke="#9b9ea6" stroke-width="1.5"/>
-      <g transform="translate(124 5)">
+      <path d="M0 12v72c0 7 19 13 42 13s42-6 42-13V12" fill="#f7f7f8" stroke="#9b9ea6" stroke-width="1.5"/>
+      <path d="M0 36c0 7 19 13 42 13s42-6 42-13" fill="none" stroke="#9b9ea6" stroke-width="1.5"/>
+      <path d="M0 60c0 7 19 13 42 13s42-6 42-13" fill="none" stroke="#9b9ea6" stroke-width="1.5"/>
+      <g transform="translate(124 9)">
         <path d="M11 28L45 9l34 19v38L45 85 11 66Z" fill="#f7f7f8" stroke="#9b9ea6" stroke-width="1.5"/>
         <circle cx="45" cy="24" r="6" fill="#9b9ea6"/>
         <circle cx="26" cy="55" r="6" fill="#b4b6bc"/>
@@ -124,12 +131,12 @@
 
   <!-- Retrieval and Evaluation share a centre line at x=1086, so the two edges
        between them run straight down, evenly spaced either side of it. -->
-  <path class="flow" d="M1031 538 V600"/>
-  <path class="flow" d="M1141 538 V600"/>
+  <path class="flow" d="M1031 538 V580"/>
+  <path class="flow" d="M1141 538 V580"/>
 
   <!-- Evaluation -->
-  <g transform="translate(936 604)">
-    <rect class="stage" width="300" height="102" rx="12"/>
+  <g transform="translate(936 584)">
+    <rect class="stage" width="300" height="124" rx="12"/>
     <text x="28" y="40" class="eyebrow">Evaluation</text>
     <text x="28" y="71" class="label">Ablations and judging</text>
     <text x="28" y="94" class="copy">Confidence intervals · calibration</text>

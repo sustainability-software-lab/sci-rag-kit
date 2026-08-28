@@ -22,7 +22,7 @@ hide:
 
 </section>
 
-<section class="srag-home-section" markdown>
+<section class="srag-home-section srag-home-section--figure" markdown>
 
 <figure class="srag-home-figure">
   <img
