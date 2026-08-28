@@ -50,7 +50,7 @@ sci-rag corpus license-report --strict   # exit 1 if anything is still `unknown`
 Counts by class, by document **and** by chunk, because those answer different
 questions: rights are declared per document, but retrieval returns chunks, so a
 corpus that is 20% restricted by document can be 60% restricted by the material
-an answer would draw on. Every class in the taxonomy is listed even at zero — a
+an answer would draw on. Every class in the taxonomy is listed even at zero. A
 missing row would read as "not checked" rather than "none".
 
 Documents still in `unknown` are named individually, with the source bucket

@@ -2,7 +2,7 @@
 
 License classes already gate retrieval: every layer applies the caller's
 allowlist inside its own SQL, and ``unknown`` is never included unless asked
-for by name. What was missing is the view from outside that machinery — how
+for by name. What was missing is the view from outside that machinery: how
 much of the corpus is actually reachable under a restriction, and which
 documents are quietly sitting in ``unknown`` because nobody recorded their
 rights.
