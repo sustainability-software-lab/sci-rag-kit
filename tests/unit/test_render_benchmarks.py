@@ -143,7 +143,9 @@ def test_renders_full_page(tmp_path: Path) -> None:
     )
     assert "full_deep" in page and "with_rerank" in page and "auto_routed" in page
     assert "confidence_weighted" in page and "with_citations" in page and "no_retracted" in page
+    assert "zero document edges" in page
     assert "Entity-resolution condition" in page and "resolved_entities" in page
+    assert "neither a retrieval gain nor a degradation" in page
     assert "Snippet-compression condition" in page and "prompt_tokens" in page
     assert "google:gemini-2.5-flash" in page and "anthropic:claude-haiku-4-5" in page
     assert "1.00 [0.90, 1.00]" in page  # CI formatting

@@ -207,9 +207,12 @@ def render_benchmarks(
         "- `auto_routed` vs `full_deep` and `interactive` is the evidence for",
         "  (or against) making adaptive routing a default. Until it clearly",
         "  matches `full_deep` at lower cost, `auto` stays opt-in.",
-        "- `confidence_weighted` and `with_citations` isolate the two new graph",
-        "  ranking mechanisms. A neutral row means this tiny corpus did not",
-        "  exercise enough competing graph candidates to justify a default.",
+        "- `confidence_weighted` isolates confidence-aware graph ranking. Its",
+        "  interval overlaps the full condition, so this run does not justify a default.",
+        "- The shipped demo manifest has no cached DOI reference lists, so citation",
+        "  ingestion produced zero document edges. Treat `with_citations` as an",
+        "  unexercised control. Small movement from independent real-model retrieval",
+        "  calls is not evidence for or against citation traversal.",
         "- `no_retracted` should be exactly neutral because the synthetic demo",
         "  contains no known retracted document. Any apparent gain would be suspect.",
         "",
@@ -260,9 +263,21 @@ def render_benchmarks(
             lines.append(
                 f"| {METRIC_LABELS[metric]} | {_delta_cell(delta)} | {delta['p_value']:.3f} |"
             )
+        resolution_inconclusive = all(
+            deltas[metric]["lo"] <= 0.0 <= deltas[metric]["hi"] for metric in METRICS
+        )
+        resolution_reading = (
+            "The controlled merge preserved hit@5 and hit@10. Every paired interval includes "
+            "zero, so this small run establishes neither a retrieval gain nor a degradation."
+            if resolution_inconclusive
+            else "At least one paired interval excludes zero; inspect that metric before "
+            "changing the entity-resolution default."
+        )
         lines += [
             "",
-            f"Control snapshot: `{resolution_baseline.get('snapshot')}`. Post-resolution snapshot: ",
+            resolution_reading,
+            "",
+            f"Control snapshot: `{resolution_baseline.get('snapshot')}`. Post-resolution snapshot:",
             f"`{resolved_entities.get('snapshot')}`.",
             f"Both resolution reports were measured at commit `{resolved_entities.get('git_commit')}`.",
             "",
