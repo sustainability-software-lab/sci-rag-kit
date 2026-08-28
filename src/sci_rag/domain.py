@@ -105,9 +105,24 @@ class CompressionTuning(BaseModel):
     holding while measured prompt tokens fall on the target corpus.
     """
 
-    enabled: bool = False
-    relevance_floor: float = Field(default=0.3, ge=0.0, le=1.0)
-    max_tokens_per_chunk: int = Field(default=160, ge=16, le=2048)
+    enabled: bool = Field(
+        default=False,
+        description="Domain default; enable only after paired judged-answer evidence.",
+    )
+    relevance_floor: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=1.0,
+        description="Drop a model-scored chunk below this relevance score.",
+    )
+    max_tokens_per_chunk: int = Field(
+        default=160,
+        ge=16,
+        le=2048,
+        description=(
+            "Maximum accepted tokens per summary; over-budget output falls back to full text."
+        ),
+    )
 
 
 class DomainConfig(BaseModel):
@@ -117,7 +132,10 @@ class DomainConfig(BaseModel):
     relation_types: list[RelationTypeSpec] = Field(default_factory=list)
     query_classes: list[QueryClassSpec] = Field(default_factory=list)
     retrieval: RetrievalTuning = Field(default_factory=RetrievalTuning)
-    compression: CompressionTuning = Field(default_factory=CompressionTuning)
+    compression: CompressionTuning = Field(
+        default_factory=CompressionTuning,
+        description="Question-aware chunk compression before answer prompt assembly.",
+    )
 
 
 @dataclass

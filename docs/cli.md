@@ -128,7 +128,7 @@ $ sci-rag answer [OPTIONS] QUERY
 | `--journal` | text | unset | Comma-separated journal allowlist. |
 | `--exclude-doi` | text | unset | Comma-separated DOIs to drop. |
 | `--include-retracted` | boolean | false | Deliberately allow known retracted papers as answer evidence. |
-| `--compression, --no-compression` | boolean | domain setting | Override contextual source compression for this answer. |
+| `--compression, --no-compression` | boolean | unset | Override contextual source compression (domain default when omitted). |
 
 ## `sci-rag stats`
 
