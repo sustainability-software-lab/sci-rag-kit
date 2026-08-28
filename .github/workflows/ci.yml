@@ -107,10 +107,13 @@ jobs:
         run: make docs
       - name: Install the browser the geometry guard measures with
         run: uv run playwright install --with-deps chromium
-      - name: Measure the built site's code snippets
+      - name: Measure the built site's page head and code snippets
         # Reads site/ from the build above. Geometry is what the Markdown-level
-        # guard in tests/unit cannot see.
-        run: uv run pytest tests/docs -q
+        # guard in tests/unit cannot see. The page-head module comes along
+        # because its breadcrumb assertions render the site with MkDocs, so
+        # they skip in the checks job, which deliberately installs no docs
+        # group. This is the only job where they run.
+        run: uv run pytest tests/docs tests/unit/test_docs_page_head.py -q
       - name: Upload documentation preview
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v7

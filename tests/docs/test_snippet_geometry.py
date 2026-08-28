@@ -21,19 +21,15 @@ each one.
 
 from __future__ import annotations
 
-import functools
-import http.server
-import threading
-from collections.abc import Iterator
-from pathlib import Path
 from typing import Any
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[2]
-SITE = ROOT / "site"
-
 pytestmark = pytest.mark.docs_render
+
+# Wide enough for the docked sidebar and a full-measure article, which is where
+# a snippet is widest and any spacing defect is most visible.
+WIDTH = 1200
 
 # Broken was 0px, current is 17px. Anything under this reads as one block with a
 # stray divider through it.
@@ -82,61 +78,10 @@ MEASURE_JS = """
 """
 
 
-def _built_pages() -> list[Path]:
-    return sorted(SITE.rglob("*.html"))
-
-
 @pytest.fixture(scope="module")
-def site_origin() -> Iterator[str]:
-    """Serve the built site, because file:// resolves the stylesheets differently."""
-    if not SITE.is_dir() or not _built_pages():
-        pytest.skip(f"no built site at {SITE}; run `make docs` first")
-
-    handler = functools.partial(_QuietHandler, directory=str(SITE))
-    # Threading matters: the browser opens several keep-alive connections per
-    # page, and a single-threaded server serialises them into a stall.
-    with http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler) as server:
-        server.daemon_threads = True
-        thread = threading.Thread(target=server.serve_forever, daemon=True)
-        thread.start()
-        try:
-            yield f"http://127.0.0.1:{server.server_address[1]}"
-        finally:
-            server.shutdown()
-            thread.join(timeout=5)
-
-
-class _QuietHandler(http.server.SimpleHTTPRequestHandler):
-    """The default handler logs every asset to stderr, which buries test output."""
-
-    def log_message(self, format: str, *args: Any) -> None:
-        return
-
-
-@pytest.fixture(scope="module")
-def measurements(site_origin: str) -> list[tuple[str, dict[str, Any]]]:
+def measurements(measure_pages: Any, built_pages: list[str]) -> list[tuple[str, dict[str, Any]]]:
     """Every page's snippet geometry, measured once and shared by the assertions."""
-    playwright = pytest.importorskip(
-        "playwright.sync_api",
-        reason="playwright is not installed; `uv sync --group docs-test`",
-    )
-
-    collected: list[tuple[str, dict[str, Any]]] = []
-    with playwright.sync_playwright() as driver:
-        try:
-            browser = driver.chromium.launch()
-        except Exception as exc:  # pragma: no cover - environment guard
-            pytest.skip(
-                f"no Playwright browser ({type(exc).__name__}); run `playwright install chromium`"
-            )
-        page = browser.new_page(viewport={"width": 1200, "height": 900})
-        for path in _built_pages():
-            relative = path.relative_to(SITE).as_posix()
-            page.goto(f"{site_origin}/{relative}", wait_until="domcontentloaded")
-            collected.append((relative, page.evaluate(MEASURE_JS)))
-        browser.close()
-
-    return collected
+    return measure_pages(MEASURE_JS, [WIDTH], built_pages)[WIDTH]
 
 
 def test_the_measured_site_is_not_silently_empty(
