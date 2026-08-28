@@ -19,7 +19,7 @@ migrations, `domain/`, and data paths resolve predictably.
 | `sci-rag ingest` | Ingest documents: parse, chunk, embed, and store them. |
 | `sci-rag retrieve` | Inspect retrieval: see what each layer contributed and what won. |
 | `sci-rag answer` | Generate a grounded answer with numbered citations. |
-| `sci-rag profile` | Where retrieval time goes: p50/p95 per stage, for each profile. Replays the seed questions against interactive, deep, and auto, and aggregates the per-stage timings every request already records. Stages run concurrently, so their durations do not sum to the request; wall-clock is measured separately and reported beside them. |
+| `sci-rag profile` | Where retrieval time goes: p50/p95 per stage, for each profile. |
 | `sci-rag stats` | What is in the knowledge base right now. |
 | `sci-rag serve` | Serve the REST API (/v1, docs at /docs) and the MCP server (/mcp). |
 | `sci-rag mcp` | Run the MCP server over stdio (for local agents like Claude Code). |
