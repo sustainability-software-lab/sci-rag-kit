@@ -784,19 +784,17 @@ def eval_retrieval(
         else DEFAULT_ABLATIONS[:1]
     )
 
-    if condition == "resolved_entities":
-
-        async def count_resolution_audits() -> int:
-            async with get_session_factory()() as session:
-                return (await session.scalar(select(func.count(EntityResolutionAudit.id)))) or 0
-
-        if run_async(count_resolution_audits()) == 0:
-            raise typer.BadParameter(
-                "resolved_entities requires at least one persisted entity-resolution audit row",
-                param_hint="--condition",
-            )
-
     async def run():  # type: ignore[no-untyped-def]
+        if condition == "resolved_entities":
+            async with get_session_factory()() as session:
+                audit_count = (
+                    await session.scalar(select(func.count(EntityResolutionAudit.id)))
+                ) or 0
+            if audit_count == 0:
+                raise typer.BadParameter(
+                    "resolved_entities requires at least one persisted entity-resolution audit row",
+                    param_hint="--condition",
+                )
         retriever = Retriever()
         results = await run_retrieval_eval(retriever, questions, configs=configs, limit=limit)
         fingerprint = await corpus_fingerprint(get_session_factory())
