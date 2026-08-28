@@ -146,11 +146,11 @@ How to choose well:
 * **Relations read as sentences.** "source RELATION target" should be
   sayable out loud: "polyamide SUFFERS_FROM chlorine degradation".
 
-Also update `query_classes` in the same file: 3 to 5 kinds of questions
-your users actually ask (performance lookup, mechanism explanation,
-material comparison...), each with a few trigger keywords and a one-line
-instruction for how a document answering it would read. These steer the
-HyDE layer.
+Also update `query_classes` in the same file. List 3 to 5 kinds of
+question your users actually ask, such as performance lookup, mechanism
+explanation, or material comparison. Give each one a few trigger keywords
+and a one-line instruction for how a document answering it would read.
+These steer the HyDE layer.
 
 ## Step 4: tune the prompts (lightly)
 
@@ -195,11 +195,11 @@ domain expert can vouch for. Each line:
 {"id": "pfas-rejection", "question": "What PFAS rejection does a polyamide RO membrane achieve?", "reference_answer": "Above 99 percent for long-chain PFAS at typical seawater RO conditions, per Lee 2021.", "reference_titles": ["Membrane Fouling Mechanisms: A Review"], "evidence_phrases": ["99", "long-chain PFAS"], "tags": ["performance"]}
 ```
 
-Rules of thumb: pick evidence phrases distinctive enough that finding
-them means finding the answer (numbers with units are perfect); include
-one or two multi-hop questions whose answers span documents; include one
-question the corpus canNOT answer, tagged `unanswerable`, as an honesty
-probe.
+Three rules of thumb. Pick evidence phrases distinctive enough that
+finding them means finding the answer, where numbers with units are
+perfect. Include one or two multi-hop questions whose answers span
+documents. And include one question the corpus **cannot** answer, tagged
+`unanswerable`, as an honesty probe.
 
 Then:
 
@@ -222,10 +222,10 @@ uv run sci-rag serve
 ```
 
 Before anyone else touches it, set API keys in `.env` (see
-`.env.example`), and decide your external license scope: a public or
+`.env.example`) and decide your external license scope. A public or
 semi-public endpoint should pin callers to
-`{"license_classes": ["public", "open_commercial"]}` so your
-`restricted` and `unknown` documents stay internal. The
+`{"license_classes": ["public", "open_commercial"]}`, so your `restricted`
+and `unknown` documents stay internal. The
 [API reference](api.md) covers keys, scopes, and the MCP tools; the
 [GCP guide](deploy-gcp.md) covers putting it on Cloud Run.
 

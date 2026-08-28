@@ -7,10 +7,10 @@ compose, a managed product, or an agentic literature assistant, better
 options exist and are named below.
 
 No benchmark-score comparisons appear here. Cross-system numbers on
-hand-picked corpora mislead more than they inform; our own measured
-numbers (on our own demo corpus, with confidence intervals and a
-reproduction command) live in [benchmarks.md](benchmarks.md) and claim
-nothing about anyone else.
+hand-picked corpora mislead more than they inform. Our own measured
+numbers live in [benchmarks.md](benchmarks.md), on our own demo corpus,
+with confidence intervals and a reproduction command. They claim nothing
+about anyone else.
 
 ## The landscape, honestly
 
@@ -25,7 +25,7 @@ incremental insert/delete, dual-level retrieval, multiple storage
 backends including Postgres, big community. It is a LIBRARY you build
 an application around. If you want to write that application code and
 make your own architecture calls, LightRAG is the strongest general
-choice, and some of its ideas (per-document extraction caching) are on
+choice. Some of its ideas, such as per-document extraction caching, are on
 our own roadmap, credited.
 
 **PaperQA2** owns agentic scientific literature QA: multi-step
@@ -45,11 +45,12 @@ want those decisions made well and defensibly, once.
 
 ## What sci-rag-kit actually is
 
-A GitHub template repository: you instantiate it, run
-`scripts/init_domain.py`, edit three domain files (ontology, prompts,
-seed questions), point it at your documents, and you have a running,
-served, evaluated knowledge base whose every architectural decision is
-written down with its reasoning (docs/methodology.md, docs/adr/).
+A GitHub template repository. You instantiate it, run
+`scripts/init_domain.py`, edit three domain files (ontology, prompts, and
+seed questions), and point it at your documents. What you get is a
+running, served, evaluated knowledge base, and every architectural
+decision behind it is written down with its reasoning in
+`docs/methodology.md` and `docs/adr/`.
 
 The bets it makes for you, and where they hold:
 

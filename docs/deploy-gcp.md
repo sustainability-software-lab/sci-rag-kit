@@ -9,16 +9,16 @@
     if you want them back.
 
 The kit ships a small, honest Terraform module (`infra/terraform/`) that
-stands up a production-shaped instance: Cloud SQL Postgres (pgvector),
-one Cloud Run service serving REST and MCP, one Cloud Run job for
-migrations and ingestion, a corpus bucket, secrets, and a least-privilege
-service account. This page walks it end to end.
+stands up a production-shaped instance. You get Cloud SQL Postgres with
+pgvector, one Cloud Run service serving REST and MCP, one Cloud Run job
+for migrations and ingestion, a corpus bucket, secrets, and a
+least-privilege service account. This page walks it end to end.
 
 Two honest notes before you start. First, this costs money while it
-exists; the database is the steady cost (the default `db-g1-small` tier
-is a few tens of dollars a month), so tear down experiments with
-`terraform destroy`. Second, everything here is also doable by hand in
-the console; the Terraform is 300 readable lines, and reading it IS the
+exists. The database is the steady cost, since the default `db-g1-small`
+tier runs a few tens of dollars a month, so tear down experiments with
+`terraform destroy`. Second, everything here is also doable by hand in the
+console. The Terraform is 300 readable lines, and reading it **is** the
 architecture documentation.
 
 ## Prerequisites
@@ -86,11 +86,12 @@ gcloud run jobs execute sci-rag-ops --region=us-central1 --project=YOUR_PROJECT 
   --args='graph,communities' --wait
 ```
 
-For corpora too large to bake into the image, upload documents to the
-created bucket and extend your manifest workflow to pull from it, or run
-ingestion from your laptop against the database through the
-[Cloud SQL Auth Proxy](https://cloud.google.com/sql/docs/postgres/connect-auth-proxy)
-(the `db_connection_name` output is what the proxy needs).
+A corpus too large to bake into the image has two routes. Upload the
+documents to the created bucket and extend your manifest workflow to pull
+from it. Or run ingestion from your laptop against the database through
+the
+[Cloud SQL Auth Proxy](https://cloud.google.com/sql/docs/postgres/connect-auth-proxy),
+which needs the `db_connection_name` output.
 
 ## Step 4: set API keys and verify
 

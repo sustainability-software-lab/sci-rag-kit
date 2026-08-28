@@ -18,12 +18,11 @@ document-to-document, its type is always the same, and its evidence is a
 DOI match in a reference list rather than a sentence someone wrote.
 
 The alternative that would preserve the table is a synthetic entity per
-document. That buys the reuse and pays for it three times over:
-`search_entities` starts returning paper titles alongside concepts,
-community detection clusters documents with concepts and writes summaries
-about the mixture, and `graph gc` has to learn that some entities are not
-allowed to be evidence-less because they are not evidence-bearing in the
-first place.
+document. That buys the reuse, and it pays for it three times over.
+`search_entities` starts returning paper titles alongside concepts.
+Community detection clusters documents with concepts and writes summaries
+about the mixture. And `graph gc` has to learn that some entities may be
+evidence-less, because they were never evidence-bearing to begin with.
 
 ## Decision
 
@@ -43,10 +42,10 @@ reference to a paper nobody ingested is not a graph edge, it is a dangling
 pointer, and the corpus should not carry pointers it cannot resolve.
 
 Citation traversal joins the existing graph stage as an optional
-expansion rather than becoming a sixth retrieval layer, because the
+expansion rather than becoming a sixth retrieval layer. Two reasons. The
 fusion weights, the router, and the public trace contract all enumerate
-five layers, and a citation walk is a variant of "walk from here to
-related evidence" rather than a new kind of evidence.
+five layers. And a citation walk is a variant of "walk from here to
+related evidence", not a new kind of evidence.
 
 ## Consequences
 
