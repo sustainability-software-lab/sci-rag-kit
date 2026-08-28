@@ -115,3 +115,62 @@ uv run sci-rag ingest --manifest data/campaigns/rice-straw/corpus.jsonl
 Every manifest row retains the normalized DOI, bibliographic metadata,
 fail-closed `license_class`, and the exact Unpaywall license signal in
 `license_source`.
+
+## Screen a discovered campaign
+
+Write the review protocol as plain text. State the inclusion and exclusion
+criteria precisely enough that another reviewer could apply them without
+outside context:
+
+```text
+Include field studies of rice-straw conversion with a measured material yield.
+Exclude reviews, simulations without experimental validation, and studies of
+other feedstocks.
+```
+
+Screen the abstracts already retained in campaign state:
+
+```bash
+uv run sci-rag campaign screen \
+  --name rice-straw \
+  --criteria-file screening-criteria.txt \
+  --confidence-threshold 0.8
+```
+
+The model receives abstracts in bounded batches and must return one strict
+`include` or `exclude` decision, confidence, and reason per work. The command
+does not trust that output blindly:
+
+* confidence below the threshold becomes `review`;
+* a missing abstract becomes `review` without a model call;
+* malformed JSON, missing rows, duplicate indexes, and provider failures make
+  the affected batch `review`;
+* no failure path silently excludes a work.
+
+Decisions append to `state.jsonl`. The current protocol, its SHA-256 digest,
+the confidence floor, every per-work reason, failure counts, and the current
+PRISMA-aligned totals are written to `screening-report.json`. Repeating the
+same protocol resumes without calling the model again. Changing the criteria
+or confidence floor starts a new set of decisions while preserving the old
+append-only history.
+
+The screening report begins at the deduplicated campaign-state boundary.
+`identified`, `screened`, and the sum of `included`, `excluded`, and
+`awaiting_review` therefore reconcile against the unique discovered works.
+Upstream duplicates were already removed and reported by `campaign discover`,
+so `duplicates_removed` is zero at this boundary. Exclusions also include a
+reason breakdown rather than only an aggregate count.
+
+## Review uncertain rows
+
+Walk the queue interactively:
+
+```bash
+uv run sci-rag campaign review --name rice-straw
+```
+
+For each row, choose `include`, `exclude`, or `skip`, then record a reason.
+Human decisions append after the model suggestion instead of overwriting it,
+and the report is regenerated from the latest decision under that protocol.
+Skipping leaves the row in `awaiting_review`, so the totals continue to
+reconcile without pretending the campaign is complete.

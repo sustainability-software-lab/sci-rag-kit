@@ -141,6 +141,8 @@ docs/              Methodology, tutorials, API reference, ADRs
 | `sci-rag corpus enrich --mailto you@example.org` | Add Crossref journal, citation-count, and retraction metadata (`--dry-run` first) |
 | `sci-rag campaign discover --topic ... \| --doi-file ...` | Build a deduplicated, resumable DOI list through OpenAlex or Crossref |
 | `sci-rag campaign build --topic ... \| --doi-file ... --dry-run` | Map explicit license signals, download verified direct OA PDFs, and write an ingest manifest |
+| `sci-rag campaign screen --name ... --criteria-file ...` | Screen discovered abstracts and route uncertain or invalid model results to human review |
+| `sci-rag campaign review --name ...` | Walk the pending review queue and append explicit human decisions |
 | `sci-rag graph extract` | Extract entities and relationships from chunks |
 | `sci-rag graph resolve-entities --dry-run` | Preview alias, fuzzy, and optional LLM duplicate-entity merges |
 | `sci-rag graph citations --dry-run` | Reconcile cached Crossref references into resolved and unresolved DOI pointers |
