@@ -325,3 +325,196 @@ def test_apply_skips_a_drafted_row_whose_id_is_already_taken(
     after = load_seed_questions(seed_file)
     assert [q.id for q in after] == [q.id for q in before]
     assert "rice-straw-generated" in _plain(result.output)
+
+
+# --- draft manifest and draft ontology, through the same two lanes ----------
+
+_MANIFEST_REPLY = json.dumps(
+    {
+        "source_buckets": ["field_notes"],
+        "documents": [
+            {
+                "filename": "colusa-rice-straw.md",
+                "title": "Colusa Basin Rice Straw Assessment",
+                "authors": ["Demo Region Biomass Office"],
+                "year": 2023,
+                "source": "field_notes",
+                "license_class": "public",
+            },
+            {
+                "filename": "almond-prunings.md",
+                "title": "Almond Pruning Logistics",
+                "year": 2023,
+                "source": "field_notes",
+            },
+        ],
+    }
+)
+
+_ONTOLOGY_REPLY = json.dumps(
+    {
+        "entity_types": [
+            {"name": "Feedstock", "description": "A residue stream"},
+            {"name": "Region", "description": "A geographic area"},
+            {"name": "Property", "description": "A measured characteristic"},
+        ],
+        "relation_types": [{"name": "LOCATED_IN", "description": "Grown or collected in"}],
+        "query_classes": [
+            {
+                "name": "availability",
+                "keywords": ["tons"],
+                "hyde_instruction": "Write a resource assessment passage.",
+            }
+        ],
+    }
+)
+
+
+def test_the_new_commands_are_registered() -> None:
+    for args in (["draft", "manifest", "--help"], ["draft", "ontology", "--help"]):
+        result = runner.invoke(app, args)
+        assert result.exit_code == 0, f"{args}: {result.output}"
+
+
+def test_manifest_flags_exist() -> None:
+    help_text = _plain(runner.invoke(app, ["draft", "manifest", "--help"]).output)
+    for flag in ("--folder", "--print-prompt", "--from-file", "--apply", "--dry-run", "--output"):
+        assert flag in help_text
+
+
+def test_ontology_flags_exist() -> None:
+    help_text = _plain(runner.invoke(app, ["draft", "ontology", "--help"]).output)
+    for flag in ("--from-corpus", "--refine", "--cold", "--print-prompt", "--from-file", "--apply"):
+        assert flag in help_text
+
+
+def test_manifest_never_writes_a_license_class_the_model_asserted(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from sci_rag.ingest.manifest import load_manifest
+
+    _mock_llm(monkeypatch, [_MANIFEST_REPLY])
+
+    result = runner.invoke(app, ["draft", "manifest", "--folder", str(project / "data" / "raw")])
+
+    assert result.exit_code == 0, result.output
+    proposed = project / "data" / "corpus.jsonl.proposed"
+    assert proposed.exists()
+    entries = load_manifest(proposed)
+    assert {e.path.name for e in entries} == {"colusa-rice-straw.md", "almond-prunings.md"}
+    assert all(e.license_class == "unknown" for e in entries)
+    assert "rights decision" in _plain(result.output)
+
+
+def test_manifest_print_prompt_puts_nothing_but_the_prompt_on_stdout(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _forbid_llm(monkeypatch)
+
+    result = runner.invoke(
+        app,
+        ["draft", "manifest", "--folder", str(project / "data" / "raw"), "--print-prompt"],
+    )
+
+    assert result.exit_code == 0, result.output
+    stdout = _plain(result.stdout)
+    assert "colusa-rice-straw.md" in stdout
+    assert "302,000 dry tons" in stdout
+
+
+def test_manifest_from_file_reproduces_lane_a_byte_for_byte(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    lane_a = _project(tmp_path / "ma")
+    lane_b = _project(tmp_path / "mb")
+
+    _offline_project(lane_a, monkeypatch)
+    _mock_llm(monkeypatch, [_MANIFEST_REPLY])
+    a = runner.invoke(app, ["draft", "manifest", "--folder", str(lane_a / "data" / "raw")])
+    assert a.exit_code == 0, a.output
+
+    reply_file = tmp_path / "manifest-reply.json"
+    reply_file.write_text(_MANIFEST_REPLY, encoding="utf-8")
+
+    _offline_project(lane_b, monkeypatch)
+    _forbid_llm(monkeypatch)
+    b = runner.invoke(
+        app,
+        [
+            "draft",
+            "manifest",
+            "--folder",
+            str(lane_b / "data" / "raw"),
+            "--from-file",
+            str(reply_file),
+        ],
+    )
+    assert b.exit_code == 0, b.output
+
+    produced_a = (lane_a / "data" / "corpus.jsonl.proposed").read_text(encoding="utf-8")
+    produced_b = (lane_b / "data" / "corpus.jsonl.proposed").read_text(encoding="utf-8")
+    # Paths are absolute per scratch project, so compare everything else.
+    assert produced_a.replace(str(lane_a), "") == produced_b.replace(str(lane_b), "")
+    reset_settings_cache()
+
+
+def test_ontology_proposes_a_file_and_keeps_the_tuned_blocks(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import yaml
+
+    from sci_rag.domain import load_domain
+
+    domain_yaml = project / "domain" / "domain.yaml"
+    untouched = domain_yaml.read_bytes()
+    before = load_domain(project / "domain").config
+    _mock_llm(monkeypatch, [_ONTOLOGY_REPLY])
+
+    result = runner.invoke(
+        app,
+        ["draft", "ontology", "--from-corpus", "--folder", str(project / "data" / "raw")],
+    )
+
+    assert result.exit_code == 0, result.output
+    proposed = domain_yaml.with_name("domain.yaml.proposed")
+    assert proposed.exists()
+    assert domain_yaml.read_bytes() == untouched, "a proposal never edits domain.yaml"
+    raw = yaml.safe_load(proposed.read_text(encoding="utf-8"))
+    assert [e["name"] for e in raw["entity_types"]] == ["Feedstock", "Region", "Property"]
+    assert raw["retrieval"]["weights"] == before.retrieval.weights
+    assert raw["retrieval"]["rrf_k"] == before.retrieval.rrf_k
+
+
+def test_ontology_apply_writes_in_place(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from sci_rag.domain import load_domain
+
+    _mock_llm(monkeypatch, [_ONTOLOGY_REPLY])
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "ontology",
+            "--from-corpus",
+            "--folder",
+            str(project / "data" / "raw"),
+            "--apply",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    after = load_domain(project / "domain").config
+    assert [e.name for e in after.entity_types] == ["Feedstock", "Region", "Property"]
+
+
+def test_ontology_cold_needs_no_corpus(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """--cold is the wizard's behaviour: description only, no documents."""
+    llm = _mock_llm(monkeypatch, [_ONTOLOGY_REPLY])
+
+    result = runner.invoke(app, ["draft", "ontology", "--cold", "--dry-run"])
+
+    assert result.exit_code == 0, result.output
+    output = _plain(result.output)
+    assert "Grounded in" not in output, "the cold lane reads no documents at all"
+    assert "Resulting ontology: Feedstock, Region, Property" in output
+    assert "302,000" not in llm.calls[0]["prompt"], "no passage reached the cold prompt"

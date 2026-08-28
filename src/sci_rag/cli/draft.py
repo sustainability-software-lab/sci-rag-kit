@@ -243,3 +243,304 @@ def _append_to_seed_file(seed_file: Path, questions, *, header: str) -> None:  #
 
 
 __all__ = ["draft_app"]
+
+
+@draft_app.command("manifest")
+def draft_manifest_command(
+    folder: Path | None = typer.Option(
+        None, "--folder", help="Documents to describe. Defaults to <data_dir>/raw."
+    ),
+    print_prompt: bool = typer.Option(
+        False,
+        "--print-prompt",
+        help="Print the rendered prompt and exit. Paste it into any assistant.",
+    ),
+    from_file: Path | None = typer.Option(
+        None,
+        "--from-file",
+        help="Read the model's reply from this file instead of calling a model.",
+    ),
+    output: Path | None = typer.Option(
+        None, "--output", help="Where to write the proposal. Defaults to <manifest>.proposed."
+    ),
+    manifest: Path | None = typer.Option(
+        None, "--manifest", help="The manifest being drafted. Defaults to <data_dir>/corpus.jsonl."
+    ),
+    apply: bool = typer.Option(
+        False, "--apply", help="Write the manifest itself instead of proposing one."
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be drafted without writing anything."
+    ),
+    batch_size: int = typer.Option(
+        None, "--batch-size", help="Documents per model call. Defaults to 12."
+    ),
+) -> None:
+    """Read title, authors, year, and source off your documents. Rights stay yours."""
+    from sci_rag.cli.main import run_async
+    from sci_rag.config import get_settings
+    from sci_rag.draft import DraftError, proposed_path, read_reply
+    from sci_rag.draft.manifest import (
+        BATCH_SIZE,
+        draft_manifest,
+        read_heads,
+        render_jsonl,
+        render_prompt,
+    )
+
+    if apply and dry_run:
+        raise typer.BadParameter("--apply and --dry-run ask for opposite things")
+
+    settings = get_settings()
+    source_folder = folder or (settings.data_dir / "raw")
+    target_manifest = manifest or (settings.data_dir / "corpus.jsonl")
+
+    try:
+        heads = read_heads(source_folder)
+    except DraftError as exc:
+        _fail(str(exc))
+        return
+
+    if print_prompt:
+        print(render_prompt(settings.domain_dir, heads=heads, source_buckets=[]))
+        if len(heads) > (batch_size or BATCH_SIZE):
+            console.print(
+                f"[yellow]{len(heads)} documents were found and this prompt covers all of "
+                "them. If your assistant truncates it, narrow --folder and run again per "
+                "subfolder.[/yellow]"
+            )
+        return
+
+    try:
+        result = run_async(
+            draft_manifest(
+                settings.domain_dir,
+                heads=heads,
+                raw_reply=read_reply(from_file) if from_file is not None else None,
+                batch_size=batch_size or BATCH_SIZE,
+            )
+        )
+    except DraftError as exc:
+        _fail(str(exc))
+        return
+
+    console.print(f"Read {len(heads)} documents from {source_folder}.")
+    for entry in result.entries:
+        year = entry.year or "----"
+        console.print(f"  [green]row[/green]     {entry.path.name}: {entry.title} ({year})")
+    for filename, reason in result.dropped:
+        console.print(f"  [red]dropped[/red] {filename}: {reason}")
+    for note in result.notes:
+        console.print(f"  [yellow]note[/yellow]    {note}")
+
+    if not result.entries:
+        _fail("No row survived validation, so there is nothing to write.")
+        return
+
+    console.print(f"\nSource buckets: {', '.join(result.source_buckets) or 'none'}.")
+    console.print(
+        f"[yellow]{result.needs_rights_decision} documents need a rights decision.[/yellow] "
+        'Every row says license_class "unknown", which excludes it from scoped '
+        "retrieval until you say otherwise. See docs/evidence-and-rights.md."
+    )
+
+    if dry_run:
+        console.print("[yellow]Dry run. Nothing was written.[/yellow]")
+        return
+
+    target = output or (target_manifest if apply else proposed_path(target_manifest))
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(render_jsonl(result.entries, manifest_path=target), encoding="utf-8")
+    console.print(f"Written to [bold]{target}[/bold].")
+    if not apply:
+        console.print(
+            f"Review it, set the license classes, then move it over "
+            f"{target_manifest.name}, or re-run with --apply."
+        )
+
+
+@draft_app.command("ontology")
+def draft_ontology_command(
+    from_corpus: bool = typer.Option(
+        False,
+        "--from-corpus",
+        help="Redraft the ontology from real passages. The default when documents exist.",
+    ),
+    refine: bool = typer.Option(
+        False,
+        "--refine",
+        help="Show the model your ontology and ask only what it would add and remove.",
+    ),
+    cold: bool = typer.Option(
+        False,
+        "--cold",
+        help="Draft from the description alone, without reading any document.",
+    ),
+    folder: Path | None = typer.Option(
+        None,
+        "--folder",
+        help="Draft from documents in this folder instead of the ingested corpus.",
+    ),
+    print_prompt: bool = typer.Option(
+        False,
+        "--print-prompt",
+        help="Print the rendered prompt and exit. Paste it into any assistant.",
+    ),
+    from_file: Path | None = typer.Option(
+        None,
+        "--from-file",
+        help="Read the model's reply from this file instead of calling a model.",
+    ),
+    output: Path | None = typer.Option(
+        None, "--output", help="Where to write the proposal. Defaults to <domain.yaml>.proposed."
+    ),
+    apply: bool = typer.Option(
+        False, "--apply", help="Write domain.yaml itself instead of proposing a file."
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would change without writing anything."
+    ),
+) -> None:
+    """Redraft or refine the ontology against what your documents actually say."""
+    from sci_rag.cli.main import run_async
+    from sci_rag.config import get_settings
+    from sci_rag.domain import load_domain
+    from sci_rag.draft import DraftError, proposed_path, read_reply
+    from sci_rag.draft.ontology import (
+        apply_refinement,
+        draft_from_corpus,
+        render_prompt,
+        render_yaml,
+        summarize_change,
+    )
+
+    if apply and dry_run:
+        raise typer.BadParameter("--apply and --dry-run ask for opposite things")
+    if sum(1 for flag in (from_corpus, refine, cold) if flag) > 1:
+        raise typer.BadParameter("choose one of --from-corpus, --refine, or --cold")
+
+    settings = get_settings()
+    try:
+        domain = load_domain(settings.domain_dir)
+    except (FileNotFoundError, ValueError) as exc:
+        _fail(str(exc))
+        return
+    current = domain.config
+
+    if cold:
+        drafted = _cold_draft(domain, from_file=from_file, print_prompt=print_prompt)
+        if drafted is None:
+            return
+    else:
+        # Passage count is fixed here rather than exposed: the ontology is
+        # judged against the breadth of the corpus, not against a budget.
+        sample = _gather_passages(folder, count=8)
+        existing = current if refine else None
+        if print_prompt:
+            print(render_prompt(domain, sample=sample, existing=existing))
+            return
+        try:
+            drafted = run_async(
+                draft_from_corpus(
+                    domain,
+                    sample=sample,
+                    existing=existing,
+                    raw_reply=read_reply(from_file) if from_file is not None else None,
+                )
+            )
+        except DraftError as exc:
+            _fail(str(exc))
+            return
+        console.print(f"Grounded in {sample.describe()}.")
+
+    if refine and not drafted.is_refinement:
+        console.print(
+            "[yellow]--refine asked for additions and removals; the model returned a whole "
+            "ontology. Treating it as a redraft.[/yellow]"
+        )
+
+    try:
+        proposed = apply_refinement(
+            current, drafted, replace=not (refine and drafted.is_refinement)
+        )
+    except DraftError as exc:
+        _fail(str(exc))
+        return
+
+    for kind, name, reason in drafted.removals:
+        console.print(f"  [yellow]removing[/yellow] {kind} {name}: {reason}")
+    console.print("\nProposed change:")
+    for line in summarize_change(current, proposed):
+        console.print(line)
+    # The diff alone hides the shape of the result: a redraft that changes
+    # nothing and a redraft that keeps eight of nine types read the same.
+    console.print(
+        "\nResulting ontology: " + ", ".join(entity.name for entity in proposed.entity_types)
+    )
+    console.print(
+        "The retrieval: and compression: blocks are carried over untouched; "
+        "they are tuned numbers, not domain semantics."
+    )
+
+    if dry_run:
+        console.print("[yellow]Dry run. Nothing was written.[/yellow]")
+        return
+
+    domain_yaml = settings.domain_dir / "domain.yaml"
+    target = output or (domain_yaml if apply else proposed_path(domain_yaml))
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(render_yaml(proposed), encoding="utf-8")
+    console.print(f"Written to [bold]{target}[/bold].")
+    if not apply:
+        console.print(
+            "Review it against your current domain.yaml, then move it over, or re-run "
+            "with --apply. Redrafting the ontology changes what the graph extractor "
+            "looks for, so re-run `sci-rag graph extract` afterwards."
+        )
+
+
+def _cold_draft(domain, *, from_file: Path | None, print_prompt: bool):  # type: ignore[no-untyped-def]
+    """The wizard's draft: a description, no documents, today's behaviour.
+
+    Goes through :mod:`sci_rag.scaffold.ontology` rather than reimplementing
+    it, so `sci-rag init` and `sci-rag draft ontology --cold` cannot drift.
+    """
+    from sci_rag.cli.main import run_async
+    from sci_rag.draft import DraftError, read_reply
+    from sci_rag.draft.ontology import DraftedOntology, parse_reply
+    from sci_rag.scaffold.ontology import OntologyDraftError, draft_ontology
+    from sci_rag.scaffold.ontology import render_prompt as render_cold_prompt
+
+    project_name = domain.name
+    description = domain.config.description or project_name
+
+    if print_prompt:
+        try:
+            print(
+                render_cold_prompt(
+                    domain.directory, project_name=project_name, description=description
+                )
+            )
+        except OntologyDraftError as exc:
+            _fail(str(exc))
+        return None
+
+    if from_file is not None:
+        try:
+            return parse_reply(read_reply(from_file))
+        except DraftError as exc:
+            _fail(str(exc))
+            return None
+
+    try:
+        config = run_async(
+            draft_ontology(domain.directory, project_name=project_name, description=description)
+        )
+    except OntologyDraftError as exc:
+        _fail(str(exc))
+        return None
+    return DraftedOntology(
+        entity_types=list(config.entity_types),
+        relation_types=list(config.relation_types),
+        query_classes=list(config.query_classes),
+    )

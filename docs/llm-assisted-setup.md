@@ -59,10 +59,85 @@ Nothing the repository already knows.
 
 | Command | Asks you for | Works out for itself |
 |---|---|---|
+| `draft ontology` | nothing | the name and description from `domain.yaml`; real passages from your corpus, or files in `data/raw/` |
+| `draft manifest` | nothing (the folder defaults to `data/raw`) | each document's filename and opening pages, through the existing parsers |
 | `draft questions` | nothing | the ontology, plus real passages and document titles from your corpus |
 
 More drafters land alongside this page as they ship; each one follows the same
 rule.
+
+## Drafting the ontology against your corpus
+
+The `sci-rag init` wizard can draft an ontology from a one-sentence description,
+before any document exists. That is the best guess available at that moment, and
+it is a guess. Once documents are ingested you can ask a better question: what do
+these documents actually talk about?
+
+=== "Redraft from the corpus"
+
+    Samples real passages and proposes a whole ontology in the vocabulary they
+    use.
+
+    ```bash title="Terminal"
+    uv run sci-rag draft ontology --from-corpus
+    ```
+
+=== "Refine what you have"
+
+    Shows the model your current ontology and asks only what it would add and
+    what it would remove, with a reason for every removal that points at the
+    passages. Types nobody questioned survive untouched.
+
+    ```bash title="Terminal"
+    uv run sci-rag draft ontology --refine
+    ```
+
+=== "Cold, from the description"
+
+    The wizard's behaviour, available on its own. Reads no documents at all.
+
+    ```bash title="Terminal"
+    uv run sci-rag draft ontology --cold
+    ```
+
+This is the assisted fix for the symptom the tutorial describes: near zero
+entities after `sci-rag graph extract` means the ontology and the corpus are
+talking past each other.
+
+Two things it will not do. The `retrieval:` and `compression:` blocks are tuned
+numbers an ablation earned rather than domain semantics, so they are carried over
+untouched. And a refinement that would leave no entity type at all is rejected: a
+model asking to remove everything is a bad refinement, not an instruction.
+
+Redrafting the ontology changes what the graph extractor looks for, so re-run
+`sci-rag graph extract` after you apply one.
+
+## Drafting the corpus manifest, without drafting your rights
+
+`sci-rag campaign build` already writes a manifest for DOI-addressable literature,
+where rights come from Unpaywall and Crossref. Local PDFs get none of that.
+
+```bash title="Terminal"
+uv run sci-rag draft manifest --folder data/raw
+```
+
+Each document's opening pages go through the same parsers ingestion uses, and the
+model reports title, authors, year, DOI, journal, and a source bucket. Buckets are
+chosen across the whole batch, so a sixty-document folder converges on a handful
+of shared sources rather than sixty.
+
+**`license_class` is never guessed.** Every drafted row is written `unknown`,
+which is the fail-closed default, and the command tells you how many documents
+need a rights decision. If the text contains an explicit license sentence, it is
+quoted into `license_source` as evidence for you, and only if it appears verbatim
+in the document; a sentence the model composed is dropped rather than recorded.
+
+That is not caution for its own sake. `license_class` is the input to a scoping
+boundary that decides what a public endpoint may quote, and
+[Evidence and rights](evidence-and-rights.md) is where you decide it.
+
+For documents that carry a DOI, `sci-rag corpus enrich` fills journal, citation
+counts, and retraction status from Crossref afterwards.
 
 ## Nothing is overwritten
 
