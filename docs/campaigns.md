@@ -151,8 +151,11 @@ does not trust that output blindly:
 
 Decisions append to `state.jsonl`. `screening-report.json` records the current
 protocol, its SHA-256 digest, the confidence floor, every per-work reason,
-failure counts, and the current PRISMA-aligned totals. Repeating the
-same protocol resumes without calling the model again. Changing the criteria
+failure counts, and the current PRISMA-aligned totals. PRISMA is the
+Preferred Reporting Items for Systematic Reviews and Meta-Analyses. It is
+the reporting standard systematic reviews are held to, so aligning with it
+means the counts are the ones a reviewer expects. Repeating the same
+protocol resumes without calling the model again. Changing the criteria
 or confidence floor starts a new set of decisions while preserving the old
 append-only history.
 
