@@ -51,6 +51,7 @@ evaluation target without explicit justification and evidence.
 | `tests/unit/` | Offline, database-free behavior and pure logic tests |
 | `tests/integration/` | PostgreSQL/pgvector pipeline and data-lifecycle tests |
 | `tests/server/` | REST and MCP contract tests over the shared service |
+| `tests/docs/` | Presentation checks measured in a browser against the built site |
 | `data/demo/` | Synthetic CC0 fixture corpus and manifest |
 | `docs/` | User guides, methodology, operations, benchmarks, plans, and ADRs |
 | `infra/terraform/` | Optional Google Cloud deployment |
@@ -189,6 +190,18 @@ uvx pre-commit run --all-files
 CI checks internal Markdown links in offline mode. Keep repository links relative and verify renamed
 or added documentation targets. For documentation-only changes, run the relevant pre-commit and
 link checks at minimum; run `make check` when feasible and disclose any intentionally omitted check.
+
+Changes to `docs/stylesheets/` also need the rendered-geometry guard, because a stylesheet defect
+is a number on a painted page rather than anything the Markdown-level tests can see:
+
+```bash
+# Presentation checks against the built site. Needs `make docs` first.
+make docs-geometry
+```
+
+That target installs a browser, so it is separate from `make docs` and from `make check`. The tests
+skip with instructions when the browser or `site/` is missing, which means a skipped run is not
+evidence that presentation passed. CI runs them in the `docs` job.
 
 Credentialed commands such as `make demo-cloud`, `make benchmark`, and judged answer evaluation are
 not routine validation. Run them only when the task requires them and the environment is explicitly
