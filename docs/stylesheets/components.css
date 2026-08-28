@@ -273,10 +273,13 @@
     scrollbar-gutter: stable;
   }
 
+  /* 0.35rem here plus the row's own 0.45rem padding puts the first character
+     at 16px, the same left edge as the flask mark in the header above it. */
   .md-sidebar--primary .md-sidebar__inner {
     padding-top: 0.9rem;
     padding-right: 0.6rem;
     padding-bottom: 2rem;
+    padding-left: 0.35rem;
   }
 
   .md-main__inner {
