@@ -44,13 +44,38 @@ One JSON object per line:
 * **evidence_phrases**: distinctive strings from the passages that
   answer it. Numbers with units are ideal; short generic strings (under
   three characters) are ignored on purpose.
-* **tags**: your own labels, plus one special value: `unanswerable`
-  marks an honesty probe (see below).
+* **tags**: your own labels, plus two special values. `unanswerable`
+  marks an honesty probe (see below), and `drafted` marks a question a
+  model wrote that no expert has checked yet (see below).
 
 Three pieces of writing advice. Ten great questions beat a hundred vague
 ones. Include one or two multi-hop questions whose evidence spans
 documents. And grow the set from real user questions, especially the ones
 the system fumbled.
+
+If typing them cold is the part you keep putting off,
+[`sci-rag draft questions`](llm-assisted-setup.md) writes a first pass
+grounded in your own documents and verifies every quoted phrase against the
+passage it claims to come from.
+
+## Drafted ground truth is provisional, and the report says so
+
+A question tagged `drafted` came from a model. That tag is provenance, and
+it travels into the reports: while any question carries it, both
+`sci-rag eval retrieval` and `sci-rag eval answers` print a warning saying
+how many of the questions behind the numbers are unreviewed, and the JSON
+carries the same receipt.
+
+The JSON block sits beside the corpus fingerprint:
+
+```json
+"ground_truth": {"drafted": 7, "reviewed": 3}
+```
+
+Read the question, check its evidence against the document it cites, then
+delete the `drafted` tag. That deletion is the expert sign-off, and it is
+the only thing that moves the counts. Nothing in the kit removes the tag
+for you.
 
 ## Retrieval metrics, and how to read the ablation table
 

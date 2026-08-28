@@ -8,6 +8,12 @@ beat a hundred vague ones; grow the set as real users surprise you.
 Questions tagged ``unanswerable`` are honesty probes: retrieval metrics
 skip them, and the answer evaluation checks that the assistant admits the
 gap instead of inventing something.
+
+Questions tagged ``drafted`` came from a model rather than from an expert.
+The tag is provenance, not a defect: it travels into every evaluation report
+so nobody quotes a metric grounded in unreviewed ground truth without seeing
+that fact beside it. Removing the tag is how a domain expert signs a question
+off, so nothing in the kit ever removes it on a user's behalf.
 """
 
 from __future__ import annotations
@@ -16,6 +22,9 @@ import json
 from pathlib import Path
 
 from pydantic import BaseModel, Field
+
+#: Marks a question a model wrote and no expert has checked yet.
+DRAFTED_TAG = "drafted"
 
 
 class SeedQuestion(BaseModel):
@@ -29,6 +38,11 @@ class SeedQuestion(BaseModel):
     @property
     def answerable(self) -> bool:
         return "unanswerable" not in self.tags
+
+    @property
+    def drafted(self) -> bool:
+        """True while this question is still model-drafted and unreviewed."""
+        return DRAFTED_TAG in self.tags
 
 
 def load_seed_questions(path: Path) -> list[SeedQuestion]:

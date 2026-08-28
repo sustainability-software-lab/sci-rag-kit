@@ -11,6 +11,8 @@ Each guide starts from an outcome. Use the reference section when you need an ex
 
 [<span class="srag-row__title">Bring your own domain</span><span class="srag-row__copy">Replace the ontology, prompts, source manifest, and seed questions while keeping the pipeline testable.</span>](bring-your-own-domain.md){ .srag-row }
 
+[<span class="srag-row__title">LLM-assisted setup</span><span class="srag-row__copy">Draft the ontology, manifest, seed questions, and prompts with a model, or with any assistant by copy-paste, and keep drafted ground truth labelled as such.</span>](llm-assisted-setup.md){ .srag-row }
+
 [<span class="srag-row__title">Run an open-access campaign</span><span class="srag-row__copy">Discover DOI candidates, resolve explicit rights through Unpaywall, and download only verified direct PDFs into a manifest.</span>](campaigns.md){ .srag-row }
 
 [<span class="srag-row__title">Evaluate your pipeline</span><span class="srag-row__copy">Run retrieval ablations and judged-answer evaluation, compare reports, and calibrate the judge.</span>](evaluation.md){ .srag-row }

@@ -79,6 +79,7 @@ nav:
   - Guides:
       - guides.md
       - Bring your own domain: bring-your-own-domain.md
+      - LLM-assisted setup: llm-assisted-setup.md
       - Discover a corpus: campaigns.md
       - Evaluate your pipeline: evaluation.md
       - Extend the seams: extend.md

@@ -810,8 +810,8 @@ def eval_retrieval(
         else "retrieval-ablation"
         if ablation
         else "retrieval",
-        payload=retrieval_payload(results, fingerprint, snapshot=snapshot),
-        markdown=retrieval_markdown(results, fingerprint),
+        payload=retrieval_payload(results, fingerprint, snapshot=snapshot, questions=questions),
+        markdown=retrieval_markdown(results, fingerprint, questions=questions),
     )
     console.print(f"Report written to [bold]{md_path}[/bold] (and {json_path.name}).")
 
@@ -1700,10 +1700,12 @@ def mcp_stdio() -> None:
 
 
 from sci_rag.cli.doctor import doctor as _doctor  # noqa: E402 - registered after app exists
+from sci_rag.cli.draft import draft_app as _draft_app  # noqa: E402 - registered after app exists
 from sci_rag.cli.init import init as _init  # noqa: E402 - registered after app exists
 
 app.command("doctor")(_doctor)
 app.command("init")(_init)
+app.add_typer(_draft_app, name="draft")
 
 
 def main() -> None:
