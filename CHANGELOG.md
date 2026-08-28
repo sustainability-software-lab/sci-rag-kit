@@ -4,6 +4,35 @@ Notable changes to sci-rag-kit. The format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [Semantic Versioning](https://semver.org/) once past 1.0.
 
+## [Unreleased]
+
+### Added
+
+- `sci-rag draft questions`: an assisted first pass at
+  `domain/eval_seed_questions.jsonl`, grounded in the documents you already
+  have. It prefers the ingested corpus and falls back to reading `data/raw/`
+  through the same parsers, so it works before `make setup`. Every quoted
+  evidence phrase is verified in Python against a passage belonging to a
+  document the question names; rows that fail are dropped and reported by id
+  and reason, with one repair round. A run proposes
+  `eval_seed_questions.jsonl.proposed`; `--apply` appends to the seed file
+  and never displaces a question a human wrote.
+- Two lanes on every drafter. `--print-prompt` writes the fully rendered,
+  corpus-grounded prompt to stdout for pasting into any assistant, and
+  `--from-file` reads the reply back through identical validation, so the
+  drafters work with no API key and no provider account.
+- `domain/prompts/seed_questions.md`: the prompt behind that draft, with
+  `$DOMAIN_NAME`, `$ENTITY_TYPES`, `$QUERY_CLASSES`, `$PASSAGES`, `$COUNT`,
+  and `$REJECTED` slots.
+- The `drafted` tag on seed questions, and the honesty plumbing behind it.
+  `sci-rag eval retrieval` and `sci-rag eval answers` now warn in the
+  generated Markdown when any question behind the numbers is still
+  model-drafted, and both report payloads carry
+  `"ground_truth": {"drafted": N, "reviewed": M}`. Removing the tag is the
+  expert sign-off; nothing in the kit removes it for you.
+- `docs/llm-assisted-setup.md`: the three lanes, the copy-paste path, the
+  review discipline, and the honesty rules for drafted ground truth.
+
 ## [0.3.0] - 2026-08-28
 
 The "Campaigns" release: the kit gets the parts that make it better for

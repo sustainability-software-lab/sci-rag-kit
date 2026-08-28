@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from collections.abc import Iterable, Sequence
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
@@ -22,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sci_rag.db.models import Chunk, Document, KgCommunity, KgEntity, KgRelationship
 from sci_rag.evals.answer_eval import AnswerEvalRecord, summarize_answer_records
 from sci_rag.evals.retrieval_eval import RetrievalEvalResult
+from sci_rag.evals.seeds import DRAFTED_TAG, SeedQuestion
 from sci_rag.evals.stats import SMALL_N, bootstrap_ci, format_ci
 
 
@@ -34,6 +36,33 @@ def small_n_warning(n: int) -> list[str]:
             "not findings.",
         ]
     return []
+
+
+def drafted_questions_warning(drafted: int, total: int) -> list[str]:
+    """Say out loud when the ground truth under a report is model-drafted.
+
+    A metric is only as trustworthy as the questions it was scored against.
+    `sci-rag draft questions` tags every row it writes `drafted`, and the tag
+    survives until a domain expert reads the question and deletes it. While
+    any tag remains, the report has to carry the caveat next to the number,
+    because a table pasted into a slide deck travels without its provenance.
+    """
+    if drafted <= 0:
+        return []
+    return [
+        "",
+        f"Warning: {drafted} of {total} seed questions are model-drafted and have not",
+        "been reviewed by a domain expert, so every metric here is provisional. Check",
+        "each one against the document it cites, then remove its `drafted` tag.",
+    ]
+
+
+def ground_truth_counts(tag_lists: Iterable[Sequence[str]]) -> dict[str, int]:
+    """The same receipt the markdown warning shows, for the JSON payload."""
+    counts = {"drafted": 0, "reviewed": 0}
+    for tags in tag_lists:
+        counts["drafted" if DRAFTED_TAG in tags else "reviewed"] += 1
+    return counts
 
 
 async def corpus_fingerprint(session_factory: async_sessionmaker[AsyncSession]) -> dict[str, Any]:
@@ -103,27 +132,43 @@ def retrieval_payload(
     fingerprint: dict[str, Any],
     *,
     snapshot: str | None = None,
+    questions: list[SeedQuestion] | None = None,
 ) -> dict[str, Any]:
-    return {
+    """The machine-readable report.
+
+    ``questions`` is the seed set the run scored. It is optional only so an
+    older caller keeps working; the CLI always passes it, and without it the
+    payload cannot honestly claim anything about its ground truth, so the
+    ``ground_truth`` block is omitted rather than guessed at.
+    """
+    payload: dict[str, Any] = {
         "kind": "retrieval",
         "generated_at": datetime.now(UTC).isoformat(),
         "git_commit": git_commit(),
         "snapshot": snapshot,
         "corpus": fingerprint,
-        "configs": [
-            {
-                "name": r.config.name,
-                "description": r.config.description,
-                "metrics": r.metrics,
-                "metrics_ci": r.metrics_with_ci,
-                "records": [asdict(record) for record in r.records],
-            }
-            for r in results
-        ],
     }
+    if questions is not None:
+        payload["ground_truth"] = ground_truth_counts([q.tags for q in questions])
+    payload["configs"] = [
+        {
+            "name": r.config.name,
+            "description": r.config.description,
+            "metrics": r.metrics,
+            "metrics_ci": r.metrics_with_ci,
+            "records": [asdict(record) for record in r.records],
+        }
+        for r in results
+    ]
+    return payload
 
 
-def retrieval_markdown(results: list[RetrievalEvalResult], fingerprint: dict[str, Any]) -> str:
+def retrieval_markdown(
+    results: list[RetrievalEvalResult],
+    fingerprint: dict[str, Any],
+    *,
+    questions: list[SeedQuestion] | None = None,
+) -> str:
     lines = [
         "# Retrieval evaluation",
         "",
@@ -148,6 +193,11 @@ def retrieval_markdown(results: list[RetrievalEvalResult], fingerprint: dict[str
             f"| {format_ci(ci['ndcg_at_10'])} | {n} |"
         )
     lines += small_n_warning(max_n)
+    if questions is not None:
+        counts = ground_truth_counts([q.tags for q in questions])
+        lines += drafted_questions_warning(
+            counts["drafted"], counts["drafted"] + counts["reviewed"]
+        )
     lines += [
         "",
         "Cells are mean [95% bootstrap CI], resampled per question.",
@@ -211,6 +261,7 @@ def answers_payload(
         "models": models or {},
         "config": config or {},
         "corpus": fingerprint,
+        "ground_truth": ground_truth_counts([record.tags for record in records]),
         "summary": summarize_answer_records(records),
         "summary_ci": summarize_answers_ci(records),
         "records": [asdict(record) for record in records],
@@ -268,6 +319,10 @@ def answers_markdown(
             f"| median prompt tokens after | {summary['prompt_tokens_after_median']:.1f} |",
         ]
     lines += small_n_warning(int(summary["graded"]))
+    ground_truth = ground_truth_counts([record.tags for record in records])
+    lines += drafted_questions_warning(
+        ground_truth["drafted"], ground_truth["drafted"] + ground_truth["reviewed"]
+    )
     lines += [
         "",
         "## Per question",

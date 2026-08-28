@@ -48,6 +48,8 @@ migrations, `domain/`, and data paths resolve predictably.
 | `sci-rag campaign build` | Resolve rights, download direct OA PDFs, and write an ingest manifest. |
 | `sci-rag campaign screen` | Screen discovered abstracts and queue uncertain rows for human review. |
 | `sci-rag campaign review` | Walk pending screening rows and append explicit human decisions. |
+| `sci-rag draft` | Draft the domain files you would otherwise hand-write. Every drafter can also print its prompt for any assistant (--print-prompt) and read the reply back (--from-file), so no API key is required. |
+| `sci-rag draft questions` | Draft seed questions grounded in your own documents, and verify them. |
 
 ## `sci-rag ingest`
 
@@ -537,6 +539,35 @@ $ sci-rag campaign review [OPTIONS]
 |---|---|---|---|
 | `--name` | text | required | Campaign directory name to review. |
 | `--campaign-root` | directory | data/campaigns | Parent directory containing campaign state. |
+
+## `sci-rag draft`
+
+Draft the domain files you would otherwise hand-write. Every drafter can also print its prompt for any assistant (--print-prompt) and read the reply back (--from-file), so no API key is required.
+
+```console
+$ sci-rag draft [OPTIONS] COMMAND [ARGS]...
+```
+
+## `sci-rag draft questions`
+
+Draft seed questions grounded in your own documents, and verify them.
+
+```console
+$ sci-rag draft questions [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--count` | integer | 10 | How many questions to ask for. |
+| `--folder` | path | unset | Draft from documents in this folder instead of the ingested corpus. |
+| `--print-prompt` | boolean | false | Print the rendered prompt and exit. Paste it into any assistant. |
+| `--from-file` | path | unset | Read the model's reply from this file instead of calling a model. |
+| `--output` | path | unset | Where to write the proposal. Defaults to <seed file>.proposed. |
+| `--apply` | boolean | false | Append the verified questions to the seed file. |
+| `--dry-run` | boolean | false | Show what would be drafted without writing anything. |
+| `--repair, --no-repair` | boolean | true | Ask the model once more to replace rows that failed grounding verification. |
 
 ## Shell help is authoritative too
 

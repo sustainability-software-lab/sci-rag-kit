@@ -27,7 +27,7 @@ def test_root_help_lists_all_commands() -> None:
     output = _plain(result.output)
     for command in ("ingest", "retrieve", "answer", "stats", "serve", "mcp", "doctor"):
         assert command in output
-    for group in ("db", "graph", "eval", "campaign"):
+    for group in ("db", "graph", "eval", "campaign", "draft"):
         assert group in output
 
 
@@ -45,6 +45,8 @@ def test_subcommand_help_screens() -> None:
         ["graph", "extract", "--help"],
         ["graph", "communities", "--help"],
         ["graph", "resolve-entities", "--help"],
+        ["draft", "--help"],
+        ["draft", "questions", "--help"],
         ["eval", "--help"],
         ["eval", "retrieval", "--help"],
         ["eval", "answers", "--help"],

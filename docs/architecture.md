@@ -53,6 +53,7 @@ Package by package (`src/sci_rag/`):
 | `retrieve` | five stages, RRF fusion, scope, the orchestrator | `Retriever.retrieve()` |
 | `answer` | optional snippet compression, prompt assembly, citations, streaming events | `AnswerEngine.answer_stream()` |
 | `evals` | seed questions, metrics, ablations, blind judge, reports | `run_retrieval_eval()`, `run_answer_eval()` |
+| `draft` | model-drafted domain files, grounded in your own documents and verified in Python before anything is written | `draft_questions()`, `sample_corpus()` |
 | `server` | FastAPI app, auth, schemas, MCP server | `create_app()`, `build_mcp_server()` |
 | `cli` | Typer commands wiring it all together | `sci-rag ...` |
 

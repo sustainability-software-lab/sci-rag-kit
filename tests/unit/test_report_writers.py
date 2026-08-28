@@ -19,6 +19,7 @@ from sci_rag.evals.retrieval_eval import (
     QuestionRetrievalRecord,
     RetrievalEvalResult,
 )
+from sci_rag.evals.seeds import SeedQuestion
 
 FINGERPRINT = {
     "documents": 5,
@@ -100,3 +101,53 @@ def test_answers_report_renders_grades_and_errors(tmp_path: Path) -> None:
     assert payload["records"][0]["prompt_tokens_after"] == 400
     assert "| median prompt tokens before | 500.0 |" in markdown
     assert "| median prompt tokens after | 250.0 |" in markdown
+
+
+def _seed_questions() -> list[SeedQuestion]:
+    """One reviewed question and one still carrying the drafted tag."""
+    return [
+        SeedQuestion(id="hit-first", question="q1", tags=["availability"]),
+        SeedQuestion(id="missed", question="q2", tags=["availability", "drafted"]),
+    ]
+
+
+def test_a_retrieval_report_says_when_its_ground_truth_is_unreviewed() -> None:
+    results = _retrieval_results()
+    questions = _seed_questions()
+
+    markdown = retrieval_markdown(results, FINGERPRINT, questions=questions)
+    payload = retrieval_payload(results, FINGERPRINT, questions=questions)
+
+    assert "model-drafted" in markdown
+    assert "1 of 2" in markdown
+    assert payload["ground_truth"] == {"drafted": 1, "reviewed": 1}
+
+
+def test_a_fully_reviewed_retrieval_report_carries_no_warning() -> None:
+    questions = [q.model_copy(update={"tags": ["availability"]}) for q in _seed_questions()]
+
+    markdown = retrieval_markdown(_retrieval_results(), FINGERPRINT, questions=questions)
+    payload = retrieval_payload(_retrieval_results(), FINGERPRINT, questions=questions)
+
+    assert "model-drafted" not in markdown
+    assert payload["ground_truth"] == {"drafted": 0, "reviewed": 2}
+
+
+def test_an_answers_report_says_when_its_ground_truth_is_unreviewed() -> None:
+    records = [
+        AnswerEvalRecord(question_id="a", tags=["availability"]),
+        AnswerEvalRecord(question_id="b", tags=["drafted"]),
+    ]
+
+    markdown = answers_markdown(records, FINGERPRINT)
+    payload = answers_payload(records, FINGERPRINT)
+
+    assert "model-drafted" in markdown
+    assert payload["ground_truth"] == {"drafted": 1, "reviewed": 1}
+
+
+def test_the_drafted_warning_is_silent_when_nothing_is_drafted() -> None:
+    from sci_rag.evals.report import drafted_questions_warning
+
+    assert drafted_questions_warning(0, 12) == []
+    assert any("3 of 12" in line for line in drafted_questions_warning(3, 12))
