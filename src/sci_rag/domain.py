@@ -98,6 +98,33 @@ class RetrievalTuning(BaseModel):
     reranker: RerankerTuning = Field(default_factory=RerankerTuning)
 
 
+class CompressionTuning(BaseModel):
+    """Question-aware source compression before answer prompt assembly.
+
+    This remains off until a paired judged-answer evaluation shows quality
+    holding while measured prompt tokens fall on the target corpus.
+    """
+
+    enabled: bool = Field(
+        default=False,
+        description="Domain default; enable only after paired judged-answer evidence.",
+    )
+    relevance_floor: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=1.0,
+        description="Drop a model-scored chunk below this relevance score.",
+    )
+    max_tokens_per_chunk: int = Field(
+        default=160,
+        ge=16,
+        le=2048,
+        description=(
+            "Maximum accepted tokens per summary; over-budget output falls back to full text."
+        ),
+    )
+
+
 class DomainConfig(BaseModel):
     name: str
     description: str = ""
@@ -105,6 +132,10 @@ class DomainConfig(BaseModel):
     relation_types: list[RelationTypeSpec] = Field(default_factory=list)
     query_classes: list[QueryClassSpec] = Field(default_factory=list)
     retrieval: RetrievalTuning = Field(default_factory=RetrievalTuning)
+    compression: CompressionTuning = Field(
+        default_factory=CompressionTuning,
+        description="Question-aware chunk compression before answer prompt assembly.",
+    )
 
 
 @dataclass

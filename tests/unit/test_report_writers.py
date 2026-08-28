@@ -70,6 +70,8 @@ def test_answers_report_renders_grades_and_errors(tmp_path: Path) -> None:
             answer_text="fine [1]",
             source_count=3,
             cited_count=1,
+            prompt_tokens_before=900,
+            prompt_tokens_after=400,
             grounding=GroundingGrade(2, 2, 1, "solid"),
             correctness=CorrectnessGrade(2, "matches"),
         ),
@@ -77,6 +79,8 @@ def test_answers_report_renders_grades_and_errors(tmp_path: Path) -> None:
             question_id="probe",
             tags=["unanswerable"],
             answer_text="not covered",
+            prompt_tokens_before=100,
+            prompt_tokens_after=100,
             grounding=GroundingGrade(2, 2, 2, "honest"),
         ),
         AnswerEvalRecord(question_id="broken", tags=[], error="answer failed: boom"),
@@ -88,6 +92,11 @@ def test_answers_report_renders_grades_and_errors(tmp_path: Path) -> None:
     assert summary["n"] == 3.0 and summary["graded"] == 2.0 and summary["failed"] == 1.0
     assert summary["groundedness_mean"] == 2.0
     assert summary["correctness_mean"] == 2.0
+    assert summary["prompt_tokens_before_median"] == 500.0
+    assert summary["prompt_tokens_after_median"] == 250.0
     assert "honesty probe" in markdown
     assert "answer failed: boom" in markdown
     assert "| good | 2 | 2 | 1 | 2 |" in markdown
+    assert payload["records"][0]["prompt_tokens_after"] == 400
+    assert "| median prompt tokens before | 500.0 |" in markdown
+    assert "| median prompt tokens after | 250.0 |" in markdown

@@ -8,6 +8,7 @@ are recorded, never fatal, so one flaky call cannot torch an hour-long run.
 
 from __future__ import annotations
 
+import statistics
 from dataclasses import dataclass
 
 import structlog
@@ -34,6 +35,10 @@ class AnswerEvalRecord:
     answer_text: str = ""
     source_count: int = 0
     cited_count: int = 0
+    prompt_tokens_before: int = 0
+    prompt_tokens_after: int = 0
+    compression_failure_count: int = 0
+    compression_dropped_count: int = 0
     degraded_stages: list[str] | None = None
     grounding: GroundingGrade | None = None
     correctness: CorrectnessGrade | None = None
@@ -48,6 +53,7 @@ async def run_answer_eval(
     profile: str = "deep",
     limit: int = 8,
     scope: RetrievalScope | None = None,
+    include_compression: bool | None = None,
 ) -> list[AnswerEvalRecord]:
     records: list[AnswerEvalRecord] = []
     for question in questions:
@@ -55,7 +61,11 @@ async def run_answer_eval(
         records.append(record)
         try:
             result = await engine.answer(
-                question.question, profile=profile, limit=limit, scope=scope
+                question.question,
+                profile=profile,
+                limit=limit,
+                scope=scope,
+                include_compression=include_compression,
             )
         except Exception as exc:
             record.error = f"answer failed: {type(exc).__name__}: {exc}"
@@ -64,7 +74,12 @@ async def run_answer_eval(
         record.answer_text = result.text
         record.source_count = len(result.sources)
         record.cited_count = len(result.cited_sources)
+        record.prompt_tokens_before = result.prompt_tokens_before
+        record.prompt_tokens_after = result.prompt_tokens_after
+        record.compression_failure_count = result.compression_failure_count
+        record.compression_dropped_count = result.compression_dropped_count
         record.degraded_stages = result.retrieval.degraded_stages
+        prompt_retrieval = result.prompt_retrieval or result.retrieval
 
         try:
             record.grounding = await grade_grounding(
@@ -72,8 +87,8 @@ async def run_answer_eval(
                 engine.domain,
                 question=question.question,
                 answer_text=result.text,
-                sources_block=format_sources(result.retrieval)
-                if result.retrieval.items
+                sources_block=format_sources(prompt_retrieval)
+                if prompt_retrieval.items
                 else "(no sources were retrieved)",
             )
         except Exception as exc:
@@ -111,4 +126,10 @@ def summarize_answer_records(records: list[AnswerEvalRecord]) -> dict[str, float
         summary["completeness_mean"] = sum(g.completeness for g in groundings) / len(groundings)
     if correctnesses:
         summary["correctness_mean"] = sum(c.correctness for c in correctnesses) / len(correctnesses)
+    before_tokens = [r.prompt_tokens_before for r in records if r.prompt_tokens_before > 0]
+    after_tokens = [r.prompt_tokens_after for r in records if r.prompt_tokens_after > 0]
+    if before_tokens:
+        summary["prompt_tokens_before_median"] = float(statistics.median(before_tokens))
+    if after_tokens:
+        summary["prompt_tokens_after_median"] = float(statistics.median(after_tokens))
     return summary

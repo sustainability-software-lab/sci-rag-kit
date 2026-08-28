@@ -25,8 +25,11 @@ import structlog
 
 from sci_rag.config import Settings, get_settings
 from sci_rag.domain import DomainProfile
+from sci_rag.ingest.tokens import count_tokens
 from sci_rag.llm import LLMClient, get_llm
 from sci_rag.retrieve import RetrievalResult, RetrievalScope, Retriever
+
+from .compress import SnippetCompressor
 
 log = structlog.get_logger(__name__)
 
@@ -48,7 +51,7 @@ class SourceCitation:
 
 @dataclass
 class AnswerEvent:
-    type: str  # "retrieval_started" | "retrieval_done" | "generation_started" | "delta" | "citations" | "done" | "error"
+    type: str  # retrieval_started | retrieval_done | compression_done | generation_started | delta | citations | done | error
     data: dict[str, Any] = field(default_factory=dict)
 
 
@@ -58,6 +61,11 @@ class AnswerResult:
     sources: list[SourceCitation]
     retrieval: RetrievalResult
     model: str
+    prompt_retrieval: RetrievalResult | None = None
+    prompt_tokens_before: int = 0
+    prompt_tokens_after: int = 0
+    compression_failure_count: int = 0
+    compression_dropped_count: int = 0
 
     @property
     def cited_sources(self) -> list[SourceCitation]:
@@ -94,6 +102,7 @@ class AnswerEngine:
         scope: RetrievalScope | None = None,
         api_key_override: str | None = None,
         max_tokens: int = 2048,
+        include_compression: bool | None = None,
     ) -> AnswerResult:
         events = self.answer_stream(
             query,
@@ -102,11 +111,17 @@ class AnswerEngine:
             scope=scope,
             api_key_override=api_key_override,
             max_tokens=max_tokens,
+            include_compression=include_compression,
         )
         text_parts: list[str] = []
         sources: list[SourceCitation] = []
         retrieval: RetrievalResult | None = None
+        prompt_retrieval: RetrievalResult | None = None
         model = str(self.settings.model_spec_for("answer"))
+        prompt_tokens_before = 0
+        prompt_tokens_after = 0
+        compression_failure_count = 0
+        compression_dropped_count = 0
         async for event in events:
             if event.type == "delta":
                 text_parts.append(event.data["text"])
@@ -114,13 +129,29 @@ class AnswerEngine:
                 retrieval = event.data["_result"]
             elif event.type == "generation_started":
                 model = event.data["model"]
+            elif event.type == "compression_done":
+                prompt_retrieval = event.data["_result"]
+                prompt_tokens_before = event.data["prompt_tokens_before"]
+                prompt_tokens_after = event.data["prompt_tokens_after"]
+                compression_failure_count = event.data["failure_count"]
+                compression_dropped_count = event.data["dropped_count"]
             elif event.type == "citations":
                 sources = event.data["_sources"]
             elif event.type == "error":
                 raise RuntimeError(event.data.get("message", "answer generation failed"))
         assert retrieval is not None
+        if prompt_retrieval is None:
+            prompt_retrieval = retrieval
         return AnswerResult(
-            text="".join(text_parts), sources=sources, retrieval=retrieval, model=model
+            text="".join(text_parts),
+            sources=sources,
+            retrieval=retrieval,
+            model=model,
+            prompt_retrieval=prompt_retrieval,
+            prompt_tokens_before=prompt_tokens_before,
+            prompt_tokens_after=prompt_tokens_after,
+            compression_failure_count=compression_failure_count,
+            compression_dropped_count=compression_dropped_count,
         )
 
     async def answer_stream(
@@ -132,6 +163,7 @@ class AnswerEngine:
         scope: RetrievalScope | None = None,
         api_key_override: str | None = None,
         max_tokens: int = 2048,
+        include_compression: bool | None = None,
     ) -> AsyncIterator[AnswerEvent]:
         yield AnswerEvent(type="retrieval_started", data={"profile": profile})
         if scope is None:
@@ -165,6 +197,64 @@ class AnswerEngine:
             yield AnswerEvent(type="done", data={"finish_reason": "no_sources"})
             return
 
+        try:
+            llm = self._resolve_llm(api_key_override)
+        except Exception as exc:
+            yield AnswerEvent(type="error", data={"code": "llm_unavailable", "message": str(exc)})
+            return
+
+        raw_prompt = self._render_answer_prompt(query, retrieval)
+        prompt_retrieval = retrieval
+        failures = 0
+        dropped = 0
+        compression_on = (
+            include_compression
+            if include_compression is not None
+            else self.domain.config.compression.enabled
+        )
+        if compression_on:
+            tuning = self.domain.config.compression
+            compressed = await SnippetCompressor(self.domain, llm).compress(
+                query,
+                retrieval.items,
+                relevance_floor=tuning.relevance_floor,
+                max_tokens_per_chunk=tuning.max_tokens_per_chunk,
+            )
+            prompt_retrieval = RetrievalResult(
+                items=compressed.items,
+                traces=retrieval.traces,
+                profile=retrieval.profile,
+            )
+            failures = compressed.failure_count
+            dropped = compressed.dropped_count
+
+        prompt = self._render_answer_prompt(query, prompt_retrieval)
+        prompt_tokens_before = count_tokens(raw_prompt)
+        prompt_tokens_after = count_tokens(prompt)
+        yield AnswerEvent(
+            type="compression_done",
+            data={
+                "enabled": compression_on,
+                "source_count_before": len(retrieval.items),
+                "source_count_after": len(prompt_retrieval.items),
+                "failure_count": failures,
+                "dropped_count": dropped,
+                "prompt_tokens_before": prompt_tokens_before,
+                "prompt_tokens_after": prompt_tokens_after,
+                "_result": prompt_retrieval,
+            },
+        )
+
+        if not prompt_retrieval.items:
+            text = (
+                "The retrieved material did not contain evidence relevant enough "
+                "to this question, so I cannot give a grounded answer."
+            )
+            yield AnswerEvent(type="delta", data={"text": text})
+            yield AnswerEvent(type="citations", data={"citations": [], "_sources": []})
+            yield AnswerEvent(type="done", data={"finish_reason": "no_relevant_sources"})
+            return
+
         sources = [
             SourceCitation(
                 index=i,
@@ -176,20 +266,8 @@ class AnswerEngine:
                 chunk_id=item.id if item.kind == "chunk" else None,
                 section_path=item.section_path,
             )
-            for i, item in enumerate(retrieval.items, start=1)
+            for i, item in enumerate(prompt_retrieval.items, start=1)
         ]
-        prompt = self.domain.render_prompt(
-            "answer",
-            DOMAIN_NAME=self.domain.name,
-            QUERY=query,
-            SOURCES=format_sources(retrieval),
-        )
-
-        try:
-            llm = self._resolve_llm(api_key_override)
-        except Exception as exc:
-            yield AnswerEvent(type="error", data={"code": "llm_unavailable", "message": str(exc)})
-            return
         model = llm.describe()
         yield AnswerEvent(type="generation_started", data={"model": model})
 
@@ -237,6 +315,14 @@ class AnswerEngine:
             },
         )
         yield AnswerEvent(type="done", data={"finish_reason": "stop"})
+
+    def _render_answer_prompt(self, query: str, retrieval: RetrievalResult) -> str:
+        return self.domain.render_prompt(
+            "answer",
+            DOMAIN_NAME=self.domain.name,
+            QUERY=query,
+            SOURCES=format_sources(retrieval),
+        )
 
 
 def format_sources(retrieval: RetrievalResult) -> str:

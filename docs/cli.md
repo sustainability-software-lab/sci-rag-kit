@@ -130,6 +130,7 @@ $ sci-rag answer [OPTIONS] QUERY
 | `--journal` | text | unset | Comma-separated journal allowlist. |
 | `--exclude-doi` | text | unset | Comma-separated DOIs to drop. |
 | `--include-retracted` | boolean | false | Deliberately allow known retracted papers as answer evidence. |
+| `--compression, --no-compression` | boolean | unset | Override contextual source compression (domain default when omitted). |
 
 ## `sci-rag stats`
 
@@ -335,6 +336,7 @@ $ sci-rag eval answers [OPTIONS]
 | `--limit` | integer | 8 | Sources per answer. |
 | `--judge-model` | text | unset | Judge model spec, 'model' or 'provider:model'. Overrides SCI_RAG_JUDGE_MODEL. |
 | `--snapshot` | text | unset | Record this corpus snapshot name in the report. |
+| `--compressed` | boolean | false | Enable contextual source compression for this answers-eval condition. |
 
 ## `sci-rag eval diff`
 

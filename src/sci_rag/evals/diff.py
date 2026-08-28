@@ -148,6 +148,9 @@ def _diff_answers(a: dict[str, Any], b: dict[str, Any]) -> ReportDiff:
                 correctness.get("correctness"), int | float
             ):
                 grades["correctness"] = float(correctness["correctness"])
+            prompt_tokens = record.get("prompt_tokens_after")
+            if isinstance(prompt_tokens, int | float) and prompt_tokens > 0:
+                grades["prompt_tokens"] = float(prompt_tokens)
             if grades:
                 out[record["question_id"]] = grades
         return out
@@ -155,7 +158,13 @@ def _diff_answers(a: dict[str, Any], b: dict[str, Any]) -> ReportDiff:
     scores_a, scores_b = scores(a), scores(b)
     common = sorted(set(scores_a) & set(scores_b))
     metric_deltas: dict[str, dict[str, float]] = {}
-    for dim in ("groundedness", "citation_accuracy", "completeness", "correctness"):
+    for dim in (
+        "groundedness",
+        "citation_accuracy",
+        "completeness",
+        "correctness",
+        "prompt_tokens",
+    ):
         pairs = [
             (scores_a[qid][dim], scores_b[qid][dim])
             for qid in common

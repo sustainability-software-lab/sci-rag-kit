@@ -140,6 +140,7 @@ class RagService:
         journals: list[str] | None = None,
         exclude_dois: list[str] | None = None,
         api_key_override: str | None = None,
+        include_compression: bool | None = None,
     ) -> AsyncIterator[AnswerEvent]:
         return self.engine.answer_stream(
             query,
@@ -157,6 +158,7 @@ class RagService:
                 exclude_retracted=True,
             ),
             api_key_override=api_key_override,
+            include_compression=include_compression,
         )
 
     async def list_documents(

@@ -15,7 +15,12 @@ pytestmark = pytest.mark.integration
 async def test_answer_json_mode(client) -> None:  # type: ignore[no-untyped-def]
     response = await client.post(
         "/v1/answer",
-        json={"query": "rice straw availability", "stream": False, "profile": "interactive"},
+        json={
+            "query": "rice straw availability",
+            "stream": False,
+            "profile": "interactive",
+            "include_compression": False,
+        },
     )
     assert response.status_code == 200
     body = response.json()
@@ -24,6 +29,25 @@ async def test_answer_json_mode(client) -> None:  # type: ignore[no-untyped-def]
     cited = [c for c in body["citations"] if c["cited"]]
     assert cited and cited[0]["index"] == 1
     assert body["traces"]
+    assert body["prompt_tokens_before"] == body["prompt_tokens_after"]
+    assert body["compression_failure_count"] == 0
+
+
+async def test_answer_json_compression_override_reports_measured_tokens(client) -> None:  # type: ignore[no-untyped-def]
+    response = await client.post(
+        "/v1/answer",
+        json={
+            "query": "rice straw availability",
+            "stream": False,
+            "profile": "interactive",
+            "include_compression": True,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["prompt_tokens_before"] > body["prompt_tokens_after"]
+    assert body["compression_failure_count"] == 0
 
 
 async def test_filtered_answer_still_excludes_retracted_documents(client) -> None:  # type: ignore[no-untyped-def]
@@ -74,6 +98,7 @@ async def test_answer_sse_event_sequence(client) -> None:  # type: ignore[no-unt
     assert names[0] == "retrieval_started"
     assert "retrieval_done" in names
     assert "generation_started" in names
+    assert "compression_done" in names
     assert any(name == "delta" for name in names)
     assert names[-2:] == ["citations", "done"]
 
@@ -83,6 +108,10 @@ async def test_answer_sse_event_sequence(client) -> None:  # type: ignore[no-unt
 
     citations = next(data for name, data in events if name == "citations")
     assert any(c["cited"] for c in citations["citations"])
+
+    compression = next(data for name, data in events if name == "compression_done")
+    assert compression["enabled"] is True
+    assert not any(key.startswith("_") for key in compression)
 
 
 async def test_byo_key_requires_scope(secured_client) -> None:  # type: ignore[no-untyped-def]

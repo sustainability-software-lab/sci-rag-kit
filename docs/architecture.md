@@ -51,7 +51,7 @@ Package by package (`src/sci_rag/`):
 | `llm` | `LLMClient` interface; Google implementation + `MockLLM` | `get_llm()` |
 | `graph` | entity/relation extraction, community detection + summaries | `extract_graph()`, `build_communities()` |
 | `retrieve` | five stages, RRF fusion, scope, the orchestrator | `Retriever.retrieve()` |
-| `answer` | prompt assembly, citations, streaming events | `AnswerEngine.answer_stream()` |
+| `answer` | optional snippet compression, prompt assembly, citations, streaming events | `AnswerEngine.answer_stream()` |
 | `evals` | seed questions, metrics, ablations, blind judge, reports | `run_retrieval_eval()`, `run_answer_eval()` |
 | `server` | FastAPI app, auth, schemas, MCP server | `create_app()`, `build_mcp_server()` |
 | `cli` | Typer commands wiring it all together | `sci-rag ...` |
@@ -63,6 +63,16 @@ Two rules keep this navigable:
    `retrieve/` touches stage SQL.
 2. **REST and MCP share one `RagService` instance.** The two front doors
    cannot drift apart because there is exactly one service behind both.
+
+The answer engine retains two evidence views when contextual compression is
+enabled. `retrieval` holds the complete retrieved chunks and their provenance;
+`prompt_retrieval` holds the exact summaries shown to the answer model and the
+blind grounding judge. Both views retain the same document and chunk IDs. A
+malformed or failed summary falls back to complete source text and increments a
+visible failure count. The shipped demo enables compression after its paired
+judged-answer gate passed; a specialized domain should repeat that gate before
+enabling its own default. Compression has no authority to create citation
+targets.
 
 ## Retrieval flow
 

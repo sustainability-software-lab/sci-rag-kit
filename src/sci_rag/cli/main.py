@@ -461,6 +461,11 @@ def answer(
         "--include-retracted",
         help="Deliberately allow known retracted papers as answer evidence.",
     ),
+    include_compression: bool | None = typer.Option(
+        None,
+        "--compression/--no-compression",
+        help="Override contextual source compression (domain default when omitted).",
+    ),
 ) -> None:
     """Generate a grounded answer with numbered citations."""
     from sci_rag.answer import AnswerEngine
@@ -483,6 +488,7 @@ def answer(
                 exclude_dois=exclude_dois,
                 exclude_retracted=not include_retracted,
             ),
+            include_compression=include_compression,
         ):
             if event.type == "retrieval_done":
                 degraded = event.data["degraded_stages"]
@@ -492,6 +498,13 @@ def answer(
                 )
             elif event.type == "delta":
                 console.print(event.data["text"], end="")
+            elif event.type == "compression_done" and event.data["enabled"]:
+                console.print(
+                    "[dim]Compressed sources: "
+                    f"{event.data['prompt_tokens_before']} -> "
+                    f"{event.data['prompt_tokens_after']} prompt tokens; "
+                    f"{event.data['failure_count']} fallback(s).[/dim]"
+                )
             elif event.type == "citations":
                 cited = [c for c in event.data["citations"] if c["cited"]]
                 if cited:
@@ -815,6 +828,11 @@ def eval_answers(
     snapshot: str | None = typer.Option(
         None, "--snapshot", help="Record this corpus snapshot name in the report."
     ),
+    compressed: bool = typer.Option(
+        False,
+        "--compressed",
+        help="Enable contextual source compression for this answers-eval condition.",
+    ),
 ) -> None:
     """Generate answers for every seed question and grade them with the blind judge."""
     from sci_rag.answer import AnswerEngine
@@ -835,7 +853,14 @@ def eval_answers(
     async def run():  # type: ignore[no-untyped-def]
         engine = AnswerEngine(settings=settings)
         judge = get_llm(settings, role="judge", model=judge_model)
-        records = await run_answer_eval(engine, judge, questions, profile=profile, limit=limit)
+        records = await run_answer_eval(
+            engine,
+            judge,
+            questions,
+            profile=profile,
+            limit=limit,
+            include_compression=compressed,
+        )
         fingerprint = await corpus_fingerprint(get_session_factory())
         # Stamped into the report: grading answers with the model that wrote
         # them is a known bias, so a reader needs to see both.
@@ -857,8 +882,19 @@ def eval_answers(
     console.print(table)
     json_path, md_path = write_report(
         kind="answers",
-        payload=answers_payload(records, fingerprint, snapshot=snapshot, models=models),
-        markdown=answers_markdown(records, fingerprint, models=models),
+        payload=answers_payload(
+            records,
+            fingerprint,
+            snapshot=snapshot,
+            models=models,
+            config={"compression": compressed},
+        ),
+        markdown=answers_markdown(
+            records,
+            fingerprint,
+            models=models,
+            config={"compression": compressed},
+        ),
     )
     console.print(f"Report written to [bold]{md_path}[/bold] (and {json_path.name}).")
 

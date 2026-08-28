@@ -34,6 +34,20 @@ class ServerMockLLM(LLMClient):
     async def generate(
         self, prompt, *, system=None, temperature=0.2, max_tokens=2048, json_mode=False
     ):  # type: ignore[no-untyped-def]
+        if "Passages JSON:" in prompt:
+            passages = json.loads(prompt.split("Passages JSON:\n", 1)[1])
+            return json.dumps(
+                {
+                    "snippets": [
+                        {
+                            "index": index,
+                            "relevance_score": 0.9,
+                            "summary": "Rice straw availability was measured at 302,000 dry tons.",
+                        }
+                        for index in (passage["index"] for passage in passages)
+                    ]
+                }
+            )
         if '"entities"' in prompt:
             return '{"entities": []}'
         return "A hypothetical passage about residue availability."

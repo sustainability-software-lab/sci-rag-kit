@@ -88,6 +88,7 @@ async def test_agent_smoke_every_tool(service) -> None:  # type: ignore[no-untyp
     answer = _payload(await mcp.call_tool("answer_question", {"query": "rice straw availability"}))
     assert "[1]" in answer["answer"]
     assert answer["citations"], "expected cited sources"
+    assert answer["compression"]["enabled"] is True
 
     entities = _payload(await mcp.call_tool("search_entities", {"name_contains": "rice"}))
     assert [e["name"] for e in entities["entities"]] == ["rice straw"]

@@ -77,6 +77,7 @@ async def answer(
         journals=body.journals,
         exclude_dois=body.exclude_dois,
         api_key_override=api_key_override,
+        include_compression=body.include_compression,
     )
     if body.stream:
         return EventSourceResponse(_sse_events(events))
@@ -94,6 +95,10 @@ async def _collect(events: AsyncIterator[AnswerEvent], request_id: str) -> Answe
     traces: list[StageTraceModel] = []
     degraded: list[str] = []
     model = ""
+    prompt_tokens_before = 0
+    prompt_tokens_after = 0
+    compression_failure_count = 0
+    compression_dropped_count = 0
     async for event in events:
         if event.type == "delta":
             text_parts.append(event.data["text"])
@@ -102,6 +107,11 @@ async def _collect(events: AsyncIterator[AnswerEvent], request_id: str) -> Answe
             degraded = event.data["degraded_stages"]
         elif event.type == "generation_started":
             model = event.data["model"]
+        elif event.type == "compression_done":
+            prompt_tokens_before = event.data["prompt_tokens_before"]
+            prompt_tokens_after = event.data["prompt_tokens_after"]
+            compression_failure_count = event.data["failure_count"]
+            compression_dropped_count = event.data["dropped_count"]
         elif event.type == "citations":
             citations = [CitationModel(**c) for c in event.data["citations"]]
         elif event.type == "error":
@@ -115,4 +125,8 @@ async def _collect(events: AsyncIterator[AnswerEvent], request_id: str) -> Answe
         citations=citations,
         traces=traces,
         degraded_stages=degraded,
+        prompt_tokens_before=prompt_tokens_before,
+        prompt_tokens_after=prompt_tokens_after,
+        compression_failure_count=compression_failure_count,
+        compression_dropped_count=compression_dropped_count,
     )

@@ -110,6 +110,13 @@ class AnswerRequest(BaseModel):
     profile: Literal["interactive", "deep"] = "deep"
     max_tokens: int = Field(2048, ge=64, le=8192)
     stream: bool = Field(True, description="true = Server-Sent Events; false = one JSON response.")
+    include_compression: bool | None = Field(
+        None,
+        description=(
+            "Override question-aware source compression. Otherwise use the evaluated domain "
+            "default."
+        ),
+    )
     license_classes: list[str] | None = None
     sources: list[str] | None = None
     year_min: int | None = Field(
@@ -159,6 +166,10 @@ class AnswerResponse(BaseModel):
     citations: list[CitationModel]
     traces: list[StageTraceModel]
     degraded_stages: list[str] = Field(default_factory=list)
+    prompt_tokens_before: int
+    prompt_tokens_after: int
+    compression_failure_count: int
+    compression_dropped_count: int
 
 
 class DocumentSummary(BaseModel):
