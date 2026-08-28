@@ -133,7 +133,7 @@ An `error` event (`code`, `message`) replaces the tail on failure.
 Set `include_compression` to `true` or `false` to override the domain's
 `compression.enabled` setting. Compression relevance-scores ordinary chunks
 and summarizes them before prompt assembly. The shipped demo enables it after
-the paired judged-answer gate documented in [Evaluation](evaluation.md); a new
+the paired judged-answer gate documented in [Evaluate your pipeline](evaluation.md); a new
 domain should run the same gate before enabling its default. Failed, malformed,
 empty, duplicate, or over-budget model output falls back to the complete chunk
 and increments `compression_failure_count`; it never silently removes the

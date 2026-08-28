@@ -70,7 +70,7 @@ uv run sci-rag campaign discover \
 
 DOI-file discovery normalizes and deduplicates the values, then retrieves
 bibliographic metadata from Crossref. The report counts invalid lines and
-malformed upstream records rather than letting them disappear.
+malformed upstream records, so none of them disappears silently.
 
 ## Resume behavior
 
@@ -127,7 +127,7 @@ paywall.
 Each response must declare `application/pdf`, stay within `--max-pdf-mb`, and
 begin with a PDF signature. The builder writes files through a temporary path
 and renames them only after validation. After an interruption it reuses files
-it has already verified rather than downloading them again.
+it has already verified, so a resumed run downloads nothing twice.
 
 Successful downloads produce `data/campaigns/<name>/corpus.jsonl`, in the same
 format `sci-rag ingest` reads:

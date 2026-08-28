@@ -7,7 +7,7 @@ description: Follow ownership through the packages, the storage layer, the concu
 
 How the code fits together, what talks to what, and where the seams are.
 For the reasoning behind the retrieval design itself, read
-[methodology.md](methodology.md) first; this page is about the software.
+[Methodology](methodology.md) first; this page is about the software.
 
 ## The map
 

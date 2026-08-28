@@ -35,14 +35,14 @@ in exactly what ADR 0004 refused.
 
 ## Decision
 
-Ship an interactive generator that is a post-fetch applier rather than a
+Ship an interactive generator that is a post-fetch applier and never a
 template renderer.
 
 `sci-rag-new` downloads this repository at a pinned tag, then rewrites
 its configuration files in place. `sci-rag init` does the same inside a
 checkout you already have. Both drive the same `run_wizard()`.
 
-Four properties keep this inside ADR 0004 rather than around it:
+Four properties keep this inside ADR 0004:
 
 * No placeholders. There is no `{{ }}` syntax and no `{{ }}` directory
   anywhere in the repository. A test asserts that a generated project
@@ -89,7 +89,7 @@ breaks a generated project on its first run.
 * The generator is now a compatibility surface. CI and the documentation
   both read its question names and answers-file format, so changing them
   follows the promises in [VERSIONING.md](../VERSIONING.md).
-* The homepage session is generated from the question list rather than
+* The homepage session is generated from the question list, never
   recorded by hand, so it cannot quietly drift from what the wizard asks.
 * ADR 0004 is not superseded. This implements the escape hatch it
   described, under the constraints it set.

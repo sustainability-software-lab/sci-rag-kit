@@ -18,9 +18,10 @@ Read the [documentation site](https://sustainability-software-lab.github.io/sci-
 for the guided path, or go directly to the
 [methodology](docs/methodology.md) for the design specification.
 
-To start a new project, use GitHub's **Use this template**, run the
-quickstart below against the bundled demo corpus, then replace the demo
-domain with your own.
+To start a project of your own, run `pipx install sci-rag-kit` and then
+`sci-rag-new`; the wizard asks about your field and writes a configured,
+git-initialized project. To evaluate the kit first, run the quickstart below
+against the bundled demo corpus.
 
 ## Components
 
@@ -122,9 +123,10 @@ workflow that needs no model credentials.
    communities`, then `sci-rag eval retrieval --ablation`.
 
 The step-by-step version with worked examples is
-[docs/bring-your-own-domain.md](docs/bring-your-own-domain.md).
-`uv run python scripts/init_domain.py` handles the rebranding (project
-name, description, seed-question reset).
+[Bring your own domain](docs/bring-your-own-domain.md). Inside a checkout,
+`uv run sci-rag init` runs the full setup wizard;
+`uv run python scripts/init_domain.py` is the narrow path when all you want is
+the project name, description, and a seed-question reset.
 
 ## Repository layout
 
@@ -178,15 +180,15 @@ The complete, searchable site is published at
 | [Quickstart](docs/quickstart.md) | Setup, first run, troubleshooting |
 | [FAQ](docs/faq.md) | Short answers, and the reasoning behind each design decision |
 | [Bring your own domain](docs/bring-your-own-domain.md) | Configure the kit for your field |
-| [Corpus campaigns](docs/campaigns.md) | Polite, resumable discovery from topics or DOI seeds |
+| [Run a corpus campaign](docs/campaigns.md) | Polite, resumable discovery from topics or DOI seeds |
 | [Methodology](docs/methodology.md) | Design rationale for every component |
 | [Architecture](docs/architecture.md) | Code layout, data model, extension points |
-| [Evaluation guide](docs/evaluation.md) | Seed questions, ablations, the judge |
+| [Evaluate your pipeline](docs/evaluation.md) | Seed questions, ablations, the judge |
 | [Benchmarks](docs/benchmarks.md) | Measured demo-corpus results, reproducible via make benchmark |
-| [Choosing sci-rag-kit](docs/choosing-sci-rag-kit.md) | Honest comparison vs GraphRAG, LightRAG, PaperQA2, LlamaIndex |
+| [Choosing Sci RAG Kit](docs/choosing-sci-rag-kit.md) | Honest comparison vs GraphRAG, LightRAG, PaperQA2, LlamaIndex |
 | [Roadmap](docs/ROADMAP.md) | Waves 2-3, collaboration seams, launch-gated decisions |
-| [API reference](docs/api.md) | REST endpoints, MCP tools, auth, error codes |
-| [Deploying on Google Cloud](docs/deploy-gcp.md) | Cloud SQL + Cloud Run via Terraform |
+| [REST, MCP, and Python API](docs/api.md) | REST endpoints, MCP tools, auth, error codes |
+| [Deploy on Google Cloud](docs/deploy-gcp.md) | Cloud SQL + Cloud Run via Terraform |
 | [Decision records](docs/adr/) | Postgres-native graph, embedding dimensions, Docling, template format |
 | [Versioning](docs/VERSIONING.md) + [Governance](docs/GOVERNANCE.md) | What 0.x promises; how decisions get made |
 | [Adopters](ADOPTERS.md) | Who runs a knowledge base built from the kit |

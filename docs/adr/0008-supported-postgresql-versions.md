@@ -68,7 +68,7 @@ Support **PostgreSQL 16 through 18**, and test both ends.
   editing a connection string.
 * `docker-free-postgres.yml` runs the integration and server suites
   against a conda-forge server on linux-64 and osx-arm64, and fails if
-  the suite skips rather than runs. Between it and `ci.yml`, 16 and 18
+  the suite skips. Between that job and `ci.yml`, 16 and 18
   are both proven on every release.
 * uv and venv+pip get none of this and keep Docker. PyPI ships no
   PostgreSQL server, and a manager that cannot take the path must not
@@ -105,7 +105,7 @@ version CI proves.
   aligning the Docker-free path with compose becomes free.
 * Anything in the schema, the queries, or the migrations starts depending
   on a version-specific behavior. At that point the range is a liability
-  rather than a convenience, and the project should pick one major and
+  and no longer a convenience, so the project should pick one major and
   supply a migration path.
 * PostgreSQL 19 lands and conda-forge follows. Extending the bound needs
   a green Docker-free run on the new major, not just an edited number.

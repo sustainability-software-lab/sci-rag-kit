@@ -39,14 +39,14 @@ $ sci-rag-new
 
 Every question has a default, so you can press Enter through the whole session and still get a project that runs. Steps 2 and 3 below are the questions it asked; read them to understand what it wrote, then skip to step 4.
 
-Evaluating the kit rather than starting a project? Clone it:
+Just evaluating the kit? Clone it:
 
 ```console title="Terminal"
 $ git clone https://github.com/sustainability-software-lab/sci-rag-kit.git
 $ cd sci-rag-kit
 ```
 
-Clicking **Use this template** on GitHub also works. Inside a checkout you already have, `sci-rag init` runs the same wizard. The included dev container is another supported path. In GitHub Codespaces it installs the project and starts Postgres, so continue with configuration.
+Three other routes end up in the same place, if one of them fits better: GitHub's **Use this template** button, `sci-rag init` inside a checkout you already have, or the included dev container. Opened in GitHub Codespaces, the dev container installs the project and starts Postgres for you, so skip ahead to step 2.
 
 ## 2. Choose a credential mode
 
@@ -56,19 +56,19 @@ Create the local environment file:
 $ cp .env.example .env
 ```
 
-Choose exactly one mode.
+Pick exactly one. **Start with AI Studio** unless your organization already runs on Google Cloud, in which case use Vertex. Offline mode is for machines that cannot reach a model at all, and it costs you the graph and every generated answer.
 
-### AI Studio: fastest real model
+### AI Studio: start here
 
-Create an API key at [Google AI Studio](https://aistudio.google.com/apikey), then set:
+One key, no cloud project, real embeddings and real answers. Create an API key at [Google AI Studio](https://aistudio.google.com/apikey), then set:
 
 ```dotenv title="~/.env"
 SCI_RAG_GOOGLE_API_KEY=your-key-here
 ```
 
-### Vertex AI: labs and Google Cloud
+### Vertex AI: if your lab is already on Google Cloud
 
-Authenticate Application Default Credentials once, then set the project:
+Same models, billed through your existing project, no key to hand around. Authenticate Application Default Credentials once, then set the project:
 
 ```console
 $ gcloud auth application-default login
@@ -78,7 +78,7 @@ $ gcloud auth application-default login
 SCI_RAG_GCP_PROJECT=your-project-id
 ```
 
-### Offline: no credentials
+### Offline: when no model is reachable
 
 Use the deterministic local embedder:
 
@@ -86,7 +86,7 @@ Use the deterministic local embedder:
 SCI_RAG_EMBEDDING_PROVIDER=local-hash
 ```
 
-This mode exercises parsing, chunking, storage, ranking, and retrieval evaluation without network calls. Its similarity is lexical rather than semantic. Graph extraction, HyDE, community summaries, generated answers, and model-based judging remain unavailable until you add a model credential.
+This mode exercises parsing, chunking, storage, ranking, and retrieval evaluation without network calls. Its similarity is lexical, which is a real quality difference. Graph extraction, HyDE, community summaries, generated answers, and model-based judging remain unavailable until you add a model credential.
 
 ## 3. Install the project and create the schema
 
@@ -145,7 +145,7 @@ With a Google credential:
 $ uv run sci-rag answer "How much rice straw was generated in the Colusa Basin in 2023?"
 ```
 
-The demo answer is approximately 302,000 dry tons and cites the synthetic resource assessment. Check the cited passage rather than treating the number alone as success.
+The demo answer is approximately 302,000 dry tons and cites the synthetic resource assessment. Check the cited passage. The number alone is not success.
 
 In offline mode this command reports that no LLM is configured. That refusal is expected: the system does not fabricate an answer when generation is unavailable.
 
@@ -191,7 +191,7 @@ For a local agent over stdio:
 $ claude mcp add demo-corpus -- uv run --directory "$(pwd)" sci-rag mcp
 ```
 
-Ask the agent to use `demo-corpus` for a question. You should see a `search_corpus` or `answer_question` tool call rather than an answer from the agent's unaided memory.
+Ask the agent to use `demo-corpus` for a question. You should see a `search_corpus` or `answer_question` tool call. An answer from the agent's own memory means the tool never fired.
 
 <div class="srag-checkpoint" markdown>
 **Checkpoint: one database, two front doors**

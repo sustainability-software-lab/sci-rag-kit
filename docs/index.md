@@ -126,7 +126,7 @@ The generator configures; it does not template. `sci-rag-new` fetches this repos
 
 [<span class="srag-row__title">Bring your own domain</span><span class="srag-row__copy">Define your ontology, prompts, source manifest, and questions without inventing a second framework.</span>](bring-your-own-domain.md){ .srag-row }
 
-[<span class="srag-row__title">Discover a corpus</span><span class="srag-row__copy">Discover DOI candidates, review fail-closed rights resolution, then download verified direct PDFs into an ingestible manifest.</span>](campaigns.md){ .srag-row }
+[<span class="srag-row__title">Run a corpus campaign</span><span class="srag-row__copy">Discover DOI candidates, review fail-closed rights resolution, then download verified direct PDFs into an ingestible manifest.</span>](campaigns.md){ .srag-row }
 
 [<span class="srag-row__title">Evaluate your pipeline</span><span class="srag-row__copy">Run layer ablations, compare reports, calibrate the judge, and keep the corpus fingerprint attached.</span>](evaluation.md){ .srag-row }
 

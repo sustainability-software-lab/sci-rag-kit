@@ -258,7 +258,7 @@ doing:
   LMH", "state the test conditions with every rejection value").
 
 Leave the judge prompts alone until you have read
-[evaluation.md](evaluation.md); their blindness rules are load-bearing. Prompt
+[Evaluate your pipeline](evaluation.md); their blindness rules are load-bearing. Prompt
 wording moves every downstream number, so re-run
 `sci-rag eval retrieval --ablation` after a rewrite and compare.
 
@@ -345,8 +345,8 @@ Before anyone else touches it, set API keys in `.env` (see
 semi-public endpoint should pin callers to
 `{"license_classes": ["public", "open_commercial"]}`, so your `restricted`
 and `unknown` documents stay internal. The
-[API reference](api.md) covers keys, scopes, and the MCP tools; the
-[GCP guide](deploy-gcp.md) covers putting it on Cloud Run.
+[REST, MCP, and Python API](api.md) covers keys, scopes, and the MCP tools; the
+[Deploy on Google Cloud](deploy-gcp.md) covers putting it on Cloud Run.
 
 ## The improvement loop
 

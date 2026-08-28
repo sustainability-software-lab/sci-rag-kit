@@ -100,7 +100,7 @@ def draft_questions_command(
     folder: Path | None = typer.Option(
         None,
         "--folder",
-        help="Draft from documents in this folder instead of the ingested corpus.",
+        help="Draft from documents in this folder, before anything is ingested.",
     ),
     print_prompt: bool = typer.Option(
         False,
@@ -110,7 +110,7 @@ def draft_questions_command(
     from_file: Path | None = typer.Option(
         None,
         "--from-file",
-        help="Read the model's reply from this file instead of calling a model.",
+        help="Read the model's reply from this file, with no model call.",
     ),
     output: Path | None = typer.Option(
         None, "--output", help="Where to write the proposal. Defaults to <seed file>.proposed."
@@ -235,7 +235,7 @@ def seed_from_answers_command(
     taken on the model's word: evidence phrases are extracted from the retrieved
     chunk text and every row is checked against the same relevance predicate the
     evaluation uses, so a row that would score zero against its own evidence is
-    dropped rather than proposed.
+    dropped and never proposed.
     """
     from sci_rag.answer import AnswerEngine
     from sci_rag.cli.main import run_async
@@ -360,7 +360,7 @@ def draft_manifest_command(
     from_file: Path | None = typer.Option(
         None,
         "--from-file",
-        help="Read the model's reply from this file instead of calling a model.",
+        help="Read the model's reply from this file, with no model call.",
     ),
     output: Path | None = typer.Option(
         None, "--output", help="Where to write the proposal. Defaults to <manifest>.proposed."
@@ -369,7 +369,7 @@ def draft_manifest_command(
         None, "--manifest", help="The manifest being drafted. Defaults to <data_dir>/corpus.jsonl."
     ),
     apply: bool = typer.Option(
-        False, "--apply", help="Write the manifest itself instead of proposing one."
+        False, "--apply", help="Write the manifest directly, with no .proposed file to review."
     ),
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Show what would be drafted without writing anything."
@@ -481,7 +481,7 @@ def draft_ontology_command(
     folder: Path | None = typer.Option(
         None,
         "--folder",
-        help="Draft from documents in this folder instead of the ingested corpus.",
+        help="Draft from documents in this folder, before anything is ingested.",
     ),
     print_prompt: bool = typer.Option(
         False,
@@ -491,13 +491,13 @@ def draft_ontology_command(
     from_file: Path | None = typer.Option(
         None,
         "--from-file",
-        help="Read the model's reply from this file instead of calling a model.",
+        help="Read the model's reply from this file, with no model call.",
     ),
     output: Path | None = typer.Option(
         None, "--output", help="Where to write the proposal. Defaults to <domain.yaml>.proposed."
     ),
     apply: bool = typer.Option(
-        False, "--apply", help="Write domain.yaml itself instead of proposing a file."
+        False, "--apply", help="Write domain.yaml directly, with no .proposed file to review."
     ),
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Show what would change without writing anything."
@@ -659,13 +659,13 @@ def draft_prompts_command(
     from_file: Path | None = typer.Option(
         None,
         "--from-file",
-        help="Read the model's reply from this file instead of calling a model.",
+        help="Read the model's reply from this file, with no model call.",
     ),
     output: Path | None = typer.Option(
         None, "--output", help="Where to write the proposal. Defaults to <prompt>.md.proposed."
     ),
     apply: bool = typer.Option(
-        False, "--apply", help="Write the prompt file itself instead of proposing one."
+        False, "--apply", help="Write the prompt file directly, with no .proposed file to review."
     ),
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Show the rewrite without writing anything."

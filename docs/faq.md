@@ -27,7 +27,7 @@ If you are building a bespoke retrieval application and want to own every archit
 
 A template, and specifically a GitHub template repository that is itself a working application: real code, a real demo corpus, green CI, and a "Use this template" button.
 
-That matters for how you adapt it. You edit data and configuration: the `domain/` folder, the corpus manifest, and `.env`. Nothing renames a Python package, and there are no placeholders to fill in. The thing you read is the thing you run, before and after. [Why a template repository instead of a cookiecutter](#why-a-template-repository-instead-of-a-cookiecutter) has the reasoning.
+That matters for how you adapt it. You edit data and configuration: the `domain/` folder, the corpus manifest, and `.env`. Nothing renames a Python package, and there are no placeholders to fill in. The thing you read is the thing you run, before and after. [Why a template repository and not a cookiecutter](#why-a-template-repository-and-not-a-cookiecutter) has the reasoning.
 
 ### What does "scientific" buy me over a general RAG framework?
 

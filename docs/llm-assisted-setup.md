@@ -127,7 +127,7 @@ entities after `sci-rag graph extract` means the ontology and the corpus are
 talking past each other.
 
 Two things it will not do. The `retrieval:` and `compression:` blocks are tuned
-numbers an ablation earned rather than domain semantics, so they are carried over
+numbers an ablation earned, and not domain semantics, so they are carried over
 untouched. And a refinement that would leave no entity type at all is rejected: a
 model asking to remove everything is a bad refinement, not an instruction.
 
@@ -146,13 +146,13 @@ uv run sci-rag draft manifest --folder data/raw
 Each document's opening pages go through the same parsers ingestion uses, and the
 model reports title, authors, year, DOI, journal, and a source bucket. Buckets are
 chosen across the whole batch, so a sixty-document folder converges on a handful
-of shared sources rather than sixty.
+of shared sources, and not sixty.
 
 **`license_class` is never guessed.** Every drafted row is written `unknown`,
 which is the fail-closed default, and the command tells you how many documents
 need a rights decision. If the text contains an explicit license sentence, it is
 quoted into `license_source` as evidence for you, and only if it appears verbatim
-in the document; a sentence the model composed is dropped rather than recorded.
+in the document; a sentence the model composed is dropped.
 
 That is not caution for its own sake. `license_class` is the input to a scoping
 boundary that decides what a public endpoint may quote, and
@@ -165,7 +165,7 @@ counts, and retraction status from Crossref afterwards.
 
 A drafting run writes `<file>.proposed` and prints a summary. Reviewing that
 file and moving it into place is your step, not the tool's. `--apply` skips the
-proposal, and for seed questions it appends rather than replaces, so a question
+proposal, and for seed questions it appends, never replaces, so a question
 a human wrote is never displaced by one a model wrote.
 
 `--dry-run` shows you the whole result and writes nothing at all.
@@ -239,10 +239,10 @@ only when it appears verbatim in **both** the answer and a chunk that answer
 cited: a span only in the answer is the model's words, and a span only in the
 chunk is evidence the answer did not use. Every finished row is then run
 through the same relevance predicate the evaluation itself uses, and a row that
-would score zero against its own evidence is dropped with a reason rather than
+would score zero against its own evidence is dropped with a reason and not
 proposed.
 
-Two things get dropped rather than guessed at. A question whose answer cited
+Two things get dropped, and neither is guessed at. A question whose answer cited
 nothing has no evidence to propose, so it is reported for you to write by hand
 or tag `unanswerable`. So is a question whose answer paraphrased rather than
 quoted.

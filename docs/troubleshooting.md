@@ -82,7 +82,7 @@ Use `uv run sci-rag doctor --probe` after configuring a credential. The probe sp
 
 A project that sets `SCI_RAG_EMBEDDING_PROVIDER=local-hash`, configures no credential for any provider, and leaves `SCI_RAG_LLM_MODEL` and its siblings at their shipped defaults is a supported mode, not a half-finished setup. The setup wizard writes exactly that for `credentials: offline`. `doctor` reports the unavailable generation features as warnings and exits `0`, so a green run means the offline pipeline is healthy rather than that a model is reachable.
 
-Reaching for a model and missing the credential is still a failure. `doctor` reports `FAIL` when the Google embedding provider is selected without credentials, and when a generation model is named explicitly, such as `SCI_RAG_LLM_MODEL=anthropic:claude-opus-5`, with no key or project behind it. Writing a model id is how you say you intend to generate, so the diagnosis follows what the configuration asks for rather than what happens to be missing.
+Reaching for a model with no credential behind it is still a failure. `doctor` reports `FAIL` when the Google embedding provider is selected without credentials, and when a generation model is named explicitly, such as `SCI_RAG_LLM_MODEL=anthropic:claude-opus-5`, with no key or project behind it. Writing a model id is how you say you intend to generate, so the diagnosis follows what the configuration asks for rather than what happens to be missing.
 
 ## Retrieval is empty or unexpectedly narrow
 
@@ -108,7 +108,7 @@ $ uv sync --extra docling
 $ uv run sci-rag ingest --manifest path/to/manifest.jsonl
 ```
 
-An identical source will still deduplicate. Remove the previously ingested document with the corpus lifecycle commands before replacing its stored parse; the [operations guide](operations.md) explains snapshots and backups to take first.
+An identical source will still deduplicate. Remove the previously ingested document with the corpus lifecycle commands before replacing its stored parse; the [Operate a live corpus](operations.md) explains snapshots and backups to take first.
 
 ## Embeddings no longer match
 

@@ -49,7 +49,7 @@ reference to a paper nobody ingested is not a graph edge, it is a dangling
 pointer, and the corpus should not carry pointers it cannot resolve.
 
 Citation traversal joins the existing graph stage as an optional
-expansion rather than becoming a sixth retrieval layer. Two reasons. The
+expansion, and not a sixth retrieval layer. Two reasons. The
 fusion weights, the router, and the public trace contract all enumerate
 five layers. And a citation walk is a variant of "walk from here to
 related evidence", not a new kind of evidence.

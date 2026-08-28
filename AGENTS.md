@@ -393,6 +393,11 @@ Update documentation whenever a user can observe a change to a command, configur
 manifest field, API schema, MCP tool, prompt slot, report format, deployment step, or failure mode.
 Keep README, API reference, examples, and implementation terminology consistent.
 
+Documentation changes follow [docs/STYLE.md](docs/STYLE.md): it assigns every page a type, states
+the shape each type takes, and lists the words this project does not use. `tests/unit/test_docs_style.py`
+enforces the checkable half and runs in `make check`. A new page in `mkdocs.yml` has to be classified
+in that guide's page-type table or the build fails.
+
 Architectural changes require an ADR with context, decision, consequences, and reversal conditions.
 Do not edit historical ADRs to make a new decision appear old; supersede them explicitly. Do not
 hand-edit generated benchmark tables without updating the underlying reproducible report inputs.

@@ -246,9 +246,9 @@ def render_config_docs(env_example: Path = Path(".env.example")) -> str:
         "| `domain/eval_seed_questions.jsonl` | Retrieval ground truth and optional expert answers for the target corpus. |",
         "| `domain/eval_calibration_labels.jsonl` | Independent human labels used to calibrate the model judge. |",
         "",
-        "The [Bring your own domain](bring-your-own-domain.md) guide explains",
-        "how to change these together, and [Evaluation](evaluation.md) explains",
-        "why tuning values should move only with measured evidence.",
+        "[Bring your own domain](bring-your-own-domain.md) explains how to change",
+        "these together. [Evaluate your pipeline](evaluation.md) explains why a",
+        "tuning value should move only behind measured evidence.",
         "",
     ]
     return "\n".join(lines)

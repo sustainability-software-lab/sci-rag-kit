@@ -90,7 +90,7 @@ show the shape of each entry.
 | `retrieval.reranker.model` | str \| NoneType | unset | Optional model override for the local cross-encoder. |
 | `compression` | CompressionTuning | see nested fields | Question-aware chunk compression before answer prompt assembly. |
 | `compression.enabled` | bool | false | Domain default; enable only after paired judged-answer evidence. |
-| `compression.relevance_floor` | float | 0.0 | Drop a model-scored chunk below this relevance score. Defaults to 0.0, which drops nothing: summarizing a source is safe, discarding one is not. A v0.3 floor sweep found groundedness and citation accuracy both fall off their ceiling at 0.15 and above, because the answer loses evidence it needs to ground itself in. Raise it only behind a paired judged-answer run that still holds. |
+| `compression.relevance_floor` | float | 0.0 | Drop a model-scored chunk below this relevance score. The default 0.0 drops nothing, because summarizing a source is safe and discarding one is not: a v0.3 sweep found groundedness and citation accuracy both fall off their ceiling at 0.15 and above. Raise it only behind a paired judged-answer run that holds. See docs/evaluation.md. |
 | `compression.max_tokens_per_chunk` | int | 160 | Maximum accepted tokens per summary; over-budget output falls back to full text. |
 
 ## Files beside the YAML profile
@@ -101,6 +101,6 @@ show the shape of each entry.
 | `domain/eval_seed_questions.jsonl` | Retrieval ground truth and optional expert answers for the target corpus. |
 | `domain/eval_calibration_labels.jsonl` | Independent human labels used to calibrate the model judge. |
 
-The [Bring your own domain](bring-your-own-domain.md) guide explains
-how to change these together, and [Evaluation](evaluation.md) explains
-why tuning values should move only with measured evidence.
+[Bring your own domain](bring-your-own-domain.md) explains how to change
+these together. [Evaluate your pipeline](evaluation.md) explains why a
+tuning value should move only behind measured evidence.

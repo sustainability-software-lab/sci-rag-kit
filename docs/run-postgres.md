@@ -19,7 +19,7 @@ Sci RAG Kit needs exactly one thing from your machine that it cannot install for
 | Requirement | Why | Check |
 |---|---|---|
 | A Sci RAG Kit checkout or generated project | `make setup` and `.env.example` live in it | `ls Makefile` |
-| Your environment manager | It decides which path below is yours | `ls pixi.toml environment.yml pyproject.toml` |
+| Your environment manager | It decides which path below is yours | You chose it when the project was created |
 | One of: Docker, conda-forge, or an existing server | The three supported sources | see the table |
 
 ## Pick your path

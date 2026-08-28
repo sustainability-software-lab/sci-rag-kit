@@ -114,12 +114,11 @@ class CompressionTuning(BaseModel):
         ge=0.0,
         le=1.0,
         description=(
-            "Drop a model-scored chunk below this relevance score. Defaults to 0.0, "
-            "which drops nothing: summarizing a source is safe, discarding one is "
-            "not. A v0.3 floor sweep found groundedness and citation accuracy both "
-            "fall off their ceiling at 0.15 and above, because the answer loses "
-            "evidence it needs to ground itself in. Raise it only behind a paired "
-            "judged-answer run that still holds."
+            "Drop a model-scored chunk below this relevance score. The default 0.0 "
+            "drops nothing, because summarizing a source is safe and discarding one "
+            "is not: a v0.3 sweep found groundedness and citation accuracy both fall "
+            "off their ceiling at 0.15 and above. Raise it only behind a paired "
+            "judged-answer run that holds. See docs/evaluation.md."
         ),
     )
     max_tokens_per_chunk: int = Field(
