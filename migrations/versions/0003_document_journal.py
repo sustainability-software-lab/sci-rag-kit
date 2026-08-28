@@ -30,8 +30,7 @@ def upgrade() -> None:
     op.execute("ALTER TABLE documents ADD COLUMN IF NOT EXISTS journal TEXT")
     op.execute("CREATE INDEX IF NOT EXISTS ix_documents_journal ON documents (journal)")
     op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_documents_publication_year "
-        "ON documents (publication_year)"
+        "CREATE INDEX IF NOT EXISTS ix_documents_publication_year ON documents (publication_year)"
     )
 
 

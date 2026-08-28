@@ -29,6 +29,7 @@ jobs:
   # what a generated project looks like, in which case it gets all four too:
   # those are exactly the changes a uv-only leg cannot catch.
   select:
+    name: select-managers
     runs-on: ubuntu-latest
     outputs:
       managers: ${{ steps.pick.outputs.managers }}
@@ -232,3 +233,15 @@ jobs:
         if: always() && (matrix.manager == 'pixi' || matrix.manager == 'conda')
         shell: bash -el {0}
         run: cd "$RUNNER_TEMP/generated" && $RUN python scripts/local_postgres.py stop
+
+  gate:
+    name: generated-projects-gate
+    needs: [select, generate]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every generated-project leg passed
+        run: |
+          echo "select=${{ needs.select.result }} generate=${{ needs.generate.result }}"
+          [ "${{ needs.select.result }}" = "success" ] || exit 1
+          [ "${{ needs.generate.result }}" = "success" ] || exit 1

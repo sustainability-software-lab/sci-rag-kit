@@ -39,6 +39,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
+      - name: The lockfile matches pyproject.toml
+        # Before `uv sync`, which would rewrite a stale lock in the runner
+        # and make this pass whatever was actually committed.
+        run: uv lock --check
       - name: Install dependencies
         # The provider extras are light and carry the LLM adapters' tests, so
         # CI installs them rather than skipping that coverage.
@@ -51,6 +55,17 @@ jobs:
         run: uv run mypy
       - name: Tests (unit + integration + smoke eval, with coverage floor)
         run: uv run pytest -q --cov=sci_rag --cov-report=term --cov-fail-under=78
+
+  pre-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+      - name: Every configured hook, the way CONTRIBUTING documents them
+        run: uvx pre-commit run --all-files --show-diff-on-failure
 
   docker:
     runs-on: ubuntu-latest

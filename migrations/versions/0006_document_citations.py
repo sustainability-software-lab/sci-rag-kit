@@ -38,8 +38,7 @@ def upgrade() -> None:
         "ON document_citations (cited_document_id)"
     )
     op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_document_citations_doi "
-        "ON document_citations (cited_doi)"
+        "CREATE INDEX IF NOT EXISTS ix_document_citations_doi ON document_citations (cited_doi)"
     )
 
 

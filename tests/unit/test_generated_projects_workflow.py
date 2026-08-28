@@ -18,10 +18,18 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github" / "workflows" / "generated-projects.yml"
 DOCKER_FREE = ROOT / ".github" / "workflows" / "docker-free-postgres.yml"
+CI = ROOT / ".github" / "workflows" / "ci.yml"
+CODEQL = ROOT / ".github" / "workflows" / "codeql.yml"
+LINK_ROT = ROOT / ".github" / "workflows" / "link-rot.yml"
+
+
+def _load_workflow(path: Path) -> dict[str, Any]:
+    workflow: dict[str, Any] = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    return workflow
 
 
 def _generate_steps() -> list[dict[str, Any]]:
-    workflow = yaml.load(WORKFLOW.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    workflow = _load_workflow(WORKFLOW)
     steps: list[dict[str, Any]] = workflow["jobs"]["generate"]["steps"]
     return steps
 
@@ -58,7 +66,7 @@ def test_the_docker_free_workflow_covers_both_required_platforms() -> None:
     selector's script rather than in the matrix block. Assert on where it is
     actually written, not on the indirection.
     """
-    workflow = yaml.load(DOCKER_FREE.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    workflow = _load_workflow(DOCKER_FREE)
 
     chooser = " ".join(step.get("run", "") for step in workflow["jobs"]["select"]["steps"])
     assert "ubuntu-latest" in chooser and "linux-64" in chooser
@@ -75,7 +83,71 @@ def test_the_docker_free_workflow_covers_both_required_platforms() -> None:
 
 def test_the_docker_free_workflow_refuses_a_skipped_suite() -> None:
     """A skipped integration suite looks identical to a passing one."""
-    workflow = yaml.load(DOCKER_FREE.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    workflow = _load_workflow(DOCKER_FREE)
     runs = " ".join(step.get("run", "") for step in workflow["jobs"]["integration"]["steps"])
 
     assert "Postgres unavailable" in runs, "nothing detects the skip path"
+
+
+def test_the_selector_contexts_are_unambiguous_and_their_matrices_have_gates() -> None:
+    generated = _load_workflow(WORKFLOW)
+    docker_free = _load_workflow(DOCKER_FREE)
+
+    assert generated["jobs"]["select"]["name"] == "select-managers"
+    assert docker_free["jobs"]["select"]["name"] == "select-platforms"
+
+    for workflow, gate_name, dependency in (
+        (generated, "generated-projects-gate", "generate"),
+        (docker_free, "docker-free-postgres-gate", "integration"),
+    ):
+        gate = workflow["jobs"]["gate"]
+        assert gate["name"] == gate_name
+        assert gate["needs"] == ["select", dependency]
+        assert gate["if"] == "always()"
+        assert "continue-on-error" not in gate
+
+        runs = " ".join(step.get("run", "") for step in gate["steps"])
+        assert "needs.select.result" in runs
+        assert f"needs.{dependency}.result" in runs
+        assert runs.count('= "success"') == 2
+
+
+def test_ci_checks_the_lock_before_sync_and_runs_every_pre_commit_hook() -> None:
+    workflow = _load_workflow(CI)
+    check_runs = [step.get("run", "") for step in workflow["jobs"]["checks"]["steps"]]
+
+    lock_index = next(index for index, run in enumerate(check_runs) if "uv lock --check" in run)
+    sync_index = next(index for index, run in enumerate(check_runs) if "uv sync" in run)
+    assert lock_index < sync_index, "uv sync can repair a stale lock before the check sees it"
+
+    pre_commit = workflow["jobs"]["pre-commit"]
+    assert "continue-on-error" not in pre_commit
+    runs = " ".join(step.get("run", "") for step in pre_commit["steps"])
+    assert "pre-commit run --all-files --show-diff-on-failure" in runs
+
+
+def test_codeql_has_security_permissions_and_all_three_triggers() -> None:
+    workflow = _load_workflow(CODEQL)
+
+    assert set(workflow["on"]) == {"pull_request", "push", "schedule"}
+    assert workflow["on"]["push"]["branches"] == ["main"]
+    assert workflow["permissions"]["contents"] == "read"
+    assert workflow["permissions"]["security-events"] == "write"
+
+    uses = [step.get("uses", "") for step in workflow["jobs"]["analyze"]["steps"]]
+    assert "github/codeql-action/init@v3" in uses
+    assert "github/codeql-action/analyze@v3" in uses
+
+
+def test_external_link_checks_never_run_on_pull_requests() -> None:
+    workflow = _load_workflow(LINK_ROT)
+
+    assert set(workflow["on"]) == {"schedule", "workflow_dispatch"}
+    steps = workflow["jobs"]["external-links"]["steps"]
+    runs = " ".join(step.get("run", "") for step in steps)
+    assert "make docs" in runs
+
+    lychee = next(step for step in steps if step.get("uses") == "lycheeverse/lychee-action@v2")
+    assert "--offline" not in lychee["with"]["args"]
+    assert "**/*.md" in lychee["with"]["args"]
+    assert "site/**/*.html" in lychee["with"]["args"]

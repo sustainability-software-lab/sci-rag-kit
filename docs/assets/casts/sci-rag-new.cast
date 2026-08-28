@@ -96,7 +96,7 @@
 [15.36,"o","  pyproject.toml         [tool.pixi] workspace, environments, tasks\r\n"]
 [15.48,"o","  Dockerfile             pixi base image\r\n"]
 [15.6,"o","  .devcontainer/         ghcr.io/prefix-dev/devcontainer-features/pixi:0\r\n"]
-[15.72,"o","  rendered               8 files for pixi\r\n"]
+[15.72,"o","  rendered               9 files for pixi\r\n"]
 [15.84,"o","  pixi.lock              created on first `pixi install`\r\n"]
 [15.96,"o","  data/campaigns/        openalex topic \"polyamide membrane fouling\"\r\n"]
 [16.08,"o","  LICENSE                BSD-3-Clause\r\n"]
