@@ -68,23 +68,65 @@ def doctor(
     console.print("[green]All checks passed.[/green]")
 
 
+def _google_credential_check(settings: Settings) -> Check:
+    """Whether the Google credential situation matches what the project needs.
+
+    Only the Google embedder needs these credentials to function. The local
+    embedder does not, so its missing credentials are a note about which
+    features are switched off, not a fault.
+    """
+    mode = settings.credentials_mode()
+    if mode != "none":
+        return Check("credentials", "ok", f"mode={mode}")
+    if settings.embedding_provider == "google":
+        return Check(
+            "credentials",
+            "fail",
+            "The google embedding provider is selected but no credentials are set.",
+            "Set SCI_RAG_GOOGLE_API_KEY or SCI_RAG_GCP_PROJECT in .env, or use "
+            "SCI_RAG_EMBEDDING_PROVIDER=local-hash for an offline dry run.",
+        )
+    return Check(
+        "credentials",
+        "warn",
+        "No Google credentials. The local-hash embedder still ingests and retrieves, "
+        "but its rankings are lexical rather than semantic.",
+        "Set SCI_RAG_GOOGLE_API_KEY (or SCI_RAG_GCP_PROJECT) in .env for semantic embeddings.",
+    )
+
+
 def _llm_credential_checks(settings: Settings) -> list[Check]:
     """One check per generation provider actually in use.
 
     Each provider carries its own credentials, so a deployment can embed with
     an AI Studio key while generating through Claude on Vertex. Checking the
     union of configured roles keeps the report honest about what will fail.
+
+    A project that asks nothing of any provider is reported as a warning
+    instead. Its generation features really are unavailable and the row still
+    says so, but a project the user deliberately set up to run offline is not
+    misconfigured, and failing it teaches them to ignore the diagnosis.
     """
     roles: dict[str, list[str]] = {}
     for role in ("answer", "extraction", "judge"):
         spec = settings.model_spec_for(role)
         roles.setdefault(spec.provider, []).append(role)
 
+    offline = settings.is_offline()
     checks: list[Check] = []
     for provider, used_by in roles.items():
         label = f"llm credentials ({provider})"
         where = ", ".join(used_by)
-        if provider == "google":
+        if offline:
+            checks.append(
+                Check(
+                    label,
+                    "warn",
+                    f"This project runs offline, so {where} are unavailable.",
+                    "Set SCI_RAG_GOOGLE_API_KEY or SCI_RAG_GCP_PROJECT in .env to turn them on.",
+                )
+            )
+        elif provider == "google":
             if settings.credentials_mode() == "none":
                 checks.append(
                     Check(
@@ -162,28 +204,7 @@ async def _run_checks(*, probe: bool) -> list[Check]:
             f"google_credentials={mode}",
         )
     )
-    if settings.embedding_provider == "google" and mode == "none":
-        checks.append(
-            Check(
-                "credentials",
-                "fail",
-                "The google embedding provider is selected but no credentials are set.",
-                "Set SCI_RAG_GOOGLE_API_KEY or SCI_RAG_GCP_PROJECT in .env, or use "
-                "SCI_RAG_EMBEDDING_PROVIDER=local-hash for an offline dry run.",
-            )
-        )
-    elif mode == "none":
-        checks.append(
-            Check(
-                "credentials",
-                "warn",
-                "No Google credentials: retrieval works, embedding new documents will not.",
-                "Set SCI_RAG_GOOGLE_API_KEY (or SCI_RAG_GCP_PROJECT) in .env.",
-            )
-        )
-    else:
-        checks.append(Check("credentials", "ok", f"mode={mode}"))
-
+    checks.append(_google_credential_check(settings))
     checks.extend(_llm_credential_checks(settings))
 
     # --- domain profile -------------------------------------------------
@@ -419,36 +440,54 @@ async def _run_checks(*, probe: bool) -> list[Check]:
         if chunks:
             from sci_rag.embed import get_embedder
 
-            current_version = get_embedder(settings).version
-            stale_chunks = (
-                await conn.scalar(
-                    text(
-                        "SELECT count(*) FROM chunks WHERE embedding_version IS DISTINCT FROM :v"
-                    ).bindparams(v=current_version)
-                )
-                or 0
-            )
-            stale_communities = (
-                await conn.scalar(
-                    text(
-                        "SELECT count(*) FROM kg_communities WHERE summary IS NOT NULL "
-                        "AND summary_embedding_version IS DISTINCT FROM :v"
-                    ).bindparams(v=current_version)
-                )
-                or 0
-            )
-            if stale_chunks or stale_communities:
+            # An embedder that cannot be constructed is a diagnosis, not a
+            # crash. Letting it escape kills the whole command before it
+            # prints anything, including the credentials row that explains
+            # why the embedder could not be built in the first place.
+            try:
+                current_version = get_embedder(settings).version
+            except Exception as exc:
                 checks.append(
                     Check(
                         "embedding versions",
                         "warn",
-                        f"{stale_chunks} chunk(s) and {stale_communities} community "
-                        f"summar(ies) not on {current_version}",
-                        "uv run sci-rag embed reindex --apply",
+                        f"cannot be checked: {type(exc).__name__}: {str(exc)[:120]}",
+                        "Fix the embedding provider configuration above, then re-run.",
                     )
                 )
             else:
-                checks.append(Check("embedding versions", "ok", f"all rows on {current_version}"))
+                stale_chunks = (
+                    await conn.scalar(
+                        text(
+                            "SELECT count(*) FROM chunks "
+                            "WHERE embedding_version IS DISTINCT FROM :v"
+                        ).bindparams(v=current_version)
+                    )
+                    or 0
+                )
+                stale_communities = (
+                    await conn.scalar(
+                        text(
+                            "SELECT count(*) FROM kg_communities WHERE summary IS NOT NULL "
+                            "AND summary_embedding_version IS DISTINCT FROM :v"
+                        ).bindparams(v=current_version)
+                    )
+                    or 0
+                )
+                if stale_chunks or stale_communities:
+                    checks.append(
+                        Check(
+                            "embedding versions",
+                            "warn",
+                            f"{stale_chunks} chunk(s) and {stale_communities} community "
+                            f"summar(ies) not on {current_version}",
+                            "uv run sci-rag embed reindex --apply",
+                        )
+                    )
+                else:
+                    checks.append(
+                        Check("embedding versions", "ok", f"all rows on {current_version}")
+                    )
 
         orphaned = (
             await conn.scalar(

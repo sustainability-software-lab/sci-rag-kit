@@ -63,12 +63,17 @@ curl -s -X POST localhost:8000/v1/query \
        "license_classes": ["public", "open_commercial"]}'
 ```
 
-Request fields: `query` (required), `top_k` (1..50, default 8),
-`profile` (`interactive` default, `deep`, or `auto`), per-layer overrides
-(`include_graph`, `include_community`, `include_hyde`, `include_rerank`),
-`license_classes` and `sources` allowlists (omit for all; an empty
-license list returns nothing by design), the metadata filters below, and
-`include_content: false` for lean responses.
+Request fields:
+
+* `query`, required.
+* `top_k`, 1 to 50, default 8.
+* `profile`: `interactive` (the default), `deep`, or `auto`.
+* Per-layer overrides: `include_graph`, `include_community`,
+  `include_hyde`, `include_rerank`.
+* `license_classes` and `sources` allowlists. Omit them for all; an empty
+  license list returns nothing by design.
+* The metadata filters below.
+* `include_content: false` for lean responses.
 
 **Metadata filters.** `year_min`, `year_max`, `authors`, `journals`, and
 `exclude_dois` narrow by publication metadata:
@@ -85,16 +90,17 @@ They are enforced inside every layer's SQL, before ranking, exactly like
 the license scope: an out-of-range document can never crowd an eligible
 one out of a bounded candidate pool. `authors` and `journals` match
 whole stored strings, not substrings. One consequence to expect: **any**
-filter disables the community layer, because a stored community summary
-aggregates evidence across documents before your scope is known, and it
-cannot be filtered after the fact. The `community` trace reads `skipped`
-when that happens. `journal` can come directly from your manifest or be
+filter disables the community layer. A stored community summary aggregates
+evidence across documents before your scope is known, so nothing can
+filter it after the fact. The `community` trace reads `skipped` when that
+happens. `journal` can come directly from your manifest or be
 refreshed from explicit Crossref metadata with `sci-rag corpus enrich`.
 
-The response carries `items` (each with title, section path, citation,
-license class, fused score, and `layers`, which names the layers that
-found it), `traces` (per-stage status and timing), and
-`degraded_stages`. If something timed out, you will know exactly what.
+The response carries three things: `items`, `traces`, and
+`degraded_stages`. Each item has a title, section path, citation, license
+class, fused score, and a `layers` field naming the layers that found it.
+Each trace has a per-stage status and timing. If something timed out, you
+will know exactly what.
 
 ### POST /v1/answer
 

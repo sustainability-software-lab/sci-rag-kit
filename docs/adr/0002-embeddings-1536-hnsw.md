@@ -5,36 +5,38 @@
 ## Context
 
 Modern embedding models emit up to 3072 dimensions, and bigger sounds
-better. But pgvector's HNSW index supports at most 2000 dimensions, so a
-3072-dimension column silently falls back to exact scans: every vector
-query reads every row. That is fine at ten thousand chunks and painful
-after that, and it is the kind of degradation nobody notices until the
-corpus has grown.
+better. But pgvector's HNSW index tops out at 2000. Give it a
+3072-dimension column and it quietly falls back to exact scans, where
+every vector query reads every row. At ten thousand chunks that is fine.
+Past that it hurts, and it is the kind of slowdown nobody notices until
+the corpus has already grown.
 
-Embedding models trained with Matryoshka representation learning
-(including the default `gemini-embedding-001`) are designed to be
-truncated: the first N dimensions carry most of the signal, at a small,
-published quality cost.
+Models trained with Matryoshka representation learning, the default
+`gemini-embedding-001` among them, are designed to be truncated: the
+first N dimensions carry most of the signal, at a small and published
+cost in quality.
 
 ## Decision
 
 Default to 1536 dimensions, requested from the model via
 `output_dimensionality`, with two guardrails:
 
-* Truncated vectors are re-normalized to unit length before storage
-  (truncation breaks the unit norm that cosine ranking assumes).
-* The provider asserts the configured dimension on every response, and
-  the database column enforces it on every insert, so a model or
-  configuration mismatch fails at the source.
+* Re-normalize every truncated vector to unit length before storing it.
+  Truncation breaks the unit norm that cosine ranking assumes.
+* Check the configured dimension twice. The provider asserts it on every
+  response and the database column enforces it on every insert, so a
+  model or configuration mismatch fails at the source.
 
-The dimension is configuration (`SCI_RAG_EMBEDDING_DIM`), baked into the
-schema at migration time; changing it is an explicit migration plus
-re-embed, aided by the `embedding_version` stamp on every chunk.
+`SCI_RAG_EMBEDDING_DIM` sets the dimension, and a migration bakes it into
+the schema. Changing it later takes a migration and a full re-embed. The
+`embedding_version` stamp on every chunk is what makes the second half
+tractable: the embedder re-runs only the chunks whose stamp no longer
+matches.
 
 ## Consequences
 
-* Vector search stays indexed as the corpus grows; the demo's ~2 second
+* Vector search stays indexed as the corpus grows. The demo's ~2 second
   vector stage is connection and API latency, not scan time.
-* A small retrieval-quality cost versus full 3072 dimensions; if that
-  ever matters for a corpus, the honest path is to measure it with the
-  ablation harness before paying the exact-scan price.
+* Full 3072 dimensions would retrieve slightly better. If that ever
+  matters for a corpus, measure the gap with the ablation harness before
+  paying the exact-scan price.

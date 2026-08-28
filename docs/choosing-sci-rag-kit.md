@@ -1,16 +1,16 @@
 # Choosing sci-rag-kit (or not)
 
 An honest comparison against the systems you should also consider.
-Short version: sci-rag-kit is an opinionated, evaluated TEMPLATE you
+Short version: sci-rag-kit is an opinionated, evaluated **template** you
 specialize into your field's knowledge base. If you want a library to
 compose, a managed product, or an agentic literature assistant, better
 options exist and are named below.
 
 No benchmark-score comparisons appear here. Cross-system numbers on
-hand-picked corpora mislead more than they inform; our own measured
-numbers (on our own demo corpus, with confidence intervals and a
-reproduction command) live in [benchmarks.md](benchmarks.md) and claim
-nothing about anyone else.
+hand-picked corpora mislead more than they inform. Our own measured
+numbers live in [benchmarks.md](benchmarks.md), on our own demo corpus,
+with confidence intervals and a reproduction command. They claim nothing
+about anyone else.
 
 ## The landscape, honestly
 
@@ -22,10 +22,10 @@ expects fixes and evolution.
 
 **LightRAG** is the most active general-purpose GraphRAG library:
 incremental insert/delete, dual-level retrieval, multiple storage
-backends including Postgres, big community. It is a LIBRARY you build
+backends including Postgres, big community. It is a **library** you build
 an application around. If you want to write that application code and
 make your own architecture calls, LightRAG is the strongest general
-choice, and some of its ideas (per-document extraction caching) are on
+choice. Some of its ideas, such as per-document extraction caching, are on
 our own roadmap, credited.
 
 **PaperQA2** owns agentic scientific literature QA: multi-step
@@ -37,7 +37,7 @@ PaperQA2. Its evidence-summarization pattern is a Wave 2 candidate
 here, credited.
 
 **LlamaIndex (+ Neo4j)** gives maximal flexibility: every RAG pattern,
-every store, endless composability. The flip side is that YOU are the
+every store, endless composability. The flip side is that **you** are the
 architect: chunking, graph store, eval, serving are all decisions you
 make and own. Teams with strong LLM-engineering capacity build great
 systems this way; teams whose job is the science, not the RAG, mostly
@@ -45,11 +45,12 @@ want those decisions made well and defensibly, once.
 
 ## What sci-rag-kit actually is
 
-A GitHub template repository: you instantiate it, run
-`scripts/init_domain.py`, edit three domain files (ontology, prompts,
-seed questions), point it at your documents, and you have a running,
-served, evaluated knowledge base whose every architectural decision is
-written down with its reasoning (docs/methodology.md, docs/adr/).
+A GitHub template repository. You instantiate it, run
+`scripts/init_domain.py`, edit three domain files (ontology, prompts, and
+seed questions), and point it at your documents. What you get is a
+running, served, evaluated knowledge base, and every architectural
+decision behind it is written down with its reasoning in
+`docs/methodology.md` and `docs/adr/`.
 
 The bets it makes for you, and where they hold:
 
@@ -67,7 +68,7 @@ The bets it makes for you, and where they hold:
 - **No agentic loop.** By design (predictable cost, honest evals), and
   the anti-recommendation is recorded in the methodology. If your
   questions genuinely need multi-step reasoning per query, use PaperQA2
-  or add an agent ON TOP of the kit's API.
+  or add an agent **on top of** the kit's API.
 - **Postgres-only.** One database is the point. If that is a blocker,
   the kit is not for you; we will not grow a storage abstraction layer.
 - **Google-first model wiring.** Gemini through AI Studio or Vertex is
@@ -83,7 +84,7 @@ The bets it makes for you, and where they hold:
 
 ## A decision rule that fits on an index card
 
-- Building a knowledge base FOR a scientific field, want evaluation and
+- Building a knowledge base **for** a scientific field, want evaluation and
   license discipline built in, happy to own a small Postgres service:
   **use the template**.
 - Building a bespoke application, want full architectural control:

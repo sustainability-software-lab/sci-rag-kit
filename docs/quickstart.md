@@ -62,7 +62,7 @@ Choose exactly one mode.
 
 Create an API key at [Google AI Studio](https://aistudio.google.com/apikey), then set:
 
-```dotenv title=".env"
+```dotenv title="~/.env"
 SCI_RAG_GOOGLE_API_KEY=your-key-here
 ```
 
@@ -74,7 +74,7 @@ Authenticate Application Default Credentials once, then set the project:
 $ gcloud auth application-default login
 ```
 
-```dotenv title=".env"
+```dotenv title="~/.env"
 SCI_RAG_GCP_PROJECT=your-project-id
 ```
 
@@ -82,7 +82,7 @@ SCI_RAG_GCP_PROJECT=your-project-id
 
 Use the deterministic local embedder:
 
-```dotenv title=".env"
+```dotenv title="~/.env"
 SCI_RAG_EMBEDDING_PROVIDER=local-hash
 ```
 

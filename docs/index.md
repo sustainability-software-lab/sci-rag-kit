@@ -18,7 +18,7 @@ hide:
 
 <p class="srag-home-masthead__lede">A template repository that ingests your literature, keeps provenance and rights attached, retrieves through five fused layers, generates cited answers, and evaluates the whole path.</p>
 
-<p class="srag-home-masthead__meta">v0.2.0, alpha, BSD-3-Clause. Install with pipx, the GitHub template, or a clone.</p>
+<p class="srag-home-masthead__meta">v0.3.0a1, alpha, BSD-3-Clause. Install with pipx, the GitHub template, or a clone.</p>
 
 </section>
 
@@ -100,7 +100,7 @@ Evaluation
 
 ## One repository, specialized
 
-The generator configures; it does not template. `sci-rag-new` fetches this repository at a pinned tag and rewrites its configuration files in place, so there are no placeholders to render and nothing that only becomes real code after generation. The repository you can read is the application you run, before and after.
+The generator configures; it does not template. `sci-rag-new` fetches this repository at a pinned tag and rewrites its configuration files in place. There are no placeholders to render, and nothing that only becomes real code after generation. The repository you can read is the application you run, before and after.
 
 <!-- BEGIN KIT ONBOARDING -->
 `pipx install sci-rag-kit`, the GitHub template button, and a plain clone all leave you with the same tree.

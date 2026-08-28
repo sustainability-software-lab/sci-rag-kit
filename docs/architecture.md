@@ -1,6 +1,6 @@
 # Architecture
 
-How the code is organized, what talks to what, and where the seams are.
+How the code fits together, what talks to what, and where the seams are.
 For the reasoning behind the retrieval design itself, read
 [methodology.md](methodology.md) first; this page is about the software.
 
@@ -122,20 +122,20 @@ Five tables, one database:
 * `kg_communities`: cluster membership, an LLM summary, and the
   summary's embedding.
 
-The embedding dimension is fixed at migration time from
-`SCI_RAG_EMBEDDING_DIM` (default 1536). The provider asserts it on every
-call; the column enforces it on every insert. Changing dimension is a
-deliberate migration plus re-embed, never a drift.
+A migration fixes the embedding dimension from `SCI_RAG_EMBEDDING_DIM`
+(default 1536). The provider asserts it on every call; the column enforces
+it on every insert. Changing it is a deliberate migration plus re-embed,
+never a drift.
 
 ## Concurrency model
 
 Everything is asyncio end to end (SQLAlchemy async + asyncpg). The
 retrieval orchestrator runs each enabled stage as its own task with its
 own database session (asyncpg cannot multiplex one session) under its
-own `asyncio.wait_for` timeout. The query embedding is computed once in
-a shared task that vector and community both await (shielded, so one
-stage's timeout cannot cancel it out from under the other). A failing
-stage records `error` in its trace and contributes nothing; the request
+own `asyncio.wait_for` timeout. A shared task computes the query embedding
+once, and vector and community both await it. That task is shielded, so one
+stage's timeout cannot cancel it out from under the other. A failing stage
+records `error` in its trace and contributes nothing; the request
 survives.
 
 ## Error and degradation philosophy
@@ -144,14 +144,14 @@ survives.
   visible (`traces`, `degraded_stages`) rather than silent.
 * Ingestion fails per document, never per corpus; every failure is a row
   in the report with a reason.
-* Fail-closed beats fail-open everywhere rights are involved: empty
-  license scope returns nothing; `unknown` license is unsafe; the
-  community layer refuses scoped requests outright.
-* License, source, year, author, journal, document, and DOI conditions
-  are applied before a layer orders or limits candidates.
-* Anything a model returns is validated before it touches the database
-  (ontology types, judge scores, JSON shapes) and dropped, not repaired,
-  when malformed.
+* Fail-closed beats fail-open everywhere rights matter: empty license
+  scope returns nothing; `unknown` license is unsafe; the community layer
+  refuses scoped requests outright.
+* Every layer applies its license, source, year, author, journal,
+  document, and DOI conditions before it orders or limits candidates.
+* The kit validates anything a model returns (ontology types, judge
+  scores, JSON shapes) before it touches the database, and drops
+  malformed output rather than repairing it.
 * Campaign screening is stricter than ordinary retrieval degradation. A
   malformed response, missing abstract, or low-confidence decision becomes a
   human-review row. It can never become an exclusion implicitly.
@@ -172,9 +172,9 @@ HTTP, and health/manifest endpoints. Cross-cutting pieces:
 * **Streaming** uses Server-Sent Events (sse-starlette) with typed
   events; the non-streaming JSON mode aggregates the same event stream,
   so the two can never disagree.
-* **BYO keys**: a request-supplied LLM key (gated by the `byo_llm`
-  scope) or a per-key binding is threaded to a per-request client and
-  never stored or logged.
+* **BYO keys**: the server threads a request-supplied LLM key (gated by
+  the `byo_llm` scope), or a per-key binding, into a per-request client.
+  It stores neither and logs neither.
 
 For agents over stdio (Claude Code and friends), `sci-rag mcp` runs the
 same tool set with logs forced to stderr, because stdout belongs to the
@@ -184,8 +184,8 @@ protocol.
 
 1. **A new document parser**: add a branch in
    `ingest/parsers.py::parse_file` producing the shared block model.
-2. **A new corpus collector** (S3, an API): produce `CorpusEntry` rows;
-   everything downstream is unchanged.
+2. **A new corpus collector** (S3, an API): produce `CorpusEntry` rows,
+   and nothing downstream changes.
 3. **A reranker**: implement the `Reranker` protocol and add an ablation
    config so the adapter has to prove itself.
 4. **A different embedding or LLM provider**: implement the two-method
@@ -198,6 +198,6 @@ protocol.
 ## What is deliberately absent
 
 No task queue, no cache service, no vector-store sidecar, no graph
-database, no plugin framework. Each was considered and declined for v1;
-the [decision records](adr/0001-graph-in-postgres.md) hold the arguments,
+database, no plugin framework. We considered each and declined it for v1.
+The [decision records](adr/0001-graph-in-postgres.md) hold the arguments,
 including the conditions under which we would reverse them.

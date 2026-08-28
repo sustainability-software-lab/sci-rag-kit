@@ -180,11 +180,10 @@ jobs:
           # guided blank, so a freshly generated project has no ground truth
           # yet. That is the point of the reset, not a regression.
 
-      # Diagnostic, not a gate. `doctor` reports FAIL when an LLM model is
-      # configured with no credentials behind it, which is exactly the state an
-      # offline project is in on purpose. The demo above is the assertion.
-      - name: sci-rag doctor (diagnostic)
-        if: always()
-        continue-on-error: true
+      # A gate. A project generated with `credentials: offline` is a state the
+      # user chose, so `doctor` warns about the unavailable generation features
+      # rather than failing on them; anything it does report as FAIL here is a
+      # real defect in what the wizard produced.
+      - name: sci-rag doctor
         shell: bash -el {0}
         run: cd "$RUNNER_TEMP/generated" && $RUN sci-rag doctor

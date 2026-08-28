@@ -15,9 +15,10 @@ the same model family that wrote them, which flatters the score. And the kit
 is a template: an adopter who cannot change the backend has to change the
 code.
 
-The interface for this already existed. `LLMClient` has three methods, is
-injected at every consumer, and had exactly one factory with a handful of call
-sites. The open question was not where the seam goes, but what fills it.
+The interface for this already existed. `LLMClient` has three methods, every
+consumer takes it by injection, and it had exactly one factory with a handful
+of call sites. The open question was not where the seam goes, but what fills
+it.
 
 The obvious alternative was a translation layer such as LiteLLM: one
 dependency, roughly a hundred providers, far less code to write.
@@ -26,22 +27,22 @@ dependency, roughly a hundred providers, far less code to write.
 
 **Hand-written adapters, one module per provider, behind the existing
 `LLMClient` ABC.** Three ship: `google`, `anthropic`, and
-`openai-compatible`. Selection is a `provider:model` spec, so a bare model id
-keeps resolving to `SCI_RAG_LLM_PROVIDER` and configurations written before
-this change keep working unedited.
+`openai-compatible`. You select one with a `provider:model` spec, so a bare
+model id keeps resolving to `SCI_RAG_LLM_PROVIDER` and configurations written
+before this change keep working unedited.
 
-A translation layer was rejected because the provider differences that matter
+We rejected a translation layer because the provider differences that matter
 here are precisely the ones it would smooth over. JSON-mode calls set
-`thinking_budget=0` on Gemini for a documented reason -- without it,
-extraction and judging spend their whole output budget on thought and return
-empty. The Claude equivalent is `output_config={"effort": "low"}`: a different
-knob with different semantics, and *not* a translation of the same one, since
-disabling thinking on current Claude models can leak reasoning tags into the
-JSON these call sites parse. Current Claude models also removed the sampling
-parameters outright, so `temperature` must be dropped rather than forwarded.
-Reaching all of that through a normalizing layer is harder than writing the
-hundred lines directly, and it keeps the supported set visible in one file --
-the same trade-off `get_embedder()` already makes.
+`thinking_budget=0` on Gemini for a documented reason: without it, extraction
+and judging spend their whole output budget on thought and return empty. The
+Claude equivalent is `output_config={"effort": "low"}`. That is a different
+knob with different semantics, *not* a translation of the same one. Disabling
+thinking on current Claude models can leak reasoning tags into the JSON these
+call sites parse. Those models also removed the sampling parameters outright,
+so the adapter drops `temperature` rather than forwarding it. Reaching all of
+that through a normalizing layer is harder than writing the hundred lines
+directly, and writing them keeps the supported set visible in one file, which
+is the same trade-off `get_embedder()` already makes.
 
 `openai-compatible` is the third adapter rather than a dedicated OpenAI one
 because Vertex serves its non-Google partner models behind an
@@ -52,11 +53,11 @@ endpoint, OpenAI itself, and a self-hosted vLLM or Ollama server.
 **Embeddings stay Google-only.** Anthropic ships no embedding API. On Vertex
 the only managed text embeddings are Google's; everything else requires
 deploying and paying for a GPU endpoint in Model Garden. More decisively, an
-embedder is not a runtime-swappable choice in this system: `SCI_RAG_EMBEDDING_DIM`
-is baked into the pgvector column at migration time (ADR 0002) and every chunk
-stores the version that produced it, so switching means a migration, a full
-re-embed, and an index rebuild. A provider flag would advertise a
-configuration change for what is a data migration.
+embedder is not a runtime-swappable choice in this system. A migration bakes
+`SCI_RAG_EMBEDDING_DIM` into the pgvector column (ADR 0002), and every chunk
+stores the version that produced it. Switching therefore means a migration, a
+full re-embed, and an index rebuild. A provider flag would advertise a
+configuration change for what is really a data migration.
 
 ## Consequences
 
@@ -68,10 +69,10 @@ configuration change for what is a data migration.
   The capability table in [extend.md](../extend.md) is the checklist; the
   `temperature` and effort rows are where a new adapter is most likely to get
   it wrong.
-* The SDKs are optional extras (`--extra anthropic`, `--extra openai`) and are
-  imported lazily, so an offline or Google-only install carries neither.
-* Retry policy is shared in `retry_async()` and the provider SDKs are built
-  with `max_retries=0`, so the kit has one backoff to reason about instead of
+* The SDKs are optional extras (`--extra anthropic`, `--extra openai`) that
+  the kit imports lazily, so an offline or Google-only install carries neither.
+* `retry_async()` holds the one retry policy, and the kit builds the provider
+  SDKs with `max_retries=0`, so there is one backoff to reason about instead of
   three that compound.
 * Bring-your-own-key stays meaningful per provider. It has no meaning against
   Vertex, which authenticates with the operator's Google credentials, so that

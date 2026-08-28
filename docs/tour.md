@@ -91,7 +91,7 @@ The [Bring your own domain](bring-your-own-domain.md) guide works through those 
 <div class="srag-checkpoint" markdown>
 **Orientation checkpoint**
 
-You should now be able to point to the file that owns each of these: scientific vocabulary (`domain/domain.yaml`), source rights (manifest JSONL), runtime defaults (`src/sci_rag/config.py` or `.env`), and measured quality (`domain/eval_seed_questions.jsonl` plus `eval_results/`).
+You should now be able to point to the file that owns each of these four things. Scientific vocabulary lives in `domain/domain.yaml`, source rights in the manifest JSONL, runtime defaults in `src/sci_rag/config.py` or `.env`, and measured quality in `domain/eval_seed_questions.jsonl` plus `eval_results/`.
 </div>
 
 Next, [run the quickstart](quickstart.md) or [specialize the demo domain](bring-your-own-domain.md).

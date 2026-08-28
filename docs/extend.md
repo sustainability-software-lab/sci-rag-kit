@@ -35,7 +35,7 @@ Add the suffix to `SUPPORTED_SUFFIXES`, add a branch in `parse_file()`, and let 
 
 A collector does not need to know about chunking or storage. It emits `CorpusEntry` records containing a local path plus whatever source metadata it can establish:
 
-```python title="CorpusEntry fields (excerpt from src/sci_rag/ingest/manifest.py)"
+```python title="src/sci_rag/ingest/manifest.py"
 path: Path
 title: str | None
 authors: list[str]
@@ -53,7 +53,7 @@ Resolve remote bytes to stable local paths before ingestion. Normalize identifie
 
 `Reranker` is a structural protocol with one async operation:
 
-```python title="src/sci_rag/retrieve/rerank.py (interface excerpt)"
+```python title="src/sci_rag/retrieve/rerank.py"
 class Reranker(Protocol):
     name: str
 
@@ -70,7 +70,7 @@ Do not enable a new reranker by default from intuition. Run `sci-rag eval retrie
 
 An embedding provider exposes `version`, `dim`, and one batch method:
 
-```python title="src/sci_rag/embed/provider.py (interface excerpt)"
+```python title="src/sci_rag/embed/provider.py"
 class EmbeddingProvider(ABC):
     version: str
     dim: int
@@ -127,7 +127,7 @@ Where a provider may reject a knob, the adapters retry once without it rather th
 
 `SCI_RAG_EMBEDDING_PROVIDER` accepts `google` or `local-hash`, and there is no third option by design. Anthropic ships no embedding API, and on Vertex the only *managed* text embeddings are Google's; every alternative means deploying and paying for your own Model Garden endpoint.
 
-More to the point, an embedder is not a runtime-swappable choice here. `SCI_RAG_EMBEDDING_DIM` is baked into the pgvector column at migration time (see [ADR 0002](adr/0002-embeddings-1536-hnsw.md)), and each chunk stores the `version` that produced it. Changing embedder means a migration, a full re-embed, and an index rebuild -- `sci-rag embed plan` exists to scope exactly that work. Point `SCI_RAG_EMBEDDING_MODEL` at a different Google embedding model freely; treat anything beyond that as a data migration, not a configuration change.
+More to the point, an embedder is not a runtime-swappable choice here. A migration bakes `SCI_RAG_EMBEDDING_DIM` into the pgvector column (see [ADR 0002](adr/0002-embeddings-1536-hnsw.md)), and each chunk stores the `version` that produced it. Changing embedder means a migration, a full re-embed, and an index rebuild. `sci-rag embed plan` exists to scope exactly that work. Point `SCI_RAG_EMBEDDING_MODEL` at a different Google embedding model freely; treat anything beyond that as a data migration, not a configuration change.
 
 ## 5. Add an authentication backend
 
