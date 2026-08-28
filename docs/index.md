@@ -266,12 +266,12 @@ Writing membrane-materials-kb/
   domain/eval_seed_questions.jsonl   guided blank
   .env                   google_ai_studio, gemini-2.5-flash, gemini-embedding-001
   pyproject.toml         name, description, extras: docling
-  Makefile               commands prefixed with `pixi run`
+  Makefile               commands prefixed with `pixi run`, database runs from conda-forge, no Docker
   docs/                  kit onboarding, player, and cast removed
   pyproject.toml         [tool.pixi] workspace, environments, tasks
   Dockerfile             pixi base image
   .devcontainer/         ghcr.io/prefix-dev/devcontainer-features/pixi:0
-  rendered               7 files for pixi
+  rendered               8 files for pixi
   pixi.lock              created on first `pixi install`
   data/campaigns/        openalex topic "polyamide membrane fouling"
   LICENSE                BSD-3-Clause

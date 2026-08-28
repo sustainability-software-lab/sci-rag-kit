@@ -104,6 +104,7 @@ nav:
           - Citation edges in their own table: adr/0005-citation-edges-as-a-document-table.md
           - Multi-provider LLMs: adr/0006-multi-provider-llms.md
           - Interactive project generator: adr/0007-interactive-project-generator.md
+          - Supported PostgreSQL versions: adr/0008-supported-postgresql-versions.md
       - Contributing: contributing.md
       - Changelog: changelog.md
       - How to cite: citation.md

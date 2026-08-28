@@ -393,8 +393,26 @@ def apply_makefile(answers: ProjectAnswers, root: Path) -> list[str]:
         sync = sync + "".join(f" --extra {extra}" for extra in answers.extras)
     text = re.sub(rf"(?m)^\t{re.escape(answers.runner.sync_command)}$", f"\t{sync}", text, count=1)
 
+    notes = [f"commands prefixed with `{answers.runner.run_prefix}`"]
+    if answers.runner.offers_local_postgres:
+        text = _use_local_postgres(text, answers)
+        notes.append("database runs from conda-forge, no Docker")
+
     _write(path, text)
-    return [_log("Makefile", f"commands prefixed with `{answers.runner.run_prefix}`")]
+    return [_log("Makefile", ", ".join(notes))]
+
+
+def _use_local_postgres(text: str, answers: ProjectAnswers) -> str:
+    """Point the database targets at the project's own server.
+
+    Only reached for a manager whose channel ships PostgreSQL. Doing this by
+    substitution rather than by rewriting the targets keeps the Makefile the
+    user reads identical to the template's apart from these two recipes.
+    """
+    run = answers.runner.run("python scripts/local_postgres.py", project_slug=answers.repo_name)
+    return text.replace("docker compose up -d --wait", f"{run} start").replace(
+        "docker compose down", f"{run} stop"
+    )
 
 
 # --- license ----------------------------------------------------------------
