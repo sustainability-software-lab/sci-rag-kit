@@ -1,12 +1,16 @@
 """Guards for the block at the top of every documentation page.
 
 Every page opens with the same three things in the same order: a clickable
-breadcrumb trail, the page title, and a one-line grey lede. A reader moving
-between pages should see those three land in the same place every time, so
-this module pins both halves of that promise. The source-level tests pin the
-inputs (the theme feature, the template override, the stylesheet, and the
-Markdown shape of each page). The build test at the end pins the output, by
-rendering the real site and looking at what MkDocs actually emitted.
+breadcrumb trail, the page title, and a one-line grey lede. The trail and the
+title start at the same height on every page, which is what these tests hold.
+The lede sits wherever the title leaves it: a two-line title pushes it down,
+and reserving the space to prevent that cost more in dead air under the short
+titles than the alignment was worth.
+
+The source-level tests pin the inputs (the theme feature, the template
+override, the stylesheet, and the Markdown shape of each page). The build test
+at the end pins the output, by rendering the real site and looking at what
+MkDocs actually emitted.
 """
 
 import re
