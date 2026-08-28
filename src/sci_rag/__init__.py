@@ -20,9 +20,18 @@ circular imports are impossible.
 from __future__ import annotations
 
 from importlib import import_module
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _installed_version
 from typing import Any
 
-__version__ = "0.1.0a0"
+try:
+    #: Read from the installed distribution rather than declared here.
+    #: A hand-maintained copy drifts, and this one had: v0.2.0 shipped
+    #: reporting 0.1.0a0. `sci-rag-new` resolves the template tag from this
+    #: same metadata, so the two cannot disagree about what version this is.
+    __version__ = _installed_version("sci-rag-kit")
+except PackageNotFoundError:  # pragma: no cover - only in a bare source tree
+    __version__ = "0.0.0+unknown"
 
 _EXPORTS: dict[str, str] = {
     # configuration and domain

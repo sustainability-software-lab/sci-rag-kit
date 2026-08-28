@@ -112,6 +112,16 @@ Notable changes to sci-rag-kit. The format follows
   into confidently wrong advice and emitted the same key several times.
 
 
+## [0.3.0a1] - 2026-08-28
+
+A packaging pre-release. No behavior of its own: it exists to establish
+Trusted Publishing to TestPyPI and PyPI and to reserve the `sci-rag-kit`
+name on both, using a version number that can be burned without cost if
+the publishing path turns out to be wrong.
+
+The changes it carries are the ones listed under Unreleased above. The
+real 0.3.0, with the Wave 2 benchmark refresh, is #49.
+
 ## [0.2.0] - 2026-08-27
 
 The "Credibility" release: the gaps between what the methodology

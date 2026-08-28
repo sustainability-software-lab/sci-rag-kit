@@ -113,9 +113,17 @@ def test_the_tarball_is_extracted_with_its_top_level_directory_stripped(tmp_path
     assert not (target / "sci-rag-kit-0.2.0").exists()
 
 
-def test_a_missing_tag_says_which_tag(tmp_path: Path) -> None:
-    with pytest.raises(TemplateFetchError, match=re.escape("v9.9.9")):
+def test_a_404_names_both_causes(tmp_path: Path) -> None:
+    """codeload returns 404 for a missing tag and for a private repository.
+
+    The second one looks like a broken generator to every user who is not a
+    collaborator, so the message has to name it.
+    """
+    with pytest.raises(TemplateFetchError, match=re.escape("v9.9.9")) as caught:
         fetch_template(tmp_path / "out", ref="v9.9.9", client=_client(b"", status=404))
+    message = str(caught.value)
+    assert "does not exist" in message
+    assert "publicly readable" in message
 
 
 def test_a_corrupt_tarball_is_rejected(tmp_path: Path) -> None:

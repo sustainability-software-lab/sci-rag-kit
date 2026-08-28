@@ -1,6 +1,6 @@
 [project]
 name = "sci-rag-kit"
-version = "0.2.0"
+version = "0.3.0a1"
 description = "A DIY GraphRAG factory for scientific domains: ingest your literature, build a knowledge graph in Postgres, retrieve with five fused layers, evaluate honestly, and serve over REST and MCP."
 readme = "README.md"
 requires-python = ">=3.11"

@@ -140,9 +140,14 @@ def fetch_template(
     try:
         response = http.get(url)
         if response.status_code == 404:
+            # A 404 here has two very different causes and codeload cannot
+            # tell them apart: the tag does not exist, or the repository is
+            # not readable anonymously. The second one looks like a broken
+            # generator to every user who is not a collaborator, so name it.
             raise TemplateFetchError(
-                f"No template at tag {resolved} ({url}). Pass --ref to name another tag, "
-                "or --template-path to generate from a local checkout."
+                f"Could not fetch the template at {resolved} ({url}). Either that tag "
+                f"does not exist, or {repo} is not publicly readable. Pass --ref to "
+                "name another tag, or --template-path to generate from a local checkout."
             )
         response.raise_for_status()
         payload = response.content
