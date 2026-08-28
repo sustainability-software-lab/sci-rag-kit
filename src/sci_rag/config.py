@@ -29,6 +29,11 @@ LLMProviderName = Literal["google", "anthropic", "openai-compatible"]
 #: writes answers, and a *different* one grades them.
 LLMRole = Literal["answer", "extraction", "judge"]
 
+#: The settings that name a generation model. Writing any of them is how a
+#: user says they intend to generate, so a project that has changed one is
+#: not offline no matter what its credentials look like.
+_GENERATION_MODEL_FIELDS = ("llm_provider", "llm_model", "extraction_model", "judge_model")
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -130,6 +135,35 @@ class Settings(BaseSettings):
         if self.gcp_project:
             return "vertex"
         return "none"
+
+    def is_offline(self) -> bool:
+        """Whether this project asks anything of a model provider at all.
+
+        Running with no credentials is a supported mode, not a half-finished
+        setup: the deterministic local embedder ingests, retrieves, and scores
+        without a single model call, and the setup wizard writes exactly this
+        configuration for ``credentials: offline``. Diagnostics use the answer
+        to tell "these features are switched off" apart from "these features
+        are broken".
+
+        Three conditions have to hold together, and each one is there to stop
+        a real misconfiguration from being read as a deliberate choice:
+
+        - The embedder is the local one. A Google embedder with no credentials
+          cannot embed anything, so that project is broken rather than offline.
+        - No provider credential is set anywhere. A project holding one is
+          reaching for a model, which makes a second missing credential a gap.
+        - Every generation model setting is still the shipped default. Someone
+          who wrote ``anthropic:claude-opus-5`` and no key wants to be told.
+        """
+        if self.embedding_provider != "local-hash":
+            return False
+        if self.credentials_mode() != "none":
+            return False
+        if self.anthropic_api_key or self.openai_api_key or self.openai_base_url:
+            return False
+        fields = type(self).model_fields
+        return all(getattr(self, name) == fields[name].default for name in _GENERATION_MODEL_FIELDS)
 
 
 @lru_cache(maxsize=1)

@@ -61,6 +61,38 @@ def _by_name(checks) -> dict[str, object]:  # type: ignore[no-untyped-def]
     return {check.name: check for check in checks}
 
 
+async def test_doctor_reports_an_unbuildable_embedder_instead_of_raising(
+    clean_tables, local_embedder, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    """A project that wants the Google embedder and has no key must still get a table.
+
+    The embedding-version row builds the configured embedder to learn its
+    version stamp, and the Google one refuses to construct without
+    credentials. Letting that escape means the command a user runs to find
+    out what is wrong dies with a traceback and reports nothing at all,
+    including the credentials failure that explains it.
+    """
+    await _stamp_alembic_revision()
+    entries = load_manifest(REPO_ROOT / "data" / "demo" / "manifest.jsonl")
+    await ingest_entries(entries[:1], embedder=local_embedder)
+
+    from sci_rag.config import reset_settings_cache
+
+    monkeypatch.setenv("SCI_RAG_EMBEDDING_PROVIDER", "google")
+    reset_settings_cache()
+    try:
+        checks = _by_name(await _run_checks(probe=False))
+    finally:
+        monkeypatch.setenv("SCI_RAG_EMBEDDING_PROVIDER", "local-hash")
+        reset_settings_cache()
+
+    assert checks["credentials"].status == "fail"
+    assert checks["embedding versions"].status == "warn"
+    assert "RuntimeError" in checks["embedding versions"].detail
+    # The rows after the embedder lookup still have to be reached.
+    assert "knowledge graph" in checks
+
+
 async def test_doctor_on_empty_schema(clean_tables) -> None:  # type: ignore[no-untyped-def]
     await _stamp_alembic_revision()
     checks = _by_name(await _run_checks(probe=False))
@@ -87,6 +119,30 @@ async def test_doctor_with_corpus_flags_missing_graph(clean_tables, local_embedd
     assert checks["corpus"].status == "ok"
     assert checks["knowledge graph"].status == "warn"
     assert "graph extract" in checks["knowledge graph"].fix
+
+
+async def test_doctor_passes_for_an_offline_project_with_a_corpus(
+    clean_tables, local_embedder
+) -> None:  # type: ignore[no-untyped-def]
+    """The state the wizard writes for `credentials: offline` is not a failure.
+
+    The test environment is that state: the local-hash embedder, no
+    credentials, the shipped generation defaults. A user who pressed Enter
+    through the wizard and ingested a corpus should see an exit code of 0,
+    so nothing here may report `fail`. The missing pieces still have to be
+    visible, hence the warnings this asserts alongside.
+    """
+    await _stamp_alembic_revision()
+    entries = load_manifest(REPO_ROOT / "data" / "demo" / "manifest.jsonl")
+    await ingest_entries(entries, embedder=local_embedder)
+
+    checks = await _run_checks(probe=False)
+    by_name = _by_name(checks)
+
+    failures = {check.name: check.detail for check in checks if check.status == "fail"}
+    assert failures == {}
+    assert by_name["credentials"].status == "warn"
+    assert by_name["llm credentials (google)"].status == "warn"
 
 
 async def test_doctor_warns_about_known_retracted_documents(clean_tables, local_embedder) -> None:  # type: ignore[no-untyped-def]
