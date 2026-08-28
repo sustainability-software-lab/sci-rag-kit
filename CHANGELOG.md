@@ -31,6 +31,18 @@ Notable changes to sci-rag-kit. The format follows
 - `sci-rag doctor` reports the resolved spec per role and checks credentials
   for each generation provider in use.
 
+- Environment manager choice in the wizard: pixi, conda, and venv+pip
+  alongside uv. One `RunnerProfile` renders all five uv-wired surfaces
+  (task commands, CI, Dockerfile, dev container, docs), writes whatever
+  manifest that manager needs (`[tool.pixi]` tables or `pixi.toml`,
+  `environment.yml`, `requirements.txt` plus `requirements-dev.txt`), and
+  is the only place a manager-specific string lives.
+- `generated-projects.yml`: a CI matrix that generates a project per
+  manager and runs that project's own lint, typecheck, and offline demo.
+  uv runs on every pull request; all four run nightly, on release tags,
+  and on any pull request that changes what a generated project looks
+  like.
+
 ### Changed
 
 - `.env` now reaches the process environment. pydantic-settings reads it
