@@ -43,6 +43,7 @@ migrations, `domain/`, and data paths resolve predictably.
 | `sci-rag corpus enrich` | Add Crossref citation, journal, and retraction metadata to the corpus. |
 | `sci-rag corpus delete` | Delete documents and every graph trace of their evidence. Chunks cascade, entity evidence arrays are scrubbed, relationships evidenced by the documents go, and communities that aggregated that evidence are dropped (rebuild them with `sci-rag graph communities`). Run `sci-rag graph gc` afterwards to sweep entities left with no evidence at all. |
 | `sci-rag corpus snapshot` | Write a named corpus fingerprint manifest under data/snapshots/. Records counts, per-document content hashes, embedding versions, the git commit, and a single corpus digest. Reference it from eval runs with --snapshot NAME so reported numbers stay tied to exactly the corpus that produced them. |
+| `sci-rag corpus export` | Export documents, chunks, entities, and relationships to files. Scoping is fail-closed and applies to the graph too: an entity is exported only when every document it was extracted from is in scope, because its description is written from all of them. Communities are never exported; they aggregate with no per-document attribution to check. |
 | `sci-rag campaign` | Discover, build, and screen legal, resumable scientific-document campaigns. |
 | `sci-rag campaign discover` | Discover a deduplicated DOI list and save resumable state. |
 | `sci-rag campaign build` | Resolve rights, download direct OA PDFs, and write an ingest manifest. |
@@ -463,6 +464,28 @@ $ sci-rag corpus snapshot [OPTIONS] [NAME]
 | Name | Type | Default | Description |
 |---|---|---|---|
 | `NAME` | text | unset | Snapshot name (default: UTC timestamp). |
+
+## `sci-rag corpus export`
+
+Export documents, chunks, entities, and relationships to files. Scoping is fail-closed and applies to the graph too: an entity is exported only when every document it was extracted from is in scope, because its description is written from all of them. Communities are never exported; they aggregate with no per-document attribution to check.
+
+```console
+$ sci-rag corpus export [OPTIONS] OUTDIR
+```
+
+### Arguments
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `OUTDIR` | path | required | Directory to write the export files into. |
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--format` | text | jsonl | jsonl (no extra dependency) or parquet (needs --extra export). |
+| `--license` | text | empty | Export only these license classes (repeatable). Omit for everything. An export is a redistribution, so a scope excludes 'unknown' unless you name it. |
+| `--include-embeddings` | boolean | false | Include chunk vectors (large, rarely wanted). |
 
 ## `sci-rag campaign`
 

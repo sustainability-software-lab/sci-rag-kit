@@ -125,26 +125,51 @@ Cloud SQL restores follow the console or
 `gcloud sql backups restore`; run the same doctor + snapshot-digest
 verification afterwards.
 
-## Analytical export (optional)
+## Analytical export
 
-For sharing data outside Postgres (or belt-and-suspenders archival), a
-Parquet export of the four core tables works well:
+For sharing data outside Postgres, or for belt-and-suspenders archival:
 
 ```bash
-# DuckDB reads Postgres directly and writes Parquet:
-duckdb -c "
-  INSTALL postgres; LOAD postgres;
-  ATTACH 'postgresql://sci_rag:sci_rag@localhost:5433/sci_rag' AS db (TYPE postgres);
-  COPY db.documents TO 'export/documents.parquet';
-  COPY db.chunks TO 'export/chunks.parquet';
-  COPY db.kg_entities TO 'export/kg_entities.parquet';
-  COPY db.kg_relationships TO 'export/kg_relationships.parquet';
-"
+sci-rag corpus export export/                      # JSONL, no extra dependency
+sci-rag corpus export export/ --format parquet     # needs `uv sync --extra export`
 ```
 
-Parquet export is a convenience for analysis, not a restore path. Vectors
-round-trip as text and the full-text columns get rebuilt, so restores
-always go through `pg_restore` or Cloud SQL backups.
+One file per table: `documents`, `chunks`, `entities`, `relationships`.
+Chunk embeddings are omitted by default because they dominate the output
+size and are rarely what a downstream consumer wants; `--include-embeddings`
+keeps them.
+
+### An export is a redistribution
+
+Reading rows out of Postgres by hand, with DuckDB or anything else, loses
+the rights information every other path in the kit enforces, and the copy
+that leaves the database is the copy nobody re-checks. So the command takes
+the same kind of license allowlist retrieval does, and applies it
+fail-closed:
+
+```bash
+sci-rag corpus export export/ --license public --license open_commercial
+```
+
+`unknown` is excluded unless you name it, exactly as in retrieval. The graph
+needs a stricter rule than the rows, because it aggregates: an entity's
+description is written from evidence across every document it was extracted
+from, so **an entity survives a scope only when every one of those documents
+did**, and a relationship survives only when its own document did and both
+its endpoints survived. An entity carrying no document attribution cannot be
+checked, so a scoped export drops it.
+
+Communities are never exported. A community summary aggregates across
+documents with no per-document attribution to filter on, which is the same
+reason the community retrieval layer disables itself under any scope.
+
+### It is not a restore path
+
+Vectors round-trip as arrays and the full-text columns get rebuilt on
+ingest, so restores always go through `pg_restore` or Cloud SQL backups.
+In Parquet, `documents.extra` is written as a JSON string rather than a
+struct, because its keys vary per document and an inferred struct schema
+would change with the corpus.
 
 ## The habits that matter
 
