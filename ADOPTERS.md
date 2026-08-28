@@ -1,9 +1,9 @@
 # Adopters
 
 Teams and projects running a knowledge base built from sci-rag-kit.
-This list is the project's real scoreboard (see docs/GOVERNANCE.md:
-success is measured behaviorally, not in stars), and it feeds the 1.0
-criteria in docs/VERSIONING.md.
+This list is the project's real scoreboard: deployments count, stars do
+not. It also feeds the 1.0 criteria in docs/VERSIONING.md, which asks
+for at least two production deployments outside the maintainers' own.
 
 ## How to add your deployment
 
@@ -16,5 +16,5 @@ cell value.
 | _your entry here_ | | | | |
 
 Planned flagship: **BioCirV (LBL)**, an agricultural residues and
-bioeconomy knowledge base; it lands on this list when it is actually
+bioeconomy knowledge base. It lands on this list once it is actually
 deployed, not before.
