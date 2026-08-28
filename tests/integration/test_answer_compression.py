@@ -69,12 +69,19 @@ class AnswerCompressionLLM(LLMClient):
 
 
 @pytest.mark.asyncio
-async def test_adopted_domain_default_compresses_exact_prompt_and_preserves_citations() -> None:
+async def test_compression_rewrites_the_prompt_and_preserves_citations() -> None:
+    """The compression path itself, asked for explicitly.
+
+    Whether the shipped domain turns it on is an evidence-gated tuning
+    decision that flips with the benchmark (see docs/benchmarks.md), so this
+    passes the flag rather than depending on today's default. The default is
+    covered separately below.
+    """
     retriever = StaticRetriever()
     llm = AnswerCompressionLLM()
     engine = AnswerEngine(retriever=retriever, llm=llm)  # type: ignore[arg-type]
 
-    result = await engine.answer("What yield was measured?")
+    result = await engine.answer("What yield was measured?", include_compression=True)
 
     assert "Yield was 42 kg per tonne." in llm.answer_prompt
     assert "Background material." not in llm.answer_prompt
@@ -85,3 +92,29 @@ async def test_adopted_domain_default_compresses_exact_prompt_and_preserves_cita
     assert result.prompt_retrieval.items[0].content == "Yield was 42 kg per tonne."
     assert result.prompt_tokens_before > result.prompt_tokens_after
     assert result.compression_failure_count == 0
+
+
+async def test_the_shipped_domain_default_is_what_actually_runs() -> None:
+    """Whatever domain.yaml says, the engine has to honour it unasked.
+
+    This is the test that would have caught a domain profile whose committed
+    default disagreed with what answering actually did.
+    """
+    from pathlib import Path
+
+    from sci_rag.config import get_settings
+    from sci_rag.domain import load_domain
+
+    configured = load_domain(Path(get_settings().domain_dir)).config.compression.enabled
+
+    retriever = StaticRetriever()
+    llm = AnswerCompressionLLM()
+    engine = AnswerEngine(retriever=retriever, llm=llm)  # type: ignore[arg-type]
+
+    result = await engine.answer("What yield was measured?")
+
+    compressed = result.prompt_tokens_before > result.prompt_tokens_after
+    assert compressed is configured, (
+        f"domain.yaml sets compression.enabled={configured}, "
+        f"but answering {'compressed' if compressed else 'did not compress'}"
+    )

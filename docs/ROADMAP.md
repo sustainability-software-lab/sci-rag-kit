@@ -34,10 +34,12 @@ what the code actually did:
 - [docs/benchmarks.md](benchmarks.md): measured numbers, reproducible
   with `make benchmark`
 
-## Wave 2: v0.3 "Campaigns" (the scientific differentiators)
+## Shipped: v0.3 "Campaigns"
 
 The release that makes the kit better for science than a general-purpose
-RAG framework:
+RAG framework. Every item below landed ([epic #38](https://github.com/sustainability-software-lab/sci-rag-kit/issues/38)),
+including the stretch item. Two of them ship switched off, and the
+reasons are the interesting part:
 
 - **Campaign corpus builder.** `sci-rag campaign build --topic|--doi-file`:
   OpenAlex/Crossref discovery, Unpaywall open-access resolution, verified
@@ -62,8 +64,27 @@ RAG framework:
 - **Contextual snippet compression** (the PaperQA2 pattern):
   per-chunk relevance-scored summarization before answer assembly,
   landing only if judged answer quality holds while tokens drop.
-- **PRISMA-style screening** (stretch): LLM inclusion/exclusion on
-  abstracts with a human-review queue and PRISMA-aligned counts.
+- **PRISMA-style screening**: LLM inclusion/exclusion on abstracts with a
+  human-review queue and PRISMA-aligned counts. Landed despite being
+  marked stretch.
+
+Two of those are ablation-gated and the v0.3 benchmark decided against
+turning them on:
+
+- **Compression defaults off.** The paired judged-answer gate cut median
+  prompt tokens 1280 to 378, but all four judged dimensions moved down.
+  At n=10 no single drop separates from noise, and that is exactly why
+  the default stays off: the gate asks for evidence that quality holds,
+  and overlapping intervals are not that evidence. Tuning the relevance
+  floor and re-running is [#90](https://github.com/sustainability-software-lab/sci-rag-kit/issues/90).
+- **Entity resolution is unexercised by the demo corpus.** Resolution
+  finds no automatic pairs and plans no merges across 67 extracted
+  entities, so the `resolved_entities` condition cannot be measured here
+  and the command refuses to fabricate one. The feature is shipped; the
+  evidence needs a corpus with real alias variation.
+
+The project factory (`sci-rag-new`, [epic #59](https://github.com/sustainability-software-lab/sci-rag-kit/issues/59))
+landed alongside wave 2 and is not part of it.
 
 ## Wave 3: v0.4+ "Scale and intelligence"
 
@@ -114,14 +135,22 @@ set that ships in the box. And the first public case study.
 ## Launch-gated decisions (owner: maintainer, not automation)
 
 These are listed here so they stay visible. No tooling executes them,
-because each one is a judgment call with public consequences:
+because each one is a judgment call with public consequences. Two are now
+done, and stay on the list as a record of when:
 
 - Restoring `CITATION.cff` and attribution wording
 - Minting a Zenodo DOI on the next tagged release
 - JOSS (Journal of Open Source Software) submission
-- PyPI publication
+- **PyPI publication: done.** `sci-rag-kit` is published, over Trusted
+  Publishing (OIDC, no stored token). `0.3.0a1` was cut first as a
+  deliberately expendable version, because PyPI does not allow reuploading
+  one and the workflow had never run. Release mechanics are in
+  [VERSIONING.md](VERSIONING.md).
 - A hosted demo (for example Hugging Face Spaces)
-- Flipping the repository public
+- **Flipping the repository public: done.** This one gated more than it
+  looked: `sci-rag-new` fetches the template tarball anonymously, so while
+  the repository was private the generator would have installed cleanly
+  from PyPI and produced nothing for anyone outside the org.
 
 ## How to influence this roadmap
 

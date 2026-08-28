@@ -115,10 +115,19 @@ retrieval:
     timeout_s: 15.0
 
 # Question-aware compression between retrieval and answer prompt assembly.
-# Enabled for the shipped demo after the paired n=10 judged-answer gate held
-# every quality dimension while measured prompt tokens fell. Re-run the gate
-# before carrying this default into a different domain or corpus.
+#
+# OFF for the shipped demo. The paired n=10 judged-answer gate was re-run for
+# the v0.3 benchmark and did not hold: median prompt tokens fell 1280 -> 378,
+# but all four judged dimensions moved down (groundedness 2.00 -> 1.60,
+# citation accuracy 2.00 -> 1.80, completeness 1.90 -> 1.60, correctness
+# 1.60 -> 1.10). At n=10 no single drop is distinguishable from noise, but the
+# gate asks for quality to HOLD, and this run does not show it holding.
+#
+# The mechanism is the relevance floor, not the summarizer: 61 chunks were
+# dropped across 10 questions with zero compression failures. A lower floor
+# may well pass the gate. Re-run it before turning this on, here or anywhere
+# else. See docs/benchmarks.md.
 compression:
-  enabled: true
+  enabled: false
   relevance_floor: 0.3
   max_tokens_per_chunk: 160

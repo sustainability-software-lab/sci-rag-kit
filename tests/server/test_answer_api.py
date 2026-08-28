@@ -78,7 +78,7 @@ async def test_filtered_answer_still_excludes_retracted_documents(client) -> Non
     assert all(citation["document_id"] != document_id for citation in response.json()["citations"])
 
 
-async def test_answer_sse_event_sequence(client) -> None:  # type: ignore[no-untyped-def]
+async def test_answer_sse_event_sequence(client, demo_compression_enabled) -> None:  # type: ignore[no-untyped-def]
     events: list[tuple[str, dict]] = []
     async with client.stream(
         "POST",
@@ -110,7 +110,9 @@ async def test_answer_sse_event_sequence(client) -> None:  # type: ignore[no-unt
     assert any(c["cited"] for c in citations["citations"])
 
     compression = next(data for name, data in events if name == "compression_done")
-    assert compression["enabled"] is True
+    # The tuning belongs to the domain profile, not to the SSE contract; what
+    # this pins is that the event is emitted and carries the configured value.
+    assert compression["enabled"] is demo_compression_enabled
     assert not any(key.startswith("_") for key in compression)
 
 

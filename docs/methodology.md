@@ -271,6 +271,16 @@ evaluation holdouts real (section 9). An excluded document is unreachable
 through every layer, including graph traversal, and a regression test
 proves it.
 
+Retraction is a fourth scope dimension, and it is the one with a default.
+Crossref enrichment records whether a document has been retracted, and
+`exclude_retracted` drops those documents inside every layer's SQL like
+any other scope condition. Answering turns it on by default; raw
+retrieval does not, because inspecting what a retracted paper claimed is
+a legitimate thing to want and the caller has asked for candidates rather
+than for an answer. A retraction discovered after ingestion changes the
+next answer without re-ingesting anything, and `doctor` reports the count
+so a corpus cannot quietly acquire retracted sources.
+
 ## 8 Grounded answers
 
 The answer prompt receives numbered sources: the retrieved chunks, each
@@ -282,6 +292,16 @@ instead of improvising.
 The response carries a structured citation list mapping each number to its
 document, and the evaluation judge checks that honesty rule after the
 fact.
+
+Between retrieval and prompt assembly, sources may be compressed:
+question-aware summarization of each chunk, dropping any whose relevance
+falls below a floor. This shortens the prompt without changing which
+documents are cited, so the citation list is unaffected. It is off in the
+model default and on for the shipped demo domain, and the difference is
+the point. Compression only earns a default where a paired judged-answer
+evaluation has shown every quality dimension holding while measured
+prompt tokens fell. Carrying it to another corpus means re-running that
+gate there, not inheriting the demo's result.
 
 ## 9 Evaluation design
 

@@ -122,3 +122,19 @@ async def secured_client(secured_app):  # type: ignore[no-untyped-def]
     transport = httpx.ASGITransport(app=secured_app)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as c:
         yield c
+
+
+@pytest.fixture
+def demo_compression_enabled() -> bool:
+    """Whatever the shipped domain profile is tuned to, read at call time.
+
+    Compression is an evidence-gated tuning decision that flips with the
+    benchmark (see docs/benchmarks.md), so a server contract test must pin
+    that the value is reported, not which value it currently is.
+    """
+    from pathlib import Path
+
+    from sci_rag.config import get_settings
+    from sci_rag.domain import load_domain
+
+    return load_domain(Path(get_settings().domain_dir)).config.compression.enabled
