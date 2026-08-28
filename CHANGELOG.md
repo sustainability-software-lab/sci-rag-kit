@@ -4,7 +4,18 @@ Notable changes to sci-rag-kit. The format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [Semantic Versioning](https://semver.org/) once past 1.0.
 
-## [Unreleased]
+## [0.3.0] - 2026-08-28
+
+The "Campaigns" release: the kit gets the parts that make it better for
+science than a general-purpose RAG framework, plus an interactive project
+factory so starting one is two commands instead of a seven-step tutorial.
+
+Two features ship switched off, on purpose. Contextual compression cut
+median prompt tokens by 70% but every judged dimension moved down, so its
+paired gate did not hold (#90). Entity resolution finds nothing to merge on
+the demo corpus, so its ablation cannot be measured here. Both are in
+`docs/benchmarks.md` with the numbers.
+
 
 ### Added
 

@@ -121,3 +121,84 @@ def test_includes_calibration_when_present(tmp_path: Path) -> None:
     page = render_benchmarks(retrieval, answers)
     assert "kappa" in page.lower()
     assert "1.00" in page
+
+
+def compressed_fixture(*, quality_holds: bool) -> dict:
+    """A second answers run, paired against `answers_fixture` on the same set."""
+    scores = (
+        {"groundedness": 2.0, "correctness": 1.6}
+        if quality_holds
+        else {
+            "groundedness": 1.6,
+            "correctness": 1.1,
+        }
+    )
+    return {
+        "kind": "answers",
+        "git_commit": "abc1234",
+        "snapshot": "v0.2-demo",
+        "corpus": {"documents": 5, "chunks": 34},
+        "summary": {
+            "n": 10.0,
+            "graded": 10.0,
+            "failed": 0.0,
+            "prompt_tokens_before_median": 1280.0,
+            "prompt_tokens_after_median": 378.0,
+        },
+        "summary_ci": {
+            name: {"mean": value, "lo": value - 0.5, "hi": 2.0, "n": 10.0}
+            for name, value in scores.items()
+        },
+        "records": [{"compression_dropped_count": 61, "compression_failure_count": 0}],
+    }
+
+
+def _write(tmp_path: Path, name: str, payload: dict) -> Path:
+    directory = tmp_path / name
+    directory.mkdir()
+    (directory / "report.json").write_text(json.dumps(payload), encoding="utf-8")
+    return directory
+
+
+def test_a_failing_compression_gate_is_reported_as_failing(tmp_path: Path) -> None:
+    """The whole point of the gate: a token saving alone must not read as a win."""
+    page = render_benchmarks(
+        _write(tmp_path, "retrieval", retrieval_fixture()),
+        _write(tmp_path, "answers", answers_fixture()),
+        _write(tmp_path, "compressed", compressed_fixture(quality_holds=False)),
+    )
+
+    assert "## Contextual compression: the paired gate" in page
+    assert "the gate does not hold" in page
+    assert "70% lower" in page, "the token saving is still reported"
+    assert "Sources dropped by the relevance floor: 61" in page
+    assert "stays `false`" in page
+
+
+def test_a_holding_compression_gate_says_so(tmp_path: Path) -> None:
+    page = render_benchmarks(
+        _write(tmp_path, "retrieval", retrieval_fixture()),
+        _write(tmp_path, "answers", answers_fixture()),
+        _write(tmp_path, "compressed", compressed_fixture(quality_holds=True)),
+    )
+
+    assert "the gate holds" in page
+    assert "THIS corpus only" in page
+
+
+def test_the_compression_section_is_absent_without_a_paired_run(tmp_path: Path) -> None:
+    page = render_benchmarks(
+        _write(tmp_path, "retrieval", retrieval_fixture()),
+        _write(tmp_path, "answers", answers_fixture()),
+    )
+    assert "Contextual compression" not in page
+
+
+def test_a_missing_resolved_entities_condition_is_explained(tmp_path: Path) -> None:
+    """Absent because the corpus has nothing to resolve, not because it was skipped."""
+    page = render_benchmarks(
+        _write(tmp_path, "retrieval", retrieval_fixture()),
+        _write(tmp_path, "answers", answers_fixture()),
+    )
+    assert "`resolved_entities` is absent" in page
+    assert "a result rather than an" in page

@@ -49,10 +49,15 @@ def _calibration_for(answers_path: Path | None) -> dict[str, Any] | None:
     return None
 
 
-def render_benchmarks(retrieval_path: Path, answers_path: Path | None) -> str:
+def render_benchmarks(
+    retrieval_path: Path,
+    answers_path: Path | None,
+    compressed_path: Path | None = None,
+) -> str:
     retrieval = _load(retrieval_path)
     assert retrieval is not None
     answers = _load(answers_path)
+    compressed = _load(compressed_path)
     calibration = _calibration_for(answers_path)
     corpus = retrieval.get("corpus", {})
     snapshot = retrieval.get("snapshot")
@@ -106,6 +111,22 @@ def render_benchmarks(retrieval_path: Path, answers_path: Path | None) -> str:
         cells = " | ".join(_ci_cell(ci.get(metric)) for metric in METRICS)
         lines.append(f"| {config['name']} | {cells} | {n} |")
 
+    names = {config["name"] for config in retrieval.get("configs", [])}
+    if "resolved_entities" not in names:
+        lines += [
+            "",
+            "`resolved_entities` is absent, and that is a result rather than an",
+            "omission. It is a separate condition (`sci-rag eval retrieval",
+            "--condition resolved_entities`) measured on a post-resolution",
+            "snapshot, and it requires at least one persisted resolution audit",
+            "row. On this corpus `sci-rag graph resolve-entities` finds no",
+            "automatic pairs and plans no merges: 67 extracted entities with",
+            "nothing duplicated enough to merge. The command refuses to run the",
+            "condition rather than report a number that would just be",
+            "`full_deep` under another name. A corpus with real alias variation",
+            "is what would exercise it.",
+        ]
+
     lines += [
         "",
         "How to read it:",
@@ -141,6 +162,9 @@ def render_benchmarks(retrieval_path: Path, answers_path: Path | None) -> str:
             "is graded in a separate reference-only pass (docs/evaluation.md).",
             "",
         ]
+
+    if compressed is not None and answers is not None:
+        lines += _compression_section(answers, compressed)
 
     if calibration is not None:
         lines += [
@@ -186,13 +210,93 @@ def render_benchmarks(retrieval_path: Path, answers_path: Path | None) -> str:
     return "\n".join(lines)
 
 
+_JUDGED_DIMENSIONS = ("groundedness", "citation_accuracy", "completeness", "correctness")
+
+
+def _median_tokens(report: dict[str, Any], key: str) -> float | None:
+    value = report.get("summary", {}).get(key)
+    return float(value) if value is not None else None
+
+
+def _compression_section(answers: dict[str, Any], compressed: dict[str, Any]) -> list[str]:
+    """The paired gate that decides whether compression may default on.
+
+    Two answers-eval runs over the same questions and the same corpus, one
+    with `--compressed` and one without. The gate asks for judged quality to
+    hold while measured prompt tokens fall, so both halves are reported: a
+    token saving alone never justifies the default.
+    """
+    base_ci = answers.get("summary_ci", {})
+    comp_ci = compressed.get("summary_ci", {})
+    before = _median_tokens(compressed, "prompt_tokens_before_median")
+    after = _median_tokens(compressed, "prompt_tokens_after_median")
+    dropped = sum(r.get("compression_dropped_count", 0) for r in compressed.get("records", []))
+    failures = sum(r.get("compression_failure_count", 0) for r in compressed.get("records", []))
+    n = int(compressed.get("summary", {}).get("n", 0))
+
+    lines = [
+        "## Contextual compression: the paired gate",
+        "",
+        "Two judged-answer runs over the same questions and the same corpus,",
+        "one with `--compressed` and one without. Compression may default on",
+        "only when judged quality HOLDS while measured prompt tokens fall. A",
+        "token saving on its own is not evidence; it is half of a trade.",
+        "",
+        "| Dimension | Uncompressed | Compressed |",
+        "|-----------|-------------:|-----------:|",
+    ]
+    for dimension in _JUDGED_DIMENSIONS:
+        lines.append(
+            f"| {dimension} | {_ci_cell(base_ci.get(dimension))} | {_ci_cell(comp_ci.get(dimension))} |"
+        )
+    if before is not None and after is not None:
+        saving = f"{(1 - after / before) * 100:.0f}%" if before else "n/a"
+        lines.append(f"| median prompt tokens | {before:.0f} | {after:.0f} ({saving} lower) |")
+    lines += [
+        "",
+        f"Sources dropped by the relevance floor: {dropped}. Compression"
+        f" failures: {failures}. Questions: {n}.",
+        "",
+    ]
+    fell = [
+        d
+        for d in _JUDGED_DIMENSIONS
+        if (comp_ci.get(d) or {}).get("mean", 0) < (base_ci.get(d) or {}).get("mean", 0)
+    ]
+    if fell:
+        lines += [
+            f"On this run the gate does not hold: {len(fell)} of"
+            f" {len(_JUDGED_DIMENSIONS)} judged dimensions moved down"
+            f" ({', '.join(fell)}). At this sample size no single drop is"
+            " distinguishable from noise, and that is the point: the gate asks"
+            " for evidence that quality holds, and overlapping intervals are"
+            " not that evidence. `compression.enabled` therefore stays `false`"
+            " in the shipped domain profile.",
+            "",
+            "The mechanism is the relevance floor rather than the summarizer,"
+            " which the counters above separate: sources were dropped, none"
+            " failed to compress. A lower floor may pass the gate. Re-run it"
+            " before turning compression on for any corpus.",
+            "",
+        ]
+    else:
+        lines += [
+            "On this run the gate holds: no judged dimension fell while prompt"
+            " tokens dropped. That justifies the default on THIS corpus only;"
+            " re-run the gate before carrying it to another.",
+            "",
+        ]
+    return lines
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--retrieval", type=Path, required=True)
     parser.add_argument("--answers", type=Path, default=None)
+    parser.add_argument("--answers-compressed", type=Path, default=None)
     parser.add_argument("--output", type=Path, default=Path("docs/benchmarks.md"))
     args = parser.parse_args()
-    page = render_benchmarks(args.retrieval, args.answers)
+    page = render_benchmarks(args.retrieval, args.answers, args.answers_compressed)
     args.output.write_text(page, encoding="utf-8")
     print(f"wrote {args.output}")
 

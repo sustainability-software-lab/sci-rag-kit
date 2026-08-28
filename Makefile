@@ -110,10 +110,14 @@ benchmark: db-up
 	uv run sci-rag corpus snapshot $(BENCH_SNAP)
 	uv run sci-rag eval retrieval --ablation --snapshot $(BENCH_SNAP)
 	uv run sci-rag eval answers --snapshot $(BENCH_SNAP)
+	@# The paired half of the compression gate. Both runs are needed: a token
+	@# saving with no quality comparison is not evidence for a default.
+	uv run sci-rag eval answers --compressed --snapshot $(BENCH_SNAP)
 	uv run sci-rag eval calibrate --labels domain/eval_calibration_labels.jsonl \
-		--report $$(ls -td eval_results/*-answers | head -1)
+		--report $$(ls -td eval_results/*-answers | head -2 | tail -1)
 	uv run python scripts/render_benchmarks.py \
 		--retrieval $$(ls -td eval_results/*-retrieval-ablation | head -1) \
-		--answers $$(ls -td eval_results/*-answers | head -1) \
+		--answers $$(ls -td eval_results/*-answers | head -2 | tail -1) \
+		--answers-compressed $$(ls -td eval_results/*-answers | head -1) \
 		--output docs/benchmarks.md
 	@echo "docs/benchmarks.md regenerated."

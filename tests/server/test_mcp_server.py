@@ -56,7 +56,7 @@ async def test_tool_inventory_and_schemas(service) -> None:  # type: ignore[no-u
     assert {str(r.uri) for r in resources} == {"corpus://manifest", "corpus://methodology"}
 
 
-async def test_agent_smoke_every_tool(service) -> None:  # type: ignore[no-untyped-def]
+async def test_agent_smoke_every_tool(service, demo_compression_enabled) -> None:  # type: ignore[no-untyped-def]
     mcp, _tools = build_mcp_server(service)
 
     stats = _payload(await mcp.call_tool("corpus_stats", {}))
@@ -88,7 +88,9 @@ async def test_agent_smoke_every_tool(service) -> None:  # type: ignore[no-untyp
     answer = _payload(await mcp.call_tool("answer_question", {"query": "rice straw availability"}))
     assert "[1]" in answer["answer"]
     assert answer["citations"], "expected cited sources"
-    assert answer["compression"]["enabled"] is True
+    # The tuning belongs to the domain profile, not to the MCP contract; what
+    # this pins is that the field is reported at all.
+    assert answer["compression"]["enabled"] is demo_compression_enabled
 
     entities = _payload(await mcp.call_tool("search_entities", {"name_contains": "rice"}))
     assert [e["name"] for e in entities["entities"]] == ["rice straw"]
