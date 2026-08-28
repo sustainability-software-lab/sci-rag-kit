@@ -16,12 +16,21 @@ uv sync --group docs
 docker compose up -d --wait
 make check          # ruff + mypy + the full test suite
 make docs           # generated references + strict build + public-artifact guard
+make docs-geometry  # optional: measure the built site's snippets in a browser
 uvx pre-commit install   # optional: run the same lint hooks on every commit
 ```
 
 The whole suite runs offline (deterministic local embedder, mock LLMs)
 against the docker-compose Postgres. If Postgres is not reachable,
 integration tests skip with instructions rather than failing.
+
+`make docs-geometry` is the same idea for the documentation site. Some
+presentation bugs are only visible as numbers from a rendered page, such as
+two code blocks with no gap between them, so those tests drive a real
+browser over `site/`. They need `make docs` to have run and they pull a
+browser, which is why they are a separate target and a separate dependency
+group. Without either they skip with instructions, so `make check` is
+unaffected. CI runs them in the job that already builds the site.
 
 ## The bar for changes
 

@@ -1,7 +1,7 @@
 # Convenience targets. Everything here is just the underlying command,
 # spelled out; run `make <target>` or copy the command, whichever you like.
 
-.PHONY: setup db-up db-down db-upgrade demo demo-cloud test lint typecheck check serve mcp eval eval-ablation docs docs-serve docs-reference cast clean-demo
+.PHONY: setup db-up db-down db-upgrade demo demo-cloud test lint typecheck check serve mcp eval eval-ablation docs docs-geometry docs-serve docs-reference cast clean-demo
 
 ## setup: install dependencies, start Postgres, create the schema
 setup:
@@ -86,6 +86,13 @@ docs:
 		echo "Internal planning language leaked into the public site." >&2; \
 		exit 1; \
 	fi
+
+## docs-geometry: measure the built site in a browser. Needs `make docs` first.
+## Separate from `docs` because it pulls a browser; the tests skip without one.
+docs-geometry:
+	uv sync --group docs --group docs-test
+	uv run playwright install chromium
+	uv run pytest tests/docs -q
 
 docs-serve:
 	uv run mkdocs serve

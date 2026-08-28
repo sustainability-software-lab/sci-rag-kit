@@ -75,6 +75,11 @@ docs = [
   "mkdocs-material==9.7.*",
   "pymdown-extensions>=10.16,<11",
 ]
+# Kept out of `docs` so building the site stays a light install. Only the
+# rendered-geometry guard needs a browser, and it skips when this is absent.
+docs-test = [
+  "playwright>=1.47",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -132,6 +137,7 @@ asyncio_default_test_loop_scope = "session"
 markers = [
   "integration: needs a running Postgres (see docker-compose.yml)",
   "cloud: needs Google credentials; skipped by default in CI",
+  "docs_render: needs a built site/ and a Playwright browser (see `make docs-geometry`)",
 ]
 
 [tool.coverage.run]

@@ -101,9 +101,16 @@ jobs:
           python-version: "3.12"
           enable-cache: true
       - name: Install project and documentation dependencies
-        run: uv sync --group docs
+        # docs-test carries Playwright for the rendered-geometry guard below.
+        run: uv sync --group docs --group docs-test
       - name: Check and build documentation exactly as contributors do
         run: make docs
+      - name: Install the browser the geometry guard measures with
+        run: uv run playwright install --with-deps chromium
+      - name: Measure the built site's code snippets
+        # Reads site/ from the build above. Geometry is what the Markdown-level
+        # guard in tests/unit cannot see.
+        run: uv run pytest tests/docs -q
       - name: Upload documentation preview
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v7
