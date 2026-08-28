@@ -103,16 +103,27 @@ establish that trust once per index, by hand. CI cannot do it for you:
    repository settings. Put a required reviewer on `pypi` for the first
    release; that turns the final publish into a decision you make rather
    than one a tag push makes for you.
-4. Verify end to end before announcing anything, from a clean directory:
+4. Verify end to end before approving the PyPI publish, from a clean
+   directory. Install the TestPyPI **artifact by URL** and let dependencies
+   resolve from real PyPI:
 
    ```bash
-   pipx install --index-url https://test.pypi.org/simple/ \
-       --pip-args="--extra-index-url https://pypi.org/simple/" sci-rag-kit
-   sci-rag-new --defaults
+   WHEEL=$(curl -sS https://test.pypi.org/pypi/sci-rag-kit/<version>/json \
+     | python -c "import json,sys; print(next(u['url'] for u in json.load(sys.stdin)['urls'] if u['packagetype']=='bdist_wheel'))")
+   uv venv probe && VIRTUAL_ENV=probe uv pip install "$WHEEL"
+   probe/bin/sci-rag-new --defaults
    ```
 
-   TestPyPI does not mirror the runtime dependencies, which is what the
-   extra index is for.
+   Do not point the installer at both indexes at once. TestPyPI is full of
+   placeholder and name-squatted packages, and any resolver told to consider
+   both will happily prefer a fake `fastapi 1.0` from TestPyPI over the real
+   one. Installing the single artifact by URL sidesteps that entirely: it
+   tests the thing you built, with the dependencies your users will get.
+
+   What to check before approving: the entry points run, `sci_rag.__version__`
+   matches the tag, and `sci-rag-new --defaults` produces a project. That last
+   one is the only check that exercises the GitHub tag fetch, which is the part
+   a PyPI upload cannot tell you about.
 
 Skip step 2 on an index and that index's job fails with a
 missing-publisher error. It publishes nothing and costs nothing; configure
