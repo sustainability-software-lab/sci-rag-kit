@@ -96,7 +96,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Validation only: fail one conditional manager leg
+      - name: "Validation only: fail one conditional manager leg"
         if: matrix.manager == 'conda'
         run: exit 1
 
