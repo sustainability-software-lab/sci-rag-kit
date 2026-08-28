@@ -187,7 +187,7 @@ The complete, searchable site is published at
 
 ## Defaults and requirements
 
-Python 3.11+; PostgreSQL 15+ with pgvector (provided by
+Python 3.11+; PostgreSQL 16 to 18 with pgvector (provided by
 `docker-compose.yml`). Default models: `gemini-embedding-001` at 1536
 dimensions (within pgvector's HNSW index limit; see ADR 0002) and
 `gemini-2.5-flash` for generation, via AI Studio key or Vertex AI. A

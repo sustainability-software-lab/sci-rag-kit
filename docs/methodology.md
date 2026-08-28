@@ -297,11 +297,13 @@ Between retrieval and prompt assembly, sources may be compressed:
 question-aware summarization of each chunk, dropping any whose relevance
 falls below a floor. This shortens the prompt without changing which
 documents are cited, so the citation list is unaffected. It is off in the
-model default and on for the shipped demo domain, and the difference is
+model default and off for the shipped demo domain, and how it got there is
 the point. Compression only earns a default where a paired judged-answer
-evaluation has shown every quality dimension holding while measured
-prompt tokens fell. Carrying it to another corpus means re-running that
-gate there, not inheriting the demo's result.
+evaluation shows every quality dimension holding while measured prompt
+tokens fall. On the v0.3 benchmark it did not: tokens fell by 70% and all
+four judged dimensions moved down, so the default went off and the numbers
+went on the [benchmarks page](benchmarks.md). Carrying compression to
+another corpus means running that gate there, not inheriting a result.
 
 ## 9 Evaluation design
 
