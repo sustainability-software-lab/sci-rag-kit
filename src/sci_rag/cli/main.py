@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 app = typer.Typer(
     name="sci-rag",
-    help="A DIY GraphRAG factory for scientific domains.",
+    help="Retrieval-augmented generation over scientific document collections, on one Postgres database.",
     no_args_is_help=True,
     pretty_exceptions_show_locals=False,
 )

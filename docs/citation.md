@@ -14,9 +14,10 @@ For work performed with the current release, cite the software title, version or
 ```bibtex
 @software{sci_rag_kit_2026,
   author  = {{Sci RAG Kit contributors}},
-  title   = {Sci RAG Kit: A DIY GraphRAG factory for scientific domains},
+  title   = {Sci RAG Kit: Retrieval-augmented generation over scientific
+             document collections, on one Postgres database},
   year    = {2026},
-  version = {0.2.0},
+  version = {0.3.0},
   url     = {https://github.com/sustainability-software-lab/sci-rag-kit},
   license = {BSD-3-Clause}
 }

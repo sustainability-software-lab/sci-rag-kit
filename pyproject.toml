@@ -1,7 +1,7 @@
 [project]
 name = "sci-rag-kit"
 version = "0.3.0"
-description = "A DIY GraphRAG factory for scientific domains: ingest your literature, build a knowledge graph in Postgres, retrieve with five fused layers, evaluate honestly, and serve over REST and MCP."
+description = "Retrieval-augmented generation over scientific document collections, on one Postgres database."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "BSD-3-Clause" }

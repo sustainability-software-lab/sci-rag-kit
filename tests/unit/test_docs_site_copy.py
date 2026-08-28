@@ -2,13 +2,18 @@
 
 The site description is written in three places that a reader compares directly:
 the MkDocs metadata, the landing page heading, and the README lead. They drift
-apart easily because nothing else links them. The second test keeps the retired
-marketing components from being reintroduced by copy-paste, since the hub pages
-repeat the same block many times over. The third keeps the product's display
-name spelled the way the logo spells it.
+apart easily because nothing else links them. The next two tests widen that to
+every surface the product ships a description through, because the site is not
+where most people meet it: the PyPI page, `sci-rag --help`, the served OpenAPI
+document, and the BibTeX a paper would carry all say what this is, and until
+they were tied together only the MkDocs field was guarded. The rest keep the
+retired marketing components from being reintroduced by copy-paste, keep the
+suggested citation pinned to a version that exists, and keep the product's
+display name spelled the way the logo spells it.
 """
 
 import re
+import tomllib
 from pathlib import Path
 
 import yaml
@@ -17,6 +22,8 @@ ROOT = Path(__file__).resolve().parents[2]
 MKDOCS = ROOT / "mkdocs.yml"
 INDEX = ROOT / "docs" / "index.md"
 README = ROOT / "README.md"
+PYPROJECT = ROOT / "pyproject.toml"
+CITATION = ROOT / "docs" / "citation.md"
 
 RETIRED_CLASSES = (
     "srag-card",
@@ -41,6 +48,39 @@ def _site_description() -> str:
     return str(config["site_description"])
 
 
+def _bibtex_field(name: str) -> str | None:
+    """Read one field out of the suggested citation, which wraps across lines."""
+    match = re.search(rf"\b{name}\s*=\s*\{{(.*?)\}}", CITATION.read_text(), re.DOTALL)
+    return None if match is None else match.group(1)
+
+
+# The phrase the project retired. `site_description` has been guarded against it
+# since the description was rewritten, but the guard stopped at that one field.
+# "for a scientific domain" is the same framing without the noun, so the pattern
+# stops at "DIY GraphRAG" rather than at the full tagline.
+RETIRED_TAGLINE = re.compile(r"DIY\s+GraphRAG", re.IGNORECASE)
+
+
+def _described_surfaces() -> list[Path]:
+    """Every tracked file that describes the product to somebody.
+
+    `docs/planning/` is excluded: `exclude_docs` keeps it off the site, it is a
+    historical record of how the project got here, and rewriting history is a
+    different thing from retiring a tagline.
+    """
+    return [
+        PYPROJECT,
+        MKDOCS,
+        *sorted(ROOT.joinpath("src").rglob("*.py")),
+        *sorted(
+            path
+            for path in ROOT.joinpath("docs").rglob("*.md")
+            if "planning" not in path.relative_to(ROOT).parts
+        ),
+        *sorted(ROOT.glob("*.md")),
+    ]
+
+
 def test_site_description_is_the_same_sentence_in_all_three_entry_points() -> None:
     description = _normalize(_site_description())
 
@@ -51,6 +91,66 @@ def test_site_description_is_the_same_sentence_in_all_three_entry_points() -> No
     assert _normalize(index_h1.group(1)) == description
 
     assert description in _normalize(README.read_text())
+
+
+def test_the_retired_tagline_is_gone_from_every_surface_a_reader_meets() -> None:
+    """One guarded field is not the same as a retired phrase."""
+    surfaces = _described_surfaces()
+    assert len(surfaces) > 100, f"expected the tracked tree, scanned {len(surfaces)}"
+
+    offenders = sorted(
+        f"{path.relative_to(ROOT)}: {match.group(0)!r}"
+        for path in surfaces
+        for match in [RETIRED_TAGLINE.search(path.read_text())]
+        if match is not None
+    )
+
+    assert not offenders, f"the retired tagline is still published in: {offenders}"
+
+
+def test_the_product_description_is_the_same_sentence_wherever_it_ships() -> None:
+    """The site is not where most people meet the product; these places are."""
+    import sci_rag
+    from sci_rag.cli.main import app as cli_app
+    from sci_rag.server.app import API_DESCRIPTION
+
+    description = _normalize(_site_description())
+    bibtex_title = _bibtex_field("title")
+    assert bibtex_title is not None, "docs/citation.md should suggest a BibTeX title"
+
+    surfaces = {
+        "pyproject.toml, which PyPI renders": tomllib.loads(PYPROJECT.read_text())["project"][
+            "description"
+        ],
+        "the sci_rag module docstring": sci_rag.__doc__ or "",
+        "sci-rag --help": cli_app.info.help or "",
+        "the served OpenAPI description": API_DESCRIPTION,
+        "the suggested BibTeX title": bibtex_title,
+    }
+
+    offenders = sorted(
+        name for name, text in surfaces.items() if description not in _normalize(text)
+    )
+
+    assert not offenders, f"these describe the product differently: {offenders}"
+
+
+def test_the_suggested_citation_pins_a_version_that_exists() -> None:
+    """v0.2.0's BibTeX outlived v0.2.0.
+
+    A citation pinned to a version that is not the current one is worse than no
+    version at all, because a reader has no way to tell it is stale. Tying it to
+    `pyproject.toml` makes the release that changes one change the other.
+    """
+    cited = _bibtex_field("version")
+    if cited is None:
+        return  # The page may drop the field and rely on its commit-pinning advice.
+
+    released = tomllib.loads(PYPROJECT.read_text())["project"]["version"]
+
+    assert cited.strip() == released, (
+        f"docs/citation.md suggests version {cited.strip()}; pyproject.toml is {released}"
+    )
 
 
 def test_retired_marketing_components_are_not_reintroduced() -> None:
