@@ -18,7 +18,7 @@ hide:
 
 <p class="srag-home-masthead__lede">A template repository that ingests your literature, keeps provenance and rights attached, retrieves through five fused layers, generates cited answers, and evaluates the whole path.</p>
 
-<p class="srag-home-masthead__meta">v0.2.0, alpha, BSD-3-Clause. Install by GitHub template or clone.</p>
+<p class="srag-home-masthead__meta">v0.2.0, alpha, BSD-3-Clause. Install with pipx, the GitHub template, or a clone.</p>
 
 </section>
 
@@ -38,9 +38,22 @@ hide:
 
 <section class="srag-home-section" id="demo" markdown>
 
-## Run the demo
+<!-- BEGIN KIT ONBOARDING: removed from generated projects by sci_rag.scaffold.apply -->
 
-The bundled five-document corpus is synthetic, CC0, and small enough to run locally. The offline embedder exercises ingestion, ranking, and retrieval evaluation without sending text to a model provider, so no credentials are required.
+## Start a project
+
+Two lines, run from wherever you keep projects. The wizard asks about your domain, credentials, ontology, corpus, and environment manager, then writes a configured, git-initialized project directory. Every question has a default, so holding down Enter still leaves you with something that runs offline.
+
+```console title="Terminal"
+$ pipx install sci-rag-kit
+$ sci-rag-new
+```
+
+<div id="srag-cast" class="srag-cast" data-cast="assets/casts/sci-rag-new.cast" aria-label="Recorded sci-rag-new session"></div>
+
+The same session is written out under [Example](#example), so you can read and copy it without JavaScript.
+
+Want to try the kit before starting anything? Clone it and run the demo. The bundled five-document corpus is synthetic, CC0, and small enough to run locally, and the offline embedder exercises ingestion, ranking, and retrieval evaluation without sending text to a model provider. No credentials.
 
 ```console title="Terminal"
 $ git clone https://github.com/sustainability-software-lab/sci-rag-kit.git
@@ -50,6 +63,8 @@ $ SCI_RAG_EMBEDDING_PROVIDER=local-hash make demo
 ```
 
 [Quickstart](quickstart.md)
+
+<!-- END KIT ONBOARDING -->
 
 </section>
 
@@ -85,7 +100,11 @@ Evaluation
 
 ## One repository, specialized
 
-Sci-RAG Kit is not a code generator. Use the GitHub template, then make the checked-in `domain/` profile and corpus yours. The repository you can read is the application you run.
+The generator configures; it does not template. `sci-rag-new` fetches this repository at a pinned tag and rewrites its configuration files in place, so there are no placeholders to render and nothing that only becomes real code after generation. The repository you can read is the application you run, before and after.
+
+<!-- BEGIN KIT ONBOARDING -->
+`pipx install sci-rag-kit`, the GitHub template button, and a plain clone all leave you with the same tree.
+<!-- END KIT ONBOARDING -->
 
 `domain/` is the specialization surface: ontology, prompts, retrieval tuning, and evaluation questions. The rest of the tree stays ordinary Python that you can inspect, test, and change.
 
@@ -147,3 +166,128 @@ Earn complexity with evidence
 No cache fleet, plug-in framework, graph sidecar, or hidden agent loop sits behind the quickstart. The defaults stay small enough to describe in a methods section. [Read the methodology](methodology.md) · [See the extension seams](extend.md)
 
 </section>
+
+<!-- BEGIN KIT ONBOARDING -->
+
+<section class="srag-home-section" id="example" markdown>
+
+## Example
+
+The session above, in full. `scripts/render_cast.py` builds it by driving the real wizard, so it cannot drift from what `sci-rag-new` actually asks. Regenerate with `make cast`. `make docs` fails if you forget.
+
+<!-- BEGIN GENERATED TRANSCRIPT: scripts/render_cast.py -->
+
+```console title="Terminal"
+$ pipx install sci-rag-kit
+$ sci-rag-new
+project_name (My Scientific KB): Membrane Materials KB
+repo_name (membrane-materials-kb):
+description (A short description of your domain.): Membrane chemistry and performance for water treatment
+author_name (Your name, lab, or organization): Berkeley Lab
+contact_email (Sent to OpenAlex, Crossref, and Unpaywall): you@lbl.gov
+python_version (3.12):
+Select environment_manager
+1 - uv
+2 - pixi
+3 - conda
+4 - venv+pip
+Choose from [1/2/3/4] (1): 2
+Select dependency_file
+1 - pyproject.toml
+2 - pixi.toml
+Choose from [1/2] (1):
+Select credentials
+1 - google_ai_studio
+2 - vertex_ai
+3 - offline
+Choose from [1/2/3] (1): 1
+Select embedding_provider
+1 - google
+2 - local-hash
+Choose from [1/2] (1):
+llm_model (gemini-2.5-flash):
+embedding_model (gemini-embedding-001):
+embedding_dim (1536):
+Select ontology
+1 - draft_with_llm
+2 - keep_demo_example
+3 - blank
+Choose from [1/2/3] (1): 1
+Select corpus_source
+1 - local_files
+2 - openalex_topic
+3 - doi_list
+4 - demo_only
+Choose from [1/2/3/4] (1): 2
+openalex_topic (your topic): polyamide membrane fouling
+max_results (100): 250
+Select pdf_parser
+1 - pypdf
+2 - docling
+Choose from [1/2] (1): 2
+Select reranker
+1 - none
+2 - llm
+3 - local_cross_encoder
+Choose from [1/2/3] (1):
+Select include_terraform
+1 - Yes
+2 - No
+Choose from [1/2] (1): 2
+Select include_demo_corpus
+1 - Yes
+2 - No
+Choose from [1/2] (1): 2
+Select open_source_license
+1 - BSD-3-Clause
+2 - MIT
+3 - Apache-2.0
+4 - No license file
+Choose from [1/2/3/4] (1):
+Select initialize_git
+1 - Yes
+2 - No
+Choose from [1/2] (1):
+
+  Drafting an ontology for "Membrane chemistry and performance for water treatment"...
+
+  Entity types      Membrane, Material, Contaminant, Process, Property, Application, Organization, Standard
+  Relation types    MADE_OF, REMOVES, HAS_PROPERTY, USED_IN, REQUIRES, COMPARED_WITH
+  Query classes     performance, fabrication, fouling, application
+
+  Accept this ontology? [y/n/redraft] (y):
+
+Fetching sci-rag-kit for membrane-materials-kb...
+
+Writing membrane-materials-kb/
+
+  removed                docs/planning/, infra/terraform/, data/demo/, examples/
+  domain/domain.yaml     8 entity types, 6 relation types, 4 query classes
+  domain/eval_seed_questions.jsonl   guided blank
+  .env                   google_ai_studio, gemini-2.5-flash, gemini-embedding-001
+  pyproject.toml         name, description, extras: docling
+  Makefile               commands prefixed with `pixi run`
+  docs/                  kit onboarding, player, and cast removed
+  pyproject.toml         [tool.pixi] workspace, environments, tasks
+  Dockerfile             pixi base image
+  .devcontainer/         ghcr.io/prefix-dev/devcontainer-features/pixi:0
+  rendered               7 files for pixi
+  pixi.lock              created on first `pixi install`
+  data/campaigns/        openalex topic "polyamide membrane fouling"
+  LICENSE                BSD-3-Clause
+  README.md              rewritten opening
+  git                    initialized, 1 commit
+
+Done. Membrane Materials KB is yours. Next:
+
+  cd membrane-materials-kb
+  pixi install
+  pixi run sci-rag doctor
+  make corpus
+```
+
+<!-- END GENERATED TRANSCRIPT -->
+
+</section>
+
+<!-- END KIT ONBOARDING -->

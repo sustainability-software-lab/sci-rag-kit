@@ -9,7 +9,7 @@ honest comparison on axes other than benchmark scores).
 
 ## What was measured
 
-- Corpus: 5 documents, 34 chunks, 89 entities, 91 relationships, 12 communities (the synthetic agricultural-residue demo corpus shipped in `data/demo/`)
+- Corpus: 5 documents, 34 chunks, 89 entities, 91 relationships, 12 communities (the synthetic agricultural-residue demo corpus shipped in `data/demo/`, which the setup wizard can decline)
 - Corpus snapshot: `benchmark-20260827-163251` (see `data/snapshots/`; the digest pins the exact document set)
 - Embedding: `gemini-embedding-001@1536`; generation and judging: `gemini-2.5-flash`
 - Code: commit `1138d88`
