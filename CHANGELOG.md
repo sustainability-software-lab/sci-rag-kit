@@ -20,6 +20,15 @@ Notable changes to sci-rag-kit. The format follows
 
 ### Added
 
+- `sci-rag manifest lint PATH`: check a corpus manifest before ingesting it.
+  Reports every problem at once with line numbers, rather than one per failed
+  document partway through a run: missing files, duplicate paths, unparseable
+  file types, entries with no title, malformed JSON, bad field types, and
+  misspelled keys the loader would silently ignore (a warning, not a failure).
+  It is strict about `license_class` because ingestion cannot be: an
+  unrecognized value normalizes to `unknown` and is then scoped as unsafe, so
+  a mistyped license quietly removes a document from results. Exit 0 when
+  clean, 1 when not.
 - `sci-rag draft questions`: an assisted first pass at
   `domain/eval_seed_questions.jsonl`, grounded in the documents you already
   have. It prefers the ingested corpus and falls back to reading `data/raw/`

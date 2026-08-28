@@ -118,6 +118,21 @@ You can also skip the manifest and run `sci-rag ingest data/raw`, which
 auto-builds entries with everything defaulted; fine for a first spike,
 not for a corpus you will cite.
 
+Check it before you ingest it:
+
+```bash
+uv run sci-rag manifest lint data/corpus.jsonl
+```
+
+It reports every problem at once, with line numbers, rather than one per
+failed document partway through an ingest run: files that are not there,
+paths claimed twice, file types the parsers cannot read, entries with no
+title, and misspelled keys the loader would ignore. It is strict about
+`license_class` on purpose. An unrecognized value is not rejected at
+ingestion, it is normalized to `unknown` and scoped as unsafe, so a
+mistyped `CC-BY-NC-ND-4.0` silently removes a document from results you
+expected it in. The linter is the only place that difference is visible.
+
 ## Step 3: declare your ontology
 
 `domain/domain.yaml` tells the graph extractor what concepts matter in your

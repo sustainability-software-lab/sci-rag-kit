@@ -59,6 +59,11 @@ campaign_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(campaign_app, name="campaign")
+manifest_app = typer.Typer(
+    help="Corpus manifests: check one before you ingest it.",
+    no_args_is_help=True,
+)
+app.add_typer(manifest_app, name="manifest")
 
 console = Console()
 
@@ -314,6 +319,51 @@ def ingest(
     )
     if report.failed:
         raise typer.Exit(1)
+
+
+@manifest_app.command("lint")
+def manifest_lint(
+    path: Path = typer.Argument(..., help="The JSONL corpus manifest to check."),
+) -> None:
+    """Check a corpus manifest before ingesting it.
+
+    Ingestion reports a bad manifest one document at a time, after the run has
+    already started. This reports every problem at once, before anything is
+    parsed, embedded, or written.
+    """
+    from sci_rag.ingest.manifest import lint_manifest
+
+    if not path.is_file():
+        console.print(f"[red]No manifest at {path}[/red]")
+        raise typer.Exit(1)
+
+    report = lint_manifest(path)
+
+    if report.findings:
+        table = Table(title=f"Manifest problems in {path.name}")
+        table.add_column("Line", justify="right")
+        table.add_column("Level")
+        table.add_column("Check")
+        table.add_column("Detail")
+        for finding in report.findings:
+            color = "red" if finding.level == "error" else "yellow"
+            table.add_row(
+                str(finding.line),
+                f"[{color}]{finding.level}[/{color}]",
+                finding.code,
+                finding.message,
+            )
+        console.print(table)
+
+    summary = (
+        f"{report.entry_count} entr{'y' if report.entry_count == 1 else 'ies'} checked, "
+        f"[red]{len(report.errors)} error(s)[/red], "
+        f"[yellow]{len(report.warnings)} warning(s)[/yellow]."
+    )
+    console.print(summary)
+    if not report.ok:
+        raise typer.Exit(1)
+    console.print(f"[green]{path.name} is ready to ingest.[/green]")
 
 
 @app.command()
