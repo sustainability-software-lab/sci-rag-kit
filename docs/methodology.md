@@ -53,9 +53,13 @@ parse -> chunk -> classify license -> deduplicate -> embed -> store (one transac
 ```
 
 * **Parse.** PDFs go through a structure-preserving parser (Docling when
-  installed, pypdf as the fallback). Markdown parses directly, and plain
-  text passes through. All routes produce the same block model: headings,
-  tables, and prose.
+  installed, pypdf as the fallback). Markdown parses directly. HTML goes
+  through the standard library's parser, which drops page chrome (`nav`,
+  `header`, `footer`, `aside`, scripts and styles) so a shared sidebar does
+  not become the most repeated text in the corpus, and renders tables as pipe
+  tables so they take the same path a Markdown table does. Plain text passes
+  through. All routes produce the same block model: headings, tables, and
+  prose.
 * **License.** Each document carries a redistribution class declared in
   the corpus manifest: `public`, `open_commercial`, `open_noncommercial`,
   `restricted`, or `unknown`. Nobody said otherwise means `unknown`, and

@@ -53,7 +53,7 @@ Without `--apply` it just shows you what it would change.
 
 ## Step 1: collect your documents
 
-Gather PDFs, Markdown, or plain-text files into `data/raw/`. Advice
+Gather PDFs, HTML pages, Markdown, or plain-text files into `data/raw/`. Advice
 learned the hard way:
 
 * **Favor documents with answers in them.** Reviews, reports, and
