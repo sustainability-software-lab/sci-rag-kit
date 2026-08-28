@@ -44,7 +44,7 @@ Package by package (`src/sci_rag/`):
 | `config` | pydantic-settings; every knob is an `SCI_RAG_*` env var | `get_settings()` |
 | `domain` | loads and validates `domain/` (ontology, prompts, tuning) | `DomainProfile` |
 | `db` | SQLAlchemy models, async engine, Alembic migrations | `session_scope()`, models |
-| `ingest` | parsers (Docling/pypdf/markdown), chunker, manifest, ingester | `ingest_entries()` |
+| `ingest` | parsers (Docling/pypdf/markdown/html), chunker, manifest, ingester | `ingest_entries()` |
 | `campaigns` | bounded discovery, explicit OA resolution, verified PDF download, protocol screening, PRISMA-aligned reporting, manifest output, and append-only resumable state | `discover_by_topic()`, `build_campaign()`, `screen_campaign()`, `CampaignState` |
 | `enrich` | Crossref journal, citation-count, and explicit retraction metadata | `enrich_documents()` |
 | `embed` | `EmbeddingProvider` interface; Google + offline hash implementations | `get_embedder()` |

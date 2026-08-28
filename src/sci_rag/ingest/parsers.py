@@ -7,6 +7,10 @@ Three routes, one output type:
   to pypdf otherwise, with a clear log line saying which route ran.
 * Markdown is parsed directly: headings and pipe tables become structured
   blocks.
+* HTML goes through the standard library's parser (no new dependency) and
+  produces the same blocks, with page chrome dropped and tables rendered as
+  pipe tables so they travel the Markdown route's path. See
+  :mod:`sci_rag.ingest.html_parser`.
 * Plain text is passed through raw; the chunker applies its own heuristics.
 
 Docling output is exported to Markdown and re-parsed, so both structured
@@ -47,7 +51,7 @@ class ParsedDocument:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-SUPPORTED_SUFFIXES = {".pdf", ".md", ".markdown", ".txt"}
+SUPPORTED_SUFFIXES = {".pdf", ".md", ".markdown", ".txt", ".html", ".htm"}
 
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)$")
 
@@ -65,6 +69,10 @@ def parse_file(path: Path, *, prefer_docling: bool = True) -> ParsedDocument:
         return _parse_pdf_pypdf(path)
     if suffix in (".md", ".markdown"):
         return parse_markdown(path.read_text(encoding="utf-8"), fallback_title=path.stem)
+    if suffix in (".html", ".htm"):
+        from sci_rag.ingest.html_parser import parse_html_file
+
+        return parse_html_file(path)
     if suffix == ".txt":
         return ParsedDocument(title=path.stem, raw_text=path.read_text(encoding="utf-8"))
     raise ValueError(

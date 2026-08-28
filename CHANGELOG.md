@@ -20,6 +20,16 @@ Notable changes to sci-rag-kit. The format follows
 
 ### Added
 
+- HTML ingestion. `.html` and `.htm` files parse through the standard library
+  (no new dependency) into the same block model the Markdown route produces,
+  so folder discovery, manifests, the chunker, and the manifest linter pick
+  them up unaided. Page chrome (`nav`, `header`, `footer`, `aside`, scripts,
+  styles) is dropped, because a corpus of pages that share a sidebar would
+  otherwise make the sidebar its most repeated text. Headings become section
+  paths, `<table>` becomes one intact pipe-table block so it stays an
+  `is_table` chunk, and the first `<h1>` becomes the title rather than a
+  duplicate heading, with `<title>` as the fallback once the site name is
+  stripped off it.
 - `sci-rag profile`: where retrieval time goes. Replays the seed questions
   against interactive, deep, and auto, and aggregates the per-stage durations
   every request already records into p50/p95 per stage, with a verdict naming

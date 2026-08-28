@@ -24,9 +24,10 @@ domain with your own.
 
 ## Components
 
-- **Ingestion**: PDF/Markdown/text parsing (Docling when installed, pypdf
-  fallback), structure-aware chunking that preserves section hierarchy and
-  keeps tables intact, content-hash deduplication, per-document license
+- **Ingestion**: PDF, HTML, Markdown, and plain-text parsing (Docling when
+  installed, pypdf fallback; HTML through the standard library, with page
+  chrome stripped), structure-aware chunking that preserves section hierarchy
+  and keeps tables intact, content-hash deduplication, per-document license
   metadata.
 - **Retrieval**: five candidate generators run in parallel and fuse by
   weighted reciprocal rank: dense vectors (pgvector + HNSW), Postgres
