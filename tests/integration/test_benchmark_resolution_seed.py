@@ -43,9 +43,16 @@ async def test_controlled_alias_seed_is_explicit_and_resolves_once(clean_tables)
     assert report.merged == 1
 
     async with get_session_factory()() as session:
-        duplicate = await session.scalar(
-            select(KgEntity).where(KgEntity.name == receipt.duplicate_name)
-        )
+        target = await session.get(KgEntity, receipt.target_id)
+        duplicate = await session.get(KgEntity, receipt.duplicate_id)
         audits = (await session.execute(select(EntityResolutionAudit))).scalars().all()
-    assert duplicate is not None and duplicate.canonical_entity_id is not None
-    assert len(audits) == 1 and audits[0].method == "alias"
+    assert target is not None and duplicate is not None
+    survivor, tombstone = (
+        (target, duplicate) if target.canonical_entity_id is None else (duplicate, target)
+    )
+    assert survivor.canonical_entity_id is None
+    assert tombstone.canonical_entity_id == survivor.id
+    assert len(audits) == 1
+    assert audits[0].method == "alias"
+    assert audits[0].merged_entity_id == tombstone.id
+    assert audits[0].surviving_entity_id == survivor.id
