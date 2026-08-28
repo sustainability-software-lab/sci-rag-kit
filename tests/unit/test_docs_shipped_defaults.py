@@ -28,6 +28,9 @@ DOMAIN_DIR = ROOT / "domain"
 METHODOLOGY = ROOT / "docs" / "methodology.md"
 ARCHITECTURE = ROOT / "docs" / "architecture.md"
 EVALUATION = ROOT / "docs" / "evaluation.md"
+ROADMAP = ROOT / "docs" / "ROADMAP.md"
+BENCHMARKS = ROOT / "docs" / "benchmarks.md"
+CONFIGURATION = ROOT / "docs" / "configuration.md"
 ADR_POSTGRES = ROOT / "docs" / "adr" / "0008-supported-postgresql-versions.md"
 
 # Pages that state what the demo ships, and therefore have to be re-read when it
@@ -65,6 +68,12 @@ DEMO_DOES_NOT_COMPRESS = (
 # before writing any domain profile at all.
 MODEL_DEFAULT_COMPRESSES = ("on in the model default", "enabled in the model default")
 MODEL_DEFAULT_DOES_NOT = ("off in the model default", "disabled in the model default")
+
+# Summary pages must state the current shipped verdict, not leave it as a
+# possibility or preserve the rejected floor's verdict as the current one.
+SUMMARY_COMPRESSES = ("compression defaults on",)
+SUMMARY_DOES_NOT_COMPRESS = ("compression defaults off",)
+SUMMARY_HEDGES = ("compression may default on",)
 
 # Surfaces a reader meets the support range through. `docs/planning/` is a
 # historical record and excluded from the site, so it is excluded here too.
@@ -143,6 +152,34 @@ def test_compression_prose_matches_the_model_default() -> None:
         off_phrases=MODEL_DEFAULT_DOES_NOT,
         subject="in the model default",
         source="CompressionTuning",
+    )
+
+
+def test_compression_summary_pages_match_the_shipped_demo_default() -> None:
+    pages = (ROADMAP, BENCHMARKS)
+    _assert_prose_matches(
+        pages=pages,
+        enabled=load_domain(DOMAIN_DIR).config.compression.enabled,
+        on_phrases=SUMMARY_COMPRESSES,
+        off_phrases=SUMMARY_DOES_NOT_COMPRESS,
+        subject="for the shipped demo",
+        source="domain/domain.yaml",
+    )
+    for page in pages:
+        hedges = [phrase for phrase in SUMMARY_HEDGES if phrase in _text(page)]
+        assert not hedges, f"{page.relative_to(ROOT)} still hedges the shipped default: {hedges}"
+
+
+def test_configuration_reference_shows_the_shipped_compression_default() -> None:
+    row = re.search(
+        r"\| `compression\.enabled` \| bool \| (?P<default>true|false) \|",
+        CONFIGURATION.read_text(encoding="utf-8"),
+    )
+    assert row is not None, "configuration.md should publish the compression.enabled row"
+
+    enabled = load_domain(DOMAIN_DIR).config.compression.enabled
+    assert row.group("default") == str(enabled).lower(), (
+        "configuration.md should take the shipped compression default from domain/domain.yaml"
     )
 
 

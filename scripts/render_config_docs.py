@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from pydantic.fields import PydanticUndefined
 
 from sci_rag.config import Settings
-from sci_rag.domain import DomainConfig
+from sci_rag.domain import DomainConfig, load_domain
 
 ENV_PREFIX = str(Settings.model_config.get("env_prefix", ""))
 ENV_PATTERN = re.compile(r"^#?\s*(SCI_RAG_[A-Z0-9_]+)\s*=")
@@ -75,6 +75,9 @@ DOMAIN_DESCRIPTIONS = {
     "retrieval.reranker.pool": "Number of fused candidates presented to the reranker.",
     "retrieval.reranker.timeout_s": "Maximum reranker duration before fused-order fallback.",
     "retrieval.reranker.model": "Optional model override for the local cross-encoder.",
+    "compression.enabled": (
+        "Shipped domain-profile default; change only after paired judged-answer evidence."
+    ),
 }
 
 
@@ -129,7 +132,9 @@ def _nested_model(annotation: Any) -> tuple[type[BaseModel] | None, bool]:
 
 
 def _domain_rows(
-    model: type[BaseModel] = DomainConfig, prefix: str = ""
+    model: type[BaseModel] = DomainConfig,
+    prefix: str = "",
+    default_overrides: dict[str, str] | None = None,
 ) -> list[tuple[str, str, str, str]]:
     rows: list[tuple[str, str, str, str]] = []
     for name, field in model.model_fields.items():
@@ -138,13 +143,19 @@ def _domain_rows(
             (
                 path,
                 _type_name(field.annotation),
-                _default(field),
+                (default_overrides or {}).get(path, _default(field)),
                 DOMAIN_DESCRIPTIONS.get(path, field.description or "Validated domain setting."),
             )
         )
         nested, repeated = _nested_model(field.annotation)
         if nested is not None:
-            rows.extend(_domain_rows(nested, f"{path}[]" if repeated else path))
+            rows.extend(
+                _domain_rows(
+                    nested,
+                    f"{path}[]" if repeated else path,
+                    default_overrides=default_overrides,
+                )
+            )
     return rows
 
 
@@ -167,8 +178,15 @@ def _env_names(path: Path) -> set[str]:
     return names
 
 
-def render_config_docs(env_example: Path = Path(".env.example")) -> str:
+def render_config_docs(
+    env_example: Path = Path(".env.example"),
+    domain_dir: Path = Path("domain"),
+) -> str:
     env_names = _env_names(env_example)
+    shipped_compression = load_domain(domain_dir).config.compression
+    domain_default_overrides = {
+        "compression.enabled": str(shipped_compression.enabled).lower(),
+    }
     lines = [
         "---",
         "title: Configuration",
@@ -224,14 +242,18 @@ def render_config_docs(env_example: Path = Path(".env.example")) -> str:
         "",
         "## `domain/domain.yaml`",
         "",
-        "The committed demo values are examples, while the types and defaults",
-        "below come from the live validation models. List paths use `[]` to",
-        "show the shape of each entry.",
+        "The types and schema defaults below come from the live validation",
+        "models. `compression.enabled` is different by design: it is a",
+        "corpus-gated setting, so the table reads its shipped value from",
+        "`domain/domain.yaml`. List paths use `[]` to show the shape of",
+        "each entry.",
         "",
         "| Field path | Type | Default | Purpose |",
         "|---|---|---|---|",
     ]
-    for path, annotation, default, description in _domain_rows():
+    for path, annotation, default, description in _domain_rows(
+        default_overrides=domain_default_overrides
+    ):
         lines.append(
             f"| `{path}` | {_cell(annotation)} | {_cell(default)} | {_cell(description)} |"
         )
@@ -270,9 +292,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=Path("docs/configuration.md"))
     parser.add_argument("--env-example", type=Path, default=Path(".env.example"))
+    parser.add_argument("--domain-dir", type=Path, default=Path("domain"))
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
-    page = render_config_docs(args.env_example)
+    page = render_config_docs(args.env_example, args.domain_dir)
     raise SystemExit(_write_or_check(args.output, page, check=args.check))
 
 
