@@ -1,3 +1,8 @@
+/* Material requests Inter at 300/400/700 only, so the 500 and 600 weights this
+   stylesheet asks for were being synthesised by the browser rather than drawn.
+   Loading the real cuts is what makes the type match its reference. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
 /*
  * Near-monochrome token set.
  *
@@ -125,47 +130,104 @@
   box-shadow: none;
 }
 
+/* Material leaves 1rem between the mark and the title, which reads as a gap
+   rather than a lockup once the mark is a single glyph. */
+[dir="ltr"] .md-header__title {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+[dir="ltr"] .md-header__button.md-logo {
+  margin-right: 0;
+  padding-right: 0.15rem;
+}
+
 .md-header__title {
   font-weight: 600;
 }
 
-.md-tabs {
-  border-bottom: 1px solid var(--srag-border);
-  background: var(--md-primary-fg-color);
+.md-header__button.md-logo :is(img, svg) {
+  height: 1.35rem;
 }
 
-/* With navigation.tabs.sticky the bar lives inside the header, so the header's
-   own rule already closes the band. Two hairlines would read as a 2px rule. */
+/* The tabs render inside md-header__inner (see overrides/partials/header.html),
+   so the chrome is one line: brand, sections, then search and the repo link. */
+.md-header__inner {
+  align-items: center;
+}
+
+/* Material stacks two absolutely positioned topics here and swaps them on
+   scroll. Beside the tabs there is no room for that, so the brand stays put
+   and the topics lay out in normal flow, letting the title size to content. */
+.md-header__title {
+  flex-grow: 0;
+  width: auto;
+  margin: 0;
+}
+
+.md-header__title > .md-header__ellipsis {
+  width: auto;
+}
+
+.md-header__topic {
+  position: static;
+}
+
+.md-header__topic + .md-header__topic {
+  display: none;
+}
+
+/* Material fades the brand out and swaps in the page title once you scroll.
+   Here the brand is the only thing in that slot, so it stays. */
+.md-header__title--active .md-header__topic {
+  z-index: 0;
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
 .md-header .md-tabs {
+  overflow: visible;
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: 0.7rem;
   border-bottom: 0;
+  background: transparent;
 }
 
-.md-tabs__link {
-  margin-top: 0.75rem;
-  font-weight: 500;
-  letter-spacing: -0.005em;
-  opacity: 1;
-  color: var(--srag-muted-700);
-}
-
-.md-tabs__item--active .md-tabs__link,
-.md-tabs__link:is(:focus-visible, :hover) {
-  color: var(--srag-ink-950);
-  opacity: 1;
+.md-tabs__list {
+  margin-left: 0;
 }
 
 .md-tabs__item {
-  position: relative;
+  height: auto;
+  padding: 0 0.15rem;
 }
 
-.md-tabs__item--active::after {
-  position: absolute;
-  right: 0.6rem;
-  bottom: 0;
-  left: 0.6rem;
-  height: 2px;
-  background: var(--srag-accent);
-  content: "";
+.md-tabs__link {
+  margin-top: 0;
+  padding: 0.28rem 0.45rem;
+  color: var(--srag-muted-700);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  border-radius: var(--srag-radius-sm);
+  opacity: 1;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.md-tabs__link:is(:focus-visible, :hover) {
+  color: var(--srag-ink-950);
+  background: var(--srag-surface-soft);
+  opacity: 1;
+}
+
+.md-tabs__item--active .md-tabs__link {
+  color: var(--srag-ink-950);
+  font-weight: 600;
+  background: var(--srag-surface-tinted);
+  opacity: 1;
 }
 
 /* ── Search field ───────────────────────────────────────────────────── */

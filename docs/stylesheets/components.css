@@ -236,3 +236,136 @@
 .md-nav__link--active {
   font-weight: 600;
 }
+
+/* These hub pages are ordinary documents rather than directory index.md files,
+   so navigation.indexes cannot fold them into their section link. Material
+   therefore prints the section name as an inert label directly above the page
+   link that carries the same words. On desktop the tab bar already names the
+   section, so the label is pure duplication and goes. The mobile drawer keeps
+   it: there is no tab bar there, and the label is the row you tap. */
+@media screen and (min-width: 76.25em) {
+  .md-nav--lifted > .md-nav__list > .md-nav__item--active > .md-nav__link:not(.md-nav__container) {
+    display: none;
+  }
+}
+
+@media screen and (min-width: 76.25em) {
+  /* Wide enough that entry titles hold one line. The column runs the full
+     height of the viewport so its rule meets the header rule and continues to
+     the bottom, and it scrolls independently of the page. */
+  .md-header--lifted ~ .md-container .md-sidebar,
+  .md-sidebar--primary {
+    top: 2.4rem;
+  }
+
+  /* No top offset, so the rule meets the header's hairline and reads as a T. */
+  .md-sidebar--primary {
+    width: 17rem;
+    height: calc(100vh - 2.4rem);
+    padding: 0;
+    border-right: 1px solid var(--srag-border);
+  }
+
+  .md-sidebar--primary .md-sidebar__scrollwrap {
+    height: 100%;
+    margin: 0;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+
+  .md-sidebar--primary .md-sidebar__inner {
+    padding-top: 0.9rem;
+    padding-right: 0.6rem;
+    padding-bottom: 2rem;
+  }
+
+  .md-main__inner {
+    margin-top: 0;
+    gap: 1.6rem;
+  }
+
+  .md-content {
+    padding-top: 0.9rem;
+  }
+
+  .md-header--lifted ~ .md-container .md-typeset :target {
+    --md-scroll-margin: 3.6rem;
+  }
+}
+
+/* Scrollbars: hairline grey, never the browser's default accent. */
+.md-sidebar__scrollwrap,
+.md-typeset__scrollwrap,
+.md-typeset .highlight pre,
+.md-typeset .srag-tree,
+.srag-home-tree,
+.mermaid {
+  scrollbar-width: thin;
+  scrollbar-color: var(--srag-border-strong) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 0.4rem;
+  height: 0.4rem;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--srag-border-strong);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--srag-muted-500);
+}
+
+/* Rows: quiet by default, rounded fill on hover, filled pill when current. */
+.md-sidebar--primary .md-nav__link {
+  padding: 0.32rem 0.45rem;
+  border-radius: var(--srag-radius-sm);
+  color: var(--srag-muted-700);
+  line-height: 1.4;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.md-sidebar--primary .md-nav__link:hover {
+  color: var(--srag-ink-950);
+  background: var(--srag-surface-soft);
+}
+
+.md-sidebar--primary .md-nav__link--active,
+.md-sidebar--primary .md-nav__link--active:hover {
+  color: var(--srag-ink-950);
+  font-weight: 600;
+  background: var(--srag-surface-tinted);
+}
+
+/* Every indented level carries a guide rule, so depth is readable at a glance
+   whether the child is another section, a page, or a heading in this page. */
+[dir="ltr"] .md-sidebar--primary .md-nav__list .md-nav__list {
+  margin-left: 0.45rem;
+  padding-right: 0;
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--srag-border);
+}
+
+/* The outermost level is the current section's own page list. It is not an
+   indent relative to anything visible, so it carries no rule. */
+[dir="ltr"] .md-sidebar--primary .md-nav--lifted > .md-nav__list > .md-nav__item > .md-nav > .md-nav__list {
+  margin-left: 0;
+  padding-left: 0;
+  border-left: 0;
+}
+
+/* Integrated table of contents: the current page's headings nest under it. */
+.md-nav--secondary .md-nav__link {
+  font-size: 0.68rem;
+}
+
+.md-nav--secondary .md-nav__link--active {
+  color: var(--srag-accent);
+  background: transparent;
+}
