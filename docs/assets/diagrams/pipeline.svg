@@ -122,8 +122,10 @@
     <text x="46" y="140" class="copy" text-anchor="middle">[1] [2]</text>
   </g>
 
-  <path class="flow" d="M1086 536 C1086 569 1066 586 1037 604"/>
-  <path class="flow" d="M1174 536 C1174 569 1196 586 1226 604"/>
+  <!-- Retrieval and Evaluation share a centre line at x=1086, so the two edges
+       between them run straight down, evenly spaced either side of it. -->
+  <path class="flow" d="M1031 538 V600"/>
+  <path class="flow" d="M1141 538 V600"/>
 
   <!-- Evaluation -->
   <g transform="translate(936 604)">
