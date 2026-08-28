@@ -121,3 +121,5 @@ benchmark: db-up
 		--answers-compressed $$(ls -td eval_results/*-answers | head -1) \
 		--output docs/benchmarks.md
 	@echo "docs/benchmarks.md regenerated."
+
+# Validation-only touch: makes the generated-project workflow expand all manager legs.
