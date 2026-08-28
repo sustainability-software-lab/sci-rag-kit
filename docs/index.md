@@ -277,7 +277,7 @@ Writing membrane-materials-kb/
   pyproject.toml         [tool.pixi] workspace, environments, tasks
   Dockerfile             pixi base image
   .devcontainer/         ghcr.io/prefix-dev/devcontainer-features/pixi:0
-  rendered               8 files for pixi
+  rendered               9 files for pixi
   pixi.lock              created on first `pixi install`
   data/campaigns/        openalex topic "polyamide membrane fouling"
   LICENSE                BSD-3-Clause

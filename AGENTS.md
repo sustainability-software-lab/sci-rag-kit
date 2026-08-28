@@ -157,13 +157,16 @@ the disposable PostgreSQL service first when integration coverage matters.
 
 ### Exact Python CI parity
 
-CI additionally checks `examples`, enforces coverage, and runs on both Python 3.11 and 3.12:
+CI additionally checks `examples` and `scripts`, verifies the lockfile, runs every configured
+pre-commit hook, enforces coverage, and runs Python checks on both Python 3.11 and 3.12:
 
 ```bash
-uv run ruff check src tests examples
-uv run ruff format --check src tests examples
+uv lock --check
+uv run ruff check src tests examples scripts
+uv run ruff format --check src tests examples scripts
 uv run mypy
 uv run pytest -q --cov=sci_rag --cov-report=term --cov-fail-under=78
+uvx pre-commit run --all-files --show-diff-on-failure
 ```
 
 Agents normally need one supported local Python version; GitHub Actions supplies the version
@@ -183,8 +186,6 @@ terraform -chdir=infra/terraform fmt -check -diff
 terraform -chdir=infra/terraform init -backend=false -input=false
 terraform -chdir=infra/terraform validate
 
-# All configured pre-commit hooks against the changed tree
-uvx pre-commit run --all-files
 ```
 
 CI checks internal Markdown links in offline mode. Keep repository links relative and verify renamed

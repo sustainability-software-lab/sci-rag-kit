@@ -30,6 +30,7 @@ concurrency:
 
 jobs:
   select:
+    name: select-platforms
     runs-on: ubuntu-latest
     outputs:
       platforms: ${{ steps.pick.outputs.platforms }}
@@ -124,3 +125,15 @@ jobs:
         if: always()
         shell: bash -el {0}
         run: uv run python scripts/local_postgres.py stop
+
+  gate:
+    name: docker-free-postgres-gate
+    needs: [select, integration]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every Docker-free PostgreSQL leg passed
+        run: |
+          echo "select=${{ needs.select.result }} integration=${{ needs.integration.result }}"
+          [ "${{ needs.select.result }}" = "success" ] || exit 1
+          [ "${{ needs.integration.result }}" = "success" ] || exit 1

@@ -26,9 +26,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.execute(
-        "ALTER TABLE kg_communities ADD COLUMN IF NOT EXISTS summary_embedding_version TEXT"
-    )
+    op.execute("ALTER TABLE kg_communities ADD COLUMN IF NOT EXISTS summary_embedding_version TEXT")
 
 
 def downgrade() -> None:
