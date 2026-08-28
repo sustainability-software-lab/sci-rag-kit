@@ -29,7 +29,7 @@ includes the project factory and provider work first exercised in `0.3.0a1`.
 - Contextual snippet compression with visible per-chunk fallback. A paired n=10
   judged demo run preserved every quality interval while reducing answer prompt
   tokens, so the shipped demo enables it. The measurements and confidence intervals
-  are published in [docs/benchmarks.md](docs/benchmarks.md).
+  are published in `docs/benchmarks.md`.
 - Wave 2 retrieval conditions for retraction exclusion, entity resolution,
   confidence weighting, and citation traversal, plus paired answer-compression
   reporting in the benchmark renderer.
