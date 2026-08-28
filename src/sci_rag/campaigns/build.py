@@ -158,7 +158,14 @@ def _candidate_from_payload(payload: dict[str, Any], *, expected_doi: str) -> Ca
     if year is not None and (not isinstance(year, int) or isinstance(year, bool)):
         raise ValueError(f"campaign state candidate year is invalid for {expected_doi}")
     fields: dict[str, str | None] = {}
-    for name in ("title", "journal", "oa_status_hint", "license_hint", "source"):
+    for name in (
+        "title",
+        "abstract",
+        "journal",
+        "oa_status_hint",
+        "license_hint",
+        "source",
+    ):
         value = payload.get(name)
         if value is not None and not isinstance(value, str):
             raise ValueError(f"campaign state candidate {name} is invalid for {expected_doi}")
@@ -166,6 +173,7 @@ def _candidate_from_payload(payload: dict[str, Any], *, expected_doi: str) -> Ca
     return CandidateWork(
         doi=doi,
         title=fields["title"],
+        abstract=fields["abstract"],
         year=year,
         authors=authors,
         journal=fields["journal"],

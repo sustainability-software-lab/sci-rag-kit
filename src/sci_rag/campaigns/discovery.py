@@ -7,6 +7,7 @@ fully testable offline and a campaign can resume without a database.
 
 from __future__ import annotations
 
+import html
 import re
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
@@ -54,6 +55,7 @@ class CandidateWork:
     oa_status_hint: str | None = None
     license_hint: str | None = None
     source: str = "unknown"
+    abstract: str | None = None
 
 
 @dataclass
@@ -110,7 +112,7 @@ async def discover_by_topic(
             "cursor": cursor,
             "per_page": min(per_page, new_result_limit - len(report.works)),
             "select": (
-                "doi,title,publication_year,authorships,primary_location,"
+                "doi,title,abstract_inverted_index,publication_year,authorships,primary_location,"
                 "open_access,best_oa_location"
             ),
         }
@@ -221,6 +223,7 @@ def _candidate_from_openalex(raw: Any) -> CandidateWork | None:
     return CandidateWork(
         doi=doi,
         title=title.strip() if isinstance(title, str) and title.strip() else None,
+        abstract=_abstract_from_openalex(raw.get("abstract_inverted_index")),
         year=year if isinstance(year, int) and not isinstance(year, bool) else None,
         authors=authors,
         journal=journal.strip() if isinstance(journal, str) and journal.strip() else None,
@@ -271,12 +274,44 @@ def _candidate_from_crossref(payload: dict[str, Any]) -> CandidateWork | None:
     return CandidateWork(
         doi=doi,
         title=title.strip() if title and title.strip() else None,
+        abstract=_abstract_from_crossref(message.get("abstract")),
         year=year,
         authors=authors,
         journal=journal.strip() if journal and journal.strip() else None,
         license_hint=license_hint,
         source="crossref",
     )
+
+
+def _abstract_from_openalex(raw: Any) -> str | None:
+    """Reconstruct OpenAlex's inverted-index abstract without guessing gaps."""
+    if not isinstance(raw, dict):
+        return None
+    positioned: dict[int, str] = {}
+    for token, raw_positions in raw.items():
+        if not isinstance(token, str) or not isinstance(raw_positions, list):
+            return None
+        for position in raw_positions:
+            if (
+                isinstance(position, bool)
+                or not isinstance(position, int)
+                or position < 0
+                or position in positioned
+            ):
+                return None
+            positioned[position] = token
+    if not positioned or sorted(positioned) != list(range(len(positioned))):
+        return None
+    return " ".join(positioned[position] for position in range(len(positioned)))
+
+
+def _abstract_from_crossref(raw: Any) -> str | None:
+    """Normalize Crossref's optional JATS fragment to plain screening text."""
+    if not isinstance(raw, str):
+        return None
+    without_tags = re.sub(r"<[^>]+>", " ", raw)
+    normalized = " ".join(html.unescape(without_tags).split())
+    return normalized or None
 
 
 def _crossref_year(message: dict[str, Any]) -> int | None:
