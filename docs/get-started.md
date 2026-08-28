@@ -26,4 +26,6 @@ These pages take a clean clone to a running knowledge base, then point at the re
 3. Follow [Bring your own domain](bring-your-own-domain.md) with a small, well-understood corpus, or use a [corpus campaign](campaigns.md) to discover candidates and build a fail-closed open-access manifest.
 4. Review the campaign's rights distribution before ingestion, then run an [evaluation](evaluation.md) before changing retrieval weights or enabling the reranker.
 
+Still deciding? The [FAQ](faq.md) answers what this is, who it is for, and why each design decision went the way it did, without sending you to a decision record first.
+
 If Postgres, credentials, or parsing gets in the way, do not guess from an empty result. Run `uv run sci-rag doctor`; the kit is designed to tell you which layer is missing.

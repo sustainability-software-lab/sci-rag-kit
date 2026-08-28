@@ -45,6 +45,10 @@ want those decisions made well and defensibly, once.
 
 ## What sci-rag-kit actually is
 
+This page answers "how does it compare to them". For "why did we build it this
+way", the [FAQ](faq.md) has the short version of every decision record, and
+this section's questions are answered there at more length.
+
 A GitHub template repository. You instantiate it, run
 `scripts/init_domain.py`, edit three domain files (ontology, prompts, and
 seed questions), and point it at your documents. What you get is a

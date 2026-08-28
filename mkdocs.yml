@@ -72,6 +72,7 @@ nav:
       - Troubleshooting: troubleshooting.md
   - Learn:
       - learn.md
+      - FAQ: faq.md
       - Architecture: architecture.md
       - Methodology: methodology.md
       - Evidence and rights: evidence-and-rights.md
