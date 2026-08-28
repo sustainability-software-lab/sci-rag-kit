@@ -1,0 +1,33 @@
+{#-
+  The stock partial hides the breadcrumb trail unless a page sits two sections
+  deep, so on this site only the decision records ever showed one. Render it
+  from a single ancestor up instead, and fall back to the site root for the
+  handful of pages that are built but kept out of the nav. Every page then
+  emits the same row, which is what holds the title below it at one height.
+-#}
+{% import "partials/path-item.html" as item with context %}
+{% if page.meta and page.meta.hide %}
+  {% set hidden = "hidden" if "path" in page.meta.hide %}
+{% endif %}
+{% set depth = page.ancestors | length %}
+{% if nav.homepage %}
+  {% set depth = depth + 1 %}
+{% endif %}
+<nav class="md-path" aria-label="{{ lang.t('nav') }}" {{ hidden }}>
+  <ol class="md-path__list">
+    {% if depth > 0 %}
+      {% if nav.homepage %}
+        {{ item.render(nav.homepage) }}
+      {% endif %}
+      {% for nav_item in page.ancestors | reverse %}
+        {{ item.render(nav_item) }}
+      {% endfor %}
+    {% else %}
+      <li class="md-path__item">
+        <a href="{{ '.' | url }}" class="md-path__link">
+          <span class="md-ellipsis">{{ config.site_name }}</span>
+        </a>
+      </li>
+    {% endif %}
+  </ol>
+</nav>

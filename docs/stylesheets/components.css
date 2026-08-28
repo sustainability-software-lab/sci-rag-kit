@@ -233,6 +233,50 @@
   scrollbar-width: thin;
 }
 
+/* ── Breadcrumbs ────────────────────────────────────────────────────── */
+
+/* The trail is a sibling of the article rather than part of it, so nothing
+   keeps the two flush unless they are given the same measure. The first three
+   values are the ones .md-content__inner carries in typography.css; change
+   them together. The fixed height is the other half of the promise: a trail
+   free to wrap would push the title down on long paths only, and the whole
+   point is that the title starts at one height everywhere. Long paths scroll
+   sideways instead. */
+.md-path {
+  width: calc(100% - 1.6rem);
+  max-width: 42rem;
+  height: 1.2rem;
+  margin-inline: auto;
+  margin-bottom: 0.35rem;
+  padding-top: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  font-size: 0.7rem;
+  scrollbar-width: none;
+}
+
+/* Once the sidebar docks, the theme stops centring the article and anchors it
+   beside the sidebar instead. The trail has to make the same move, or it sits
+   centred over a left-anchored title. */
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--primary:not([hidden]) ~ .md-content > .md-path {
+    margin-inline-start: 1.2rem;
+  }
+}
+
+.md-path::-webkit-scrollbar {
+  display: none;
+}
+
+.md-path__list {
+  height: 100%;
+  flex-wrap: nowrap;
+}
+
+.md-path__link {
+  white-space: nowrap;
+}
+
 .md-nav__link--active {
   font-weight: 600;
 }
