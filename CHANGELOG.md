@@ -43,6 +43,17 @@ Notable changes to sci-rag-kit. The format follows
   and on any pull request that changes what a generated project looks
   like.
 
+- `sci-rag-new`: the project factory as its own entry point. Runs from a
+  parent directory with nothing cloned, fetches the template at the tag
+  matching its own installed version, then applies the wizard's answers.
+  `--template-path` generates from a local checkout with no network, and
+  `--ref` overrides the tag. The LLM ontology draft is offered here and in
+  `sci-rag init`, with accept, reject, and redraft.
+- `.github/workflows/release.yml`: tag-driven publishing to TestPyPI and
+  then PyPI over Trusted Publishing, gated on the `ci` workflow having
+  passed for the tagged commit and on the tag matching the packaged
+  version. The one-time maintainer setup is in `docs/VERSIONING.md`.
+
 ### Changed
 
 - `.env` now reaches the process environment. pydantic-settings reads it
