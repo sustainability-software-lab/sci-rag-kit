@@ -169,6 +169,24 @@ jobs:
           $RUN ruff check src tests examples scripts
           $RUN mypy
 
+      # Criterion from #71: the Docker-free path is not advertised before it
+      # is tested. pixi and conda projects get PostgreSQL and pgvector from
+      # conda-forge in their own manifest, so those two legs ignore the
+      # service container above and run the database the way their own
+      # documentation tells a user to. A different port keeps the unused
+      # service from colliding with it.
+      - name: The generated project runs its own database, no container
+        if: matrix.manager == 'pixi' || matrix.manager == 'conda'
+        shell: bash -el {0}
+        env:
+          SCI_RAG_LOCAL_PG_PORT: "5443"
+        run: |
+          cd "$RUNNER_TEMP/generated"
+          $RUN python scripts/local_postgres.py start
+          $RUN python scripts/local_postgres.py status
+          echo "SCI_RAG_DATABASE_URL=postgresql+asyncpg://sci_rag:sci_rag@127.0.0.1:5443/sci_rag" >> "$GITHUB_ENV"
+          echo "SCI_RAG_LOCAL_PG_PORT=5443" >> "$GITHUB_ENV"
+
       - name: The offline demo runs in the generated project
         shell: bash -el {0}
         run: |

@@ -42,5 +42,10 @@ infra/terraform/*.tfstate*
 infra/terraform/*.tfvars
 !infra/terraform/example.tfvars
 
+# Docker-free local database (scripts/local_postgres.py). A cluster under
+# the project root is a corpus waiting to be committed by accident.
+.pgdata/
+.pgdata.log
+
 # OS noise
 .DS_Store

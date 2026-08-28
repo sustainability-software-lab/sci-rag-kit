@@ -91,6 +91,17 @@ class RunnerProfile:
     # test looks for a sibling's tokens; keep them specific enough that a
     # sibling cannot match them by accident.
     tokens: tuple[str, ...] = ()
+    # Packages this manager can install from conda-forge, as (name, spec).
+    # Only the two managers that read that channel can install a PostgreSQL
+    # server and pgvector, which is what makes their projects runnable
+    # without Docker. PyPI ships neither, so uv and venv+pip leave this empty
+    # and keep the compose database. This is the single place that decides
+    # which managers may advertise the Docker-free path.
+    conda_forge_packages: tuple[tuple[str, str], ...] = ()
+
+    @property
+    def offers_local_postgres(self) -> bool:
+        return bool(self.conda_forge_packages)
 
     def run(self, command: str, *, project_slug: str = "") -> str:
         prefix = self.run_prefix.replace("$SLUG", project_slug or "sci-rag")
@@ -173,6 +184,14 @@ class RunnerProfile:
         upgrade = self.run("sci-rag db upgrade", project_slug=project_slug)
         return f"{self.sync()} && {upgrade}"
 
+
+# The server version range this project supports and tests, from
+# docs/adr/0008-supported-postgresql-versions.md. Bounding it rather than
+# pinning lets conda-forge pick a pgvector built against the same major,
+# which is the constraint that actually matters: 0.8.x is built for
+# PostgreSQL 18, and only 0.7.x is built for 16.
+POSTGRES_SPEC = ">=16,<19"
+_LOCAL_DATABASE_PACKAGES = (("postgresql", POSTGRES_SPEC), ("pgvector", "*"))
 
 _UV_DOCKER = Template("""\
 FROM ghcr.io/astral-sh/uv:python$PYTHON-bookworm-slim AS builder
@@ -266,6 +285,7 @@ PROFILES: dict[str, RunnerProfile] = {
         version_command="pixi --version",
         interpreter_path="${containerWorkspaceFolder}/.pixi/envs/default/bin/python",
         tokens=("pixi run", "pixi install", "pixi exec", "prefix-dev/setup-pixi", "pixi.lock"),
+        conda_forge_packages=_LOCAL_DATABASE_PACKAGES,
     ),
     "conda": RunnerProfile(
         key="conda",
@@ -287,6 +307,7 @@ PROFILES: dict[str, RunnerProfile] = {
         version_command="conda --version",
         interpreter_path="/opt/conda/envs/$SLUG/bin/python",
         tokens=("conda run", "conda env create", "setup-miniconda", "environment.yml"),
+        conda_forge_packages=_LOCAL_DATABASE_PACKAGES,
     ),
     "venv+pip": RunnerProfile(
         key="venv+pip",

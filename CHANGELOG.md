@@ -66,7 +66,30 @@ Notable changes to sci-rag-kit. The format follows
   implements the escape hatch ADR 0004 left open instead of overturning
   it.
 
+- A Docker-free database for pixi and conda projects. Those two managers
+  read conda-forge, which ships the PostgreSQL server and pgvector as
+  ordinary packages, so their generated manifests declare
+  `postgresql >=16,<19` and `pgvector`, and their `make setup` starts that
+  server instead of a container. `scripts/local_postgres.py` drives
+  `initdb` and `pg_ctl` against a project-local `.pgdata/`, producing a
+  database the unmodified `.env.example` already points at. uv and
+  venv+pip keep Docker: PyPI ships no server, and a manager that cannot
+  take the path does not advertise it.
+- `.github/workflows/docker-free-postgres.yml`: the integration and server
+  suites against a conda-forge server on linux-64 and osx-arm64, failing
+  if the suite skips rather than runs. With `ci.yml` on PostgreSQL 16 and
+  this on 18, both ends of the supported range are tested.
+- `docs/adr/0008-supported-postgresql-versions.md`: why the project
+  supports a range instead of moving everyone to one major.
+
 ### Changed
+
+- Supported PostgreSQL versions are now stated and tested: **16 through
+  18**. Nothing moves. Compose and the CI service stay on the
+  `pgvector/pgvector:pg16` image, and no existing database needs a
+  migration. The schema uses no pgvector feature newer than 0.5 and no
+  version-specific SQL, so the 16 in this repository was three container
+  image tags rather than a requirement.
 
 - Generated projects no longer carry the kit's own onboarding. The pipx
   instructions, the recorded session, the vendored player, and the

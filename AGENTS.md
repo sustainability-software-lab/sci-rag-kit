@@ -113,6 +113,14 @@ The CI test database is PostgreSQL 16 with pgvector and is named `sci_rag_test`.
 tests skip, with a diagnostic message, when their database is unavailable. A skipped integration
 suite is not evidence that database behavior passed.
 
+Supported servers are PostgreSQL 16 through 18, per
+[docs/adr/0008-supported-postgresql-versions.md](docs/adr/0008-supported-postgresql-versions.md).
+The `ci.yml` service proves 16; `docker-free-postgres.yml` proves whatever conda-forge resolves
+inside the range, which is 18 today, on linux-64 and osx-arm64. Do not add version-specific SQL
+without checking both ends. `scripts/local_postgres.py` runs a server from conda-forge for the pixi
+and conda paths; it is a development database on loopback with trust authentication and is never a
+deployment path.
+
 ## Commands and validation
 
 Run commands from the repository root unless a command explicitly changes directories.
