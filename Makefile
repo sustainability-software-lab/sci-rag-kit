@@ -1,7 +1,7 @@
 # Convenience targets. Everything here is just the underlying command,
 # spelled out; run `make <target>` or copy the command, whichever you like.
 
-.PHONY: setup db-up db-down db-upgrade demo demo-cloud test lint typecheck check serve mcp eval eval-ablation docs docs-serve docs-reference cast clean-demo
+.PHONY: setup db-up db-down db-upgrade demo demo-cloud test lint typecheck check serve mcp eval eval-ablation docs docs-serve docs-reference cast benchmark clean-demo
 
 ## setup: install dependencies, start Postgres, create the schema
 setup:
@@ -91,8 +91,9 @@ docs-serve:
 	uv run mkdocs serve
 
 # The full, reproducible benchmark behind docs/benchmarks.md: real
-# embeddings + graph + every ablation config + judged answers +
-# calibration, then re-render the page from the report JSONs.
+# embeddings + graph + every same-state ablation + audited entity
+# resolution + paired compression answers + calibration, then re-render
+# the page from the report JSONs.
 # Needs Docker and Google credentials (see .env.example).
 BENCH_SNAP := benchmark-$(shell date -u +%Y%m%d-%H%M%S)
 benchmark: db-up
@@ -100,13 +101,22 @@ benchmark: db-up
 	uv run sci-rag ingest --manifest data/demo/manifest.jsonl
 	uv run sci-rag graph extract
 	uv run sci-rag graph communities
-	uv run sci-rag corpus snapshot $(BENCH_SNAP)
-	uv run sci-rag eval retrieval --ablation --snapshot $(BENCH_SNAP)
-	uv run sci-rag eval answers --snapshot $(BENCH_SNAP)
+	uv run sci-rag graph citations --apply
+	uv run sci-rag corpus snapshot $(BENCH_SNAP)-pre-resolution
+	uv run sci-rag eval retrieval --ablation --snapshot $(BENCH_SNAP)-pre-resolution
+	uv run sci-rag graph resolve-entities --apply
+	uv run sci-rag graph communities
+	uv run sci-rag corpus snapshot $(BENCH_SNAP)-resolved
+	uv run sci-rag eval retrieval --condition resolved_entities \
+		--snapshot $(BENCH_SNAP)-resolved
+	uv run sci-rag eval answers --snapshot $(BENCH_SNAP)-resolved
+	uv run sci-rag eval answers --compressed --snapshot $(BENCH_SNAP)-resolved
 	uv run sci-rag eval calibrate --labels domain/eval_calibration_labels.jsonl \
 		--report $$(ls -td eval_results/*-answers | head -1)
 	uv run python scripts/render_benchmarks.py \
 		--retrieval $$(ls -td eval_results/*-retrieval-ablation | head -1) \
-		--answers $$(ls -td eval_results/*-answers | head -1) \
+		--resolved-entities $$(ls -td eval_results/*-retrieval-condition | head -1) \
+		--answers $$(ls -td eval_results/*-answers | sed -n '2p') \
+		--compressed-answers $$(ls -td eval_results/*-answers | head -1) \
 		--output docs/benchmarks.md
 	@echo "docs/benchmarks.md regenerated."

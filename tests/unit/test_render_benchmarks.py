@@ -30,7 +30,10 @@ def retrieval_fixture() -> dict:
                 "mrr": {"mean": hit5, "lo": hit5 - 0.15, "hi": 1.0, "n": 9.0},
                 "ndcg_at_10": {"mean": hit5, "lo": hit5 - 0.12, "hi": 1.0, "n": 9.0},
             },
-            "records": [],
+            "records": [
+                {"question_id": "q1", "first_relevant_rank": 1, "relevant_ranks": [1]},
+                {"question_id": "q2", "first_relevant_rank": 2, "relevant_ranks": [2]},
+            ],
         }
 
     return {
@@ -49,34 +52,89 @@ def retrieval_fixture() -> dict:
         "configs": [
             config("full_deep", 1.0),
             config("keyword_only", 0.33),
+            config("confidence_weighted", 1.0),
+            config("with_citations", 1.0),
+            config("no_retracted", 1.0),
             config("with_rerank", 1.0),
             config("auto_routed", 0.89),
         ],
     }
 
 
-def answers_fixture() -> dict:
+def answers_fixture(*, compressed: bool = False) -> dict:
+    after = [300, 500] if compressed else [900, 1100]
     return {
         "kind": "answers",
         "git_commit": "abc1234",
         "snapshot": "v0.2-demo",
         "corpus": {"documents": 5, "chunks": 34},
-        "summary": {"n": 10.0, "graded": 10.0, "failed": 0.0},
-        "summary_ci": {
-            "groundedness": {"mean": 2.0, "lo": 2.0, "hi": 2.0, "n": 10.0},
-            "correctness": {"mean": 1.6, "lo": 1.1, "hi": 2.0, "n": 10.0},
+        "models": {
+            "answer": "google:gemini-2.5-flash",
+            "judge": "anthropic:claude-haiku-4-5",
         },
-        "records": [],
+        "config": {"compression": compressed},
+        "summary": {
+            "n": 2.0,
+            "graded": 2.0,
+            "failed": 0.0,
+            "prompt_tokens_before_median": 1000.0,
+            "prompt_tokens_after_median": 400.0 if compressed else 1000.0,
+        },
+        "summary_ci": {
+            "groundedness": {"mean": 2.0, "lo": 2.0, "hi": 2.0, "n": 2.0},
+            "correctness": {"mean": 1.5, "lo": 1.0, "hi": 2.0, "n": 2.0},
+        },
+        "records": [
+            {
+                "question_id": f"q{index}",
+                "grounding": {
+                    "groundedness": 2,
+                    "citation_accuracy": 2,
+                    "completeness": 2,
+                },
+                "correctness": {"correctness": score},
+                "prompt_tokens_after": after[index - 1],
+            }
+            for index, score in ((1, 1), (2, 2))
+        ],
     }
+
+
+def resolved_entities_fixture() -> dict:
+    fixture = retrieval_fixture()
+    fixture["kind"] = "retrieval-condition"
+    fixture["snapshot"] = "v0.2-demo-resolved"
+    fixture["corpus"] = {**fixture["corpus"], "entities": 75}
+    fixture["configs"] = [
+        {
+            **fixture["configs"][0],
+            "name": "resolved_entities",
+            "description": "audited post-resolution condition",
+        }
+    ]
+    return fixture
 
 
 def test_renders_full_page(tmp_path: Path) -> None:
     retrieval = tmp_path / "retrieval.json"
     answers = tmp_path / "answers.json"
+    compressed_answers = tmp_path / "compressed-answers.json"
+    resolved_entities = tmp_path / "resolved-entities.json"
     retrieval.write_text(json.dumps(retrieval_fixture()))
     answers.write_text(json.dumps(answers_fixture()))
-    page = render_benchmarks(retrieval, answers)
+    compressed_answers.write_text(json.dumps(answers_fixture(compressed=True)))
+    resolved_entities.write_text(json.dumps(resolved_entities_fixture()))
+    page = render_benchmarks(
+        retrieval,
+        answers,
+        compressed_answers_path=compressed_answers,
+        resolved_entities_path=resolved_entities,
+    )
     assert "full_deep" in page and "with_rerank" in page and "auto_routed" in page
+    assert "confidence_weighted" in page and "with_citations" in page and "no_retracted" in page
+    assert "Entity-resolution condition" in page and "resolved_entities" in page
+    assert "Snippet-compression condition" in page and "prompt_tokens" in page
+    assert "google:gemini-2.5-flash" in page and "anthropic:claude-haiku-4-5" in page
     assert "1.00 [0.90, 1.00]" in page  # CI formatting
     assert "v0.2-demo" in page  # snapshot name
     assert "abc1234" in page  # commit

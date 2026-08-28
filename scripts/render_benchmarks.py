@@ -5,6 +5,8 @@ Usage (what `make benchmark` runs after the eval passes):
     uv run python scripts/render_benchmarks.py \
         --retrieval eval_results/<run>-retrieval-ablation/report.json \
         --answers eval_results/<run>-answers/report.json \
+        --compressed-answers eval_results/<run>-answers/report.json \
+        --resolved-entities eval_results/<run>-retrieval-condition/report.json \
         --output docs/benchmarks.md
 
 The page states exactly what was measured (corpus fingerprint, snapshot
@@ -49,22 +51,105 @@ def _calibration_for(answers_path: Path | None) -> dict[str, Any] | None:
     return None
 
 
-def render_benchmarks(retrieval_path: Path, answers_path: Path | None) -> str:
+def _model_description(answers: dict[str, Any] | None) -> str:
+    if answers is not None:
+        models = answers.get("models", {})
+        answer = models.get("answer")
+        judge = models.get("judge")
+        if answer or judge:
+            return f"answer `{answer or 'unknown'}`; judge `{judge or 'unknown'}`"
+    return "generation and judging models unknown"
+
+
+def _answer_pair(
+    baseline: dict[str, Any], compressed: dict[str, Any]
+) -> tuple[dict[str, Any], int]:
+    """Validate and pair the two answer conditions before publishing a claim."""
+    for field in ("corpus", "snapshot", "models", "git_commit"):
+        if baseline.get(field) != compressed.get(field):
+            raise ValueError(f"answer reports differ in {field}; refusing an unmatched comparison")
+    if baseline.get("config", {}).get("compression") is not False:
+        raise ValueError("baseline answer report is not the compression=false condition")
+    if compressed.get("config", {}).get("compression") is not True:
+        raise ValueError("compressed answer report is not the compression=true condition")
+
+    ids_a = {record["question_id"] for record in baseline.get("records", [])}
+    ids_b = {record["question_id"] for record in compressed.get("records", [])}
+    if ids_a != ids_b:
+        raise ValueError("answer reports do not contain the same question ids")
+
+    from sci_rag.evals.diff import diff_reports
+
+    diff = diff_reports(baseline, compressed)
+    config = diff.configs[0]
+    return config.metric_deltas, config.common_n
+
+
+def _retrieval_condition_pair(
+    baseline: dict[str, Any], resolved: dict[str, Any]
+) -> tuple[dict[str, Any], int]:
+    """Pair full_deep before resolution with the audited resolved condition."""
+    baseline_configs = [
+        config for config in baseline.get("configs", []) if config["name"] == "full_deep"
+    ]
+    resolved_configs = [
+        config for config in resolved.get("configs", []) if config["name"] == "resolved_entities"
+    ]
+    if len(baseline_configs) != 1 or len(resolved_configs) != 1:
+        raise ValueError("entity-resolution comparison needs full_deep and resolved_entities")
+    if baseline.get("git_commit") != resolved.get("git_commit"):
+        raise ValueError("entity-resolution reports come from different commits")
+
+    from sci_rag.evals.diff import diff_reports
+
+    renamed = {
+        **resolved,
+        "kind": baseline.get("kind"),
+        "configs": [{**resolved_configs[0], "name": "full_deep"}],
+    }
+    before = {**baseline, "configs": baseline_configs}
+    diff = diff_reports(before, renamed, config="full_deep")
+    result = diff.configs[0]
+    return result.metric_deltas, result.common_n
+
+
+def _delta_cell(delta: dict[str, float]) -> str:
+    return f"{delta['delta']:+.3f} [{delta['lo']:+.3f}, {delta['hi']:+.3f}]"
+
+
+def _answer_condition_rows(answers: dict[str, Any], label: str) -> str:
+    summary = answers.get("summary", {})
+    summary_ci = answers.get("summary_ci", {})
+    scores = [
+        _ci_cell(summary_ci.get(dimension))
+        for dimension in ("groundedness", "citation_accuracy", "completeness", "correctness")
+    ]
+    tokens = summary.get("prompt_tokens_after_median")
+    token_cell = f"{tokens:.1f}" if isinstance(tokens, int | float) else "-"
+    failures = sum(
+        record.get("compression_failure_count", 0) for record in answers.get("records", [])
+    )
+    return f"| {label} | " + " | ".join(scores) + f" | {token_cell} | {failures} |"
+
+
+def render_benchmarks(
+    retrieval_path: Path,
+    answers_path: Path | None,
+    *,
+    compressed_answers_path: Path | None = None,
+    resolved_entities_path: Path | None = None,
+) -> str:
     retrieval = _load(retrieval_path)
     assert retrieval is not None
     answers = _load(answers_path)
-    calibration = _calibration_for(answers_path)
+    compressed_answers = _load(compressed_answers_path)
+    resolved_entities = _load(resolved_entities_path)
+    calibration_path = compressed_answers_path or answers_path
+    calibration = _calibration_for(calibration_path)
     corpus = retrieval.get("corpus", {})
     snapshot = retrieval.get("snapshot")
     commit = retrieval.get("git_commit", "unknown")
     versions = ", ".join(corpus.get("embedding_versions", [])) or "unknown"
-
-    try:
-        from sci_rag.config import get_settings
-
-        llm_model = get_settings().llm_model
-    except Exception:
-        llm_model = "unknown"
 
     lines = [
         "# Benchmarks",
@@ -84,7 +169,7 @@ def render_benchmarks(retrieval_path: Path, answers_path: Path | None) -> str:
         "demo corpus shipped in `data/demo/`)",
         f"- Corpus snapshot: `{snapshot or 'not recorded'}` "
         "(see `data/snapshots/`; the digest pins the exact document set)",
-        f"- Embedding: `{versions}`; generation and judging: `{llm_model}`",
+        f"- Embedding: `{versions}`; {_model_description(answers)}",
         f"- Code: commit `{commit}`",
         f"- Rendered: {datetime.now(UTC).strftime('%Y-%m-%d')}",
         "",
@@ -119,14 +204,65 @@ def render_benchmarks(retrieval_path: Path, answers_path: Path | None) -> str:
         "- `auto_routed` vs `full_deep` and `interactive` is the evidence for",
         "  (or against) making adaptive routing a default. Until it clearly",
         "  matches `full_deep` at lower cost, `auto` stays opt-in.",
+        "- `confidence_weighted` and `with_citations` isolate the two new graph",
+        "  ranking mechanisms. A neutral row means this tiny corpus did not",
+        "  exercise enough competing graph candidates to justify a default.",
+        "- `no_retracted` should be exactly neutral because the synthetic demo",
+        "  contains no known retracted document. Any apparent gain would be suspect.",
         "",
     ]
+
+    if resolved_entities is not None:
+        deltas, common_n = _retrieval_condition_pair(retrieval, resolved_entities)
+        baseline_config = next(
+            config for config in retrieval.get("configs", []) if config["name"] == "full_deep"
+        )
+        resolved_config = next(
+            config
+            for config in resolved_entities.get("configs", [])
+            if config["name"] == "resolved_entities"
+        )
+        lines += [
+            "## Entity-resolution condition",
+            "",
+            "Entity resolution changes persisted corpus state, so it is shown separately",
+            "from same-state layer ablations. The post-resolution command requires at least",
+            "one audit row; this is not an unchanged corpus relabeled as resolved.",
+            "",
+            "| Condition | " + " | ".join(METRIC_LABELS[m] for m in METRICS) + " | n |",
+            "|---|" + "---:|" * len(METRICS) + "---:|",
+        ]
+        for label, config in (
+            ("full_deep before", baseline_config),
+            ("resolved_entities", resolved_config),
+        ):
+            ci = config.get("metrics_ci", {})
+            cells = " | ".join(_ci_cell(ci.get(metric)) for metric in METRICS)
+            lines.append(f"| {label} | {cells} | {int(ci.get('n', 0))} |")
+        lines += [
+            "",
+            f"Paired n={common_n}; deltas are resolved minus pre-resolution:",
+            "",
+            "| Metric | Delta [95% CI] | p |",
+            "|---|---:|---:|",
+        ]
+        for metric in METRICS:
+            delta = deltas[metric]
+            lines.append(
+                f"| {METRIC_LABELS[metric]} | {_delta_cell(delta)} | {delta['p_value']:.3f} |"
+            )
+        lines += [
+            "",
+            f"Pre-resolution snapshot: `{retrieval.get('snapshot')}`. Post-resolution snapshot: ",
+            f"`{resolved_entities.get('snapshot')}`.",
+            "",
+        ]
 
     if answers is not None:
         summary_ci = answers.get("summary_ci", {})
         summary = answers.get("summary", {})
         lines += [
-            "## Judged answers (blind two-pass judge)",
+            "## Judged answers, uncompressed condition (blind two-pass judge)",
             "",
             "| Dimension | Mean [95% CI] |",
             "|-----------|--------------:|",
@@ -141,6 +277,42 @@ def render_benchmarks(retrieval_path: Path, answers_path: Path | None) -> str:
             "is graded in a separate reference-only pass (docs/evaluation.md).",
             "",
         ]
+
+    if answers is not None and compressed_answers is not None:
+        deltas, common_n = _answer_pair(answers, compressed_answers)
+        quality_names = ("groundedness", "citation_accuracy", "completeness", "correctness")
+        quality_holds = all(
+            name in deltas and deltas[name]["lo"] <= 0.0 <= deltas[name]["hi"]
+            for name in quality_names
+        )
+        tokens_fall = "prompt_tokens" in deltas and deltas["prompt_tokens"]["hi"] < 0.0
+        decision = (
+            "The paired gate passed: every quality interval includes zero and the "
+            "prompt-token interval is below zero. The shipped demo enables compression."
+            if quality_holds and tokens_fall
+            else "The paired gate did not pass; this report makes no adoption claim."
+        )
+        lines += [
+            "## Snippet-compression condition",
+            "",
+            "Both rows share one corpus fingerprint, snapshot, commit, question set, answer",
+            "model, and judge. The grounding judge sees the exact compressed or",
+            "fallback source text shown to the answer model.",
+            "",
+            "| Condition | groundedness | citation accuracy | completeness | correctness | median prompt tokens | chunk fallbacks |",
+            "|---|---:|---:|---:|---:|---:|---:|",
+            _answer_condition_rows(answers, "uncompressed"),
+            _answer_condition_rows(compressed_answers, "compressed"),
+            "",
+            f"Paired n={common_n}; deltas are compressed minus uncompressed:",
+            "",
+            "| Metric | Delta [95% CI] | p |",
+            "|---|---:|---:|",
+        ]
+        for metric in (*quality_names, "prompt_tokens"):
+            delta = deltas[metric]
+            lines.append(f"| {metric} | {_delta_cell(delta)} | {delta['p_value']:.3f} |")
+        lines += ["", decision, ""]
 
     if calibration is not None:
         lines += [
@@ -176,8 +348,9 @@ def render_benchmarks(retrieval_path: Path, answers_path: Path | None) -> str:
         "credentials in `.env` (`SCI_RAG_GOOGLE_API_KEY` or",
         "`SCI_RAG_GCP_PROJECT`; see `.env.example`). The target ingests the",
         "demo corpus with real embeddings, builds the graph, snapshots the",
-        "corpus, runs the full retrieval ablation plus the judged answers",
-        "eval, and re-renders this page from the report JSONs. Without",
+        "corpus, runs the full retrieval ablation, audited entity-resolution",
+        "condition, and both judged-answer compression conditions, then",
+        "re-renders this page from the report JSONs. Without",
         "credentials the eval commands stop with a clear message; nothing",
         "on this page is reachable offline, by design: published numbers",
         "come from real models or not at all.",
@@ -190,9 +363,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--retrieval", type=Path, required=True)
     parser.add_argument("--answers", type=Path, default=None)
+    parser.add_argument("--compressed-answers", type=Path, default=None)
+    parser.add_argument("--resolved-entities", type=Path, default=None)
     parser.add_argument("--output", type=Path, default=Path("docs/benchmarks.md"))
     args = parser.parse_args()
-    page = render_benchmarks(args.retrieval, args.answers)
+    page = render_benchmarks(
+        args.retrieval,
+        args.answers,
+        compressed_answers_path=args.compressed_answers,
+        resolved_entities_path=args.resolved_entities,
+    )
     args.output.write_text(page, encoding="utf-8")
     print(f"wrote {args.output}")
 
