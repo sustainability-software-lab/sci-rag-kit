@@ -219,6 +219,42 @@ Prompt templates use `string.Template` with `$UPPER_CASE` slots. Preserve requir
 rendering, and keep JSON examples free from unnecessary escaping. Changes to judge prompts must
 preserve the separation between grounding and correctness.
 
+### Draft the domain files, do not hand-write them
+
+A user specializing this kit has four files to produce: `domain/domain.yaml`,
+`data/corpus.jsonl`, `domain/eval_seed_questions.jsonl`, and light edits to
+`domain/prompts/*.md`. If you are working inside a generated project and about to
+author any of them from scratch, stop and run the drafter instead. It is grounded in
+the documents already on disk, and its output is validated through the same pydantic
+models the loaders use, which hand-written YAML is not.
+
+```bash
+uv run sci-rag draft manifest --folder data/raw
+uv run sci-rag draft ontology --from-corpus     # or --refine
+uv run sci-rag draft questions --count 10
+uv run sci-rag draft prompts entity_extraction
+```
+
+Every drafter also accepts `--print-prompt`, which renders the corpus-grounded prompt
+on stdout, and `--from-file`, which reads a reply back through identical validation.
+Use that pair when no model credentials are configured: render the prompt, answer it
+yourself, and feed the answer back rather than writing the file directly. It is the
+same validation either way.
+
+Three rules the drafters enforce, which apply to you as well:
+
+- `license_class` is never inferred. Every drafted manifest row is `unknown`, and a
+  rights decision is the user's, not yours and not a model's.
+- Drafted seed questions carry a `drafted` tag. Evaluation reports repeat it until a
+  domain expert removes it. Do not remove the tag on a user's behalf, and do not
+  quote a metric from a report that still carries the warning.
+- `domain/eval_calibration_labels.jsonl` is hand-labelled by design. Generating it
+  would make the judge calibrate against itself.
+
+`sci-rag doctor` reports domain coherence: ontology size and naming, seed-question
+grounding against the ingested corpus, how many questions are still unreviewed, and
+manifest paths and rights. Run it after changing anything in `domain/`.
+
 ### Depend on facades and shared seams
 
 Application code should use public facades such as `Retriever.retrieve()`, `AnswerEngine`, and

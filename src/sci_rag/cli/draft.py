@@ -544,3 +544,87 @@ def _cold_draft(domain, *, from_file: Path | None, print_prompt: bool):  # type:
         relation_types=list(config.relation_types),
         query_classes=list(config.query_classes),
     )
+
+
+@draft_app.command("prompts")
+def draft_prompts_command(
+    name: str = typer.Argument(..., help="Which prompt to reword: entity_extraction or answer."),
+    print_prompt: bool = typer.Option(
+        False,
+        "--print-prompt",
+        help="Print the rendered prompt and exit. Paste it into any assistant.",
+    ),
+    from_file: Path | None = typer.Option(
+        None,
+        "--from-file",
+        help="Read the model's reply from this file instead of calling a model.",
+    ),
+    output: Path | None = typer.Option(
+        None, "--output", help="Where to write the proposal. Defaults to <prompt>.md.proposed."
+    ),
+    apply: bool = typer.Option(
+        False, "--apply", help="Write the prompt file itself instead of proposing one."
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show the rewrite without writing anything."
+    ),
+) -> None:
+    """Reword a prompt for your field. Judge prompts are refused by name."""
+    from sci_rag.cli.main import run_async
+    from sci_rag.config import get_settings
+    from sci_rag.domain import load_domain
+    from sci_rag.draft import DraftError, proposed_path, read_reply
+    from sci_rag.draft.prompts import draft_prompt, render_prompt
+
+    if apply and dry_run:
+        raise typer.BadParameter("--apply and --dry-run ask for opposite things")
+
+    settings = get_settings()
+    try:
+        domain = load_domain(settings.domain_dir)
+    except (FileNotFoundError, ValueError) as exc:
+        _fail(str(exc))
+        return
+
+    if print_prompt:
+        try:
+            print(render_prompt(domain, name=name))
+        except DraftError as exc:
+            _fail(str(exc))
+        return
+
+    try:
+        rewritten = run_async(
+            draft_prompt(
+                domain,
+                name=name,
+                raw_reply=read_reply(from_file) if from_file is not None else None,
+            )
+        )
+    except DraftError as exc:
+        _fail(str(exc))
+        return
+
+    target_prompt = settings.domain_dir / "prompts" / f"{name}.md"
+    original = target_prompt.read_text(encoding="utf-8")
+    console.print(
+        f"Rewrote {name}: {len(original.splitlines())} lines in, "
+        f"{len(rewritten.splitlines())} out. Every required slot survived and the "
+        "template still renders."
+    )
+    console.print(
+        "[yellow]Read the diff before applying.[/yellow] Prompt wording moves every "
+        "downstream number, so re-run `sci-rag eval retrieval --ablation` and compare "
+        "before and after."
+    )
+
+    if dry_run:
+        console.print("[yellow]Dry run. Nothing was written.[/yellow]")
+        return
+
+    target = output or (target_prompt if apply else proposed_path(target_prompt))
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(rewritten, encoding="utf-8")
+    console.print(f"Written to [bold]{target}[/bold].")
+    if not apply:
+        console.print(f"  diff {target_prompt} {target}")

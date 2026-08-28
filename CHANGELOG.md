@@ -47,6 +47,33 @@ Notable changes to sci-rag-kit. The format follows
   a refinement that would leave no entity type is rejected. Writes
   `domain/domain.yaml.proposed` with a summary diff; `--apply` writes in place.
 - `domain/prompts/manifest_metadata.md` and `domain/prompts/ontology_from_corpus.md`.
+- `sci-rag draft prompts`: rewords `entity_extraction.md` or `answer.md` for your
+  field while keeping the job identical. The rewrite is re-rendered against dummy
+  values and rejected if a required `$SLOT` went missing, if one was invented, or
+  if the template will not render. `judge_grounding.md`, `judge_correctness.md`,
+  `snippet_compression.md`, and `ontology_draft.md` are refused by name, each with
+  a reason. New prompt `domain/prompts/prompt_localization.md`.
+- Domain-coherence rows in `sci-rag doctor`: ontology size, unique names and
+  SCREAMING_SNAKE relations; seed questions that cite nothing and seed sets with no
+  `unanswerable` probe; how many questions are still tagged `drafted`; whether every
+  reference title resolves to an ingested document; and manifest paths that no longer
+  exist plus a count of rows with unknown rights.
+- One new `sci-rag init` question, `draft_domain_files`, asked only when the project
+  has credentials. It decides whether the next-steps block leads with the drafters or
+  with the hand-written route.
+
+### Changed
+
+- `docs/bring-your-own-domain.md` steps 2, 3, 4 and 6 are now *Generate it* /
+  *Write it yourself* tab pairs. The generated route goes first; the full schema for
+  every file stays underneath, unchanged.
+- The next-steps blocks in `scripts/init_domain.py` and `sci-rag init` name
+  `sci-rag draft ...` instead of telling you to go hand-write four files.
+- `AGENTS.md` tells a coding agent pointed at a generated project to run
+  `sci-rag draft ... --print-prompt` rather than authoring domain YAML from scratch.
+- The rendered-geometry guard ignores zero-height wrappers. Two inactive tab panels
+  in a row sit at the same point, which it read as a zero-pixel gap between blocks a
+  reader can never see at the same time.
 
 ## [0.3.0] - 2026-08-28
 

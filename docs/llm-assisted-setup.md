@@ -62,6 +62,7 @@ Nothing the repository already knows.
 | `draft ontology` | nothing | the name and description from `domain.yaml`; real passages from your corpus, or files in `data/raw/` |
 | `draft manifest` | nothing (the folder defaults to `data/raw`) | each document's filename and opening pages, through the existing parsers |
 | `draft questions` | nothing | the ontology, plus real passages and document titles from your corpus |
+| `draft prompts` | which prompt to reword | the current template, its required slots, and the ontology |
 
 More drafters land alongside this page as they ship; each one follows the same
 rule.
@@ -221,6 +222,49 @@ So the loop is:
 A report that still carries the warning is not a failed report. It is an honest
 one, and it is fine to work with, as long as nobody quotes its numbers as
 though an expert had signed them.
+
+## Rewording the prompts, narrowly
+
+Most of `domain/prompts/` is wording. An extraction prompt written for
+agricultural residues reads oddly to a membrane chemist, and rewording it is
+exactly the kind of tedious, low-risk edit a model is good at.
+
+```bash title="Terminal"
+uv run sci-rag draft prompts entity_extraction
+uv run sci-rag draft prompts answer
+```
+
+Those are the only two prompts this command will touch. Four are refused by
+name, each with a reason:
+
+| Prompt | Why not |
+|---|---|
+| `judge_grounding.md` | Blind to the reference answer on purpose. Rewording risks merging it with the correctness pass, which would change what every judged number means without breaking anything visibly. |
+| `judge_correctness.md` | The separate reference-based pass that grounding is kept blind to. |
+| `snippet_compression.md` | Decides which evidence reaches the answer at all, and is gated on paired judged-answer measurements, so its wording is an experimental condition. |
+| `ontology_draft.md` | The drafting machinery itself; rewriting it would change how future drafts are made with nothing left to compare against. |
+
+The subtler risk is a rewrite that reads beautifully and drops a `$SLOT`. That
+template loads fine and fails in the middle of a pipeline run, so the rewrite is
+re-rendered against dummy values and rejected if a slot went missing, if one was
+invented, or if a stray dollar sign makes it unrenderable.
+
+Prompt wording moves every downstream number. Re-run
+`sci-rag eval retrieval --ablation` after applying a rewrite and compare.
+
+## Checking the result
+
+`sci-rag doctor` reports domain coherence beside its usual rows:
+
+- the ontology is large enough to be worth extracting against, names are unique,
+  and relations read as `source RELATION target`;
+- every answerable seed question cites something, and at least one is an
+  `unanswerable` honesty probe;
+- how many seed questions are still tagged `drafted`;
+- once a corpus is ingested, whether every reference title resolves to a real
+  document, because one that does not scores zero forever and reads as a
+  retrieval failure;
+- manifest paths that still exist, and how many rows nobody has classified.
 
 ## What is not drafted
 

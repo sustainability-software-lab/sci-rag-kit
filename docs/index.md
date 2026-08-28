@@ -250,6 +250,10 @@ Select initialize_git
 1 - Yes
 2 - No
 Choose from [1/2] (1):
+Select draft_domain_files
+1 - Yes
+2 - No
+Choose from [1/2] (1):
 
   Drafting an ontology for "Membrane chemistry and performance for water treatment"...
 

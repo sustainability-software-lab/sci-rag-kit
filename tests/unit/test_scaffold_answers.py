@@ -97,3 +97,31 @@ def test_blank_contact_email_is_allowed() -> None:
 
 def test_runner_resolves_to_a_profile() -> None:
     assert _answers().runner.key == "uv"
+
+
+def test_an_offline_project_is_never_offered_the_drafters() -> None:
+    """Offering a model-backed step to a project with no model is a dead end."""
+    from sci_rag.scaffold.answers import ProjectAnswers
+
+    answers = ProjectAnswers(
+        project_name="Offline KB",
+        repo_name="offline-kb",
+        credentials="offline",
+        draft_domain_files=True,
+    )
+
+    assert answers.draft_domain_files is False
+    assert any("drafting not offered" in note for note in answers.coercions)
+
+
+def test_a_credentialed_project_keeps_the_drafters_offered() -> None:
+    from sci_rag.scaffold.answers import ProjectAnswers
+
+    answers = ProjectAnswers(
+        project_name="Cloud KB",
+        repo_name="cloud-kb",
+        credentials="google_ai_studio",
+        draft_domain_files=True,
+    )
+
+    assert answers.draft_domain_files is True

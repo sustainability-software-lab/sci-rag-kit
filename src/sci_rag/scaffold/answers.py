@@ -68,6 +68,10 @@ class ProjectAnswers(BaseModel):
     include_demo_corpus: bool = True
     open_source_license: LicenseChoice = "BSD-3-Clause"
     initialize_git: bool = True
+    #: Whether the next-steps block leads with `sci-rag draft ...` or with the
+    #: hand-written route. Forced off for an offline project, which has no
+    #: model to draft with.
+    draft_domain_files: bool = True
     coercions: list[str] = Field(default_factory=list)
 
     @field_validator("environment_manager")
@@ -102,6 +106,11 @@ class ProjectAnswers(BaseModel):
         if self.ontology == "draft_with_llm" and self.drafted_ontology is None:
             self.ontology = "keep_demo_example"
             self.coercions.append("ontology kept as the demo example because no draft was accepted")
+        if self.draft_domain_files and self.credentials == "offline":
+            self.draft_domain_files = False
+            self.coercions.append(
+                "drafting not offered because an offline project has no model to draft with"
+            )
         if self.corpus_source == "demo_only" and not self.include_demo_corpus:
             self.include_demo_corpus = True
             self.coercions.append("demo corpus kept because it is the chosen corpus source")
@@ -150,7 +159,12 @@ class ProjectAnswers(BaseModel):
         email = str(data.get("contact_email", "")).strip()
         data["contact_email"] = "" if email == CONTACT_EMAIL_PLACEHOLDER else email
 
-        for flag in ("include_terraform", "include_demo_corpus", "initialize_git"):
+        for flag in (
+            "include_terraform",
+            "include_demo_corpus",
+            "initialize_git",
+            "draft_domain_files",
+        ):
             if flag in data:
                 data[flag] = _as_bool(data[flag])
 
