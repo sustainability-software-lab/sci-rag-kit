@@ -58,6 +58,14 @@ If typing them cold is the part you keep putting off,
 grounded in your own documents and verifies every quoted phrase against the
 passage it claims to come from.
 
+If you already have the questions, which is the better position to be in,
+[`sci-rag draft seed-from-answers questions.txt`](llm-assisted-setup.md) fills
+in the rest. It answers each of your questions and proposes the reference
+answer and evidence phrases from what that answer cited, keeping only phrases
+that appear verbatim in both the answer and its source. Rows arrive tagged
+`drafted` like any other draft, and the reference answers are the kit's own
+words, so they are hypotheses until you have checked them.
+
 ## Drafted ground truth is provisional, and the report says so
 
 A question tagged `drafted` came from a model. That tag is provenance, and

@@ -213,6 +213,108 @@ def draft_questions_command(
     )
 
 
+@draft_app.command("seed-from-answers")
+def seed_from_answers_command(
+    questions_file: Path = typer.Argument(
+        ..., help="Plain text file of questions, one per line. # comments are skipped."
+    ),
+    profile: str = typer.Option("deep", "--profile", help="Retrieval profile to answer with."),
+    limit: int = typer.Option(8, "--limit", help="Sources per answer."),
+    output: Path | None = typer.Option(
+        None, "--output", help="Where to write the proposal. Defaults to <seed file>.proposed."
+    ),
+    apply: bool = typer.Option(False, "--apply", help="Append the proposed rows to the seed file."),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be proposed without writing anything."
+    ),
+) -> None:
+    """Draft seed rows for questions you already have, from the kit's own answers.
+
+    `draft questions` invents the questions. This takes yours, answers each one,
+    and proposes ground truth from the evidence that answer cited. Nothing is
+    taken on the model's word: evidence phrases are extracted from the retrieved
+    chunk text and every row is checked against the same relevance predicate the
+    evaluation uses, so a row that would score zero against its own evidence is
+    dropped rather than proposed.
+    """
+    from sci_rag.answer import AnswerEngine
+    from sci_rag.cli.main import run_async
+    from sci_rag.config import get_settings
+    from sci_rag.domain import load_domain
+    from sci_rag.draft import DraftError, proposed_path
+    from sci_rag.draft.from_answers import HEADER, read_questions, render_jsonl, seeds_from_answers
+    from sci_rag.evals.seeds import load_seed_questions
+
+    if apply and dry_run:
+        raise typer.BadParameter("--apply and --dry-run ask for opposite things")
+
+    settings = get_settings()
+    try:
+        domain = load_domain(settings.domain_dir)
+        questions = read_questions(questions_file)
+    except (DraftError, FileNotFoundError, ValueError) as exc:
+        _fail(str(exc))
+        return
+
+    seed_file = domain.seed_questions_path()
+    taken = {q.id for q in load_seed_questions(seed_file)} if seed_file.exists() else set()
+
+    async def run():  # type: ignore[no-untyped-def]
+        from sci_rag.db import dispose_engine
+
+        engine = AnswerEngine(settings=settings)
+        try:
+            return await seeds_from_answers(
+                engine, questions, profile=profile, limit=limit, taken_ids=taken
+            )
+        finally:
+            # Same rule as the passage sampler: pooled asyncpg connections are
+            # disposed inside the loop that opened them.
+            await dispose_engine()
+
+    result = run_async(run())
+
+    console.print(f"Answered {len(questions)} question(s) with the {profile} profile.")
+    for question in result.questions:
+        phrases = ", ".join(question.evidence_phrases) or "title match only"
+        console.print(f"  [green]kept[/green]    {question.id}: {phrases}")
+    for reason in result.dropped:
+        console.print(f"  [red]dropped[/red] {reason}")
+    for note in result.notes:
+        console.print(f"  [yellow]note[/yellow]    {note}")
+
+    if not result.questions:
+        _fail("No question produced a usable row, so there is nothing to write.")
+        return
+
+    console.print(
+        f"\n{len(result.questions)} proposed, {len(result.dropped)} dropped. "
+        "The answers are the kit's own, so treat every reference answer as a "
+        "hypothesis until you have checked it."
+    )
+
+    if dry_run:
+        console.print("[yellow]Dry run. Nothing was written.[/yellow]")
+        return
+
+    if apply:
+        _append_to_seed_file(seed_file, result.questions, header=HEADER)
+        console.print(f"Appended to [bold]{seed_file}[/bold].")
+        console.print(
+            "Review each one, then delete its `drafted` tag. Until you do, every "
+            "evaluation report will say its ground truth is unreviewed."
+        )
+        return
+
+    target = output or proposed_path(seed_file)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(render_jsonl(result.questions), encoding="utf-8")
+    console.print(f"Proposal written to [bold]{target}[/bold].")
+    console.print(
+        f"Review it, then move it over {seed_file.name} yourself, or re-run with --apply."
+    )
+
+
 def _append_to_seed_file(seed_file: Path, questions, *, header: str) -> None:  # type: ignore[no-untyped-def]
     """Add verified rows to the seed file without disturbing what is there.
 
