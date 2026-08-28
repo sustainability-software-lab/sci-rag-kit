@@ -7,7 +7,7 @@ reports is one a single traced request already carries.
 
 Timings here are honest but not comparable to anything: a two-document corpus
 on a developer machine is not a latency benchmark. What is asserted is the
-shape — that each profile ran, that the stages a profile enables reported
+shape: that each profile ran, that the stages a profile enables reported
 durations, and that the ones it disables did not become samples.
 """
 

@@ -14,7 +14,7 @@ evidence phrase silently poisons every retrieval metric computed against it.
 So nothing here is taken on the model's word: evidence phrases are extracted
 from the retrieved chunk text, kept only when they appear verbatim in both
 the answer and a chunk that answer cited, and each finished row is then run
-through :func:`sci_rag.evals.retrieval_eval.is_relevant` — the same predicate
+through :func:`sci_rag.evals.retrieval_eval.is_relevant`, the same predicate
 the evaluation itself uses. A row that cannot prove itself relevant to its own
 evidence is dropped with a reason rather than proposed.
 
