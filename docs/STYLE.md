@@ -140,7 +140,9 @@ Each of these is a phrase that survives review because any single instance looks
 
 `it is important to note`, `it should be noted`, `it is worth noting`, `needless to say`, `as you can see`, `at the end of the day`, `in order to`, `the fact that`, `a wide range of`, `a variety of`, `in today's`, `in the world of`, `when it comes to`, `first and foremost`, `last but not least`, `that being said`, `delve into`, `deep dive`, `leverage`, `seamless`, `streamline`, `unlock`, `tailored`, `utilize`, `cutting-edge`, `best-in-class`, `game-changing`, `effortless`, `plethora`, `myriad`.
 
-Also no em dashes, anywhere in repository prose. That rule predates this guide and lives in [CONTRIBUTING.md](contributing.md).
+Also no em dashes anywhere in repository source, including code, comments,
+docstrings, and documentation. That rule predates this guide and lives in
+[CONTRIBUTING.md](contributing.md).
 
 ### The contrast budget
 
@@ -194,7 +196,7 @@ Now read it as the person it is for, and ask what a knowledgeable colleague woul
 
 ## What the tests check
 
-`tests/unit/test_docs_style.py` runs in `make check` and holds the decidable rules: the banned phrases, em dashes, American spelling, the retired verb, the contrast budget, one name per page across the nav and the front matter, front matter on every page, that every page in the nav appears in the type table above, and that every tutorial and how-to carries `## Before you start` and `## Next steps`.
+`tests/unit/test_docs_style.py` runs in `make check` and holds the decidable rules: the banned phrases, em dashes across repository source, American spelling, the retired verb, the contrast budget, one name per page across the nav and the front matter, front matter on every page, that every page in the nav appears in the type table above, and that every tutorial and how-to carries `## Before you start` and `## Next steps`.
 
 The table on this page is the source of truth the test reads. Adding a page to the nav without classifying it here fails the build, which is the intended order: decide what the page is, then write it.
 

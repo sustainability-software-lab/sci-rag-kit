@@ -35,6 +35,27 @@ STYLE = DOCS / "STYLE.md"
 EXCLUDED_DIRS = ("planning", "assets")
 ROOT_PAGES = ("README.md", "CONTRIBUTING.md")
 
+# Local and generated state is not repository source. Some of these directories
+# can also contain private corpora, so the style test must not read them.
+REPOSITORY_SCAN_EXCLUDED_DIRS = frozenset(
+    {
+        ".context",
+        ".git",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".tox",
+        ".venv",
+        "__pycache__",
+        "eval_results",
+        "interim",
+        "node_modules",
+        "processed",
+        "raw",
+        "site",
+    }
+)
+
 # The landing page is a template with its own masthead, so the page-shape
 # rules that assume a title and a lede do not apply to it.
 HOME = "index.md"
@@ -205,6 +226,23 @@ def _reader_facing() -> list[Path]:
     return [*_site_pages(), *(ROOT / name for name in ROOT_PAGES), ROOT / "domain" / "README.md"]
 
 
+def _repository_text_files(root: Path = ROOT) -> list[Path]:
+    """Every UTF-8 source file, without generated state or private corpora."""
+    files = []
+    for path in root.rglob("*"):
+        relative = path.relative_to(root)
+        if not path.is_file() or any(
+            part in REPOSITORY_SCAN_EXCLUDED_DIRS for part in relative.parts
+        ):
+            continue
+        try:
+            path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        files.append(path)
+    return sorted(files)
+
+
 def _where(page: Path) -> str:
     return str(page.relative_to(ROOT))
 
@@ -284,11 +322,25 @@ def test_no_page_uses_a_banned_filler_phrase() -> None:
     assert offenders == [], f"docs/STYLE.md bans these phrases: {offenders}"
 
 
-def test_no_page_uses_an_em_dash() -> None:
-    """A repository house rule since before this guide, and easy to lose."""
-    offenders = _offenders(re.compile("—"), _reader_facing())
+def test_the_em_dash_guard_reaches_python_source(tmp_path: Path) -> None:
+    """The repository rule covers code, comments, and docstrings too."""
+    source = tmp_path / "src" / "example.py"
+    source.parent.mkdir(parents=True)
+    source.write_text('message = "\N{EM DASH}"\n', encoding="utf-8")
 
-    assert offenders == [], f"no em dashes in repository prose: {offenders}"
+    assert source in _repository_text_files(tmp_path)
+
+
+def test_no_page_uses_an_em_dash() -> None:
+    """The repository-wide house rule must cover more than rendered prose."""
+    punctuation = "\N{EM DASH}"
+    offenders = sorted(
+        _where(path)
+        for path in _repository_text_files()
+        if punctuation in path.read_text(encoding="utf-8")
+    )
+
+    assert offenders == [], f"no em dashes anywhere in repository source: {offenders}"
 
 
 def test_spelling_is_american_throughout() -> None:
