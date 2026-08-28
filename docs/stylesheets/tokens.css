@@ -142,6 +142,11 @@
   padding-right: 0.15rem;
 }
 
+/* Give the whole left-justified column room to breathe from the window edge. */
+[dir="ltr"] .md-header__inner {
+  padding-left: 0.6rem;
+}
+
 .md-header__title {
   font-weight: 600;
 }

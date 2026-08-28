@@ -273,13 +273,13 @@
     scrollbar-gutter: stable;
   }
 
-  /* 0.35rem here plus the row's own 0.45rem padding puts the first character
-     at 16px, the same left edge as the flask mark in the header above it. */
+  /* 0.75rem here plus the row's own 0.45rem padding puts the first character
+     at 24px, the same left edge as the flask mark in the header above it. */
   .md-sidebar--primary .md-sidebar__inner {
     padding-top: 0.9rem;
     padding-right: 0.6rem;
     padding-bottom: 2rem;
-    padding-left: 0.35rem;
+    padding-left: 0.75rem;
   }
 
   .md-main__inner {
@@ -296,15 +296,33 @@
   }
 }
 
-/* Scrollbars: hairline grey, never the browser's default accent. */
+/* Scrollbars stay a hairline grey. Material darkens them to the accent colour
+   on hover and focus, which reads as a saturated blue bar down the sidebar. */
 .md-sidebar__scrollwrap,
+.md-sidebar__scrollwrap:hover,
+.md-sidebar__scrollwrap:focus-within,
+.md-search__scrollwrap,
+.md-search__scrollwrap:hover,
 .md-typeset__scrollwrap,
+.md-typeset pre > code,
+.md-typeset pre > code:hover,
 .md-typeset .highlight pre,
 .md-typeset .srag-tree,
 .srag-home-tree,
 .mermaid {
   scrollbar-width: thin;
   scrollbar-color: var(--srag-border-strong) transparent;
+}
+
+.md-sidebar__scrollwrap:hover::-webkit-scrollbar-thumb,
+.md-sidebar__scrollwrap:focus-within::-webkit-scrollbar-thumb,
+.md-search__scrollwrap::-webkit-scrollbar-thumb {
+  background-color: var(--srag-border-strong);
+}
+
+.md-sidebar__scrollwrap:hover::-webkit-scrollbar-thumb:hover,
+.md-search__scrollwrap::-webkit-scrollbar-thumb:hover {
+  background-color: var(--srag-muted-500);
 }
 
 ::-webkit-scrollbar {
