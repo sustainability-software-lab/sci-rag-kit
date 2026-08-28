@@ -86,7 +86,12 @@ jobs:
           condarc: |
             channels:
               - conda-forge
-          create-args: '"postgresql>=16,<19" pgvector'
+          # No quotes: the action execs micromamba directly rather than
+          # through a shell, so a quote here becomes part of the version spec
+          # and libmamba rejects `19"`.
+          create-args: >-
+            postgresql>=16,<19
+            pgvector
           cache-environment: true
           init-shell: bash
 
