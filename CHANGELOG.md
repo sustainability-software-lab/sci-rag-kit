@@ -20,6 +20,16 @@ Notable changes to sci-rag-kit. The format follows
 
 ### Added
 
+- `sci-rag draft seed-from-answers QUESTIONS.txt`: turn questions you already
+  have into draft seed rows. `draft questions` invents the questions; this
+  takes yours, one per line, answers each one, and proposes ground truth from
+  the evidence that answer cited. Nothing is taken on the model's word: an
+  evidence phrase is kept only when it appears verbatim in both the answer and
+  a chunk that answer cited, and every finished row is checked against the same
+  relevance predicate the evaluation uses, so a row that would score zero
+  against its own evidence is dropped with a reason. Rows carry the existing
+  `drafted` tag, so they travel through the honesty plumbing every other
+  drafter's output does.
 - `sci-rag corpus export OUTDIR`: write documents, chunks, entities, and
   relationships to one file per table, as JSONL (no extra dependency) or
   Parquet (`uv sync --extra export`). Chunk embeddings are omitted unless

@@ -53,6 +53,7 @@ migrations, `domain/`, and data paths resolve predictably.
 | `sci-rag manifest lint` | Check a corpus manifest before ingesting it. Ingestion reports a bad manifest one document at a time, after the run has already started. This reports every problem at once, before anything is parsed, embedded, or written. |
 | `sci-rag draft` | Draft the domain files you would otherwise hand-write. Every drafter can also print its prompt for any assistant (--print-prompt) and read the reply back (--from-file), so no API key is required. |
 | `sci-rag draft questions` | Draft seed questions grounded in your own documents, and verify them. |
+| `sci-rag draft seed-from-answers` | Draft seed rows for questions you already have, from the kit's own answers. `draft questions` invents the questions. This takes yours, answers each one, and proposes ground truth from the evidence that answer cited. Nothing is taken on the model's word: evidence phrases are extracted from the retrieved chunk text and every row is checked against the same relevance predicate the evaluation uses, so a row that would score zero against its own evidence is dropped rather than proposed. |
 | `sci-rag draft manifest` | Read title, authors, year, and source off your documents. Rights stay yours. |
 | `sci-rag draft ontology` | Redraft or refine the ontology against what your documents actually say. |
 | `sci-rag draft prompts` | Reword a prompt for your field. Judge prompts are refused by name. |
@@ -618,6 +619,30 @@ $ sci-rag draft questions [OPTIONS]
 | `--apply` | boolean | false | Append the verified questions to the seed file. |
 | `--dry-run` | boolean | false | Show what would be drafted without writing anything. |
 | `--repair, --no-repair` | boolean | true | Ask the model once more to replace rows that failed grounding verification. |
+
+## `sci-rag draft seed-from-answers`
+
+Draft seed rows for questions you already have, from the kit's own answers. `draft questions` invents the questions. This takes yours, answers each one, and proposes ground truth from the evidence that answer cited. Nothing is taken on the model's word: evidence phrases are extracted from the retrieved chunk text and every row is checked against the same relevance predicate the evaluation uses, so a row that would score zero against its own evidence is dropped rather than proposed.
+
+```console
+$ sci-rag draft seed-from-answers [OPTIONS] QUESTIONS_FILE
+```
+
+### Arguments
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `QUESTIONS_FILE` | path | required | Plain text file of questions, one per line. # comments are skipped. |
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--profile` | text | deep | Retrieval profile to answer with. |
+| `--limit` | integer | 8 | Sources per answer. |
+| `--output` | path | unset | Where to write the proposal. Defaults to <seed file>.proposed. |
+| `--apply` | boolean | false | Append the proposed rows to the seed file. |
+| `--dry-run` | boolean | false | Show what would be proposed without writing anything. |
 
 ## `sci-rag draft manifest`
 

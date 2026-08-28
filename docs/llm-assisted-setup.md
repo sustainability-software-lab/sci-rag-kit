@@ -193,6 +193,39 @@ any citation it invents for itself is stripped. If a draft contains no probe,
 the run says so: an evaluation set without one cannot tell you whether the
 assistant admits a gap or fills it from model priors.
 
+## When the questions are already yours
+
+`draft questions` invents the questions. The questions worth evaluating against
+are usually the ones real users asked, especially the ones the assistant
+fumbled, and those cannot be invented from the corpus. So there is a second
+command for the opposite direction:
+
+```bash
+uv run sci-rag draft seed-from-answers questions.txt
+```
+
+One question per line. The kit answers each one, then proposes ground truth
+from the evidence that answer cited: the reference answer is what the assistant
+said, and the evidence phrases are extracted from the retrieved chunk text.
+
+It has one lane, not three. There is no prompt to print, because the model is
+not being asked to draft anything: it is answering, and the drafting is the
+Python that reads its citations back.
+
+The checks are stricter here than the wording suggests, because the model's own
+prose is the one thing that must never become ground truth. A phrase is kept
+only when it appears verbatim in **both** the answer and a chunk that answer
+cited: a span only in the answer is the model's words, and a span only in the
+chunk is evidence the answer did not use. Every finished row is then run
+through the same relevance predicate the evaluation itself uses, and a row that
+would score zero against its own evidence is dropped with a reason rather than
+proposed.
+
+Two things get dropped rather than guessed at. A question whose answer cited
+nothing has no evidence to propose, so it is reported for you to write by hand
+or tag `unanswerable`. So is a question whose answer paraphrased rather than
+quoted.
+
 ## Before you have a database
 
 `draft questions` prefers the ingested corpus, because the chunker has already
