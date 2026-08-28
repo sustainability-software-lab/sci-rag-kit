@@ -84,7 +84,7 @@ The post-resolution command requires a durable merge audit row, preventing an
 unchanged corpus from being mislabeled. Read every layer-ablation row against
 `full_deep`:
 
-* A layer earns its fusion weight when REMOVING it hurts. If `no_graph`
+* A layer earns its fusion weight when **removing** it hurts. If `no_graph`
   equals `full_deep` on your corpus, your graph is not contributing yet;
   fix the ontology or the corpus before touching weights.
 * `vector_only` versus `keyword_only` tells you how your users' phrasing
@@ -171,7 +171,7 @@ the kit ships calibration as a workflow you re-run, not a one-off study:
 
 1. Run an answers eval (`sci-rag eval answers`) and open its
    `report.json` in `eval_results/`.
-2. Have a human read each generated answer (and its sources) WITHOUT
+2. Have a human read each generated answer (and its sources) **without**
    looking at the judge's scores, and record their own 0-2 scores per
    dimension, one JSON object per line:
 
