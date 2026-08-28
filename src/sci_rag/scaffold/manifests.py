@@ -60,6 +60,11 @@ def read_dependencies(root: Path) -> Dependencies:
     )
 
 
+def profile_packages(answers: ProjectAnswers) -> tuple[tuple[str, str], ...]:
+    """The conda-forge packages this project's manager can install, if any."""
+    return answers.runner.conda_forge_packages
+
+
 def _selected_extra_requirements(answers: ProjectAnswers, deps: Dependencies) -> list[str]:
     selected: list[str] = []
     for extra in answers.extras:
@@ -78,15 +83,20 @@ def _pixi_tables(answers: ProjectAnswers, deps: Dependencies, *, standalone: boo
         f'{name} = "{command}"' for name, command in _pixi_task_commands(answers, profile).items()
     )
     platforms = ", ".join(f'"{platform}"' for platform in PIXI_PLATFORMS)
+    database = "\n".join(f'{name} = "{spec}"' for name, spec in profile.conda_forge_packages)
     return f"""
 [{prefix}workspace]
 channels = ["conda-forge"]
 platforms = [{platforms}]
 
 # Python comes from conda-forge; everything else resolves from PyPI so the
-# dependency list stays single-sourced in [project].
+# dependency list stays single-sourced in [project]. The two exceptions are
+# the PostgreSQL server and pgvector, which have no PyPI equivalent and are
+# what let this project run its database without Docker; see
+# `make db-up` and docs/quickstart.md.
 [{prefix}dependencies]
 python = "{answers.python_version}.*"
+{database}
 
 [{prefix}pypi-dependencies]
 {answers.repo_name} = {{ path = ".", editable = true }}
@@ -113,6 +123,9 @@ def lint_paths(answers: ProjectAnswers) -> str:
 def _pixi_task_commands(answers: ProjectAnswers, profile: object) -> dict[str, str]:
     del profile  # tasks run inside the environment, so they carry no prefix
     commands = dict(_MIRRORED_TASKS)
+    if answers.runner.offers_local_postgres:
+        commands["db-up"] = "python scripts/local_postgres.py start"
+        commands["db-down"] = "python scripts/local_postgres.py stop"
     commands["lint"] = f"ruff check {lint_paths(answers)}"
     commands["format"] = f"ruff format {lint_paths(answers)}"
     if answers.include_demo_corpus:
@@ -151,10 +164,12 @@ def write_pixi(answers: ProjectAnswers, root: Path) -> list[str]:
 def write_conda(answers: ProjectAnswers, root: Path) -> list[str]:
     """An environment.yml that installs the project itself through pip.
 
-    Only Python comes from conda-forge. Resolving the runtime dependencies
-    there too would mean maintaining a second dependency list that could drift
-    from `[project.dependencies]`, and pip inside a conda environment is the
-    normal way scientific projects handle exactly this.
+    Only Python and the database come from conda-forge. Resolving the runtime
+    dependencies there too would mean maintaining a second dependency list
+    that could drift from `[project.dependencies]`, and pip inside a conda
+    environment is the normal way scientific projects handle exactly this. The
+    database is the exception because PyPI has no PostgreSQL server to drift
+    from.
     """
     deps = read_dependencies(root)
     pip_requirements = [
@@ -162,19 +177,25 @@ def write_conda(answers: ProjectAnswers, root: Path) -> list[str]:
         *_selected_extra_requirements(answers, deps),
         *deps.dev,
     ]
+    database = [
+        f"{name}{spec}" if spec != "*" else name for name, spec in profile_packages(answers)
+    ]
     document = {
         "name": answers.repo_name,
         "channels": ["conda-forge"],
         "dependencies": [
             f"python={answers.python_version}",
+            *database,
             "pip",
             {"pip": pip_requirements},
         ],
     }
     header = (
-        "# conda environment for this project. Python comes from conda-forge;\n"
-        "# everything else installs through pip so the dependency list stays\n"
-        "# single-sourced in pyproject.toml.\n"
+        "# conda environment for this project. Python comes from conda-forge,\n"
+        "# along with the PostgreSQL server and pgvector, which have no PyPI\n"
+        "# equivalent and are what let this project run its database without\n"
+        "# Docker. Everything else installs through pip so the dependency list\n"
+        "# stays single-sourced in pyproject.toml.\n"
         "#\n"
         f"#   conda env create -f environment.yml\n"
         f"#   conda activate {answers.repo_name}\n"

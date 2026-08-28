@@ -80,7 +80,18 @@ jobs:
       # embedder, no credentials, no model calls.
       SCI_RAG_EMBEDDING_PROVIDER: local-hash
       SCI_RAG_EMBEDDING_DIM: "1536"
-      SCI_RAG_DATABASE_URL: postgresql+asyncpg://sci_rag:sci_rag@localhost:5433/sci_rag
+      # pixi and conda projects run their own conda-forge database, so those
+      # two legs point away from the service container above. Choosing here
+      # rather than rewriting the value through GITHUB_ENV later matters: a
+      # job-level env entry and a GITHUB_ENV entry of the same name have a
+      # precedence a reader should not have to know, and the failure mode is
+      # a green leg that quietly proved the container path twice. The port
+      # differs too, so the unused service cannot answer by accident.
+      SCI_RAG_LOCAL_PG_PORT: "5443"
+      SCI_RAG_DATABASE_URL: >-
+        ${{ (matrix.manager == 'pixi' || matrix.manager == 'conda')
+        && 'postgresql+asyncpg://sci_rag:sci_rag@127.0.0.1:5443/sci_rag'
+        || 'postgresql+asyncpg://sci_rag:sci_rag@localhost:5433/sci_rag' }}
     steps:
       - uses: actions/checkout@v7
 
@@ -169,6 +180,20 @@ jobs:
           $RUN ruff check src tests examples scripts
           $RUN mypy
 
+      # Criterion from #71: the Docker-free path is not advertised before it
+      # is tested. pixi and conda projects get PostgreSQL and pgvector from
+      # conda-forge in their own manifest, so those two legs ignore the
+      # service container above and run the database the way their own
+      # documentation tells a user to. A different port keeps the unused
+      # service from colliding with it.
+      - name: The generated project runs its own database, no container
+        if: matrix.manager == 'pixi' || matrix.manager == 'conda'
+        shell: bash -el {0}
+        run: |
+          cd "$RUNNER_TEMP/generated"
+          $RUN python scripts/local_postgres.py start
+          $RUN python scripts/local_postgres.py status
+
       - name: The offline demo runs in the generated project
         shell: bash -el {0}
         run: |
@@ -180,6 +205,21 @@ jobs:
           # guided blank, so a freshly generated project has no ground truth
           # yet. That is the point of the reset, not a regression.
 
+      # The demo above passing does not by itself prove which database it
+      # talked to, and a leg that quietly used the service container would
+      # look identical. Ask the conda-forge server directly.
+      - name: The corpus landed in the Docker-free database
+        if: matrix.manager == 'pixi' || matrix.manager == 'conda'
+        shell: bash -el {0}
+        run: |
+          cd "$RUNNER_TEMP/generated"
+          COUNT=$($RUN psql -h 127.0.0.1 -p 5443 -U sci_rag -d sci_rag -tAc "SELECT count(*) FROM documents")
+          echo "documents in the local server: $COUNT"
+          [ "$(echo "$COUNT" | tr -d '[:space:]')" = "5" ] || {
+            echo "::error::the demo did not ingest into the project's own database"
+            exit 1
+          }
+
       # A gate. A project generated with `credentials: offline` is a state the
       # user chose, so `doctor` warns about the unavailable generation features
       # rather than failing on them; anything it does report as FAIL here is a
@@ -187,3 +227,8 @@ jobs:
       - name: sci-rag doctor
         shell: bash -el {0}
         run: cd "$RUNNER_TEMP/generated" && $RUN sci-rag doctor
+
+      - name: Stop the Docker-free database
+        if: always() && (matrix.manager == 'pixi' || matrix.manager == 'conda')
+        shell: bash -el {0}
+        run: cd "$RUNNER_TEMP/generated" && $RUN python scripts/local_postgres.py stop
