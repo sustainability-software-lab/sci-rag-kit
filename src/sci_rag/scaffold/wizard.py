@@ -147,3 +147,71 @@ def run_wizard(
         output_stream=output_stream,
     )
     return ProjectAnswers.from_raw(raw)
+
+
+def confirm_ontology_draft(
+    domain_dir: Path,
+    *,
+    project_name: str,
+    description: str,
+    llm: object | None = None,
+    input_stream: TextIO | None = None,
+    output_stream: TextIO | None = None,
+    max_attempts: int = 3,
+) -> object | None:
+    """Draft an ontology and let the user accept, reject, or redraft it.
+
+    Returns the accepted :class:`~sci_rag.domain.DomainConfig`, or ``None`` to
+    fall back to the worked example. A draft that fails validation is reported
+    and offered again rather than written out: model output is untrusted, and
+    a junk ontology only fails later, when the graph extractor reads it.
+    """
+    import asyncio
+
+    from sci_rag.scaffold.ontology import OntologyDraftError, draft_ontology, summarize
+
+    stdin = input_stream if input_stream is not None else sys.stdin
+    stdout = output_stream if output_stream is not None else sys.stdout
+
+    for _ in range(max_attempts):
+        stdout.write(f'\n  Drafting an ontology for "{description}"...\n\n')
+        try:
+            config = asyncio.run(
+                draft_ontology(
+                    domain_dir,
+                    project_name=project_name,
+                    description=description,
+                    llm=llm,  # type: ignore[arg-type]
+                )
+            )
+        except OntologyDraftError as exc:
+            stdout.write(f"  The draft could not be used: {exc}\n")
+            if not _wants_retry(stdin, stdout):
+                return None
+            continue
+
+        for label, value in summarize(config):
+            stdout.write(f"  {label.ljust(18)}{value}\n")
+
+        stdout.write("\n  Accept this ontology? [y/n/redraft] (y): ")
+        reply = _read(stdin)
+        if reply is None:
+            return config
+        stdout.write(f"{reply}\n" if reply else "\n")
+        answer = (reply or "y").strip().lower()
+        if answer in {"y", "yes"}:
+            return config
+        if answer in {"n", "no"}:
+            return None
+        # Anything else, including "redraft", asks the model again.
+    stdout.write("  Keeping the worked example after several drafts.\n")
+    return None
+
+
+def _wants_retry(stdin: TextIO, stdout: TextIO) -> bool:
+    stdout.write("  Try again? [y/n] (n): ")
+    reply = _read(stdin)
+    if reply is None:
+        return False
+    stdout.write(f"{reply}\n" if reply else "\n")
+    return (reply or "n").strip().lower() in {"y", "yes"}

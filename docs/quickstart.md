@@ -30,14 +30,23 @@ No Docker? Use PostgreSQL 15 or newer with pgvector, set `SCI_RAG_DATABASE_URL`,
 
 ## 1. Get the repository
 
-For your own project, click **Use this template** on GitHub and clone the repository it creates. To evaluate the kit directly:
+For your own project, run the wizard from whatever directory you keep projects in. It asks about your domain, credentials, ontology, corpus, and environment manager, then writes a configured, git-initialized project directory:
+
+```console title="Terminal"
+$ pipx install sci-rag-kit
+$ sci-rag-new
+```
+
+Every question has a default, so pressing Enter through the whole session gives you a working offline project. Steps 2 and 3 below are the answers it collects; read them to understand what it wrote, then skip to step 4.
+
+To evaluate the kit itself rather than start a project, clone it:
 
 ```console title="Terminal"
 $ git clone https://github.com/sustainability-software-lab/sci-rag-kit.git
 $ cd sci-rag-kit
 ```
 
-The included dev container is another supported path. In GitHub Codespaces it installs the project and starts Postgres, so continue with configuration.
+Clicking **Use this template** on GitHub also works, and `sci-rag init` runs the same wizard inside a checkout you already have. The included dev container is another supported path. In GitHub Codespaces it installs the project and starts Postgres, so continue with configuration.
 
 ## 2. Choose a credential mode
 

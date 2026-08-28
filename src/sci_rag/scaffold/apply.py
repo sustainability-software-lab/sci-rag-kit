@@ -585,6 +585,14 @@ _COHERENCE_SUFFIXES = {".md", ".yml", ".yaml", ".json", ".py", ""}
 _COHERENCE_EXCLUDE = ("docs/planning", "docs/changelog.md", "CHANGELOG.md")
 
 
+# Workflows that belong to the kit and not to a project made from it.
+# `generated-projects.yml` generates a project per manager, so a generated
+# project carrying it would try to generate projects. `release.yml` publishes
+# under the name `sci-rag-kit` through this repository's Trusted Publishing
+# configuration, so shipping it pre-wired would be worse than shipping none.
+# Both also legitimately name every environment manager at once.
+KIT_ONLY_WORKFLOWS = ("generated-projects.yml", "release.yml")
+
 # Rendered whole from the profile, so the ordered text pass must skip them.
 # Substituting inside a JSON string value breaks its quoting, which is how a
 # venv+pip devcontainer ended up unparseable.
@@ -711,10 +719,8 @@ def apply_runner(answers: ProjectAnswers, root: Path) -> list[str]:
             _write(path, text)
             touched += 1
 
-    # The kit's own matrix generates a project per manager. Carrying it into a
-    # generated project would have that project try to generate projects, and
-    # it is the one file that legitimately names every manager at once.
-    (root / ".github" / "workflows" / "generated-projects.yml").unlink(missing_ok=True)
+    for workflow in KIT_ONLY_WORKFLOWS:
+        (root / ".github" / "workflows" / workflow).unlink(missing_ok=True)
 
     _write_dockerfile(answers, root)
     _write_devcontainer(answers, root)

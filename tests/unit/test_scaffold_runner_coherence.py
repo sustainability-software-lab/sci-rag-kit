@@ -150,10 +150,15 @@ def test_generated_workflows_are_valid_yaml(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize("manager", runner_keys())
-def test_the_kits_own_matrix_workflow_does_not_ship(tmp_path: Path, manager: str) -> None:
-    """It generates projects, so a generated project must not carry it."""
+def test_the_kits_own_workflows_do_not_ship(tmp_path: Path, manager: str) -> None:
+    """One generates projects; the other publishes under the kit's own name."""
+    from sci_rag.scaffold.apply import KIT_ONLY_WORKFLOWS
+
     root = _generate(tmp_path, manager)
-    assert not (root / ".github" / "workflows" / "generated-projects.yml").exists()
+    for workflow in KIT_ONLY_WORKFLOWS:
+        assert not (root / ".github" / "workflows" / workflow).exists(), workflow
+    # The ones a project does want are still there.
+    assert (root / ".github" / "workflows" / "ci.yml").exists()
 
 
 @pytest.mark.parametrize("manager", runner_keys())
