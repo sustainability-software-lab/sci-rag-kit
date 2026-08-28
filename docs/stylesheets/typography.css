@@ -43,6 +43,15 @@
   text-wrap: balance;
 }
 
+/* Titles here run from three words to a full decision-record sentence, so left
+   to itself the lede below the title lands at a different height on the long
+   pages. Reserving two lines of the title's own leading holds the lede still
+   across every page that fits in two, which is all of them at this measure.
+   The value is in em so it follows the smaller title size on narrow screens. */
+.md-content__inner > h1:first-child {
+  min-height: 2.4em;
+}
+
 .md-typeset h2 {
   margin-top: 2.4rem;
   font-size: 1.3rem;

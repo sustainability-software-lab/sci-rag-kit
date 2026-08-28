@@ -1,5 +1,9 @@
 # Deploying on Google Cloud
 
+Stand up a production-shaped instance on Cloud Run and Cloud SQL with the
+Terraform module the kit ships, then hand the same service to REST and MCP
+clients.
+
 !!! note "Optional, and you may have declined it"
 
     `infra/terraform/` is one of the optional pieces the setup wizard asks
