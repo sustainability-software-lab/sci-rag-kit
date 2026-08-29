@@ -134,11 +134,23 @@ def test_ci_validates_the_dev_database_terraform_module() -> None:
     assert "terraform -chdir=dev-database validate" in runs
 
 
-def test_generated_projects_decline_cloud_database_unless_requested() -> None:
+def test_generated_projects_cover_every_cloud_asset_shape_for_every_manager() -> None:
     workflow = _load_workflow(WORKFLOW)
-    runs = " ".join(step.get("run", "") for step in workflow["jobs"]["generate"]["steps"])
+    generate = workflow["jobs"]["generate"]
+    runs = " ".join(step.get("run", "") for step in generate["steps"])
 
-    assert 'include_cloud_database: "No"' in runs
+    assert set(generate["strategy"]["matrix"]) == {"manager"}, (
+        "a second matrix axis would rename the required generate (uv) check"
+    )
+    assert "for cloud_case in pruned kept helper-only" in runs
+    assert 'pruned) helper="No"; terraform="No"' in runs
+    assert 'kept) helper="Yes"; terraform="Yes"' in runs
+    assert 'helper-only) helper="Yes"; terraform="No"' in runs
+    assert "include_cloud_database: $helper" in runs
+    assert "include_terraform: $terraform" in runs
+    assert "scripts/cloud_postgres.py" in runs
+    assert "infra/terraform/dev-database" in runs
+    assert "no live GCP call" in runs
 
 
 def test_codeql_has_security_permissions_and_all_three_triggers() -> None:

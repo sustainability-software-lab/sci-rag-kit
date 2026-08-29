@@ -82,9 +82,14 @@ cp .env.example .env
 #   SCI_RAG_EMBEDDING_PROVIDER=local-hash   offline mode: no credentials, lexical-only retrieval, no generation
 # To generate with Claude or Grok instead of Gemini, see docs/extend.md.
 
-make setup     # uv sync, start the default Docker Postgres, create the schema
+make setup     # sync dependencies, start the selected backend, create the schema
 make demo      # ingest the demo corpus, run a traced retrieval, score it
 ```
+
+`make setup` starts the selected database backend and applies every migration.
+Docker is the template default; generated projects may select conda-forge,
+system PostgreSQL, or the optional Cloud SQL development helper. See
+[Run Postgres your way](docs/run-postgres.md) for the supported combinations.
 
 With credentials configured, generation and the graph work too:
 
@@ -185,6 +190,7 @@ The complete, searchable site is published at
 | [Quickstart](docs/quickstart.md) | Setup, first run, troubleshooting |
 | [FAQ](docs/faq.md) | Short answers, and the reasoning behind each design decision |
 | [Bring your own domain](docs/bring-your-own-domain.md) | Configure the kit for your field |
+| [Run Postgres your way](docs/run-postgres.md) | Choose Docker, conda-forge, system PostgreSQL, or the optional Cloud helper |
 | [Run a corpus campaign](docs/campaigns.md) | Polite, resumable discovery from topics or DOI seeds |
 | [Methodology](docs/methodology.md) | Design rationale for every component |
 | [Architecture](docs/architecture.md) | Code layout, data model, extension points |
@@ -200,8 +206,9 @@ The complete, searchable site is published at
 
 ## Defaults and requirements
 
-Python 3.11+; PostgreSQL 16 to 18 with pgvector (provided by
-`docker-compose.yml`). Default models: `gemini-embedding-001` at 1536
+Python 3.11+; PostgreSQL 16 to 18 with pgvector from the selected backend.
+Docker is the template default and matches the PostgreSQL 16 CI service.
+Default models: `gemini-embedding-001` at 1536
 dimensions (within pgvector's HNSW index limit; see ADR 0002) and
 `gemini-2.5-flash` for generation, via AI Studio key or Vertex AI. A
 deterministic offline embedder covers tests and credential-free runs.

@@ -20,7 +20,16 @@ ENVIRONMENT_TITLES = frozenset({"Terminal", "Repository root"})
 
 # Files the documentation tells the reader to create, so they are absent from a
 # clean checkout. A header may name them; the guard cannot check them on disk.
-READER_CREATED_PATHS = frozenset({".env", "data/corpus.jsonl"})
+READER_CREATED_PATHS = frozenset(
+    {
+        ".env",
+        ".conductor/archive-cloud-workspace.sh",
+        ".conductor/run-cloud-tests.sh",
+        ".conductor/settings.local.toml",
+        ".conductor/setup-cloud-workspace.sh",
+        "data/corpus.jsonl",
+    }
+)
 
 # Languages this repository only uses when quoting a file from the project.
 FILE_QUOTING_LANGUAGES = frozenset({"dotenv", "yaml", "jsonl"})

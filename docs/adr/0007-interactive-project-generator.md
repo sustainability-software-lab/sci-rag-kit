@@ -13,7 +13,12 @@ configuration files in place. Nothing is templated and nothing is rendered.
 **Amended:** 2026-08-28. `sci-rag new` is the primary command. The original
 `sci-rag-new` entry point remains a compatibility alias, and Quick and Advanced
 prompt modes now present the same underlying configuration contract at two
-levels of detail. This amendment changes the interface, not the decision below.
+levels of detail. Quick selects the first supported environment manager on
+`PATH`, keeps production Terraform and the demo corpus, removes the optional
+Cloud development helper, and writes an owner-only `.env`. Advanced exposes
+those choices. Only `sci-rag new` performs the credential preflight before the
+template download; `sci-rag init` uses the same answers without that network
+check. This amendment changes the interface, not the decision below.
 
 ## Context
 

@@ -8,6 +8,13 @@ Notable changes to sci-rag-kit. The format follows
 
 ### Changed
 
+- Database setup documentation now treats `make setup` as selected-backend
+  dispatch, keeps Docker as the template and CI-parity default, and separates
+  Cloud SQL operator provisioning from per-workspace startup and shared
+  lifecycle controls. Generated-project documentation regions now follow the
+  Cloud helper and development Terraform files that survive pruning, and the
+  generated-project workflow covers pruned, helper-only, and fully retained
+  shapes for every environment manager without contacting Google Cloud.
 - Project setup now offers Quick and Advanced paths. Quick asks for six setup
   decisions, plus the credential value required by that mode, and defaults the
   remaining fields. Advanced asks every applicable question. Supported

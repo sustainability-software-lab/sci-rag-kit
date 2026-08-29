@@ -121,7 +121,7 @@ docs-serve:
 # The full, reproducible benchmark behind docs/benchmarks.md: real
 # embeddings + graph + every ablation config + judged answers +
 # calibration, then re-render the page from the report JSONs.
-# Needs Docker and Google credentials (see .env.example).
+# Needs the selected PostgreSQL backend and Google credentials (see .env.example).
 BENCH_SNAP := benchmark-$(shell date -u +%Y%m%d-%H%M%S)
 benchmark: db-up
 	uv run sci-rag db upgrade
