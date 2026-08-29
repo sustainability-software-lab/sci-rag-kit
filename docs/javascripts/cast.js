@@ -9,7 +9,7 @@
 // the attribute and rebuild when it changes; otherwise a reader who toggles to
 // light is left with a dark terminal and no way to fix it.
 (function () {
-  var player = null;
+  var players = new Map();
 
   function themeFor(scheme) {
     // tango and asciinema supply the ANSI colors; home.css overrides the
@@ -21,11 +21,12 @@
     if (typeof AsciinemaPlayer === "undefined") {
       return;
     }
-    if (player && typeof player.dispose === "function") {
-      player.dispose();
+    var previous = players.get(el);
+    if (previous && typeof previous.dispose === "function") {
+      previous.dispose();
     }
     el.innerHTML = "";
-    player = AsciinemaPlayer.create(el.dataset.cast, el, {
+    var player = AsciinemaPlayer.create(el.dataset.cast, el, {
       autoPlay: false,
       preload: true,
       idleTimeLimit: 1.5,
@@ -34,16 +35,17 @@
       theme: themeFor(document.body.getAttribute("data-md-color-scheme")),
       terminalFontFamily: "var(--md-code-font-family, monospace)",
     });
+    players.set(el, player);
   }
 
   document.addEventListener("DOMContentLoaded", function () {
-    var el = document.getElementById("srag-cast");
-    if (!el) {
+    var elements = document.querySelectorAll(".srag-cast");
+    if (!elements.length) {
       return;
     }
-    mount(el);
+    elements.forEach(mount);
     new MutationObserver(function () {
-      mount(el);
+      elements.forEach(mount);
     }).observe(document.body, {
       attributes: true,
       attributeFilter: ["data-md-color-scheme"],

@@ -5,7 +5,7 @@ description: Install Sci RAG Kit, run the demo corpus, and find the page that ma
 
 # Get started
 
-These pages take a clean clone to a running knowledge base, then point at the reference or guide you need next.
+Install the kit with `pipx install sci-rag-kit`, run `sci-rag new`, and use these pages to take the configured project to a running knowledge base. Each path ends at the reference or guide you need next.
 
 <div class="srag-rows" markdown>
 

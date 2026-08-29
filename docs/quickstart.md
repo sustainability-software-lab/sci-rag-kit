@@ -9,48 +9,57 @@ Set up a served, agent-accessible knowledge base over the bundled demo corpus. Y
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A served knowledge base over the demo corpus</div>
-  <div><strong>You'll need</strong>Python, uv, and a PostgreSQL backend</div>
+  <div><strong>You'll need</strong>Python, pipx, uv, and a PostgreSQL backend</div>
   <div><strong>Time</strong>About 10 minutes</div>
   <div><strong>Credentials</strong>Optional</div>
   <div><strong>Tested with</strong>v0.3</div>
 </div>
 
-Every command runs from the repository root.
+Run the wizard from the directory where you keep projects. After it creates the repository, run the remaining commands from that repository's root.
 
 ## Before you start
 
 | Requirement | Why it is needed | Check |
 |---|---|---|
 | Python 3.11 or 3.12 | Supported runtime | `python --version` |
+| [pipx](https://pipx.pypa.io/) | Isolated install for the project wizard | `pipx --version` |
 | [uv](https://docs.astral.sh/uv/) | Environment and dependency management | `uv --version` |
 | PostgreSQL backend | Docker, local PostgreSQL, or Cloud SQL with pgvector | See [step 3](#3-install-the-project-and-create-the-schema) |
 | Google credential, optional | Real semantic embeddings, graph extraction, and answers | AI Studio key or Vertex ADC |
 
 No Docker? [Run Postgres your way](run-postgres.md) covers conda-forge, a system server such as Postgres.app, and the opt-in Cloud SQL development backend. Step 3 says which one is yours.
 
-## 1. Get the repository
+## 1. Create the project
+
+### The wizard
 
 For your own project, run the wizard from whatever directory you keep projects in. It asks about your domain, credentials, ontology, corpus, and environment manager, then writes a configured, git-initialized project directory:
 
 ```console title="Terminal"
 $ pipx install sci-rag-kit
-$ sci-rag-new
+$ sci-rag new
 ```
 
-Every question has a default, so you can press Enter through the whole session and still get a project that runs. Steps 2 and 3 below are the questions it asked; read them to understand what it wrote, then skip to step 4.
+Choose Quick for six setup questions and defaults for the rest. The credential check runs before the template download, and a failed check gives you recovery choices without discarding your answers. Continue at step 3 after the wizard finishes; use step 2 when you need to change the credential mode it wrote.
 
-Just evaluating the kit? Clone it:
+### Other ways in
+
+If you want to inspect the kit before creating a project, clone it and run the demo:
 
 ```console title="Terminal"
 $ git clone https://github.com/sustainability-software-lab/sci-rag-kit.git
 $ cd sci-rag-kit
 ```
 
-Three other routes end up in the same place, if one of them fits better: GitHub's **Use this template** button, `sci-rag init` inside a checkout you already have, or the included dev container. Opened in GitHub Codespaces, the dev container installs the project and starts Postgres for you, so skip ahead to step 2.
+The other secondary routes start from the same repository tree:
+
+- GitHub's **Use this template** button creates a repository under your account.
+- `sci-rag init` configures a checkout you already have.
+- The included dev container installs the project and starts Postgres. In GitHub Codespaces, continue at step 2 after it opens.
 
 ## 2. Choose a credential mode
 
-Create the local environment file:
+The wizard already created `.env`; keep it. If you used a clone or the GitHub template, create the local environment file:
 
 ```console
 $ cp .env.example .env
