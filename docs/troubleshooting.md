@@ -34,7 +34,7 @@ $ uv run sci-rag doctor
 
 | Symptom | Most likely check | First action |
 |---|---|---|
-| Connection refused on port 5433 | Postgres is down or the URL differs | `docker compose up -d --wait` |
+| Connection refused on port 5433 | Selected backend is down or the URL differs | `SCI_RAG_DB_BACKEND=<docker|local|cloud> make db-up` |
 | Relation or table does not exist | Migrations have not run | `uv run sci-rag db upgrade` |
 | No Google credentials configured | The command needs a real model | Configure AI Studio or Vertex, or use offline retrieval |
 | Retrieval returns no items | Empty corpus, restrictive scope, or failed stages | `sci-rag stats`, then inspect stage traces |
@@ -48,7 +48,13 @@ $ uv run sci-rag doctor
 
 ## Postgres is unreachable
 
-Confirm the container and port before changing configuration:
+First identify the selected backend:
+
+```console
+$ echo "${SCI_RAG_DB_BACKEND:-docker}"
+```
+
+For Docker, confirm the container and port before changing configuration:
 
 ```console
 $ docker compose ps
@@ -56,7 +62,39 @@ $ docker compose up -d --wait
 $ uv run sci-rag db upgrade
 ```
 
-The included compose service maps PostgreSQL to host port `5433`. If you use another server, set the full async SQLAlchemy URL in `SCI_RAG_DATABASE_URL` and ensure the pgvector extension is available.
+The included compose service maps PostgreSQL to host port `5433`. For a local
+PostgreSQL 16 through 18, including Postgres.app with pgvector, put `initdb`,
+`pg_ctl`, and `psql` on PATH and run:
+
+```console
+$ SCI_RAG_DB_BACKEND=local make db-up
+$ python scripts/local_postgres.py status
+```
+
+Postgres.app 16 normally needs this PATH entry:
+
+```console
+$ export PATH="/Applications/Postgres.app/Contents/Versions/16/bin:$PATH"
+```
+
+For Cloud SQL, inspect the helper without exposing its cached password:
+
+```console
+$ python scripts/cloud_postgres.py config
+$ python scripts/cloud_postgres.py status
+$ tail -n 40 .cloudsql/proxy.log
+```
+
+If `status` says the instance is stopped, run `resume`, then `start`. If the
+password secret was deliberately rotated, stop the proxy, remove only
+`.cloudsql/password` and `.cloudsql/pgpass`, then start again so the helper
+fetches the new version. Never paste either file into an issue.
+
+`SCI_RAG_DB_BACKEND` chooses what `make db-up` runs. It does not silently
+rewrite application configuration. For Cloud SQL or any external service, set
+the full passwordless async SQLAlchemy URL printed by `config` as
+`SCI_RAG_DATABASE_URL`; set `SCI_RAG_TEST_DATABASE_URL` separately before
+running destructive database tests.
 
 **Expected output**
 
@@ -64,7 +102,9 @@ The included compose service maps PostgreSQL to host port `5433`. If you use ano
 Database schema is up to date.
 ```
 
-If the container is healthy but `doctor` cannot connect, compare `.env` with `docker-compose.yml`; a copied port `5432` is a common mismatch.
+If the selected backend is healthy but `doctor` cannot connect, compare `.env`
+with the helper's `config` output. A copied port `5432`, a different workspace
+database, or a stale Cloud SQL proxy port are common mismatches.
 
 ## A command needs model credentials
 

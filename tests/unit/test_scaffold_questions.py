@@ -34,6 +34,7 @@ EXPECTED_ORDER = [
     "pdf_parser",
     "reranker",
     "include_terraform",
+    "include_cloud_database",
     "include_demo_corpus",
     "open_source_license",
     "initialize_git",
@@ -102,3 +103,4 @@ def test_default_answers_walks_the_gates() -> None:
     # local_files is the default corpus source, so the OpenAlex follow-ups
     # are never reached.
     assert "openalex_topic" not in answers
+    assert answers["include_cloud_database"] == "No"

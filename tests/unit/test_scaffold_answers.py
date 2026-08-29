@@ -25,6 +25,14 @@ def test_defaults_validate() -> None:
     answers = _answers()
     assert answers.project_name == "My Scientific KB"
     assert answers.repo_name == "my-scientific-kb"
+    assert answers.include_cloud_database is False
+
+
+def test_cloud_database_answer_is_parsed_independently_of_the_manager() -> None:
+    for manager in ("uv", "pixi", "conda", "venv+pip"):
+        assert _answers(
+            environment_manager=manager, include_cloud_database="Yes"
+        ).include_cloud_database
 
 
 def test_offline_credentials_force_the_local_embedder() -> None:

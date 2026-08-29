@@ -20,6 +20,12 @@ Notable changes to sci-rag-kit. The format follows
 
 ### Added
 
+- An opt-in Cloud SQL development backend with one development database and
+  one disposable test database per workspace, a workspace-owned Auth Proxy,
+  explicit pause/resume cost controls, a separate dev-only Terraform module,
+  and scaffold support across all four environment managers. Docker remains
+  the default. The existing local helper now also documents system PostgreSQL
+  and Postgres.app as a zero-cost, low-latency path.
 - HTML ingestion. `.html` and `.htm` files parse through the standard library
   (no new dependency) into the same block model the Markdown route produces,
   so folder discovery, manifests, the chunker, and the manifest linter pick

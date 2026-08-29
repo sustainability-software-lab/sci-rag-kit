@@ -229,6 +229,10 @@ Select include_terraform
 1 - Yes
 2 - No
 Choose from [1/2] (1): 2
+Select include_cloud_database
+1 - Yes
+2 - No
+Choose from [1/2] (2):
 Select include_demo_corpus
 1 - Yes
 2 - No
@@ -260,7 +264,7 @@ Fetching sci-rag-kit for membrane-materials-kb...
 
 Writing membrane-materials-kb/
 
-  removed                docs/planning/, infra/terraform/, data/demo/, examples/
+  removed                docs/planning/, infra/terraform/, scripts/cloud_postgres.py, infra/terraform/dev-database/, data/demo/, examples/
   domain/domain.yaml     8 entity types, 6 relation types, 4 query classes
   domain/eval_seed_questions.jsonl   guided blank
   .env                   google_ai_studio, gemini-2.5-flash, gemini-embedding-001

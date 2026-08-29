@@ -8,6 +8,7 @@ live round-trip through the embedding and generation models.
 
 from __future__ import annotations
 
+import os
 import re
 import time
 from dataclasses import dataclass
@@ -52,6 +53,22 @@ class Check:
 _MIN_ENTITY_TYPES = 3
 
 _SCREAMING_SNAKE = re.compile(r"^[A-Z][A-Z0-9_]*$")
+
+
+def _database_start_hint() -> str:
+    """Name the backend the operator selected instead of always prescribing Docker."""
+    backend = os.environ.get("SCI_RAG_DB_BACKEND", "docker").strip().lower()
+    command = {
+        "docker": "docker compose up -d --wait",
+        "local": "uv run python scripts/local_postgres.py start",
+        "cloud": "uv run python scripts/cloud_postgres.py start",
+    }.get(backend)
+    if command is None:
+        return (
+            f"SCI_RAG_DB_BACKEND={backend!r} is invalid; choose docker, local, or cloud, "
+            "then run make db-up."
+        )
+    return f"Run `{command}` for the configured {backend} backend"
 
 
 def _ontology_coherence_check(config: DomainConfig) -> Check:
@@ -523,7 +540,7 @@ async def _run_checks(*, probe: bool) -> list[Check]:
                 "database",
                 "fail",
                 f"cannot connect ({type(exc).__name__})",
-                "docker compose up -d --wait, or fix SCI_RAG_DATABASE_URL in .env.",
+                f"{_database_start_hint()}, or fix SCI_RAG_DATABASE_URL in .env.",
             )
         )
         await dispose_engine()
@@ -544,8 +561,8 @@ async def _run_checks(*, probe: bool) -> list[Check]:
                     "fail",
                     "extension not installed in this database"
                     + ("" if available else " (and not available on this server)"),
-                    "Run sci-rag db upgrade (it creates the extension), or use the "
-                    "bundled docker-compose Postgres, which ships pgvector.",
+                    "Run sci-rag db upgrade (it creates the extension), or run "
+                    f"the configured backend first: {_database_start_hint()}.",
                 )
             )
             await dispose_engine()

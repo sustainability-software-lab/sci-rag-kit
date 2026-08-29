@@ -126,6 +126,21 @@ def test_ci_checks_the_lock_before_sync_and_runs_every_pre_commit_hook() -> None
     assert "pre-commit run --all-files --show-diff-on-failure" in runs
 
 
+def test_ci_validates_the_dev_database_terraform_module() -> None:
+    workflow = _load_workflow(CI)
+    runs = " ".join(step.get("run", "") for step in workflow["jobs"]["terraform"]["steps"])
+
+    assert "terraform -chdir=dev-database init -backend=false -input=false" in runs
+    assert "terraform -chdir=dev-database validate" in runs
+
+
+def test_generated_projects_decline_cloud_database_unless_requested() -> None:
+    workflow = _load_workflow(WORKFLOW)
+    runs = " ".join(step.get("run", "") for step in workflow["jobs"]["generate"]["steps"])
+
+    assert 'include_cloud_database: "No"' in runs
+
+
 def test_codeql_has_security_permissions_and_all_three_triggers() -> None:
     workflow = _load_workflow(CODEQL)
 

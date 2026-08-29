@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 """Run the project's PostgreSQL without a container runtime.
 
-conda-forge ships the PostgreSQL server and the pgvector extension as
-ordinary packages, so a pixi or conda project already has `initdb`,
-`pg_ctl`, and `vector.so` inside its own environment. This script drives
-them against a data directory in the project, which is the Docker-free
-equivalent of `docker compose up -d --wait`.
+The helper only needs `initdb`, `pg_ctl`, `psql`, and the pgvector extension
+on PATH. A pixi or conda project gets them from conda-forge. A system
+PostgreSQL installation works too, including Postgres.app on macOS when its
+versioned `bin` directory is added to PATH. This script drives those tools
+against a data directory in the project, which is the Docker-free equivalent
+of `docker compose up -d --wait`.
 
 It deliberately produces a database that the unmodified `.env.example`
 already points at: role `sci_rag`, database `sci_rag`, port 5433 on
@@ -50,14 +51,19 @@ DEFAULT_USER = "sci_rag"
 _MISSING_SERVER = """\
 PostgreSQL is not installed in this environment: `initdb` is not on PATH.
 
-The server and the pgvector extension come from conda-forge, so this path is
-available to pixi and conda projects:
+The server and the pgvector extension can come from conda-forge, so this path
+is available to pixi and conda projects:
 
     pixi add "postgresql>=16,<19" pgvector
     conda install -c conda-forge "postgresql>=16,<19" pgvector
 
-PyPI ships neither, so a uv or venv+pip project cannot take this path. Use
-the bundled container database instead:
+A system PostgreSQL 16 through 18 with pgvector works as well. On macOS,
+Postgres.app includes both; add its versioned bin directory to PATH, for example:
+
+    export PATH="/Applications/Postgres.app/Contents/Versions/16/bin:$PATH"
+
+PyPI ships neither. If neither conda-forge nor a system PostgreSQL is
+available, use the bundled container database instead:
 
     docker compose up -d --wait
 """

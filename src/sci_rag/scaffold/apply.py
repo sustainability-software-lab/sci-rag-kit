@@ -394,6 +394,11 @@ def apply_makefile(answers: ProjectAnswers, root: Path) -> list[str]:
     text = re.sub(rf"(?m)^\t{re.escape(answers.runner.sync_command)}$", f"\t{sync}", text, count=1)
 
     notes = [f"commands prefixed with `{answers.runner.run_prefix}`"]
+    if answers.include_cloud_database:
+        text = _use_cloud_postgres(text, answers)
+        notes.append("Cloud SQL development database included")
+    else:
+        text = _remove_cloud_postgres_dispatch(text)
     if answers.runner.offers_local_postgres:
         text = _use_local_postgres(text, answers)
         notes.append("database runs from conda-forge, no Docker")
@@ -413,6 +418,24 @@ def _use_local_postgres(text: str, answers: ProjectAnswers) -> str:
     return text.replace("docker compose up -d --wait", f"{run} start").replace(
         "docker compose down", f"{run} stop"
     )
+
+
+def _use_cloud_postgres(text: str, answers: ProjectAnswers) -> str:
+    """Render the optional cloud helper through the selected runner profile."""
+    run = answers.runner.run("python scripts/cloud_postgres.py", project_slug=answers.repo_name)
+    return text.replace("uv run python scripts/cloud_postgres.py", run)
+
+
+def _remove_cloud_postgres_dispatch(text: str) -> str:
+    """Remove the cloud branch when its helper is pruned from a project."""
+    for action in ("start", "stop"):
+        block = (
+            "ifeq ($(SCI_RAG_DB_BACKEND),cloud)\n"
+            f"\tuv run python scripts/cloud_postgres.py {action}\n"
+            "else ifeq ($(SCI_RAG_DB_BACKEND),local)"
+        )
+        text = text.replace(block, "ifeq ($(SCI_RAG_DB_BACKEND),local)")
+    return text
 
 
 # --- license ----------------------------------------------------------------
@@ -488,6 +511,17 @@ def apply_pruning(answers: ProjectAnswers, root: Path) -> list[str]:
         if workflow.exists():
             _write(workflow, _remove_yaml_job(workflow.read_text(encoding="utf-8"), "terraform"))
         removed.append("infra/terraform/")
+
+    if not answers.include_cloud_database:
+        (root / "scripts" / "cloud_postgres.py").unlink(missing_ok=True)
+        shutil.rmtree(root / "infra" / "terraform" / "dev-database", ignore_errors=True)
+        makefile = root / "Makefile"
+        if makefile.exists():
+            _write(
+                makefile,
+                _remove_cloud_postgres_dispatch(makefile.read_text(encoding="utf-8")),
+            )
+        removed.extend(["scripts/cloud_postgres.py", "infra/terraform/dev-database/"])
 
     if not answers.include_demo_corpus:
         shutil.rmtree(root / "data" / "demo", ignore_errors=True)

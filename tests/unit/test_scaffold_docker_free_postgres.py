@@ -36,9 +36,10 @@ _COPY_FILES = (
 _COPY_TREES = ("domain", "docs", "scripts", ".github", ".devcontainer", "src")
 
 _LOCAL_DB = "scripts/local_postgres.py"
+_CLOUD_DB = "scripts/cloud_postgres.py"
 
 
-def _generate(tmp_path: Path, manager: str) -> Path:
+def _generate(tmp_path: Path, manager: str, *, include_cloud: str = "No") -> Path:
     root = tmp_path / "template"
     root.mkdir(parents=True)
     for name in _COPY_FILES:
@@ -47,6 +48,10 @@ def _generate(tmp_path: Path, manager: str) -> Path:
         shutil.copytree(REPO_ROOT / tree, root / tree, ignore=shutil.ignore_patterns("__pycache__"))
     (root / "infra" / "terraform").mkdir(parents=True)
     (root / "infra" / "terraform" / "main.tf").write_text("# terraform\n", encoding="utf-8")
+    shutil.copytree(
+        REPO_ROOT / "infra" / "terraform" / "dev-database",
+        root / "infra" / "terraform" / "dev-database",
+    )
     (root / "data" / "demo").mkdir(parents=True)
     (root / "data" / "demo" / "manifest.jsonl").write_text("{}\n", encoding="utf-8")
     (root / "examples").mkdir()
@@ -58,6 +63,7 @@ def _generate(tmp_path: Path, manager: str) -> Path:
             "project_name": "Membrane Materials KB",
             "repo_name": SLUG,
             "environment_manager": manager,
+            "include_cloud_database": include_cloud,
             "initialize_git": "No",
         }
     )
@@ -111,8 +117,10 @@ def test_a_conda_project_gets_the_server_in_its_environment_file(tmp_path: Path)
 
 
 @pytest.mark.parametrize("manager", ["uv", "venv+pip"])
-def test_the_pypi_managers_get_no_server_anywhere(tmp_path: Path, manager: str) -> None:
-    """PyPI has no PostgreSQL, so promising one would be a broken instruction."""
+def test_the_pypi_managers_bundle_no_server_but_allow_a_system_one(
+    tmp_path: Path, manager: str
+) -> None:
+    """PyPI has no server package, but Postgres.app can still drive the helper."""
     root = _generate(tmp_path, manager)
 
     for name in ("pyproject.toml", "Makefile", "requirements.txt"):
@@ -121,7 +129,10 @@ def test_the_pypi_managers_get_no_server_anywhere(tmp_path: Path, manager: str) 
             continue
         text = path.read_text(encoding="utf-8")
         assert "postgresql>=16" not in text
-        assert _LOCAL_DB not in text
+    makefile = (root / "Makefile").read_text(encoding="utf-8")
+    run = get_runner(manager).run("python scripts/local_postgres.py", project_slug=SLUG)
+    assert f"{run} start" in makefile
+    assert "SCI_RAG_DB_BACKEND ?= docker" in makefile
 
 
 # --- the generated task commands --------------------------------------------
@@ -156,9 +167,47 @@ def test_the_local_database_script_survives_generation(tmp_path: Path) -> None:
         assert (root / "scripts" / "local_postgres.py").exists()
 
 
+@pytest.mark.parametrize("manager", runner_keys())
+def test_cloud_database_assets_are_pruned_by_default(tmp_path: Path, manager: str) -> None:
+    root = _generate(tmp_path / manager, manager)
+
+    assert not (root / _CLOUD_DB).exists()
+    assert not (root / "infra" / "terraform" / "dev-database").exists()
+    assert _CLOUD_DB not in (root / "Makefile").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("manager", runner_keys())
+def test_every_manager_can_keep_the_cloud_database_assets(tmp_path: Path, manager: str) -> None:
+    root = _generate(tmp_path / manager, manager, include_cloud="Yes")
+
+    assert (root / _CLOUD_DB).exists()
+    assert (root / "infra" / "terraform" / "dev-database").exists()
+    makefile = (root / "Makefile").read_text(encoding="utf-8")
+    command = get_runner(manager).run("python scripts/cloud_postgres.py", project_slug=SLUG)
+    assert f"{command} start" in makefile
+    assert f"{command} stop" in makefile
+
+
+def test_template_preserves_the_literal_compose_rewrite_seam() -> None:
+    makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+
+    assert "SCI_RAG_DB_BACKEND ?= docker" in makefile
+    assert "docker compose up -d --wait" in makefile
+    assert "docker compose down" in makefile
+
+
+def test_cloud_helper_contains_no_environment_manager_commands() -> None:
+    script = (REPO_ROOT / _CLOUD_DB).read_text(encoding="utf-8")
+
+    for profile in PROFILES.values():
+        for token in profile.command_tokens():
+            assert token not in script
+
+
 def test_the_data_directory_is_ignored() -> None:
     """A cluster under the project root is a corpus waiting to be committed."""
     ignored = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
 
     assert ".pgdata/" in ignored
     assert ".pgdata.log" in ignored
+    assert ".cloudsql/" in ignored
