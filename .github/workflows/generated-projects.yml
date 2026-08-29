@@ -119,6 +119,7 @@ jobs:
           ontology: keep_demo_example
           corpus_source: demo_only
           include_terraform: "No"
+          include_cloud_database: "No"
           include_demo_corpus: "Yes"
           open_source_license: BSD-3-Clause
           initialize_git: "No"

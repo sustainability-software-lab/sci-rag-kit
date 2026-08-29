@@ -3,17 +3,38 @@
 
 .PHONY: setup db-up db-down db-upgrade demo demo-cloud test lint typecheck check serve mcp eval eval-ablation docs docs-geometry docs-serve docs-reference cast clean-demo
 
+SCI_RAG_DB_BACKEND ?= docker
+
 ## setup: install dependencies, start Postgres, create the schema
 setup:
 	uv sync
-	docker compose up -d --wait
+	$(MAKE) db-up
 	uv run sci-rag db upgrade
 
 db-up:
+
+ifeq ($(SCI_RAG_DB_BACKEND),cloud)
+	uv run python scripts/cloud_postgres.py start
+else ifeq ($(SCI_RAG_DB_BACKEND),local)
+	uv run python scripts/local_postgres.py start
+else ifeq ($(SCI_RAG_DB_BACKEND),docker)
 	docker compose up -d --wait
+else
+	@echo "Unknown SCI_RAG_DB_BACKEND=$(SCI_RAG_DB_BACKEND); choose docker, local, or cloud." >&2
+	@exit 2
+endif
 
 db-down:
+ifeq ($(SCI_RAG_DB_BACKEND),cloud)
+	uv run python scripts/cloud_postgres.py stop
+else ifeq ($(SCI_RAG_DB_BACKEND),local)
+	uv run python scripts/local_postgres.py stop
+else ifeq ($(SCI_RAG_DB_BACKEND),docker)
 	docker compose down
+else
+	@echo "Unknown SCI_RAG_DB_BACKEND=$(SCI_RAG_DB_BACKEND); choose docker, local, or cloud." >&2
+	@exit 2
+endif
 
 db-upgrade:
 	uv run sci-rag db upgrade

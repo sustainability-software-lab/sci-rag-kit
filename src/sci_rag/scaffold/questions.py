@@ -139,6 +139,13 @@ QUESTIONS: tuple[Question, ...] = (
     Question("pdf_parser", "pdf_parser", "pypdf", choices=("pypdf", "docling")),
     Question("reranker", "reranker", "none", choices=("none", "llm", "local_cross_encoder")),
     Question("include_terraform", "include_terraform", "Yes", choices=("Yes", "No")),
+    Question(
+        "include_cloud_database",
+        "include_cloud_database",
+        "No",
+        choices=("Yes", "No"),
+        help="Include the opt-in Cloud SQL development helper and Terraform module.",
+    ),
     Question("include_demo_corpus", "include_demo_corpus", "Yes", choices=("Yes", "No")),
     Question(
         "open_source_license",

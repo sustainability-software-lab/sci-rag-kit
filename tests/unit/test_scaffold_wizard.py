@@ -111,6 +111,7 @@ _ORDER_WITH_OPENALEX = [
     "pdf_parser",
     "reranker",
     "include_terraform",
+    "include_cloud_database",
     "include_demo_corpus",
     "open_source_license",
     "initialize_git",

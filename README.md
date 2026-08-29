@@ -65,7 +65,9 @@ indexes, and the graph.
 
 ## Quickstart
 
-Requirements: [uv](https://docs.astral.sh/uv/), Docker (for Postgres), and
+Requirements: [uv](https://docs.astral.sh/uv/), a supported PostgreSQL backend
+(Docker by default, local PostgreSQL, or the opt-in Cloud SQL development
+backend), and
 optionally a [Google AI Studio API key](https://aistudio.google.com/apikey)
 or Vertex AI credentials for real embeddings and generation.
 
@@ -80,7 +82,7 @@ cp .env.example .env
 #   SCI_RAG_EMBEDDING_PROVIDER=local-hash   offline mode: no credentials, lexical-only retrieval, no generation
 # To generate with Claude or Grok instead of Gemini, see docs/extend.md.
 
-make setup     # uv sync, start Postgres (port 5433), create the schema
+make setup     # uv sync, start the default Docker Postgres, create the schema
 make demo      # ingest the demo corpus, run a traced retrieval, score it
 ```
 
@@ -135,8 +137,8 @@ domain/            Ontology, prompts, seed questions (everything specific to you
 src/sci_rag/       ingest, embed, graph, retrieve, answer, evals, server, cli
 data/demo/         Demo corpus (synthetic, CC0; optional)
 migrations/        Alembic schema (pgvector + HNSW + FTS indexes)
-tests/             Offline test suite (runs against the docker-compose Postgres)
-infra/terraform/   Optional GCP deployment (Cloud SQL + Cloud Run)
+tests/             Offline-first suite; database tests use a disposable selected backend
+infra/terraform/   Optional production deployment plus a separate dev database module
 docs/              Methodology, tutorials, API reference, ADRs
 ```
 

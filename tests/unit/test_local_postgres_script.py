@@ -92,6 +92,8 @@ def test_start_without_postgres_installed_says_who_provides_it(tmp_path: Path) -
     message = result.stdout + result.stderr
     assert "initdb" in message
     assert "pixi" in message and "conda" in message
+    assert "system PostgreSQL" in message
+    assert "Postgres.app" in message
     assert "docker compose up" in message
     assert not (tmp_path / ".pgdata").exists(), "a failed start must leave no half-made state"
 

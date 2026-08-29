@@ -1,11 +1,11 @@
 ---
 title: Run Postgres your way
-description: Get a PostgreSQL server with pgvector for Sci RAG Kit, with or without Docker, and point the kit at one you already run.
+description: Get a PostgreSQL server with pgvector for Sci RAG Kit through Docker, a local installation, or a shared Cloud SQL development instance.
 ---
 
 # Run Postgres your way
 
-Sci RAG Kit needs exactly one thing from your machine that it cannot install for you: a PostgreSQL server with the pgvector extension. This page covers every supported way to get one, including the two that need no Docker at all.
+Sci RAG Kit needs a PostgreSQL server with the pgvector extension. This page covers every supported way to get one, including three paths that need no Docker.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A running Postgres 16 to 18 with pgvector</div>
@@ -20,7 +20,7 @@ Sci RAG Kit needs exactly one thing from your machine that it cannot install for
 |---|---|---|
 | A Sci RAG Kit checkout or generated project | `make setup` and `.env.example` live in it | `ls Makefile` |
 | Your environment manager | It decides which path below is yours | You chose it when the project was created |
-| One of: Docker, conda-forge, or an existing server | The three supported sources | see the table |
+| One of: Docker, conda-forge, an existing server, or Cloud SQL | The four supported sources | See the table |
 
 ## Pick your path
 
@@ -28,8 +28,8 @@ Your environment manager decides this, so there is only one question to answer.
 
 | If your project uses | Do this | Why |
 |---|---|---|
-| **uv** or **venv + pip** | [Docker](#run-postgres-in-docker), or [a server you already run](#point-at-a-server-you-already-run) | PyPI ships no PostgreSQL server, so neither manager can install one |
-| **pixi** or **conda** | [Run it from conda-forge](#run-postgres-from-conda-forge) | The channel ships `postgresql` and `pgvector` together, so it is already in your manifest |
+| **uv** or **venv + pip** | [Docker](#run-postgres-in-docker), [a server you already run](#point-at-a-server-you-already-run), or [Cloud SQL](#share-a-cloud-sql-development-instance) | PyPI ships no PostgreSQL server, so these managers need an external source |
+| **pixi** or **conda** | [Run it from conda-forge](#run-postgres-from-conda-forge), or [use Cloud SQL](#share-a-cloud-sql-development-instance) | The channel already supplies the fastest local path, while Cloud SQL provides a shared managed instance |
 
 If you have Docker and no strong opinion, use Docker. It is the path CI proves on every change, and the one the [quickstart](quickstart.md) assumes.
 
@@ -81,6 +81,56 @@ This is a development database: loopback only, trust authentication, run by `scr
 **Checkpoint: the server is yours, not Docker's**
 
 `ls .pgdata` should show a data directory. `uv run sci-rag doctor` should report the same healthy database as the Docker path, because from the kit's side nothing has changed.
+</div>
+
+## Share a Cloud SQL development instance
+
+The opt-in Cloud SQL backend works with every environment manager. It gives each workspace a separate development database, destructive-test database, proxy process, and loopback port on one shared instance. Select it when the setup wizard asks whether to include a cloud development database, or use the module in this checkout.
+
+The backend needs the Google Cloud CLI, Terraform, the Cloud SQL Auth Proxy, and `psql`. Authenticate `gcloud`, then provision the development-only instance:
+
+```console title="Terminal"
+$ cd infra/terraform/dev-database
+$ terraform init
+$ terraform apply -var "developer_principal=user:$(gcloud config get account)"
+$ terraform output -raw sci_rag_cloud_pg_config
+$ cd ../../..
+```
+
+Export the four non-secret `SCI_RAG_CLOUD_PG_*` lines printed by Terraform, or add them to your shell profile. Start the workspace proxy and databases, then ask the helper for the connection URLs:
+
+```console title="Terminal"
+$ SCI_RAG_DB_BACKEND=cloud make db-up
+$ python scripts/cloud_postgres.py config
+```
+
+Copy the printed `SCI_RAG_DATABASE_URL=...` line into `.env`. It contains no password. The URL points asyncpg at the mode-0600 pgpass file under `.cloudsql/`. Apply the schema after the URL is set:
+
+```console title="Terminal"
+$ SCI_RAG_DB_BACKEND=cloud make setup
+```
+
+The helper resumes a paused instance, creates both workspace databases, starts the proxy, and enables pgvector. `make db-down` stops only this workspace's proxy. Pause and resume affect every workspace on the shared instance, so use them only when the other users are finished:
+
+```console title="Terminal"
+$ python scripts/cloud_postgres.py pause
+$ python scripts/cloud_postgres.py resume
+```
+
+For integration and server tests, export only the workspace-scoped test URL. Those suites destroy data in that database:
+
+```console title="Terminal"
+$ export SCI_RAG_TEST_DATABASE_URL="$(python scripts/cloud_postgres.py config | \
+    sed -n 's/^SCI_RAG_TEST_DATABASE_URL=//p')"
+$ uv run pytest tests/integration tests/server -q
+```
+
+The development instance has a public IPv4 endpoint with no authorized networks. Connections go through the IAM-authorized, TLS-encrypted Cloud SQL Auth Proxy. This instance has development cost and durability settings and must not serve a deployment. [ADR 0009](adr/0009-cloud-dev-database.md) records the security, permissions, latency, and cost decisions.
+
+<div class="srag-checkpoint" markdown>
+**Checkpoint: this workspace owns its local proxy state**
+
+`python scripts/cloud_postgres.py status` should name this workspace's port and database. `uv run sci-rag doctor` should report a healthy database and schema.
 </div>
 
 ## Point at a server you already run

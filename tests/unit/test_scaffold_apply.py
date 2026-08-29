@@ -286,6 +286,35 @@ def test_keeping_terraform_leaves_the_ci_job_alone(template: Path) -> None:
     )
 
 
+def test_declining_cloud_database_removes_only_its_assets(template: Path) -> None:
+    cloud_script = template / "scripts" / "cloud_postgres.py"
+    cloud_script.parent.mkdir(parents=True)
+    cloud_script.write_text("# cloud helper\n", encoding="utf-8")
+    cloud_module = template / "infra" / "terraform" / "dev-database"
+    cloud_module.mkdir()
+    (cloud_module / "main.tf").write_text("# cloud module\n", encoding="utf-8")
+
+    apply.apply_pruning(_answers(include_cloud_database="No"), template)
+
+    assert not cloud_script.exists()
+    assert not cloud_module.exists()
+    assert (template / "infra" / "terraform" / "main.tf").exists()
+
+
+def test_keeping_cloud_database_leaves_its_assets(template: Path) -> None:
+    cloud_script = template / "scripts" / "cloud_postgres.py"
+    cloud_script.parent.mkdir(parents=True)
+    cloud_script.write_text("# cloud helper\n", encoding="utf-8")
+    cloud_module = template / "infra" / "terraform" / "dev-database"
+    cloud_module.mkdir()
+    (cloud_module / "main.tf").write_text("# cloud module\n", encoding="utf-8")
+
+    apply.apply_pruning(_answers(include_cloud_database="Yes"), template)
+
+    assert cloud_script.exists()
+    assert cloud_module.exists()
+
+
 def test_declining_the_demo_corpus_removes_the_demo_and_the_examples(template: Path) -> None:
     """examples/library_quickstart.py reads data/demo, so they go together."""
     apply.apply_pruning(_answers(include_demo_corpus="No"), template)

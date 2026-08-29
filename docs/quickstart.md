@@ -9,7 +9,7 @@ Set up a served, agent-accessible knowledge base over the bundled demo corpus. Y
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A served knowledge base over the demo corpus</div>
-  <div><strong>You'll need</strong>Python, uv, and Docker</div>
+  <div><strong>You'll need</strong>Python, uv, and a PostgreSQL backend</div>
   <div><strong>Time</strong>About 10 minutes</div>
   <div><strong>Credentials</strong>Optional</div>
   <div><strong>Tested with</strong>v0.3</div>
@@ -23,10 +23,10 @@ Every command runs from the repository root.
 |---|---|---|
 | Python 3.11 or 3.12 | Supported runtime | `python --version` |
 | [uv](https://docs.astral.sh/uv/) | Environment and dependency management | `uv --version` |
-| Docker | Local Postgres with pgvector | `docker version` |
+| PostgreSQL backend | Docker, local PostgreSQL, or Cloud SQL with pgvector | See [step 3](#3-install-the-project-and-create-the-schema) |
 | Google credential, optional | Real semantic embeddings, graph extraction, and answers | AI Studio key or Vertex ADC |
 
-No Docker? [Run Postgres your way](run-postgres.md) has the two paths that do not need it. Step 3 says which one is yours.
+No Docker? [Run Postgres your way](run-postgres.md) covers conda-forge, a system server such as Postgres.app, and the opt-in Cloud SQL development backend. Step 3 says which one is yours.
 
 ## 1. Get the repository
 
@@ -102,7 +102,7 @@ That installs dependencies, starts the compose Postgres on host port `5433`, and
 Database schema is up to date.
 ```
 
-No Docker? Supported servers are **PostgreSQL 16 through 18**, and there are two other ways to get one. pixi and conda projects run theirs from conda-forge with the same `make setup`; uv and venv projects point at a server you already have. [Run Postgres your way](run-postgres.md) has both.
+No Docker? Supported servers are **PostgreSQL 16 through 18**. pixi and conda projects can run one from conda-forge, every environment manager can use a supported system server, and generated projects can opt into a shared Cloud SQL development instance. [Run Postgres your way](run-postgres.md) has all three paths.
 
 <div class="srag-checkpoint" markdown>
 **Checkpoint: the foundation is healthy**

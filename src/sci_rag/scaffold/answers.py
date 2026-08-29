@@ -65,6 +65,7 @@ class ProjectAnswers(BaseModel):
     pdf_parser: Literal["pypdf", "docling"] = "pypdf"
     reranker: Literal["none", "llm", "local_cross_encoder"] = "none"
     include_terraform: bool = True
+    include_cloud_database: bool = False
     include_demo_corpus: bool = True
     open_source_license: LicenseChoice = "BSD-3-Clause"
     initialize_git: bool = True
@@ -161,6 +162,7 @@ class ProjectAnswers(BaseModel):
 
         for flag in (
             "include_terraform",
+            "include_cloud_database",
             "include_demo_corpus",
             "initialize_git",
             "draft_domain_files",

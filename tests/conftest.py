@@ -7,7 +7,7 @@ suite runs offline.
 
 Integration tests need Postgres. Point SCI_RAG_TEST_DATABASE_URL at any
 Postgres with the pgvector extension available (the repo's
-docker-compose.yml works: ``docker compose up -d``); if it is unreachable,
+Docker, local, and cloud development backends all work); if it is unreachable,
 integration tests skip with a clear message instead of failing.
 """
 
@@ -52,7 +52,10 @@ async def database():  # type: ignore[no-untyped-def]
         await dispose_engine()
         pytest.skip(
             f"Postgres unavailable at {get_settings().database_url!r} ({type(exc).__name__}). "
-            "Start it with `docker compose up -d` or set SCI_RAG_TEST_DATABASE_URL."
+            "Start it with `SCI_RAG_DB_BACKEND=docker make db-up`, "
+            "`SCI_RAG_DB_BACKEND=local make db-up`, or "
+            "`SCI_RAG_DB_BACKEND=cloud make db-up`; then set "
+            "SCI_RAG_TEST_DATABASE_URL to that backend's disposable test database."
         )
     async with engine.begin() as conn:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))

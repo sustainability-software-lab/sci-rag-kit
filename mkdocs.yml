@@ -108,6 +108,7 @@ nav:
           - "ADR 0006: Hand-written provider adapters": adr/0006-multi-provider-llms.md
           - "ADR 0007: A generator that configures": adr/0007-interactive-project-generator.md
           - "ADR 0008: PostgreSQL 16 through 18": adr/0008-supported-postgresql-versions.md
+          - "ADR 0009: A shared Cloud SQL instance with workspace databases": adr/0009-cloud-dev-database.md
       - Contributing: contributing.md
       - Documentation style: STYLE.md
       - Changelog: changelog.md

@@ -149,6 +149,22 @@ Because a generator that rendered placeholders would drag back everything the te
 
 Full argument and reversal conditions: [ADR 0007](adr/0007-interactive-project-generator.md).
 
+### When should I use local PostgreSQL, Cloud SQL, or Docker?
+
+Use local PostgreSQL for the fastest Docker-free feedback loop, Cloud SQL when
+separate workspaces should share a managed instance without sharing database
+names or ports, and Docker when you want the unchanged default with the fewest
+host prerequisites. Postgres.app and the conda-forge server both drive the
+same project-local helper. The cloud backend assigns each workspace its own
+development database, destructive-test database, proxy process, and loopback
+port, but its WAN round trips make the integration suite materially slower.
+
+The cloud instance is development-only. Its public endpoint has no authorized
+networks, and developers reach it through the IAM-authorized, TLS-encrypted
+Cloud SQL Auth Proxy. [ADR 0009](adr/0009-cloud-dev-database.md) records the
+security revision, scoped IAM permissions, measured latency, and cost-control
+tradeoffs.
+
 ### Why support three PostgreSQL majors?
 
 Because nothing in the schema needs a particular major, and pinning one would have cost an audience the project had just invited.
