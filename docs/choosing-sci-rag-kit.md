@@ -60,13 +60,14 @@ want those decisions made well and defensibly, once.
 
 ## What sci-rag-kit actually is
 
-A GitHub template repository. `pipx install sci-rag-kit` then `sci-rag-new`
-runs a wizard that asks about your domain, credentials, ontology, corpus,
-and environment manager, then writes a configured project. Inside a
-checkout you already have, `sci-rag init` runs the same wizard, and
-`scripts/init_domain.py` is the narrow path when all you want is to reset
-the name and the seed questions. What you get is a running, served,
-evaluated knowledge base.
+A GitHub template repository. `pipx install sci-rag-kit` then `sci-rag new`
+opens Quick or Advanced setup and writes a configured project. Quick asks for
+six setup decisions plus the credential value required by that mode; Advanced
+exposes every applicable choice. Inside a checkout you already have,
+`sci-rag init` configures the same files, and `scripts/init_domain.py` is the
+narrow path when all you want is to reset the name and the seed questions.
+What you get is a running, served, evaluated knowledge base. The
+[quickstart](quickstart.md) is the canonical walkthrough.
 
 That is the short version. This page is about how the kit compares to
 other systems; for what it is, who it is for, and why each decision went

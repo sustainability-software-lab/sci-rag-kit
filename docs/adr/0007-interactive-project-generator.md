@@ -5,9 +5,15 @@ description: Why the project wizard rewrites real configuration files and render
 
 # ADR 0007: A generator that configures
 
-`sci-rag-new` fetches this repository at a pinned tag and rewrites its configuration files in place. Nothing is templated and nothing is rendered.
+`sci-rag new` fetches this repository at a pinned tag and rewrites its
+configuration files in place. Nothing is templated and nothing is rendered.
 
 **Status:** accepted
+
+**Amended:** 2026-08-28. `sci-rag new` is the primary command. The original
+`sci-rag-new` entry point remains a compatibility alias, and Quick and Advanced
+prompt modes now present the same underlying configuration contract at two
+levels of detail. This amendment changes the interface, not the decision below.
 
 ## Context
 
@@ -38,9 +44,19 @@ in exactly what ADR 0004 refused.
 Ship an interactive generator that is a post-fetch applier and never a
 template renderer.
 
-`sci-rag-new` downloads this repository at a pinned tag, then rewrites
+`sci-rag new` downloads this repository at a pinned tag, then rewrites
 its configuration files in place. `sci-rag init` does the same inside a
-checkout you already have. Both drive the same `run_wizard()`.
+checkout you already have. The compatibility entry point `sci-rag-new`
+routes to the new-project command. All three drive the same answer model and
+appliers.
+
+Interactive setup starts with Quick or Advanced. Quick asks for six setup
+decisions, plus the credential value required by the selected mode, and uses
+defaults for the other fields. Advanced asks every applicable question.
+`sci-rag new` also checks a selected Google credential before the template
+download; `sci-rag init` captures credentials without that new-project
+preflight. These presentation and validation layers still converge on the same
+`ProjectAnswers` contract before files change.
 
 Four properties keep this inside ADR 0004:
 
@@ -73,7 +89,7 @@ breaks a generated project on its first run.
 
 ## Consequences
 
-* Onboarding is `pipx install sci-rag-kit`, then `sci-rag-new`. No
+* Onboarding is `pipx install sci-rag-kit`, then `sci-rag new`. No
   repository to clone first, no file to hand-edit before the first run.
 * The generator ships in the same distribution as the application, so
   installing it also installs `sci-rag`. That install is heavy for what
@@ -82,7 +98,8 @@ breaks a generated project on its first run.
   knowingly. The same install is the tool the user wants next, pipx
   isolates it, and the scaffold package lazy-imports the runtime, so
   startup stays fast even though installation is not.
-* `sci-rag-new` fetches the tag matching its own installed version. A
+* The new-project command and its compatibility alias fetch the tag matching
+  their installed version. A
   given generator release always produces the same project, and
   upgrading the generator is the only way to change what a new project
   contains.

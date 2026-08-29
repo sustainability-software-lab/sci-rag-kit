@@ -30,35 +30,48 @@ treatment, and you have 60 PDFs of papers, theses, and technical reports.
 | A model credential | The drafters and the graph extractor call a model. Without one, use `--print-prompt` and `--from-file` throughout | `grep SCI_RAG_GOOGLE .env` |
 | A domain expert's attention, for one hour | Step 6 needs questions somebody can vouch for, and nothing substitutes | |
 
-If you got here from `sci-rag-new`, the wizard already asked you most of
-this. Every answer landed in a file you can keep editing. Nothing here is
-generated code, and nothing regenerates behind you:
+If you got here from `sci-rag new`, setup already wrote the decisions you
+made and the defaults behind them. Quick asks for six setup decisions, plus
+the credential value required by the selected mode. It defaults the repository
+name, author, Python version, models, embedding dimension, ontology behavior,
+source details, parser, reranker, infrastructure, demo content, license, and
+Git initialization. Advanced asks every applicable question instead. Offline
+setup keeps the worked example ontology. A credentialed Quick setup drafts one
+from the description after the credential check succeeds; continuing after a
+failed check keeps the example.
 
-| What it asked | Where the answer went | How to change it |
-|---|---|---|
-| project name, description | `domain/domain.yaml`, `pyproject.toml`, `README.md` | edit the files, or re-run the wizard |
-| credentials, models, embedding dimension | `.env` | edit `.env`; changing the dimension needs a migration and re-embedding |
-| ontology | `domain/domain.yaml` | step 3 below |
-| corpus source | `data/corpus.jsonl`, `data/dois.txt`, or a `make corpus` target | steps 1 and 2 below |
-| PDF parser, reranker | `pyproject.toml` extras, `domain/domain.yaml` | step 5 below, and [Configuration](configuration.md) |
-| environment manager | `Makefile`, CI, `Dockerfile`, dev container, docs | re-run the wizard; it renders all five together |
-| license, git | `LICENSE`, the initial commit | ordinary files |
+Nothing here is generated code, and nothing regenerates behind you:
 
-The rest of this tutorial is the same work done by hand. Read it either
-way: the wizard picks defaults, and knowing which ones is how you decide
-whether to keep them.
+| Setup area | Where to review it |
+|---|---|
+| Project name, description | `domain/domain.yaml`, `pyproject.toml`, `README.md` |
+| Credentials, models, embedding dimension | `.env`; a dimension change needs a migration and re-embedding |
+| Ontology | `domain/domain.yaml`; step 3 below |
+| Corpus source | `data/corpus.jsonl`, `data/dois.txt`, or a `make corpus` target; steps 1 and 2 below |
+| PDF parser, reranker | `pyproject.toml` extras, `domain/domain.yaml`; step 5 below |
+| Environment manager | `Makefile`, CI, `Dockerfile`, dev container, docs |
+| Infrastructure, demo, license, Git | Ordinary project files |
+
+The rest of this tutorial does the domain work deliberately. Read it either
+way: knowing what setup chose is how you decide whether to keep it.
 
 ## Step 0: run the setup wizard
 
 ```bash
-uv run sci-rag init
+uv run sci-rag init --advanced
 ```
 
-Same questions as `sci-rag-new`, run against the checkout you are already
-standing in. Every question has a default, so pressing Enter through the
-session leaves you with something that runs offline. `--dry-run` shows
-what it would change without touching anything; `--defaults` skips the
-asking entirely.
+This tutorial uses Advanced because it exposes every applicable project choice.
+Run `uv run sci-rag init` to choose Quick or Advanced interactively, or pass
+`--quick` to select the short path directly. Pass `--no-tty` when you want plain
+numbered prompts instead of the terminal menu. `--dry-run` shows what setup
+would change without touching anything; `--defaults` skips the questions and
+uses the shipped defaults.
+
+Unlike `sci-rag new`, `sci-rag init` does not run the live credential check.
+It still captures the selected key or project and uses it directly if you ask
+setup to draft the ontology. Run `uv run sci-rag doctor --probe` afterward when
+you need to verify that the provider accepts it.
 
 You can re-run it later. That is how you change several answers at once.
 

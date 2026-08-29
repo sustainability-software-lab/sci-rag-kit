@@ -42,7 +42,11 @@ hide:
 
 ## Start a project
 
-Two lines, run from wherever you keep projects. The wizard asks about your domain, credentials, ontology, corpus, and environment manager, then writes a configured, git-initialized project directory. Every question has a default, so holding down Enter still leaves you with something that runs offline.
+Two lines, run from wherever you keep projects. Quick asks for six setup decisions,
+plus the credential value required by the selected mode, and supplies defaults for
+everything else. Choose Offline when you do not want a model credential. Advanced
+exposes every applicable option. Both write a configured, git-initialized project
+directory.
 
 ```console title="Terminal"
 $ pipx install sci-rag-kit

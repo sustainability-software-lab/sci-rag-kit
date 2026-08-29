@@ -85,7 +85,12 @@ This is a development database: loopback only, trust authentication, run by `scr
 
 ## Share a Cloud SQL development instance
 
-The opt-in Cloud SQL backend works with every environment manager. It gives each workspace a separate development database, destructive-test database, proxy process, and loopback port on one shared instance. Select it when the setup wizard asks whether to include a cloud development database, or use the module in this checkout.
+The opt-in Cloud SQL backend works with every environment manager. It gives each
+workspace a separate development database, destructive-test database, proxy
+process, and loopback port on one shared instance. Quick keeps the default and
+leaves this helper out. Run `sci-rag new --advanced` for a new project, or
+`sci-rag init --advanced` in a checkout, and select the cloud development
+database when asked. You can also use the module in this upstream checkout.
 
 The backend needs the Google Cloud CLI, Terraform, the Cloud SQL Auth Proxy, and `psql`. Authenticate `gcloud`, then provision the development-only instance:
 

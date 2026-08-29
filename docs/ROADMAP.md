@@ -94,7 +94,8 @@ different answer for each:
   and the command refuses to fabricate one. The feature is shipped; the
   evidence needs a corpus with real alias variation.
 
-The project factory (`sci-rag-new`, [epic #59](https://github.com/sustainability-software-lab/sci-rag-kit/issues/59))
+The project factory (main `sci-rag new` command,
+[epic #59](https://github.com/sustainability-software-lab/sci-rag-kit/issues/59))
 landed alongside wave 2 and is not part of it.
 
 ## Wave 3: v0.4+ "Scale and intelligence"
@@ -159,8 +160,8 @@ done, and stay on the list as a record of when:
   [VERSIONING.md](VERSIONING.md).
 - A hosted demo (for example Hugging Face Spaces)
 - **Flipping the repository public: done.** This one gated more than it
-  looked: `sci-rag-new` fetches the template tarball anonymously, so while
-  the repository was private the generator would have installed cleanly
+  looked: the project generator fetches the template tarball anonymously, so
+  while the repository was private the generator would have installed cleanly
   from PyPI and produced nothing for anyone outside the org.
 
 ## How to influence this roadmap

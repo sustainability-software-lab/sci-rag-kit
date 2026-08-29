@@ -49,7 +49,9 @@ This kit is infrastructure with the decisions already made and measured. [Choosi
 
 Clone the repository and run the demo. Ten minutes, no credentials: it ingests five synthetic CC0 documents about agricultural residues, retrieves evidence for one question, and scores that retrieval against the bundled seed questions.
 
-To start a project of your own instead, `pipx install sci-rag-kit` then `sci-rag-new` runs the wizard. The [quickstart](quickstart.md) has the commands for both.
+To start a project of your own instead, `pipx install sci-rag-kit` then
+`sci-rag new` runs the wizard. The [quickstart](quickstart.md) has the commands
+for both.
 
 ### Do I need Google credentials?
 
@@ -71,9 +73,16 @@ The full argument, including the conditions under which we would reverse it, is 
 
 ### Do I have to clone the repository?
 
-No. `pipx install sci-rag-kit` then `sci-rag-new` fetches the template at a pinned tag and writes a configured, git-initialized project directory. Every question has a default, so pressing Enter through the whole session still leaves you with something that runs offline.
+No. `pipx install sci-rag-kit` then `sci-rag new` fetches the template at a
+pinned tag and writes a configured, git-initialized project directory. Quick
+asks for six setup decisions and the credential value required by the selected
+mode; Advanced exposes every applicable option. Choose Offline explicitly when
+you do not want a model credential.
 
-Clicking **Use this template** on GitHub works too, and inside a checkout you already have, `sci-rag init` runs the same wizard. All three leave you with the same tree.
+Clicking **Use this template** or cloning works too. Run `sci-rag init` inside
+that checkout; it configures the same files without downloading a template or
+running the new-project credential check. Both routes start from the same live
+tree and use the same appliers.
 
 ### Can I run it completely offline?
 
@@ -145,7 +154,14 @@ Full argument and reversal conditions: [ADR 0006](adr/0006-multi-provider-llms.m
 
 Because a generator that rendered placeholders would drag back everything the template decision refused.
 
-`sci-rag-new` downloads this repository at a pinned tag and rewrites its configuration files in place. There is no `{{ }}` syntax and no `{{ }}` directory anywhere in the tree, and a test asserts a generated project contains no bare `{{` in any Markdown, TOML, YAML, or JSONL file. The generator fetches this repository byte for byte, so the template stays browsable, runnable, and tested as itself. The wizard is ordinary tested code under `src/sci_rag/scaffold/`, and the appliers round-trip their output through the same models the application loads, so a generated profile cannot be something `load_domain()` would reject.
+`sci-rag new` downloads this repository at a pinned tag and rewrites its
+configuration files in place. There is no `{{ }}` syntax and no `{{ }}` directory
+anywhere in the tree, and a test asserts a generated project contains no bare `{{`
+in any Markdown, TOML, YAML, or JSONL file. The generator fetches this repository
+byte for byte, so the template stays browsable, runnable, and tested as itself. The
+wizard is ordinary tested code under `src/sci_rag/scaffold/`, and the appliers
+round-trip their output through the same models the application loads, so a
+generated profile cannot be something `load_domain()` would reject.
 
 Full argument and reversal conditions: [ADR 0007](adr/0007-interactive-project-generator.md).
 
@@ -313,7 +329,7 @@ A small factory selects providers, so the supported set stays visible in one fil
 
 You can, but the kit deliberately does not, and derived projects keep the `sci_rag` import path.
 
-Renaming buys nothing functional and costs you the ability to diff your project against the upstream template and pull improvements from it. That benefit is live: the generator fetches this repository byte for byte, so your tree and upstream's stay comparable. `scripts/init_domain.py` handles the cosmetic rebranding, meaning project name, description, and a seed-question reset, without touching the import path. `sci-rag init` does the same as part of a full setup session.
+Renaming buys nothing functional and costs you the ability to diff your project against the upstream template and pull improvements from it. That benefit is live: the generator fetches this repository byte for byte, so your tree and upstream's stay comparable. `scripts/init_domain.py` handles the cosmetic rebranding, meaning project name, description, and a seed-question reset, without touching the import path. `sci-rag init` includes the same operation in its broader setup flow.
 
 ### How much of this should I change?
 

@@ -19,9 +19,11 @@ clients, and destroyable in one command.
 
 !!! note "Optional, and you may have declined it"
 
-    `infra/terraform/` is one of the optional pieces the setup wizard asks
-    about. If you answered no to `include_terraform`, the directory and its
-    CI job are not in your project. Copy them from
+    Quick keeps Terraform in the generated project. Run
+    `sci-rag new --advanced` for a new project, or `sci-rag init --advanced`
+    in a checkout, when you want setup to ask about it. If you answer no to
+    `include_terraform`, the directory and its CI job are not in your project.
+    Copy them from
     [the template](https://github.com/sustainability-software-lab/sci-rag-kit/tree/main/infra/terraform)
     if you want them back.
 
