@@ -35,8 +35,8 @@ from sci_rag.server.routers import answer_router, documents_router, meta_router,
 from sci_rag.server.service import RagService
 
 API_DESCRIPTION = """
-Retrieval-augmented generation over scientific document collections, on one
-Postgres database. Built with
+Retrieval-augmented generation, built around your scientific domain.
+Built with
 [sci-rag-kit](https://github.com/sustainability-software-lab/sci-rag-kit).
 
 * `POST /v1/query`: retrieval only; ranked evidence with per-layer traces.

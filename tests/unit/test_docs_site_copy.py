@@ -168,6 +168,60 @@ def test_retired_marketing_components_are_not_reintroduced() -> None:
     assert not offenders, f"retired components still referenced: {sorted(offenders)}"
 
 
+# Python-Markdown's attr_list only binds `{ .class }` when it sits on the same
+# line as the construct. An 80-column wrap that splits `](page.md){ .srag-row }`
+# prints the marker as prose, which is what leaked onto the homepage.
+_SPLIT_ATTR_LIST = re.compile(r"\)\{\s*$")
+_ORPHAN_ATTR_LIST = re.compile(r"^\{?\s*\.[A-Za-z][\w-]*\s*\}$")
+
+
+def test_attr_list_markers_stay_on_the_same_line_as_the_link() -> None:
+    """A wrapped `{ .srag-row }` is not a class. It is visible junk."""
+    offenders: list[str] = []
+    for page in sorted(ROOT.joinpath("docs").rglob("*.md")):
+        if "planning" in page.relative_to(ROOT).parts:
+            continue
+        in_fence = False
+        previous = ""
+        for number, line in enumerate(page.read_text().splitlines(), start=1):
+            stripped = line.strip()
+            if stripped.startswith("```") or stripped.startswith("~~~"):
+                in_fence = not in_fence
+                previous = line
+                continue
+            if in_fence:
+                previous = line
+                continue
+            if _SPLIT_ATTR_LIST.search(line.rstrip()) or (
+                _ORPHAN_ATTR_LIST.match(stripped) and previous.rstrip().endswith("{")
+            ):
+                offenders.append(f"{page.relative_to(ROOT)}:{number}")
+            previous = line
+
+    assert not offenders, (
+        "keep `{{ .class }}` on the same line as the link; wrapping it prints "
+        f"the marker as text: {offenders}"
+    )
+
+
+def test_homepage_rows_never_link_through_a_raw_html_href() -> None:
+    """A raw `<a href>` is not rewritten, and it is not checked either.
+
+    Writing the rows as HTML to dodge a wrapped attr_list marker traded one
+    silent defect for two. MkDocs rewrites `.md` only inside a Markdown link,
+    so `href="quickstart.md"` ships a 404; and the offline link check reads the
+    Markdown source, so `href="quickstart/"` is a path that does not exist
+    there. Only a Markdown link satisfies both, which is how the other five hub
+    pages have always written them. The wrap that started this is caught by
+    `test_attr_list_markers_stay_on_the_same_line_as_the_link` above, site-wide.
+    """
+    offenders = re.findall(r'<a[^>]*class="srag-row"[^>]*>', INDEX.read_text())
+
+    assert offenders == [], (
+        f"write homepage rows as one-line Markdown links, not raw HTML: {offenders}"
+    )
+
+
 # The display name has no hyphen, because the logo wordmark has none. The slug
 # keeps its hyphens everywhere it is an identifier: the repository, the package,
 # the CLI, image tags, and URLs. Only the human-readable name is spelled this way.

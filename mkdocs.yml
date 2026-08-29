@@ -1,5 +1,5 @@
 site_name: Sci RAG Kit
-site_description: Retrieval-augmented generation over scientific document collections, on one Postgres database
+site_description: Retrieval-augmented generation, built around your scientific domain
 site_author: Sustainability Software Lab
 site_url: https://sustainability-software-lab.github.io/sci-rag-kit/
 repo_url: https://github.com/sustainability-software-lab/sci-rag-kit

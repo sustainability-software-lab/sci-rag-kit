@@ -1,5 +1,5 @@
-"""sci-rag-kit: retrieval-augmented generation over scientific document
-collections, on one Postgres database.
+"""sci-rag-kit: retrieval-augmented generation, built around your
+scientific domain.
 
 Point it at a folder of papers and reports, and it gives you a grounded,
 citation-backed question-answering system for your field: ingestion with
