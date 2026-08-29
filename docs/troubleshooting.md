@@ -118,6 +118,16 @@ The offline embedder is lexical, not semantic. It does not make graph extraction
 
 Use `uv run sci-rag doctor --probe` after configuring a credential. The probe spends one small request and distinguishes a present-looking credential from one the provider accepts.
 
+### Recover during project setup
+
+`sci-rag new` checks an entered Google credential before it downloads the template. If the check fails, the wizard explains the provider error and offers three choices:
+
+1. **Try a different credential** to replace the current key or project and run the check again.
+2. **Switch to an AI Studio key** to leave the Vertex path and enter a key from [Google AI Studio](https://aistudio.google.com/apikey).
+3. **Continue without a model** to finish the project with the worked example ontology.
+
+The third choice keeps your chosen credential mode and writes the entered key or project to `.env`. It skips only the ontology draft, so you can fix the credential or run `gcloud auth application-default login` later without rebuilding the project. Run `uv run sci-rag doctor --probe` after the fix to confirm the provider accepts it.
+
 ### Running offline on purpose
 
 A project that sets `SCI_RAG_EMBEDDING_PROVIDER=local-hash`, configures no credential for any provider, and leaves `SCI_RAG_LLM_MODEL` and its siblings at their shipped defaults is a supported mode, not a half-finished setup. The setup wizard writes exactly that for `credentials: offline`. `doctor` reports the unavailable generation features as warnings and exits `0`, so a green run means the offline pipeline is healthy rather than that a model is reachable.

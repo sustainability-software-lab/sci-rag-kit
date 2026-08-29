@@ -19,7 +19,7 @@ for the guided path, or go directly to the
 [methodology](docs/methodology.md) for the design specification.
 
 To start a project of your own, run `pipx install sci-rag-kit` and then
-`sci-rag-new`; the wizard asks about your field and writes a configured,
+`sci-rag new`; the wizard asks about your field and writes a configured,
 git-initialized project. To evaluate the kit first, run the quickstart below
 against the bundled demo corpus.
 
