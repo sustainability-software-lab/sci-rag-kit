@@ -9,36 +9,72 @@ There is no git binary requirement and no template rendering: this downloads a
 tarball with httpx, which is already a direct dependency, and extracts it.
 What comes out is the runnable repository, byte for byte. The appliers then
 rewrite its configuration in place (see ADR 0004).
+
+The offline `--template-path` route copies from a checkout instead. A checkout
+holds more than a template does, so the copy boundary is what the repository
+tracks rather than what the working tree happens to contain (see ADR 0010).
 """
 
 from __future__ import annotations
 
+import fnmatch
 import io
+import os
 import shutil
+import subprocess
 import tarfile
 import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
+    from collections.abc import Callable
+
     import httpx
 
 TEMPLATE_REPO = "sustainability-software-lab/sci-rag-kit"
 
-# Build state and history from a local checkout. A generated project gets its
-# own git history, and copying a virtualenv would be both wrong and enormous.
-_LOCAL_EXCLUDES = shutil.ignore_patterns(
-    ".git",
-    ".venv",
-    ".pixi",
-    "__pycache__",
-    "*.pyc",
-    "site",
-    "eval_results",
-    "node_modules",
-    ".mypy_cache",
-    ".pytest_cache",
-    ".ruff_cache",
+# The dot-prefixed entries the template genuinely ships. Everything else that
+# starts with a dot is local state: credentials, agent scratch, caches, a
+# virtualenv, a database cluster. See ADR 0010.
+_TEMPLATE_DOT_ENTRIES = frozenset(
+    {
+        ".devcontainer",
+        ".dockerignore",
+        ".env.example",
+        ".github",
+        ".gitignore",
+        ".gitkeep",
+        ".pre-commit-config.yaml",
+        ".python-version",
+        ".terraform.lock.hcl",
+    }
+)
+
+# Build output and caches that carry no dot and so need naming.
+_NEVER_COPIED_NAMES = frozenset(
+    {
+        "__pycache__",
+        "build",
+        "dist",
+        "eval_results",
+        "htmlcov",
+        "node_modules",
+        "site",
+    }
+)
+
+_NEVER_COPIED_GLOBS = ("*.pyc", "*.pyo", "*.egg-info", "*.tfstate", "*.tfstate.*")
+
+# Directories whose contents are the user's corpus or evaluation output. Only
+# the placeholder that keeps the directory in the tree may cross.
+_PLACEHOLDER_ONLY_DIRS = frozenset(
+    {
+        Path("data") / "raw",
+        Path("data") / "interim",
+        Path("data") / "processed",
+        Path("data") / "demo" / "downloads",
+    }
 )
 
 
@@ -80,11 +116,95 @@ def _require_empty(target: Path) -> None:
         )
 
 
+def _tracked_paths(source: Path) -> list[str] | None:
+    """The repository-tracked files under ``source``, or None if git cannot say.
+
+    A checkout is not the same thing as a distributable template. It also
+    holds credentials, agent state, caches, and whatever corpus the user
+    ingested last week. Asking git which paths are tracked draws the boundary
+    from the repository itself rather than from a list of names somebody
+    remembered to write down, and it is the same content the download route
+    already produces. See ADR 0010.
+    """
+    try:
+        listed = subprocess.run(
+            ["git", "ls-files", "-z"],
+            cwd=source,
+            capture_output=True,
+            check=False,
+            env={**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_SYSTEM": os.devnull},
+        )
+    except OSError:
+        # No git binary. The offline route still has to work.
+        return None
+    if listed.returncode != 0:
+        return None
+    return [name for name in listed.stdout.decode("utf-8", "surrogateescape").split("\0") if name]
+
+
+def _copy_tracked(source: Path, target: Path, tracked: list[str]) -> None:
+    """Copy exactly the named paths, preserving mode and symlinks."""
+    for name in tracked:
+        origin = source / name
+        # A tracked path can be missing mid-edit, and a submodule gitlink is a
+        # directory rather than a file. Neither is a reason to refuse to
+        # generate, and neither can leak anything.
+        if not origin.is_symlink() and not origin.is_file():
+            continue
+        destination = target / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(origin, destination, follow_symlinks=False)
+
+
+def _is_local_state(relative_dir: Path, name: str) -> bool:
+    """True when this entry belongs to the template author and not to the template."""
+    if name.startswith(".") and name not in _TEMPLATE_DOT_ENTRIES:
+        return True
+    if name in _NEVER_COPIED_NAMES:
+        return True
+    if any(fnmatch.fnmatch(name, pattern) for pattern in _NEVER_COPIED_GLOBS):
+        return True
+    return relative_dir in _PLACEHOLDER_ONLY_DIRS and name != ".gitkeep"
+
+
+def _fallback_excludes(source: Path) -> Callable[[str, list[str]], set[str]]:
+    """A fail-closed copy rule for a template directory git knows nothing about.
+
+    An exported tarball or a hand-assembled directory has no tracking
+    information to read, so the rule inverts: nothing hidden crosses unless
+    the template genuinely ships it, and the corpus directories keep only
+    their placeholder.
+    """
+    root = source.resolve()
+
+    def ignore(directory: str, names: list[str]) -> set[str]:
+        try:
+            relative = Path(directory).resolve().relative_to(root)
+        except ValueError:  # pragma: no cover - copytree never leaves the tree
+            relative = Path(".")
+        return {name for name in names if _is_local_state(relative, name)}
+
+    return ignore
+
+
 def _copy_local(source: Path, target: Path) -> str:
     if not source.is_dir():
         raise TemplateFetchError(f"No template checkout at {source}.")
-    shutil.copytree(source, target, ignore=_LOCAL_EXCLUDES, dirs_exist_ok=True)
-    return f"local checkout at {source}"
+
+    tracked = _tracked_paths(source)
+    if tracked is not None:
+        if not tracked:
+            raise TemplateFetchError(
+                f"{source} is a git repository with no tracked files, so there is no "
+                "template to copy. Commit the template first, or point --template-path "
+                "at a checkout that has content."
+            )
+        target.mkdir(parents=True, exist_ok=True)
+        _copy_tracked(source, target, tracked)
+        return f"local checkout at {source} (tracked content only)"
+
+    shutil.copytree(source, target, ignore=_fallback_excludes(source), dirs_exist_ok=True)
+    return f"local directory at {source}"
 
 
 def _extract(archive_bytes: bytes, target: Path) -> None:

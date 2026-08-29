@@ -75,7 +75,10 @@ def new(
     template_path: Path | None = typer.Option(
         None,
         "--template-path",
-        help="Generate from a local checkout instead of downloading. No network needed.",
+        help=(
+            "Generate from a local checkout instead of downloading. No network needed. "
+            "Copies what the checkout tracks, so local state stays local."
+        ),
     ),
 ) -> None:
     """Answer a short questionnaire, get a configured project directory."""
