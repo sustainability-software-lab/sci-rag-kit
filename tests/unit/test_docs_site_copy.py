@@ -204,12 +204,22 @@ def test_attr_list_markers_stay_on_the_same_line_as_the_link() -> None:
     )
 
 
-def test_homepage_rows_do_not_use_attr_list_or_raw_md_hrefs() -> None:
-    """Homepage rows are HTML. A wrap cannot print `{ .srag-row }`, and MkDocs
-    does not rewrite `.md` inside a raw `href`."""
-    text = INDEX.read_text()
-    assert "{ .srag-row }" not in text
-    assert not re.search(r'class="srag-row"[^>]*href="[^"]+\.md"', text)
+def test_homepage_rows_never_link_through_a_raw_html_href() -> None:
+    """A raw `<a href>` is not rewritten, and it is not checked either.
+
+    Writing the rows as HTML to dodge a wrapped attr_list marker traded one
+    silent defect for two. MkDocs rewrites `.md` only inside a Markdown link,
+    so `href="quickstart.md"` ships a 404; and the offline link check reads the
+    Markdown source, so `href="quickstart/"` is a path that does not exist
+    there. Only a Markdown link satisfies both, which is how the other five hub
+    pages have always written them. The wrap that started this is caught by
+    `test_attr_list_markers_stay_on_the_same_line_as_the_link` above, site-wide.
+    """
+    offenders = re.findall(r'<a[^>]*class="srag-row"[^>]*>', INDEX.read_text())
+
+    assert offenders == [], (
+        f"write homepage rows as one-line Markdown links, not raw HTML: {offenders}"
+    )
 
 
 # The display name has no hyphen, because the logo wordmark has none. The slug
