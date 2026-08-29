@@ -91,6 +91,7 @@ nav:
       - CLI: cli.md
       - Configuration: configuration.md
       - REST, MCP, and Python API: api.md
+      - Generate typed API clients: api-clients.md
       - Benchmarks: benchmarks.md
       - Glossary: glossary.md
   - Project:
