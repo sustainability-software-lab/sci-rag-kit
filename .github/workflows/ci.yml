@@ -76,6 +76,44 @@ jobs:
         run: docker build -t sci-rag-kit:ci .
       - name: Image smoke (CLI runs inside the container)
         run: docker run --rm sci-rag-kit:ci sci-rag --help
+      - name: The image carries its documented runtime inputs
+        run: |
+          docker run --rm sci-rag-kit:ci python -c "import sci_rag; print(sci_rag.__file__)"
+          docker run --rm sci-rag-kit:ci test -f /app/domain/domain.yaml
+          docker run --rm sci-rag-kit:ci test -f /app/alembic.ini
+          docker run --rm sci-rag-kit:ci test -d /app/migrations
+      # tests/unit/test_build_context.py holds the manifest shape. This step
+      # is the part no unit test can do: ask Docker itself what it admitted.
+      # The sentinels are synthetic and are created here, never read from a
+      # real workspace.
+      - name: Local state cannot reach a build context
+        run: |
+          mkdir -p .cloudsql .context data/raw
+          printf 'synthetic-not-a-secret\n' > .env
+          printf 'synthetic-not-a-secret\n' > .cloudsql/password
+          printf 'agent state\n' > .context/sentinel.txt
+          printf 'private corpus\n' > data/raw/private-sentinel.txt
+          printf 'FROM busybox:1.36\nCOPY . /audit-context\n' > Dockerfile.context-audit
+          docker build -f Dockerfile.context-audit -t sci-rag-kit:context-audit .
+          failed=0
+          for path in .env .cloudsql/password .context/sentinel.txt data/raw/private-sentinel.txt; do
+            if docker run --rm sci-rag-kit:context-audit test -e "/audit-context/$path"; then
+              echo "::error::$path reached the Docker build context"
+              failed=1
+            else
+              echo "excluded from the build context: $path"
+            fi
+          done
+          for path in pyproject.toml uv.lock alembic.ini src domain migrations; do
+            if docker run --rm sci-rag-kit:context-audit test -e "/audit-context/$path"; then
+              echo "admitted, as the image needs: $path"
+            else
+              echo "::error::$path is missing from the build context"
+              failed=1
+            fi
+          done
+          rm -f Dockerfile.context-audit
+          exit "$failed"
 
   terraform:
     runs-on: ubuntu-latest

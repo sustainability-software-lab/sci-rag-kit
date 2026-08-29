@@ -79,6 +79,26 @@ The Dockerfile packages the kit, your `domain/` folder, and the
 migrations, so the same image serves the API and runs schema upgrades.
 Rebuild and repush whenever your domain or corpus manifest changes.
 
+!!! warning "The trailing dot is an upload"
+
+    `gcloud builds submit ... .` uploads a copy of the current directory to
+    Google Cloud Build, and `docker build .` hands the same directory to your
+    local daemon. `.gcloudignore` and `.dockerignore` bound what that means.
+    Both exclude everything and then re-admit only the build inputs:
+    `pyproject.toml`, `uv.lock`, `README.md`, `alembic.ini`, `src/`,
+    `domain/`, `migrations/`, and the `Dockerfile` itself.
+
+    So a credential, a `.env`, a Terraform state file, or a paper you may not
+    redistribute is safe where it normally lives, and is uploaded the moment
+    you move it inside one of those paths. Your corpus belongs in
+    `data/raw/`, which is excluded from both. If you add a `COPY` to the
+    Dockerfile, add its source to both manifests;
+    `tests/unit/test_build_context.py` fails if you forget.
+
+    Do not delete `.gcloudignore` to "get everything uploaded". Without it,
+    gcloud falls back to deriving the upload set from `.gitignore`, which
+    misses anything ignored only through `.git/info/exclude`.
+
 ## Step 2: terraform apply
 
 ```bash

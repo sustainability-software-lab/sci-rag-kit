@@ -42,6 +42,7 @@ _TEMPLATE_DOT_ENTRIES = frozenset(
         ".devcontainer",
         ".dockerignore",
         ".env.example",
+        ".gcloudignore",
         ".github",
         ".gitignore",
         ".gitkeep",
