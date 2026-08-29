@@ -40,6 +40,7 @@ Four types, from the [Diataxis](https://diataxis.fr/) framework. A page that can
 | `cli.md` | reference |
 | `configuration.md` | reference |
 | `api.md` | reference |
+| `api-clients.md` | how-to |
 | `benchmarks.md` | reference |
 | `glossary.md` | reference |
 | `project.md` | explanation |

@@ -28,6 +28,9 @@ READER_CREATED_PATHS = frozenset(
         ".conductor/settings.local.toml",
         ".conductor/setup-cloud-workspace.sh",
         "data/corpus.jsonl",
+        "generated/typescript/status.ts",
+        "openapi-python-client.yaml",
+        "python-status.py",
     }
 )
 
