@@ -25,6 +25,7 @@ migrations, `domain/`, and data paths resolve predictably.
 | `sci-rag mcp` | Run the MCP server over stdio (for local agents like Claude Code). |
 | `sci-rag doctor` | Diagnose the environment: config, domain, database, corpus, credentials. |
 | `sci-rag init` | Configure this checkout for your own field. |
+| `sci-rag new` | Answer a short questionnaire, get a configured project directory. |
 | `sci-rag db` | Database schema management. |
 | `sci-rag db upgrade` | Create or upgrade the database schema (runs the Alembic migrations). |
 | `sci-rag graph` | Build the knowledge graph: extract entities, then detect communities. |
@@ -220,7 +221,29 @@ $ sci-rag init [OPTIONS]
 | `--target` | path | . | The checkout to configure. Defaults to the current directory. |
 | `--defaults` | boolean | false | Take every default without asking. Useful in CI. |
 | `--answers-file` | path | unset | A YAML file of answers, for reproducible generation. Unanswered questions take their default. |
+| `--quick, --advanced` | boolean | unset | Ask six setup questions, or expose every option. |
+| `--no-tty` | boolean | false | Use plain numbered prompts even in a supported terminal. |
 | `--dry-run` | boolean | false | Show what would change without writing anything. |
+
+## `sci-rag new`
+
+Answer a short questionnaire, get a configured project directory.
+
+```console
+$ sci-rag new [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--output-dir, -o` | path | . | Where to create the project directory. Defaults to the current directory. |
+| `--defaults` | boolean | false | Take every default without asking. Useful in CI. |
+| `--answers-file` | path | unset | A YAML file of answers, for reproducible generation. Unanswered questions take their default. |
+| `--quick, --advanced` | boolean | unset | Ask six setup questions, or expose every option. |
+| `--no-tty` | boolean | false | Use plain numbered prompts even in a supported terminal. |
+| `--ref` | text | unset | Fetch the template at this tag or branch instead of the tag matching this generator's version. |
+| `--template-path` | path | unset | Generate from a local checkout instead of downloading. No network needed. |
 
 ## `sci-rag db`
 

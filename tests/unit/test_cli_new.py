@@ -14,6 +14,7 @@ from pathlib import Path
 import yaml
 from typer.testing import CliRunner
 
+from sci_rag.cli.main import app as main_app
 from sci_rag.cli.new import app
 
 REPO_ROOT = Path(__file__).parents[2]
@@ -22,6 +23,32 @@ _ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 _FILES = ("pyproject.toml", "Makefile", "Dockerfile", ".env.example", "README.md", "LICENSE")
 _TREES = ("domain", ".github")
+
+
+def test_main_cli_registers_new_with_mode_and_plain_fallback_flags() -> None:
+    result = runner.invoke(main_app, ["new", "--help"])
+
+    assert result.exit_code == 0, result.output
+    output = _ANSI.sub("", result.output)
+    assert "--quick" in output
+    assert "--advanced" in output
+    assert "--no-tty" in output
+
+
+def test_cancelling_an_interactive_prompt_exits_cleanly(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from sci_rag.scaffold.prompt import PromptAborted
+
+    def abort(**_kwargs):  # type: ignore[no-untyped-def]
+        raise PromptAborted("Setup cancelled.")
+
+    monkeypatch.setattr("sci_rag.scaffold.wizard.collect_answers", abort)
+
+    result = runner.invoke(app, ["--template-path", str(REPO_ROOT)])
+
+    assert result.exit_code == 1
+    output = _ANSI.sub("", result.output)
+    assert "Setup cancelled." in output
+    assert "Traceback" not in output
 
 
 def _checkout(tmp_path: Path) -> Path:
@@ -57,6 +84,10 @@ def test_defaults_create_a_project_directory(tmp_path: Path) -> None:
     assert project.is_dir()
     assert load_domain(project / "domain").name == "My Scientific KB"
     assert (project / ".env").exists()
+    output = _ANSI.sub("", result.output)
+    assert "sci-rag draft ontology --from-corpus" in output
+    assert "sci-rag draft questions --count 10" in output
+    assert "docs/llm-assisted-setup.md" in output
 
 
 def test_the_directory_is_named_from_the_answers(tmp_path: Path) -> None:

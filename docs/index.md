@@ -174,13 +174,98 @@ The session above, in full. `scripts/render_cast.py` builds it by driving the re
 
 ```console title="Terminal"
 $ pipx install sci-rag-kit
-$ sci-rag-new
+$ sci-rag new
+Select Setup
+1 - Quick - Six questions, sensible defaults for the rest
+2 - Advanced - Every option, for when you know what you want
+Choose from [1/2] (1): 1
+project_name (My Scientific KB): Membrane Materials KB
+description (A short description of your domain.): Membrane chemistry and performance for water treatment
+contact_email (Sent to OpenAlex, Crossref, and Unpaywall): you@lbl.gov
+Select environment_manager
+1 - uv
+2 - pixi
+3 - conda
+4 - venv+pip
+Choose from [1/2/3/4] (1): 1
+Select credentials
+1 - google_ai_studio
+2 - vertex_ai
+3 - offline
+Choose from [1/2/3] (1): 1
+Select corpus_source
+1 - local_files
+2 - openalex_topic
+3 - doi_list
+4 - demo_only
+Choose from [1/2/3/4] (1): 1
+
+  Drafting an ontology for "Membrane chemistry and performance for water treatment"...
+
+  Entity types      Membrane, Material, Contaminant, Process, Property, Application, Organization, Standard
+  Relation types    MADE_OF, REMOVES, HAS_PROPERTY, USED_IN, REQUIRES, COMPARED_WITH
+  Query classes     performance, fabrication, fouling, application
+
+  Accept this ontology? [y/n/redraft] (y):
+
+Fetching sci-rag-kit for membrane-materials-kb...
+
+Writing membrane-materials-kb/
+
+  removed                docs/planning/, scripts/cloud_postgres.py, infra/terraform/dev-database/
+  domain/domain.yaml     8 entity types, 6 relation types, 4 query classes
+  domain/eval_seed_questions.jsonl   guided blank
+  .env                   google_ai_studio, gemini-2.5-flash, gemini-embedding-001
+  pyproject.toml         name, description, extras: none
+  Makefile               commands prefixed with `uv run`
+  docs/                  kit onboarding, player, and cast removed
+  Dockerfile             uv base image
+  .devcontainer/         ghcr.io/va-h/devcontainers-features/uv:1
+  rendered               6 files for uv
+  data/corpus.jsonl      commented field shape, ready for your documents
+  LICENSE                BSD-3-Clause
+  README.md              rewritten opening
+  git                    initialized, 1 commit
+
+Done. Membrane Materials KB is yours. Next:
+
+  cd membrane-materials-kb
+  uv sync
+  uv run sci-rag doctor
+  uv run sci-rag draft manifest --folder data/raw
+  uv run sci-rag ingest --manifest data/corpus.jsonl
+
+Then let a model draft the rest of your domain files:
+
+  uv run sci-rag draft ontology --from-corpus
+  uv run sci-rag draft questions --count 10
+
+Each one proposes a file for you to review rather than writing one, and each also prints its prompt (--print-prompt) if you would rather paste it into an assistant you already have. Guide: docs/llm-assisted-setup.md
+
+The walkthrough: docs/bring-your-own-domain.md
+```
+
+<details markdown>
+<summary>Show the Advanced setup</summary>
+
+<div class="srag-cast" data-cast="assets/casts/sci-rag-new-advanced.cast" aria-label="Recorded Advanced sci-rag new session"></div>
+
+```console title="Terminal"
+$ pipx install sci-rag-kit
+$ sci-rag new
+Select Setup
+1 - Quick - Six questions, sensible defaults for the rest
+2 - Advanced - Every option, for when you know what you want
+Choose from [1/2] (1): 2
 project_name (My Scientific KB): Membrane Materials KB
 repo_name (membrane-materials-kb):
 description (A short description of your domain.): Membrane chemistry and performance for water treatment
 author_name (Your name, lab, or organization): Berkeley Lab
 contact_email (Sent to OpenAlex, Crossref, and Unpaywall): you@lbl.gov
-python_version (3.12):
+Select python_version
+1 - 3.11
+2 - 3.12
+Choose from [1/2] (2):
 Select environment_manager
 1 - uv
 2 - pixi
@@ -271,7 +356,7 @@ Writing membrane-materials-kb/
   pyproject.toml         name, description, extras: docling
   Makefile               commands prefixed with `pixi run`, database runs from conda-forge, no Docker
   docs/                  kit onboarding, player, and cast removed
-  pyproject.toml         [tool.pixi] workspace, environments, tasks
+  pyproject.toml          workspace, environments, tasks
   Dockerfile             pixi base image
   .devcontainer/         ghcr.io/prefix-dev/devcontainer-features/pixi:0
   rendered               9 files for pixi
@@ -287,7 +372,18 @@ Done. Membrane Materials KB is yours. Next:
   pixi install
   pixi run sci-rag doctor
   make corpus
+
+Then let a model draft the rest of your domain files:
+
+  pixi run sci-rag draft ontology --from-corpus
+  pixi run sci-rag draft questions --count 10
+
+Each one proposes a file for you to review rather than writing one, and each also prints its prompt (--print-prompt) if you would rather paste it into an assistant you already have. Guide: docs/llm-assisted-setup.md
+
+The walkthrough: docs/bring-your-own-domain.md
 ```
+
+</details>
 
 <!-- END GENERATED TRANSCRIPT -->
 

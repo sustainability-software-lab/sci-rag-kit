@@ -54,6 +54,10 @@ def test_init_is_registered() -> None:
 def test_init_help_renders() -> None:
     result = runner.invoke(app, ["init", "--help"])
     assert result.exit_code == 0
+    output = _ANSI.sub("", result.output)
+    assert "--quick" in output
+    assert "--advanced" in output
+    assert "--no-tty" in output
 
 
 def test_dry_run_changes_nothing(tmp_path: Path) -> None:

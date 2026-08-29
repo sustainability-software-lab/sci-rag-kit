@@ -27,6 +27,7 @@ for it. Adding one is a new entry in :data:`PROFILES`, not a redesign.
 
 from __future__ import annotations
 
+import shutil
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from string import Template
@@ -334,6 +335,19 @@ PROFILES: dict[str, RunnerProfile] = {
 
 def runner_keys() -> list[str]:
     return list(PROFILES)
+
+
+def detect_environment_manager() -> str | None:
+    """Return the first supported manager found on PATH, in profile order."""
+    executables = {
+        "uv": ("uv",),
+        "pixi": ("pixi",),
+        "conda": ("conda", "mamba", "micromamba"),
+    }
+    for key in runner_keys():
+        if any(shutil.which(executable) for executable in executables.get(key, ())):
+            return key
+    return None
 
 
 def get_runner(key: str) -> RunnerProfile:

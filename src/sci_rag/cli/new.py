@@ -43,6 +43,16 @@ def new(
         help="A YAML file of answers, for reproducible generation. Unanswered questions "
         "take their default.",
     ),
+    quick: bool | None = typer.Option(
+        None,
+        "--quick/--advanced",
+        help="Ask six setup questions, or expose every option.",
+    ),
+    no_tty: bool = typer.Option(
+        False,
+        "--no-tty",
+        help="Use plain numbered prompts even in a supported terminal.",
+    ),
     ref: str | None = typer.Option(
         None,
         "--ref",
@@ -59,13 +69,23 @@ def new(
     from sci_rag.scaffold.answers import ProjectAnswers
     from sci_rag.scaffold.apply import apply_all
     from sci_rag.scaffold.fetch import TemplateFetchError, fetch_template
+    from sci_rag.scaffold.prompt import PromptAborted
+    from sci_rag.scaffold.report import print_scaffold_report
     from sci_rag.scaffold.wizard import AnswerFileError, collect_answers, confirm_ontology_draft
 
     non_interactive = defaults or answers_file is not None
     try:
-        raw = collect_answers(defaults=defaults, answers_file=answers_file)
+        raw = collect_answers(
+            defaults=defaults,
+            answers_file=answers_file,
+            quick=quick,
+            plain=no_tty,
+        )
     except AnswerFileError as exc:
         console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    except PromptAborted as exc:
+        console.print(f"[yellow]{exc}[/yellow]")
         raise typer.Exit(1) from exc
 
     # Built once to resolve the directory name; rebuilt after the fetch, when a
@@ -95,27 +115,13 @@ def new(
             )
 
     answers = ProjectAnswers.from_raw(raw, drafted_ontology=drafted)  # type: ignore[arg-type]
-    console.print(f"\nWriting [bold]{answers.repo_name}/[/bold]\n")
-    for change in apply_all(answers, target):
-        console.print(f"  {change}", soft_wrap=True, highlight=False)
-
-    _print_next_steps(answers)
-
-
-def _print_next_steps(answers) -> None:  # type: ignore[no-untyped-def]
-    run = answers.runner.run
-    console.print(f"\nDone. [bold]{answers.project_name}[/bold] is yours. Next:\n")
-    console.print(f"  cd {answers.repo_name}")
-    console.print(f"  {answers.runner.sync(extras=answers.extras)}")
-    console.print(f"  {run('sci-rag doctor', project_slug=answers.repo_name)}")
-    if answers.corpus_source in {"openalex_topic", "doi_list"}:
-        console.print("  make corpus")
-    elif answers.corpus_source == "demo_only":
-        console.print("  make demo")
-    else:
-        console.print(
-            f"  {run('sci-rag ingest --manifest data/corpus.jsonl', project_slug=answers.repo_name)}"
-        )
+    changes = apply_all(answers, target)
+    print_scaffold_report(
+        answers,
+        changes,
+        console=console,
+        created_directory=True,
+    )
 
 
 def main() -> None:

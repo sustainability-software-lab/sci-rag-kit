@@ -51,6 +51,16 @@ def init(
         help="A YAML file of answers, for reproducible generation. Unanswered questions "
         "take their default.",
     ),
+    quick: bool | None = typer.Option(
+        None,
+        "--quick/--advanced",
+        help="Ask six setup questions, or expose every option.",
+    ),
+    no_tty: bool = typer.Option(
+        False,
+        "--no-tty",
+        help="Use plain numbered prompts even in a supported terminal.",
+    ),
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Show what would change without writing anything."
     ),
@@ -63,6 +73,8 @@ def init(
     """
     from sci_rag.scaffold.answers import ProjectAnswers
     from sci_rag.scaffold.apply import apply_all
+    from sci_rag.scaffold.prompt import PromptAborted
+    from sci_rag.scaffold.report import print_scaffold_report
     from sci_rag.scaffold.wizard import AnswerFileError, collect_answers, confirm_ontology_draft
 
     root = target.expanduser().resolve()
@@ -75,9 +87,17 @@ def init(
         raise typer.Exit(1)
 
     try:
-        raw = collect_answers(defaults=defaults, answers_file=answers_file)
+        raw = collect_answers(
+            defaults=defaults,
+            answers_file=answers_file,
+            quick=quick,
+            plain=no_tty,
+        )
     except AnswerFileError as exc:
         console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    except PromptAborted as exc:
+        console.print(f"[yellow]{exc}[/yellow]")
         raise typer.Exit(1) from exc
 
     drafted = None
@@ -100,52 +120,8 @@ def init(
             preview = Path(scratch) / root.name
             shutil.copytree(root, preview, ignore=_SCRATCH_IGNORE, symlinks=True)
             changes = apply_all(answers, preview, allow_git=False)
-        _report(answers, changes, dry_run=True)
+        print_scaffold_report(answers, changes, console=console, dry_run=True)
         return
 
     changes = apply_all(answers, root, allow_git=False)
-    _report(answers, changes, dry_run=False)
-
-
-def _report(answers, changes: list[str], *, dry_run: bool) -> None:  # type: ignore[no-untyped-def]
-    verb = "Would write" if dry_run else "Writing"
-    console.print(f"\n{verb} [bold]{answers.repo_name}/[/bold]\n")
-    for change in changes:
-        # soft_wrap keeps the aligned columns intact in a narrow terminal;
-        # this block is the transcript the documentation shows.
-        console.print(f"  {change}", soft_wrap=True, highlight=False)
-
-    if dry_run:
-        console.print("\n[yellow]Dry run. Nothing was written.[/yellow]")
-        console.print("Re-run without --dry-run to apply these changes.")
-        return
-
-    run = answers.runner.run
-    console.print(f"\nDone. [bold]{answers.project_name}[/bold] is yours. Next:\n")
-    console.print(f"  {answers.runner.sync_command}")
-    console.print(f"  {run('sci-rag doctor')}")
-    if answers.corpus_source in {"openalex_topic", "doi_list"}:
-        console.print("  make corpus")
-    elif answers.corpus_source == "demo_only":
-        console.print("  make demo")
-    else:
-        if answers.draft_domain_files:
-            console.print(f"  {run('sci-rag draft manifest --folder data/raw')}")
-        console.print(f"  {run('sci-rag ingest --manifest data/corpus.jsonl')}")
-
-    if answers.draft_domain_files:
-        console.print("\nThen let a model draft the rest of your domain files:\n")
-        console.print(f"  {run('sci-rag draft ontology --from-corpus')}")
-        console.print(f"  {run('sci-rag draft questions --count 10')}")
-        console.print(
-            "\nEach one proposes a file for you to review rather than writing one, and "
-            "each also prints its prompt (--print-prompt) if you would rather paste it "
-            "into an assistant you already have. Guide: docs/llm-assisted-setup.md"
-        )
-    else:
-        console.print(
-            "\nThen write domain/domain.yaml, data/corpus.jsonl, and "
-            "domain/eval_seed_questions.jsonl by hand. If you change your mind, "
-            "`sci-rag draft --help` does a first pass at all three."
-        )
-    console.print("\nThe walkthrough: docs/bring-your-own-domain.md")
+    print_scaffold_report(answers, changes, console=console)
