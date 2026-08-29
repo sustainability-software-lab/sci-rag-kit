@@ -24,7 +24,10 @@ verifier without touching any route. Scopes are the contract:
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
+import secrets
 import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -41,15 +44,44 @@ log = structlog.get_logger(__name__)
 ALL_SCOPES = ("retrieval:query", "retrieval:answer", "corpus:read", "byo_llm")
 
 
+# Rate limit accounting needs an identity that tells two credentials apart.
+# A truncated key does not: two keys beginning alike collapse into one bucket
+# and either caller can throttle the other, which is what F-017 reproduced.
+#
+# The salt is generated once per process and never written down. The limiter
+# keeps its windows in process memory and drops them on restart, so identity
+# only has to be stable for that long, and nothing durable derived from a raw
+# key exists to be attacked offline.
+_LIMITER_SALT = secrets.token_bytes(32)
+
+
+def limiter_identity(token: str) -> str:
+    """An opaque per process identity for the whole token.
+
+    Distinct tokens get distinct identities and the same token always gets
+    the same one, without the raw credential being stored anywhere.
+    """
+    digest = hmac.new(_LIMITER_SALT, token.encode("utf-8"), hashlib.blake2s).hexdigest()
+    return f"key:{digest}"
+
+
 @dataclass
 class AuthContext:
     key_id: str
     scopes: tuple[str, ...]
     llm_api_key: str | None = None  # per-key BYO binding; never logged
     rate_limit_per_minute: int | None = None
+    # Defaults to key_id so a backend with nothing to tell apart, such as the
+    # open one, keeps its single shared bucket.
+    rate_limit_id: str | None = None
 
     def has_scope(self, scope: str) -> bool:
         return scope in self.scopes
+
+    @property
+    def limiter_key(self) -> str:
+        """What the rate limiter counts against."""
+        return self.rate_limit_id or self.key_id
 
 
 class AuthBackend(ABC):
@@ -133,7 +165,9 @@ class StaticKeyBackend(AuthBackend):
             )
         scopes = tuple(entry.get("scopes") or ALL_SCOPES)
         return AuthContext(
+            # A short label a human can read in a log without it being the key.
             key_id=f"key:{token[:6]}...",
+            rate_limit_id=limiter_identity(token),
             scopes=scopes,
             llm_api_key=entry.get("llm_api_key"),
             rate_limit_per_minute=entry.get(
@@ -144,7 +178,9 @@ class StaticKeyBackend(AuthBackend):
     def check_rate(self, context: AuthContext) -> None:
         if not context.rate_limit_per_minute:
             return
-        allowed, retry_after = self._limiter.allow(context.key_id, context.rate_limit_per_minute)
+        allowed, retry_after = self._limiter.allow(
+            context.limiter_key, context.rate_limit_per_minute
+        )
         if not allowed:
             raise ApiError(
                 429,

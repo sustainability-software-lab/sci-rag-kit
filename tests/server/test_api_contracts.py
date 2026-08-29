@@ -83,6 +83,39 @@ async def test_rate_limit_returns_429_with_retry_after(secured_client) -> None: 
     assert int(third.headers["Retry-After"]) >= 1
 
 
+async def test_same_prefix_keys_do_not_share_a_rate_limit_bucket(secured_client) -> None:  # type: ignore[no-untyped-def]
+    """F-017: two callers whose keys begin alike are still two callers.
+
+    Both keys allow one request a minute. The first spends its own budget.
+    The second must still get its own, because a rate limit that keyed off
+    the first six characters let either caller throttle the other.
+    """
+    first = {"Authorization": "Bearer shared-prefix-first"}
+    second = {"Authorization": "Bearer shared-prefix-second"}
+
+    assert (
+        await secured_client.post("/v1/query", json={"query": "rice"}, headers=first)
+    ).status_code == 200
+    assert (
+        await secured_client.post("/v1/query", json={"query": "rice"}, headers=first)
+    ).status_code == 429
+
+    independent = await secured_client.post("/v1/query", json={"query": "rice"}, headers=second)
+    assert independent.status_code == 200, "a same-prefix key spent another key's budget"
+
+
+async def test_one_key_still_accumulates_against_its_own_limit(secured_client) -> None:  # type: ignore[no-untyped-def]
+    """Isolating buckets must not accidentally give every request a fresh one."""
+    headers = {"Authorization": "Bearer shared-prefix-second"}
+    assert (
+        await secured_client.post("/v1/query", json={"query": "rice"}, headers=headers)
+    ).status_code == 200
+    repeated = await secured_client.post("/v1/query", json={"query": "rice"}, headers=headers)
+    assert repeated.status_code == 429
+    assert repeated.json()["code"] == "rate_limited"
+    assert int(repeated.headers["Retry-After"]) >= 1
+
+
 async def test_corpus_manifest_is_public_even_when_auth_is_on(secured_client) -> None:  # type: ignore[no-untyped-def]
     response = await secured_client.get("/v1/corpus-manifest")
     assert response.status_code == 200
