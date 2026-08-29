@@ -75,7 +75,7 @@ def collect_answers(
         plain=plain,
     )
     detected_manager = None
-    if isinstance(prompter, QuestionaryPrompter):
+    if not non_interactive and isinstance(prompter, QuestionaryPrompter):
         from sci_rag.scaffold.runners import detect_environment_manager
 
         detected_manager = detect_environment_manager()
@@ -104,6 +104,8 @@ def collect_answers(
             answers[question.name] = preset[question.name]
         elif non_interactive or (quick is True and not question.quick):
             answers[question.name] = default
+        elif question.secret:
+            answers[question.name] = prompter.secret(question, default)
         elif question.choices:
             answers[question.name] = prompter.choice(question, default)
         else:
