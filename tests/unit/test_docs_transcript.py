@@ -10,6 +10,7 @@ and cast still match a fresh render.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from runpy import run_path
 
@@ -117,6 +118,87 @@ def test_the_cast_is_valid_asciicast_v2() -> None:
             previous = timestamp
 
 
+def _plain_cast_text(payload: str) -> str:
+    return re.sub(r"\x1b\[[0-9;]*m", "", payload)
+
+
+def test_the_cast_uses_bold_and_faint_ansi() -> None:
+    """The player should match the static transcript: answers bold, prompts faint."""
+    for transcript in (_quick_transcript(), _advanced_transcript()):
+        cast = _MODULE["render_cast"](transcript)
+        assert "\\u001b[1m" in cast
+        assert "\\u001b[2m" in cast
+
+
+def test_the_cast_pauses_after_commands_and_choices() -> None:
+    """A choice has to sit on screen long enough to read before the next prompt."""
+    events = [
+        json.loads(line) for line in _MODULE["render_cast"](_advanced_transcript()).splitlines()[1:]
+    ]
+    plains = [_plain_cast_text(event[2]) for event in events]
+
+    cmd = next(i for i, text in enumerate(plains) if text.startswith("$ sci-rag new"))
+    assert events[cmd + 1][0] - events[cmd][0] >= 1.0
+
+    choose = next(i for i, text in enumerate(plains) if "Choose from [1/2/3/4] (1): 2" in text)
+    assert events[choose + 1][0] - events[choose][0] >= 1.2
+
+    menu = next(i for i, text in enumerate(plains) if text.startswith("1 - uv"))
+    assert events[menu + 1][0] - events[menu][0] < 0.3
+
+
+def test_freeform_answers_are_typed_character_by_character() -> None:
+    """The prompt lands first; the answer is keyed in so the cursor can blink."""
+    events = [
+        json.loads(line) for line in _MODULE["render_cast"](_quick_transcript()).splitlines()[1:]
+    ]
+    plains = [_plain_cast_text(event[2]) for event in events]
+
+    prompt = next(i for i, text in enumerate(plains) if "project_name" in text)
+    assert "Membrane" not in plains[prompt]
+    assert plains[prompt].endswith(" ")
+
+    typed = []
+    for text in plains[prompt + 1 :]:
+        if text == "\r\n":
+            break
+        if text:
+            typed.append(text)
+    assert typed == list("Membrane Materials KB")
+    assert events[prompt + 1][0] - events[prompt][0] >= 0.8
+    keystrokes = [
+        events[prompt + i + 2][0] - events[prompt + i + 1][0] for i in range(len(typed) - 1)
+    ]
+    assert min(keystrokes) >= 0.04
+    assert max(keystrokes) <= 0.2
+
+
+def test_the_html_transcript_keeps_the_plain_text() -> None:
+    """Styling wraps lines; copying the block must still yield the session."""
+    import html as html_module
+    import re
+
+    for transcript in (_quick_transcript(), _advanced_transcript()):
+        markup = _MODULE["format_transcript_html"](transcript)
+        inner = re.search(r"<code>(.*)</code>", markup, re.DOTALL)
+        assert inner is not None
+        plain = html_module.unescape(re.sub(r"<[^>]+>", "", inner.group(1)))
+        assert plain == transcript
+
+
+def test_the_html_transcript_marks_commands_questions_and_answers() -> None:
+    markup = _MODULE["format_transcript_html"](_advanced_transcript())
+    assert 'class="highlight srag-term"' in markup
+    assert "srag-term__cmd" in markup
+    assert "srag-term__key" in markup
+    assert "srag-term__value" in markup
+    assert "srag-term__heading" in markup
+    assert "srag-term__break" in markup
+    assert "Membrane Materials KB" in markup
+    assert "srag-term__line--next" in markup
+    assert "pixi install" in markup
+
+
 def test_the_player_assets_are_vendored_not_fetched() -> None:
     """A CDN reference would break the hermetic build and the offline link check."""
     vendor = REPO_ROOT / "docs" / "assets" / "vendor" / "asciinema-player"
@@ -137,3 +219,14 @@ def test_the_player_mounts_every_cast_on_the_page() -> None:
 
     assert 'querySelectorAll(".srag-cast")' in script
     assert 'getElementById("srag-cast")' not in script
+
+
+def test_the_player_autoplays_at_real_time() -> None:
+    script = (REPO_ROOT / "docs" / "javascripts" / "cast.js").read_text(encoding="utf-8")
+    assert "autoPlay: !reduceMotion" in script
+    assert "loop: !reduceMotion" in script
+    assert "controls: false" in script
+    assert "fit: false" in script
+    assert 'terminalFontSize: "0.88em"' in script
+    assert "speed: 1" in script
+    assert "idleTimeLimit: 4" in script

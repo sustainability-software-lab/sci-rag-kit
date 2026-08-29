@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 app = typer.Typer(
     name="sci-rag",
-    help="Retrieval-augmented generation over scientific document collections, on one Postgres database.",
+    help="Retrieval-augmented generation, built around your scientific domain.",
     no_args_is_help=True,
     pretty_exceptions_show_locals=False,
 )

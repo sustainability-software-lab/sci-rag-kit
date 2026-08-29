@@ -22,8 +22,10 @@ answers.
 from __future__ import annotations
 
 import argparse
+import html
 import io
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -189,12 +191,192 @@ def render_transcript(*, quick: bool = True) -> str:
     return "".join(f"{line.rstrip()}\n" for line in output.getvalue().splitlines())
 
 
-def render_cast(transcript: str) -> str:
-    """An asciicast v2 file, one event per line of the transcript.
+_PROMPT_LINE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*) \(([^)]+)\):(.*)$")
+_CHOICE_LINE = re.compile(r"^(\d+) - (.+)$")
+_CHOOSE_LINE = re.compile(r"^(Choose from \S+ \([^)]+\):)(.*)$")
+_ACCEPT_LINE = re.compile(r"^(Accept this ontology\? \[[^\]]+\] \([^)]+\):)(.*)$")
 
-    Timings are synthesized rather than measured. The point of the player is to
-    show the shape of the session at a readable pace; a real wall clock would
-    mostly record how fast the person typing was.
+
+_ROLE_CLASS = {
+    "prompt": "srag-term__prompt",
+    "cmd": "srag-term__cmd",
+    "key": "srag-term__key",
+    "default": "srag-term__default",
+    "value": "srag-term__value",
+    "heading": "srag-term__heading",
+    "choice-n": "srag-term__choice-n",
+    "choice": "srag-term__choice",
+    "status": "srag-term__status",
+    "done": "srag-term__heading",
+}
+
+# SGR 1 is bold (commands, answers); SGR 2 is faint (prompts, menus).
+_ROLE_SGR = {
+    "prompt": "2",
+    "default": "2",
+    "choice-n": "2",
+    "key": "2",
+    "choice": "2",
+    "status": "2",
+    "cmd": "1",
+    "value": "1",
+    "heading": "1",
+    "done": "1;32",
+}
+
+
+def _span(class_name: str, text: str) -> str:
+    return f'<span class="{class_name}">{html.escape(text)}</span>'
+
+
+def _parse_line(line: str, *, in_next: bool) -> tuple[str, list[tuple[str, str]]]:
+    """Split one transcript line into ``(kind, [(role, text), ...])``."""
+    if line.startswith("$ "):
+        return "cmd", [("prompt", "$ "), ("cmd", line[2:])]
+    if line.startswith("Select "):
+        return "select", [("heading", line)]
+    choice = _CHOICE_LINE.match(line)
+    if choice:
+        return "choice", [("choice-n", f"{choice.group(1)} - "), ("choice", choice.group(2))]
+    choose = _CHOOSE_LINE.match(line)
+    if choose:
+        return "choose", [("key", choose.group(1)), ("value", choose.group(2))]
+    accept = _ACCEPT_LINE.match(line)
+    if accept:
+        return "prompt", [("key", accept.group(1)), ("value", accept.group(2))]
+    prompt = _PROMPT_LINE.match(line)
+    if prompt:
+        return (
+            "prompt",
+            [
+                ("key", prompt.group(1)),
+                ("default", f" ({prompt.group(2)}):"),
+                ("value", prompt.group(3)),
+            ],
+        )
+    if line.startswith("Done."):
+        return "done", [("done", line)]
+    if line.startswith("Fetching ") or line.startswith("Writing "):
+        return "section", [("heading", line)]
+    if in_next and line.startswith("  "):
+        return "next", [("cmd", line)]
+    if line.startswith("  "):
+        return "status", [("status", line)]
+    return "output", [("raw", line)]
+
+
+def _format_line(line: str, *, in_next: bool) -> tuple[str, str]:
+    """Return ``(kind, inner_html)`` for one transcript line."""
+    kind, parts = _parse_line(line, in_next=in_next)
+    inner: list[str] = []
+    for role, text in parts:
+        class_name = _ROLE_CLASS.get(role)
+        inner.append(_span(class_name, text) if class_name else html.escape(text))
+    return kind, "".join(inner)
+
+
+def _ansi_line(parts: list[tuple[str, str]]) -> str:
+    chunks: list[str] = []
+    for role, text in parts:
+        code = _ROLE_SGR.get(role)
+        chunks.append(f"\x1b[{code}m{text}\x1b[0m" if code else text)
+    return "".join(chunks)
+
+
+def _split_typed_value(parts: list[tuple[str, str]]) -> tuple[list[tuple[str, str]], str]:
+    """Peel the typed answer off a prompt so it can be keyed in separately."""
+    if not parts or parts[-1][0] != "value":
+        return parts, ""
+    prefix, value = parts[:-1], parts[-1][1]
+    if value.startswith(" "):
+        return [*prefix, ("raw", " ")], value[1:]
+    return prefix, value
+
+
+def _keystroke_delay(char: str, index: int, previous: str) -> float:
+    """A stable, slightly uneven cadence. Must be deterministic for ``--check``."""
+    if char == " ":
+        return 0.11
+    if char in "-_/.@":
+        return 0.075
+    beat = (0.048, 0.062, 0.052, 0.078, 0.05)[index % 5]
+    if previous in {"", " "} and char.isupper():
+        return beat + 0.045
+    return beat
+
+
+def _delay_after(kind: str, line: str) -> float:
+    """Seconds to hold after a line so a command or choice can be read."""
+    answered = kind in {"prompt", "choose"} and not line.rstrip().endswith("):")
+    delays = {
+        "empty": 0.22,
+        "cmd": 1.2,
+        "select": 0.32,
+        "choice": 0.09,
+        "choose": 1.45 if answered else 1.15,
+        "prompt": 1.15 if answered else 0.9,
+        "status": 0.18,
+        "section": 0.7,
+        "done": 1.6,
+        "next": 0.75,
+        "output": 0.25,
+    }
+    return delays.get(kind, 0.2)
+
+
+def _needs_break(kind: str, previous: str | None) -> bool:
+    if previous in {None, "empty"}:
+        return False
+    if kind in {"select", "section", "done"}:
+        return True
+    if kind == "status" and previous not in {"status", "empty"}:
+        return True
+    if kind == "prompt" and previous == "cmd":
+        return True
+    if kind == "cmd" and previous != "cmd":
+        return True
+    return kind == "next" and previous != "next"
+
+
+def format_transcript_html(transcript: str) -> str:
+    """Wrap the session in a Terminal block whose lines can be styled.
+
+    A ``console`` fence only distinguishes ``$`` prompts from everything else,
+    so the wizard's questions, answers, and menus all render as one weight.
+    The plain text inside the ``<code>`` element is still the transcript, so
+    copy stays honest.
+    """
+    rendered: list[str] = []
+    previous: str | None = None
+    in_next = False
+    for line in transcript.splitlines():
+        if not line:
+            rendered.append('<span class="srag-term__line srag-term__line--empty"></span>')
+            previous = "empty"
+            continue
+        kind, inner = _format_line(line, in_next=in_next)
+        if kind == "done":
+            in_next = True
+        classes = f"srag-term__line srag-term__line--{kind}"
+        if _needs_break(kind, previous):
+            classes += " srag-term__break"
+        rendered.append(f'<span class="{classes}">{inner}</span>')
+        previous = kind
+    body = "\n".join(rendered) + "\n"
+    return (
+        '<div class="highlight srag-term">\n'
+        '<span class="filename">Terminal</span>\n'
+        f"<pre><code>{body}</code></pre>\n"
+        "</div>\n"
+    )
+
+
+def render_cast(transcript: str) -> str:
+    """An asciicast v2 file of the session, paced to be watched.
+
+    Menu rows land at once. Freeform answers are keyed in character by
+    character after a short pause, so the cursor blinks on the prompt the way
+    a real wizard wait does. Timings are synthesized and deterministic.
     """
     width = max((len(line) for line in transcript.splitlines()), default=80) + 2
     header = {
@@ -204,14 +386,51 @@ def render_cast(transcript: str) -> str:
         "title": "sci-rag new (generated by scripts/render_cast.py)",
         "env": {"TERM": "xterm-256color", "SHELL": "/bin/bash"},
     }
-    lines = [json.dumps(header, separators=(",", ":"))]
-    clock = 0.0
+    events: list[tuple[float, str]] = []
+    clock = 0.4
+    in_next = False
+
+    def emit(payload: str) -> None:
+        nonlocal clock
+        stamp = round(clock, 3)
+        if events and stamp <= events[-1][0]:
+            stamp = round(events[-1][0] + 0.001, 3)
+            clock = stamp
+        events.append((stamp, payload))
+
     for line in transcript.splitlines():
-        # Prompts read as typing; output lines land at once.
-        clock += 0.45 if line.rstrip().endswith(":") else 0.12
-        lines.append(json.dumps([round(clock, 3), "o", line + "\r\n"], separators=(",", ":")))
-    clock += 2.0
-    lines.append(json.dumps([round(clock, 3), "o", ""], separators=(",", ":")))
+        if not line:
+            emit("\r\n")
+            clock += _delay_after("empty", line)
+            continue
+        kind, parts = _parse_line(line, in_next=in_next)
+        if kind == "done":
+            in_next = True
+        if kind == "prompt":
+            prefix, typed = _split_typed_value(parts)
+            emit(_ansi_line(prefix))
+            # Long enough for one cursor blink before the first key lands.
+            clock += 1.12 if not typed else 0.92
+            previous = ""
+            for index, char in enumerate(typed):
+                clock += _keystroke_delay(char, index, previous)
+                emit(f"\x1b[1m{char}" if index == 0 else char)
+                previous = char
+            if typed:
+                clock += 0.24
+                emit("\x1b[0m\r\n")
+            else:
+                emit("\r\n")
+            clock += 0.5 if typed else 0.62
+            continue
+        emit(_ansi_line(parts) + "\r\n")
+        clock += _delay_after(kind, line)
+    clock += 2.4
+    emit("")
+    lines = [json.dumps(header, separators=(",", ":"))]
+    lines.extend(
+        json.dumps([stamp, "o", payload], separators=(",", ":")) for stamp, payload in events
+    )
     return "\n".join(lines) + "\n"
 
 
@@ -225,11 +444,11 @@ def render_index(index_text: str, quick: str, advanced: str) -> str:
     head, _, rest = index_text.partition(BEGIN)
     _, _, tail = rest.partition(END)
     block = (
-        f'{BEGIN}\n\n```console title="Terminal"\n{quick}```\n\n'
+        f"{BEGIN}\n\n{format_transcript_html(quick)}\n"
         "<details markdown>\n<summary>Show the Advanced setup</summary>\n\n"
         '<div class="srag-cast" data-cast="assets/casts/sci-rag-new-advanced.cast" '
         'aria-label="Recorded Advanced sci-rag new session"></div>\n\n'
-        f'```console title="Terminal"\n{advanced}```\n\n</details>\n\n{END}'
+        f"{format_transcript_html(advanced)}\n</details>\n\n{END}"
     )
     return head + block + tail
 

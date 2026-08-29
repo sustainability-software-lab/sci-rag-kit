@@ -14,8 +14,8 @@ For work performed with the current release, cite the software title, version or
 ```bibtex
 @software{sci_rag_kit_2026,
   author  = {{Sci RAG Kit contributors}},
-  title   = {Sci RAG Kit: Retrieval-augmented generation over scientific
-             document collections, on one Postgres database},
+  title   = {Sci RAG Kit: Retrieval-augmented generation, built around your
+             scientific domain},
   year    = {2026},
   version = {0.3.0},
   url     = {https://github.com/sustainability-software-lab/sci-rag-kit},

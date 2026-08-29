@@ -26,29 +26,59 @@
       previous.dispose();
     }
     el.innerHTML = "";
+    var reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
     var player = AsciinemaPlayer.create(el.dataset.cast, el, {
-      autoPlay: false,
+      autoPlay: !reduceMotion,
+      loop: !reduceMotion,
+      // A picture frame, not a video player: no control bar, restart on end.
+      controls: false,
       preload: true,
-      idleTimeLimit: 1.5,
-      speed: 1.4,
-      fit: "width",
+      // Hold authored pauses after commands and choices; do not compress them.
+      idleTimeLimit: 4,
+      speed: 1,
+      // Width-fit shrinks the glyphs below the static console next to it.
+      // 0.88em is the same rule as `.md-typeset code` in typography.css.
+      fit: false,
+      terminalFontSize: "0.88em",
+      terminalLineHeight: 1.55,
       theme: themeFor(document.body.getAttribute("data-md-color-scheme")),
       terminalFontFamily: "var(--md-code-font-family, monospace)",
     });
     players.set(el, player);
   }
 
-  document.addEventListener("DOMContentLoaded", function () {
+  function mountAll() {
     var elements = document.querySelectorAll(".srag-cast");
-    if (!elements.length) {
+    elements.forEach(mount);
+  }
+
+  function init() {
+    if (!document.querySelectorAll(".srag-cast").length) {
       return;
     }
-    elements.forEach(mount);
+    mountAll();
+    if (init.watching) {
+      return;
+    }
+    init.watching = true;
     new MutationObserver(function () {
-      elements.forEach(mount);
+      mountAll();
     }).observe(document.body, {
       attributes: true,
       attributeFilter: ["data-md-color-scheme"],
     });
-  });
+  }
+
+  // extra_javascript can run after DOMContentLoaded, and Material instant
+  // navigation never fires that event again. Mount in both cases.
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+  if (typeof document$ !== "undefined" && document$.subscribe) {
+    document$.subscribe(init);
+  }
 })();

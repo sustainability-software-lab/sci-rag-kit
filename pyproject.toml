@@ -1,7 +1,7 @@
 [project]
 name = "sci-rag-kit"
 version = "0.3.0"
-description = "Retrieval-augmented generation over scientific document collections, on one Postgres database."
+description = "Retrieval-augmented generation, built around your scientific domain."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "BSD-3-Clause" }

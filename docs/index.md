@@ -1,7 +1,7 @@
 ---
 template: home.html
 title: Sci RAG Kit
-description: Retrieval-augmented generation over scientific document collections, on one Postgres database.
+description: Retrieval-augmented generation, built around your scientific domain.
 hide:
   - navigation
   - toc
@@ -14,7 +14,7 @@ hide:
   <img class="srag-home-masthead__logo srag-logo--dark" src="assets/branding/monochrome/sci-rag-kit-full-white-transparent.png" alt="Sci RAG Kit" width="2048" height="768">
 </div>
 
-# Retrieval-augmented generation over scientific document collections, on one Postgres database
+# Retrieval-augmented generation, built around your scientific domain.
 
 <p class="srag-home-masthead__lede">A template repository that ingests your literature, keeps provenance and rights attached, retrieves through five fused layers, generates cited answers, and evaluates the whole path.</p>
 
@@ -176,219 +176,223 @@ The recommended Quick session above, in full. `scripts/render_cast.py` builds it
 
 <!-- BEGIN GENERATED TRANSCRIPT: scripts/render_cast.py -->
 
-```console title="Terminal"
-$ pipx install sci-rag-kit
-$ sci-rag new
-Select Setup
-1 - Quick - Six questions, sensible defaults for the rest
-2 - Advanced - Every option, for when you know what you want
-Choose from [1/2] (1): 1
-project_name (My Scientific KB): Membrane Materials KB
-description (A short description of your domain.): Membrane chemistry and performance for water treatment
-contact_email (Sent to OpenAlex, Crossref, and Unpaywall): you@lbl.gov
-Select environment_manager
-1 - uv
-2 - pixi
-3 - conda
-4 - venv+pip
-Choose from [1/2/3/4] (1): 1
-Select credentials
-1 - google_ai_studio
-2 - vertex_ai
-3 - offline
-Choose from [1/2/3] (1): 1
-google_api_key ():
-Select corpus_source
-1 - local_files
-2 - openalex_topic
-3 - doi_list
-4 - demo_only
-Choose from [1/2/3/4] (1): 1
-Checking the credential with one small model request...
-gemini-2.5-flash answered in 90 ms.
-
-  Drafting an ontology for "Membrane chemistry and performance for water treatment"...
-
-  Entity types      Membrane, Material, Contaminant, Process, Property, Application, Organization, Standard
-  Relation types    MADE_OF, REMOVES, HAS_PROPERTY, USED_IN, REQUIRES, COMPARED_WITH
-  Query classes     performance, fabrication, fouling, application
-
-  Accept this ontology? [y/n/redraft] (y):
-
-Fetching sci-rag-kit for membrane-materials-kb...
-
-Writing membrane-materials-kb/
-
-  removed                docs/planning/, scripts/cloud_postgres.py, infra/terraform/dev-database/
-  domain/domain.yaml     8 entity types, 6 relation types, 4 query classes
-  domain/eval_seed_questions.jsonl   guided blank
-  .env                   google_ai_studio, gemini-2.5-flash, gemini-embedding-001
-  pyproject.toml         name, description, extras: none
-  Makefile               commands prefixed with `uv run`
-  docs/                  kit onboarding, player, and cast removed
-  Dockerfile             uv base image
-  .devcontainer/         ghcr.io/va-h/devcontainers-features/uv:1
-  rendered               6 files for uv
-  data/corpus.jsonl      commented field shape, ready for your documents
-  LICENSE                BSD-3-Clause
-  README.md              rewritten opening
-  git                    initialized, 1 commit
-
-Done. Membrane Materials KB is yours. Next:
-
-  cd membrane-materials-kb
-  uv sync
-  uv run sci-rag doctor
-  uv run sci-rag draft manifest --folder data/raw
-  uv run sci-rag ingest --manifest data/corpus.jsonl
-
-Then let a model draft the rest of your domain files:
-
-  uv run sci-rag draft ontology --from-corpus
-  uv run sci-rag draft questions --count 10
-
-Each one proposes a file for you to review rather than writing one, and each also prints its prompt (--print-prompt) if you would rather paste it into an assistant you already have. Guide: docs/llm-assisted-setup.md
-
-The walkthrough: docs/bring-your-own-domain.md
-```
+<div class="highlight srag-term">
+<span class="filename">Terminal</span>
+<pre><code><span class="srag-term__line srag-term__line--cmd"><span class="srag-term__prompt">$ </span><span class="srag-term__cmd">pipx install sci-rag-kit</span></span>
+<span class="srag-term__line srag-term__line--cmd"><span class="srag-term__prompt">$ </span><span class="srag-term__cmd">sci-rag new</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select Setup</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Quick - Six questions, sensible defaults for the rest</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">Advanced - Every option, for when you know what you want</span></span>
+<span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"> 1</span></span>
+<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">project_name</span><span class="srag-term__default"> (My Scientific KB):</span><span class="srag-term__value"> Membrane Materials KB</span></span>
+<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">description</span><span class="srag-term__default"> (A short description of your domain.):</span><span class="srag-term__value"> Membrane chemistry and performance for water treatment</span></span>
+<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">contact_email</span><span class="srag-term__default"> (Sent to OpenAlex, Crossref, and Unpaywall):</span><span class="srag-term__value"> you@lbl.gov</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select environment_manager</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">uv</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">pixi</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">conda</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">4 - </span><span class="srag-term__choice">venv+pip</span></span>
+<span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3/4] (1):</span><span class="srag-term__value"> 1</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select credentials</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">google_ai_studio</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">vertex_ai</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">offline</span></span>
+<span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3] (1):</span><span class="srag-term__value"> 1</span></span>
+<span class="srag-term__line srag-term__line--output">google_api_key ():</span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select corpus_source</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">local_files</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">openalex_topic</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">doi_list</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">4 - </span><span class="srag-term__choice">demo_only</span></span>
+<span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3/4] (1):</span><span class="srag-term__value"> 1</span></span>
+<span class="srag-term__line srag-term__line--output">Checking the credential with one small model request...</span>
+<span class="srag-term__line srag-term__line--output">gemini-2.5-flash answered in 90 ms.</span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Drafting an ontology for &quot;Membrane chemistry and performance for water treatment&quot;...</span></span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Entity types      Membrane, Material, Contaminant, Process, Property, Application, Organization, Standard</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Relation types    MADE_OF, REMOVES, HAS_PROPERTY, USED_IN, REQUIRES, COMPARED_WITH</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Query classes     performance, fabrication, fouling, application</span></span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Accept this ontology? [y/n/redraft] (y):</span></span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--section"><span class="srag-term__heading">Fetching sci-rag-kit for membrane-materials-kb...</span></span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--section"><span class="srag-term__heading">Writing membrane-materials-kb/</span></span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  removed                docs/planning/, scripts/cloud_postgres.py, infra/terraform/dev-database/</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  domain/domain.yaml     8 entity types, 6 relation types, 4 query classes</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  domain/eval_seed_questions.jsonl   guided blank</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  .env                   google_ai_studio, gemini-2.5-flash, gemini-embedding-001</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  pyproject.toml         name, description, extras: none</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Makefile               commands prefixed with `uv run`</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  docs/                  kit onboarding, player, and cast removed</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Dockerfile             uv base image</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  .devcontainer/         ghcr.io/va-h/devcontainers-features/uv:1</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  rendered               6 files for uv</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  data/corpus.jsonl      commented field shape, ready for your documents</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  LICENSE                BSD-3-Clause</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  README.md              rewritten opening</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  git                    initialized, 1 commit</span></span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--done"><span class="srag-term__heading">Done. Membrane Materials KB is yours. Next:</span></span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  cd membrane-materials-kb</span></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  uv sync</span></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  uv run sci-rag doctor</span></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  uv run sci-rag draft manifest --folder data/raw</span></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  uv run sci-rag ingest --manifest data/corpus.jsonl</span></span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--output">Then let a model draft the rest of your domain files:</span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  uv run sci-rag draft ontology --from-corpus</span></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  uv run sci-rag draft questions --count 10</span></span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--output">Each one proposes a file for you to review rather than writing one, and each also prints its prompt (--print-prompt) if you would rather paste it into an assistant you already have. Guide: docs/llm-assisted-setup.md</span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--output">The walkthrough: docs/bring-your-own-domain.md</span>
+</code></pre>
+</div>
 
 <details markdown>
 <summary>Show the Advanced setup</summary>
 
 <div class="srag-cast" data-cast="assets/casts/sci-rag-new-advanced.cast" aria-label="Recorded Advanced sci-rag new session"></div>
 
-```console title="Terminal"
-$ pipx install sci-rag-kit
-$ sci-rag new
-Select Setup
-1 - Quick - Six questions, sensible defaults for the rest
-2 - Advanced - Every option, for when you know what you want
-Choose from [1/2] (1): 2
-project_name (My Scientific KB): Membrane Materials KB
-repo_name (membrane-materials-kb):
-description (A short description of your domain.): Membrane chemistry and performance for water treatment
-author_name (Your name, lab, or organization): Berkeley Lab
-contact_email (Sent to OpenAlex, Crossref, and Unpaywall): you@lbl.gov
-python_version (3.12):
-Select environment_manager
-1 - uv
-2 - pixi
-3 - conda
-4 - venv+pip
-Choose from [1/2/3/4] (1): 2
-Select dependency_file
-1 - pyproject.toml
-2 - pixi.toml
-Choose from [1/2] (1):
-Select credentials
-1 - google_ai_studio
-2 - vertex_ai
-3 - offline
-Choose from [1/2/3] (1): 1
-google_api_key ():
-Select embedding_provider
-1 - google
-2 - local-hash
-Choose from [1/2] (1):
-llm_model (gemini-2.5-flash):
-embedding_model (gemini-embedding-001):
-embedding_dim (1536):
-Select ontology
-1 - draft_with_llm
-2 - keep_demo_example
-3 - blank
-Choose from [1/2/3] (1): 1
-Select corpus_source
-1 - local_files
-2 - openalex_topic
-3 - doi_list
-4 - demo_only
-Choose from [1/2/3/4] (1): 2
-openalex_topic (your topic): polyamide membrane fouling
-max_results (100): 250
-Select pdf_parser
-1 - pypdf
-2 - docling
-Choose from [1/2] (1): 2
-Select reranker
-1 - none
-2 - llm
-3 - local_cross_encoder
-Choose from [1/2/3] (1):
-Select include_terraform
-1 - Yes
-2 - No
-Choose from [1/2] (1): 2
-Select include_cloud_database
-1 - Yes
-2 - No
-Choose from [1/2] (2):
-Select include_demo_corpus
-1 - Yes
-2 - No
-Choose from [1/2] (1): 2
-Select open_source_license
-1 - BSD-3-Clause
-2 - MIT
-3 - Apache-2.0
-4 - No license file
-Choose from [1/2/3/4] (1):
-Select initialize_git
-1 - Yes
-2 - No
-Choose from [1/2] (1):
-Select draft_domain_files
-1 - Yes
-2 - No
-Choose from [1/2] (1):
-Checking the credential with one small model request...
-gemini-2.5-flash answered in 90 ms.
-
-  Drafting an ontology for "Membrane chemistry and performance for water treatment"...
-
-  Entity types      Membrane, Material, Contaminant, Process, Property, Application, Organization, Standard
-  Relation types    MADE_OF, REMOVES, HAS_PROPERTY, USED_IN, REQUIRES, COMPARED_WITH
-  Query classes     performance, fabrication, fouling, application
-
-  Accept this ontology? [y/n/redraft] (y):
-
-Fetching sci-rag-kit for membrane-materials-kb...
-
-Writing membrane-materials-kb/
-
-  removed                docs/planning/, infra/terraform/, scripts/cloud_postgres.py, infra/terraform/dev-database/, data/demo/, examples/
-  domain/domain.yaml     8 entity types, 6 relation types, 4 query classes
-  domain/eval_seed_questions.jsonl   guided blank
-  .env                   google_ai_studio, gemini-2.5-flash, gemini-embedding-001
-  pyproject.toml         name, description, extras: docling
-  Makefile               commands prefixed with `pixi run`, database runs from conda-forge, no Docker
-  docs/                  kit onboarding, player, and cast removed
-  pyproject.toml          workspace, environments, tasks
-  Dockerfile             pixi base image
-  .devcontainer/         ghcr.io/prefix-dev/devcontainer-features/pixi:0
-  rendered               9 files for pixi
-  pixi.lock              created on first `pixi install`
-  data/campaigns/        openalex topic "polyamide membrane fouling"
-  LICENSE                BSD-3-Clause
-  README.md              rewritten opening
-  git                    initialized, 1 commit
-
-Done. Membrane Materials KB is yours. Next:
-
-  cd membrane-materials-kb
-  pixi install
-  pixi run sci-rag doctor
-  make corpus
-
-Then let a model draft the rest of your domain files:
-
-  pixi run sci-rag draft ontology --from-corpus
-  pixi run sci-rag draft questions --count 10
-
-Each one proposes a file for you to review rather than writing one, and each also prints its prompt (--print-prompt) if you would rather paste it into an assistant you already have. Guide: docs/llm-assisted-setup.md
-
-The walkthrough: docs/bring-your-own-domain.md
-```
+<div class="highlight srag-term">
+<span class="filename">Terminal</span>
+<pre><code><span class="srag-term__line srag-term__line--cmd"><span class="srag-term__prompt">$ </span><span class="srag-term__cmd">pipx install sci-rag-kit</span></span>
+<span class="srag-term__line srag-term__line--cmd"><span class="srag-term__prompt">$ </span><span class="srag-term__cmd">sci-rag new</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select Setup</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Quick - Six questions, sensible defaults for the rest</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">Advanced - Every option, for when you know what you want</span></span>
+<span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"> 2</span></span>
+<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">project_name</span><span class="srag-term__default"> (My Scientific KB):</span><span class="srag-term__value"> Membrane Materials KB</span></span>
+<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">repo_name</span><span class="srag-term__default"> (membrane-materials-kb):</span><span class="srag-term__value"></span></span>
+<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">description</span><span class="srag-term__default"> (A short description of your domain.):</span><span class="srag-term__value"> Membrane chemistry and performance for water treatment</span></span>
+<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">author_name</span><span class="srag-term__default"> (Your name, lab, or organization):</span><span class="srag-term__value"> Berkeley Lab</span></span>
+<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">contact_email</span><span class="srag-term__default"> (Sent to OpenAlex, Crossref, and Unpaywall):</span><span class="srag-term__value"> you@lbl.gov</span></span>
+<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">python_version</span><span class="srag-term__default"> (3.12):</span><span class="srag-term__value"></span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select environment_manager</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">uv</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">pixi</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">conda</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">4 - </span><span class="srag-term__choice">venv+pip</span></span>
+<span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3/4] (1):</span><span class="srag-term__value"> 2</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select dependency_file</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">pyproject.toml</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">pixi.toml</span></span>
+<span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"></span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select credentials</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">google_ai_studio</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">vertex_ai</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">offline</span></span>
+<span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3] (1):</span><span class="srag-term__value"> 1</span></span>
+<span class="srag-term__line srag-term__line--output">google_api_key ():</span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select embedding_provider</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">google</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">local-hash</span></span>
+<span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"></span></span>
+<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">llm_model</span><span class="srag-term__default"> (gemini-2.5-flash):</span><span class="srag-term__value"></span></span>
+<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">embedding_model</span><span class="srag-term__default"> (gemini-embedding-001):</span><span class="srag-term__value"></span></span>
+<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">embedding_dim</span><span class="srag-term__default"> (1536):</span><span class="srag-term__value"></span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select ontology</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">draft_with_llm</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">keep_demo_example</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">blank</span></span>
+<span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3] (1):</span><span class="srag-term__value"> 1</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select corpus_source</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">local_files</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">openalex_topic</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">doi_list</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">4 - </span><span class="srag-term__choice">demo_only</span></span>
+<span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3/4] (1):</span><span class="srag-term__value"> 2</span></span>
+<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">openalex_topic</span><span class="srag-term__default"> (your topic):</span><span class="srag-term__value"> polyamide membrane fouling</span></span>
+<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">max_results</span><span class="srag-term__default"> (100):</span><span class="srag-term__value"> 250</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select pdf_parser</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">pypdf</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">docling</span></span>
+<span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"> 2</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select reranker</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">none</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">llm</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">local_cross_encoder</span></span>
+<span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3] (1):</span><span class="srag-term__value"></span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select include_terraform</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Yes</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">No</span></span>
+<span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"> 2</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select include_cloud_database</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Yes</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">No</span></span>
+<span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (2):</span><span class="srag-term__value"></span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select include_demo_corpus</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Yes</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">No</span></span>
+<span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"> 2</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select open_source_license</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">BSD-3-Clause</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">MIT</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">Apache-2.0</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">4 - </span><span class="srag-term__choice">No license file</span></span>
+<span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3/4] (1):</span><span class="srag-term__value"></span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select initialize_git</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Yes</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">No</span></span>
+<span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"></span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select draft_domain_files</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Yes</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">No</span></span>
+<span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"></span></span>
+<span class="srag-term__line srag-term__line--output">Checking the credential with one small model request...</span>
+<span class="srag-term__line srag-term__line--output">gemini-2.5-flash answered in 90 ms.</span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Drafting an ontology for &quot;Membrane chemistry and performance for water treatment&quot;...</span></span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Entity types      Membrane, Material, Contaminant, Process, Property, Application, Organization, Standard</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Relation types    MADE_OF, REMOVES, HAS_PROPERTY, USED_IN, REQUIRES, COMPARED_WITH</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Query classes     performance, fabrication, fouling, application</span></span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Accept this ontology? [y/n/redraft] (y):</span></span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--section"><span class="srag-term__heading">Fetching sci-rag-kit for membrane-materials-kb...</span></span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--section"><span class="srag-term__heading">Writing membrane-materials-kb/</span></span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  removed                docs/planning/, infra/terraform/, scripts/cloud_postgres.py, infra/terraform/dev-database/, data/demo/, examples/</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  domain/domain.yaml     8 entity types, 6 relation types, 4 query classes</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  domain/eval_seed_questions.jsonl   guided blank</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  .env                   google_ai_studio, gemini-2.5-flash, gemini-embedding-001</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  pyproject.toml         name, description, extras: docling</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Makefile               commands prefixed with `pixi run`, database runs from conda-forge, no Docker</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  docs/                  kit onboarding, player, and cast removed</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  pyproject.toml          workspace, environments, tasks</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Dockerfile             pixi base image</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  .devcontainer/         ghcr.io/prefix-dev/devcontainer-features/pixi:0</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  rendered               9 files for pixi</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  pixi.lock              created on first `pixi install`</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  data/campaigns/        openalex topic &quot;polyamide membrane fouling&quot;</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  LICENSE                BSD-3-Clause</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  README.md              rewritten opening</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  git                    initialized, 1 commit</span></span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--done"><span class="srag-term__heading">Done. Membrane Materials KB is yours. Next:</span></span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  cd membrane-materials-kb</span></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  pixi install</span></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  pixi run sci-rag doctor</span></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  make corpus</span></span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--output">Then let a model draft the rest of your domain files:</span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  pixi run sci-rag draft ontology --from-corpus</span></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  pixi run sci-rag draft questions --count 10</span></span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--output">Each one proposes a file for you to review rather than writing one, and each also prints its prompt (--print-prompt) if you would rather paste it into an assistant you already have. Guide: docs/llm-assisted-setup.md</span>
+<span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--output">The walkthrough: docs/bring-your-own-domain.md</span>
+</code></pre>
+</div>
 
 </details>
 

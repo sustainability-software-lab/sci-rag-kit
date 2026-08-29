@@ -8,6 +8,12 @@
   width: 100%;
 }
 
+/* Material's content column starts 1.5rem below the header. The masthead
+   already has its own top padding, so that extra band is just empty air. */
+.md-main__inner:has(.srag-home-body) {
+  margin-top: 0;
+}
+
 @media screen and (min-width: 76.25em) {
   .srag-home-nav {
     display: none;
@@ -26,12 +32,7 @@
 
 .srag-home-section + .srag-home-section {
   border-top: 1px solid var(--srag-border);
-}
-
-/* The figure carries detail that rewards width, so it runs wider than the
-   prose sections rather than being held to a reading measure. */
-.srag-home-section--figure {
-  max-width: 64rem;
+  padding-top: 1.1rem;
 }
 
 .srag-home-section > :first-child {
@@ -49,9 +50,9 @@
 
 /* ── Masthead ───────────────────────────────────────────────────────── */
 
-.srag-home-masthead {
-  padding-top: 3.2rem;
-  padding-bottom: 2.6rem;
+.srag-home-section.srag-home-masthead {
+  padding-top: 1.4rem;
+  padding-bottom: 1.1rem;
 }
 
 .srag-home-masthead__brand {
@@ -60,7 +61,7 @@
 
 .srag-home-masthead__logo {
   display: block;
-  width: 14rem;
+  width: 20rem;
   height: auto;
 }
 
@@ -87,11 +88,14 @@
 }
 
 .md-typeset .srag-home-masthead__lede {
-  max-width: 54ch;
   margin: 0;
   color: var(--srag-muted-700);
   font-size: 0.92rem;
   line-height: 1.6;
+}
+
+.md-typeset .srag-home-masthead__lede > p {
+  margin: 0;
 }
 
 .md-typeset .srag-home-masthead__meta {
@@ -176,12 +180,17 @@
     padding: 2.1rem 1.2rem;
   }
 
-  .srag-home-masthead {
-    padding-top: 2.2rem;
+  .srag-home-section + .srag-home-section {
+    padding-top: 1.1rem;
+  }
+
+  .srag-home-section.srag-home-masthead {
+    padding-top: 1.1rem;
+    padding-bottom: 1.1rem;
   }
 
   .srag-home-masthead__logo {
-    width: 9rem;
+    width: 13rem;
   }
 
   .md-typeset .srag-home-figure img {
@@ -189,27 +198,116 @@
   }
 }
 
-/* Recorded sci-rag-new session on the homepage. The player brings its own
-   ANSI palette, but its background and body text come from the same tokens as
-   the console blocks above it, so the two sit on one surface instead of two. */
+/* Recorded sci-rag-new session: the same box as `.md-typeset .highlight`,
+   so it sits with the console above it rather than as a second surface.
+   The vendor 0.75em terminal border is zeroed; it clipped the first column
+   and painted a ring in a different grey. */
 .srag-cast {
+  --term-color-background: var(--md-code-bg-color);
+  --term-color-foreground: var(--md-code-fg-color);
+  --term-color-2: var(--srag-success);
+  --term-color-10: var(--srag-success);
   margin: 1.25rem 0 1rem;
-  border: 1px solid var(--srag-border);
-  border-radius: var(--srag-radius-md);
   overflow: hidden;
-  background: var(--srag-surface-tinted);
+  border: 1px solid var(--srag-border);
+  border-radius: var(--srag-radius-sm);
+  background: var(--md-code-bg-color);
 }
 
 .srag-cast:empty {
   display: none;
 }
 
-.srag-cast .ap-player {
-  font-size: 0.82rem;
+/* The console is `.md-typeset pre > code`, and both `pre` and `code` are
+   0.88em, so the glyphs compound. The player option sets 0.88em on the
+   player; this wrapper supplies the other 0.88em so the two surfaces match.
+   Left-align so a wider-than-the-column recording clips on the right, not
+   through the prompt. Padding matches the inset on `pre > code`. */
+.srag-cast .ap-wrapper {
+  height: auto;
+  justify-content: flex-start;
+  font-size: 0.88em;
+  padding: 0.68em 1.04em;
 }
 
-.srag-cast .ap-terminal {
+.srag-cast div.ap-wrapper div.ap-player {
   --term-color-background: var(--md-code-bg-color);
   --term-color-foreground: var(--md-code-fg-color);
-  background-color: var(--md-code-bg-color);
+  --term-color-2: var(--srag-success);
+  --term-color-10: var(--srag-success);
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 0;
+  background-color: transparent;
+}
+
+.srag-cast .ap-control-bar {
+  display: none;
+}
+
+.srag-cast pre.ap-terminal {
+  border-width: 0;
+  background-color: transparent;
+}
+
+.srag-cast .ap-terminal .ap-bright {
+  font-weight: 600;
+}
+
+.srag-cast .ap-terminal .ap-faint {
+  opacity: 0.62;
+}
+
+/* A block caret on CSS time, not the player's on/off toggle, so it keeps a
+   steady beat while a prompt waits for the next keystroke. */
+.srag-cast pre.ap-terminal .ap-line .ap-cursor,
+.srag-cast pre.ap-terminal.ap-cursor-on .ap-line .ap-cursor {
+  color: var(--bg);
+  background-color: var(--fg);
+  border-radius: 0.04em;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .srag-cast pre.ap-terminal .ap-line .ap-cursor {
+    animation: srag-cursor-blink 1.06s steps(1, end) infinite;
+  }
+}
+
+@keyframes srag-cursor-blink {
+  50% {
+    color: var(--fg);
+    background-color: transparent;
+  }
+}
+
+/* The static Example transcript. A console fence cannot tell a question from
+   an answer, so the renderer emits line spans and this sheet gives them weight
+   rather than a second palette. Lines stay inline so a newline in the pre is
+   one row, not two. */
+.md-typeset .srag-term pre {
+  line-height: 1.4;
+}
+
+.md-typeset .srag-term__prompt,
+.md-typeset .srag-term__default,
+.md-typeset .srag-term__choice-n {
+  color: var(--srag-muted-500);
+}
+
+.md-typeset .srag-term__key,
+.md-typeset .srag-term__choice,
+.md-typeset .srag-term__status {
+  color: var(--srag-muted-600);
+}
+
+.md-typeset .srag-term__cmd,
+.md-typeset .srag-term__value,
+.md-typeset .srag-term__heading {
+  color: var(--srag-ink-950);
+  font-weight: 600;
+}
+
+.md-typeset .srag-term__line--done .srag-term__heading {
+  color: var(--srag-success);
 }

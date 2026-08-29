@@ -168,6 +168,50 @@ def test_retired_marketing_components_are_not_reintroduced() -> None:
     assert not offenders, f"retired components still referenced: {sorted(offenders)}"
 
 
+# Python-Markdown's attr_list only binds `{ .class }` when it sits on the same
+# line as the construct. An 80-column wrap that splits `](page.md){ .srag-row }`
+# prints the marker as prose, which is what leaked onto the homepage.
+_SPLIT_ATTR_LIST = re.compile(r"\)\{\s*$")
+_ORPHAN_ATTR_LIST = re.compile(r"^\{?\s*\.[A-Za-z][\w-]*\s*\}$")
+
+
+def test_attr_list_markers_stay_on_the_same_line_as_the_link() -> None:
+    """A wrapped `{ .srag-row }` is not a class. It is visible junk."""
+    offenders: list[str] = []
+    for page in sorted(ROOT.joinpath("docs").rglob("*.md")):
+        if "planning" in page.relative_to(ROOT).parts:
+            continue
+        in_fence = False
+        previous = ""
+        for number, line in enumerate(page.read_text().splitlines(), start=1):
+            stripped = line.strip()
+            if stripped.startswith("```") or stripped.startswith("~~~"):
+                in_fence = not in_fence
+                previous = line
+                continue
+            if in_fence:
+                previous = line
+                continue
+            if _SPLIT_ATTR_LIST.search(line.rstrip()) or (
+                _ORPHAN_ATTR_LIST.match(stripped) and previous.rstrip().endswith("{")
+            ):
+                offenders.append(f"{page.relative_to(ROOT)}:{number}")
+            previous = line
+
+    assert not offenders, (
+        "keep `{{ .class }}` on the same line as the link; wrapping it prints "
+        f"the marker as text: {offenders}"
+    )
+
+
+def test_homepage_rows_do_not_use_attr_list_or_raw_md_hrefs() -> None:
+    """Homepage rows are HTML. A wrap cannot print `{ .srag-row }`, and MkDocs
+    does not rewrite `.md` inside a raw `href`."""
+    text = INDEX.read_text()
+    assert "{ .srag-row }" not in text
+    assert not re.search(r'class="srag-row"[^>]*href="[^"]+\.md"', text)
+
+
 # The display name has no hyphen, because the logo wordmark has none. The slug
 # keeps its hyphens everywhere it is an identifier: the repository, the package,
 # the CLI, image tags, and URLs. Only the human-readable name is spelled this way.
