@@ -1,4 +1,4 @@
-"""Render the homepage's `sci-rag-new` transcript and its terminal cast.
+"""Render Quick and Advanced onboarding transcripts and terminal casts.
 
 The session on the documentation homepage is not typed by hand. It is produced
 by driving the real wizard with a scripted set of answers and capturing exactly
@@ -6,11 +6,11 @@ what it printed, so a question added to ``sci_rag.scaffold.questions`` shows up
 here or ``--check`` fails. A hand-recorded cast goes stale the first time
 someone edits the question list, silently, on the page a new user reads first.
 
-Two artifacts come out of one run:
+Three artifacts come out of two runs:
 
-* ``docs/assets/casts/sci-rag-new.cast``, an asciicast v2 file for the player.
-* the static ``## Example`` transcript in ``docs/index.md``, between markers.
-  It is copy-pasteable, survives no-JS, and is what CI asserts against.
+* ``docs/assets/casts/sci-rag-new.cast``, the recommended Quick session.
+* ``docs/assets/casts/sci-rag-new-advanced.cast``, the full Advanced session.
+* both static transcripts in ``docs/index.md``, with Advanced collapsed.
 
 The only stubbed part is the model call behind the ontology draft: it uses the
 mock LLM client the tests use, so the drafting output is the real rendering
@@ -27,18 +27,22 @@ import json
 import shutil
 from pathlib import Path
 
+from rich.console import Console
+
 from sci_rag.llm import MockLLM
 from sci_rag.scaffold.answers import ProjectAnswers
 from sci_rag.scaffold.apply import apply_all
+from sci_rag.scaffold.report import print_scaffold_report
 from sci_rag.scaffold.wizard import collect_answers, confirm_ontology_draft
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BEGIN = "<!-- BEGIN GENERATED TRANSCRIPT: scripts/render_cast.py -->"
 END = "<!-- END GENERATED TRANSCRIPT -->"
 
-# The worked example from the plan for the project factory. Every value is an
-# answer to a question in questions.py, in order; "" means pressing Enter.
-SCRIPTED_ANSWERS = {
+# The Advanced session exercises every gated branch. Blank values still press
+# Enter, so questions added later appear without needing another hand-built
+# positional list.
+ADVANCED_ANSWERS = {
     "project_name": "Membrane Materials KB",
     "description": "Membrane chemistry and performance for water treatment",
     "author_name": "Berkeley Lab",
@@ -52,6 +56,15 @@ SCRIPTED_ANSWERS = {
     "pdf_parser": "2",
     "include_terraform": "2",
     "include_demo_corpus": "2",
+}
+
+QUICK_ANSWERS = {
+    "project_name": "Membrane Materials KB",
+    "description": "Membrane chemistry and performance for water treatment",
+    "contact_email": "you@lbl.gov",
+    "environment_manager": "1",
+    "credentials": "1",
+    "corpus_source": "1",
 }
 
 # The response the mock model gives for the ontology draft. Kept here rather
@@ -91,13 +104,29 @@ _TEMPLATE_FILES = ("pyproject.toml", "Makefile", "Dockerfile", ".env.example", "
 _TEMPLATE_TREES = ("domain", ".github", ".devcontainer")
 
 
-def _input_stream() -> io.StringIO:
-    """One line per question, in the order questions.py asks them."""
-    from sci_rag.scaffold.questions import QUESTIONS
+def _input_stream(*, quick: bool) -> io.StringIO:
+    """One line per visible prompt, including the setup-mode pre-step."""
+    from sci_rag.scaffold.questions import QUESTIONS, default_for, is_asked
 
-    return io.StringIO(
-        "\n".join(SCRIPTED_ANSWERS.get(question.name, "") for question in QUESTIONS) + "\n"
-    )
+    scripted = QUICK_ANSWERS if quick else ADVANCED_ANSWERS
+    replies = ["1" if quick else "2"]
+    gathered: dict[str, str] = {}
+    for question in QUESTIONS:
+        if not is_asked(question, gathered):
+            continue
+        default = default_for(question, gathered)
+        reply = scripted.get(question.name, "")
+        if quick and not question.quick:
+            gathered[question.name] = default
+            continue
+        replies.append(reply)
+        if not reply:
+            gathered[question.name] = default
+        elif question.choices and reply.isdigit():
+            gathered[question.name] = question.choices[int(reply) - 1]
+        else:
+            gathered[question.name] = reply
+    return io.StringIO("\n".join(replies) + "\n")
 
 
 def _scratch_template(root: Path) -> Path:
@@ -115,14 +144,14 @@ def _scratch_template(root: Path) -> Path:
     return target
 
 
-def render_transcript() -> str:
-    """The whole session, as the program prints it."""
+def render_transcript(*, quick: bool = True) -> str:
+    """One complete Quick or Advanced session, as the program prints it."""
     import tempfile
 
     output = io.StringIO()
-    output.write("$ pipx install sci-rag-kit\n$ sci-rag-new\n")
+    output.write("$ pipx install sci-rag-kit\n$ sci-rag new\n")
 
-    raw = collect_answers(input_stream=_input_stream(), output_stream=output)
+    raw = collect_answers(input_stream=_input_stream(quick=quick), output_stream=output)
 
     drafted = confirm_ontology_draft(
         REPO_ROOT / "domain",
@@ -137,16 +166,14 @@ def render_transcript() -> str:
     with tempfile.TemporaryDirectory() as scratch:
         template = _scratch_template(Path(scratch))
         output.write(f"\nFetching sci-rag-kit for {answers.repo_name}...\n")
-        output.write(f"\nWriting {answers.repo_name}/\n\n")
-        for change in apply_all(answers, template, year=2026):
-            output.write(f"  {change}\n")
+        changes = apply_all(answers, template, year=2026)
 
-    run = answers.runner.run
-    output.write(f"\nDone. {answers.project_name} is yours. Next:\n\n")
-    output.write(f"  cd {answers.repo_name}\n")
-    output.write(f"  {answers.runner.sync(extras=answers.extras)}\n")
-    output.write(f"  {run('sci-rag doctor', project_slug=answers.repo_name)}\n")
-    output.write("  make corpus\n")
+    print_scaffold_report(
+        answers,
+        changes,
+        console=Console(file=output, color_system=None, force_terminal=False, width=300),
+        created_directory=True,
+    )
     # Pressing Enter leaves the prompt with a trailing space. The
     # trailing-whitespace pre-commit hook would strip it from the committed
     # page and make --check fail forever, so strip it at the source.
@@ -179,7 +206,7 @@ def render_cast(transcript: str) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_index(index_text: str, transcript: str) -> str:
+def render_index(index_text: str, quick: str, advanced: str) -> str:
     """Replace the generated block in docs/index.md, leaving the rest alone."""
     if BEGIN not in index_text or END not in index_text:
         raise SystemExit(
@@ -188,7 +215,13 @@ def render_index(index_text: str, transcript: str) -> str:
         )
     head, _, rest = index_text.partition(BEGIN)
     _, _, tail = rest.partition(END)
-    block = f'{BEGIN}\n\n```console title="Terminal"\n{transcript}```\n\n{END}'
+    block = (
+        f'{BEGIN}\n\n```console title="Terminal"\n{quick}```\n\n'
+        "<details markdown>\n<summary>Show the Advanced setup</summary>\n\n"
+        '<div class="srag-cast" data-cast="assets/casts/sci-rag-new-advanced.cast" '
+        'aria-label="Recorded Advanced sci-rag new session"></div>\n\n'
+        f'```console title="Terminal"\n{advanced}```\n\n</details>\n\n{END}'
+    )
     return head + block + tail
 
 
@@ -208,15 +241,22 @@ def _write_or_check(path: Path, content: str, *, check: bool) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cast", type=Path, default=Path("docs/assets/casts/sci-rag-new.cast"))
+    parser.add_argument(
+        "--advanced-cast",
+        type=Path,
+        default=Path("docs/assets/casts/sci-rag-new-advanced.cast"),
+    )
     parser.add_argument("--index", type=Path, default=Path("docs/index.md"))
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
 
-    transcript = render_transcript()
-    status = _write_or_check(args.cast, render_cast(transcript), check=args.check)
+    quick = render_transcript(quick=True)
+    advanced = render_transcript(quick=False)
+    status = _write_or_check(args.cast, render_cast(quick), check=args.check)
+    status |= _write_or_check(args.advanced_cast, render_cast(advanced), check=args.check)
     status |= _write_or_check(
         args.index,
-        render_index(args.index.read_text(encoding="utf-8"), transcript),
+        render_index(args.index.read_text(encoding="utf-8"), quick, advanced),
         check=args.check,
     )
     raise SystemExit(status)

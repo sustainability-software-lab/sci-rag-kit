@@ -13,7 +13,7 @@ of being asked unconditionally and then ignored.
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from sci_rag.scaffold.naming import slugify
 from sci_rag.scaffold.runners import runner_keys
@@ -37,6 +37,10 @@ class Question:
     prompt: str
     default: str | Callable[[Answers], str]
     choices: tuple[str, ...] | None = None
+    label: str = ""
+    choice_help: Mapping[str, str] = field(default_factory=dict)
+    quick: bool = False
+    secret: bool = False
     help: str = ""
     asked_when: Callable[[Answers], bool] | None = None
     validator: Callable[[str], str] | None = None
@@ -68,30 +72,78 @@ def _validate_email(value: str) -> str:
 
 
 QUESTIONS: tuple[Question, ...] = (
-    Question("project_name", "project_name", "My Scientific KB"),
-    Question("repo_name", "repo_name", lambda a: slugify(a.get("project_name", ""))),
-    Question("description", "description", "A short description of your domain."),
-    Question("author_name", "author_name", "Your name, lab, or organization"),
+    Question(
+        "project_name",
+        "project_name",
+        "My Scientific KB",
+        label="What is your project called?",
+        quick=True,
+    ),
+    Question(
+        "repo_name",
+        "repo_name",
+        lambda a: slugify(a.get("project_name", "")),
+        label="Repository directory name",
+    ),
+    Question(
+        "description",
+        "description",
+        "A short description of your domain.",
+        label="One line about your field",
+        quick=True,
+    ),
+    Question(
+        "author_name",
+        "author_name",
+        "Your name, lab, or organization",
+        label="Who should the project credit?",
+    ),
     Question(
         "contact_email",
         "contact_email",
         "Sent to OpenAlex, Crossref, and Unpaywall",
+        label="Contact email",
+        quick=True,
         validator=_validate_email,
         help="Polite-pool identification for the metadata APIs. Blank is allowed.",
     ),
-    Question("python_version", "python_version", "3.12", validator=_validate_python_version),
+    Question(
+        "python_version",
+        "python_version",
+        "3.12",
+        choices=SUPPORTED_PYTHON_VERSIONS,
+        label="Python version",
+        choice_help={
+            "3.11": "The oldest version supported by this release",
+            "3.12": "The current recommended runtime",
+        },
+        validator=_validate_python_version,
+    ),
     Question(
         "environment_manager",
         "environment_manager",
         # Derived, so registering a profile can never leave this list stale.
         lambda _a: runner_keys()[0],
         choices=tuple(runner_keys()),
+        label="Environment manager",
+        choice_help={
+            "uv": "Fast Python environments and locking with uv",
+            "pixi": "Conda packages and Python dependencies in one project",
+            "conda": "A conventional conda environment plus pip dependencies",
+            "venv+pip": "Standard-library virtual environment and pip",
+        },
+        quick=True,
     ),
     Question(
         "dependency_file",
         "dependency_file",
         "pyproject.toml",
         choices=("pyproject.toml", "pixi.toml"),
+        label="Where should pixi dependencies live?",
+        choice_help={
+            "pyproject.toml": "Keep project and pixi dependencies together",
+            "pixi.toml": "Keep pixi configuration in its own file",
+        },
         asked_when=lambda a: a.get("environment_manager") == "pixi",
     ),
     Question(
@@ -99,66 +151,173 @@ QUESTIONS: tuple[Question, ...] = (
         "credentials",
         "google_ai_studio",
         choices=("google_ai_studio", "vertex_ai", "offline"),
+        label="How will you reach a model?",
+        choice_help={
+            "google_ai_studio": "One free key, no cloud project",
+            "vertex_ai": "Billed through a Google Cloud project you already have",
+            "offline": "No model calls, graph extraction, or generated answers",
+        },
+        quick=True,
     ),
     Question(
         "embedding_provider",
         "embedding_provider",
         "google",
         choices=("google", "local-hash"),
+        label="Embedding provider",
+        choice_help={
+            "google": "Semantic embeddings from the configured Google model",
+            "local-hash": "Deterministic offline vectors for development and tests",
+        },
         # Offline projects have no provider to choose; answers.py forces it.
         asked_when=lambda a: a.get("credentials") != "offline",
     ),
-    Question("llm_model", "llm_model", "gemini-2.5-flash"),
-    Question("embedding_model", "embedding_model", "gemini-embedding-001"),
-    Question("embedding_dim", "embedding_dim", "1536", validator=_validate_positive_int),
+    Question("llm_model", "llm_model", "gemini-2.5-flash", label="Generation model"),
+    Question(
+        "embedding_model",
+        "embedding_model",
+        "gemini-embedding-001",
+        label="Embedding model",
+    ),
+    Question(
+        "embedding_dim",
+        "embedding_dim",
+        "1536",
+        label="Embedding dimensions",
+        validator=_validate_positive_int,
+    ),
     Question(
         "ontology",
         "ontology",
         "draft_with_llm",
         choices=("draft_with_llm", "keep_demo_example", "blank"),
+        label="Starting ontology",
+        choice_help={
+            "draft_with_llm": "Draft field-specific types from your description",
+            "keep_demo_example": "Keep the worked agricultural-residue ontology for now",
+            "blank": "Start with an intentionally empty ontology",
+        },
     ),
     Question(
         "corpus_source",
         "corpus_source",
         "local_files",
         choices=("local_files", "openalex_topic", "doi_list", "demo_only"),
+        label="Where will the first documents come from?",
+        choice_help={
+            "local_files": "Add PDFs, HTML, Markdown, or text files from disk",
+            "openalex_topic": "Discover a legal corpus from an OpenAlex topic",
+            "doi_list": "Resolve a list of known DOI records",
+            "demo_only": "Keep the bundled synthetic corpus for evaluation",
+        },
+        quick=True,
     ),
     Question(
         "openalex_topic",
         "openalex_topic",
         "your topic",
+        label="OpenAlex topic",
         asked_when=lambda a: a.get("corpus_source") == "openalex_topic",
     ),
     Question(
         "max_results",
         "max_results",
         "100",
+        label="Maximum OpenAlex results",
         validator=_validate_positive_int,
         asked_when=lambda a: a.get("corpus_source") == "openalex_topic",
     ),
-    Question("pdf_parser", "pdf_parser", "pypdf", choices=("pypdf", "docling")),
-    Question("reranker", "reranker", "none", choices=("none", "llm", "local_cross_encoder")),
-    Question("include_terraform", "include_terraform", "Yes", choices=("Yes", "No")),
+    Question(
+        "pdf_parser",
+        "pdf_parser",
+        "pypdf",
+        choices=("pypdf", "docling"),
+        label="PDF parser",
+        choice_help={
+            "pypdf": "Lightweight text extraction with no machine-learning stack",
+            "docling": "Structure-aware parsing with stronger table extraction",
+        },
+    ),
+    Question(
+        "reranker",
+        "reranker",
+        "none",
+        choices=("none", "llm", "local_cross_encoder"),
+        label="Result reranker",
+        choice_help={
+            "none": "Return the fused ranking as-is",
+            "llm": "Ask the configured model to reorder retrieved passages",
+            "local_cross_encoder": "Run a local cross-encoder model",
+        },
+    ),
+    Question(
+        "include_terraform",
+        "include_terraform",
+        "Yes",
+        choices=("Yes", "No"),
+        label="Keep production Terraform?",
+        choice_help={
+            "Yes": "Keep the optional Cloud Run and Cloud SQL deployment module",
+            "No": "Remove production infrastructure files and their CI job",
+        },
+    ),
     Question(
         "include_cloud_database",
         "include_cloud_database",
         "No",
         choices=("Yes", "No"),
+        label="Include the Cloud SQL development helper?",
+        choice_help={
+            "Yes": "Keep the opt-in shared development database helper",
+            "No": "Use Docker, conda-forge, or another PostgreSQL server",
+        },
         help="Include the opt-in Cloud SQL development helper and Terraform module.",
     ),
-    Question("include_demo_corpus", "include_demo_corpus", "Yes", choices=("Yes", "No")),
+    Question(
+        "include_demo_corpus",
+        "include_demo_corpus",
+        "Yes",
+        choices=("Yes", "No"),
+        label="Keep the demo corpus?",
+        choice_help={
+            "Yes": "Keep five synthetic documents for a known-good first run",
+            "No": "Remove the demo and examples from the generated project",
+        },
+    ),
     Question(
         "open_source_license",
         "open_source_license",
         "BSD-3-Clause",
         choices=("BSD-3-Clause", "MIT", "Apache-2.0", "No license file"),
+        label="Open-source license",
+        choice_help={
+            "BSD-3-Clause": "Permissive license with non-endorsement protection",
+            "MIT": "Short permissive license",
+            "Apache-2.0": "Permissive license with an explicit patent grant",
+            "No license file": "Do not grant redistribution rights yet",
+        },
     ),
-    Question("initialize_git", "initialize_git", "Yes", choices=("Yes", "No")),
+    Question(
+        "initialize_git",
+        "initialize_git",
+        "Yes",
+        choices=("Yes", "No"),
+        label="Initialize a Git repository?",
+        choice_help={
+            "Yes": "Create a repository and make the generated baseline commit",
+            "No": "Leave version-control setup to you",
+        },
+    ),
     Question(
         "draft_domain_files",
         "draft_domain_files",
         "Yes",
         choices=("Yes", "No"),
+        label="Draft the remaining domain files next?",
+        choice_help={
+            "Yes": "Put the corpus-grounded drafting commands in next steps",
+            "No": "Point next steps at the hand-written route",
+        },
         # An offline project has no model to draft with, and the copy-paste
         # lane is a manual step nobody should be volunteered for by a default.
         asked_when=lambda a: a.get("credentials") != "offline",

@@ -1990,9 +1990,11 @@ def mcp_stdio() -> None:
 from sci_rag.cli.doctor import doctor as _doctor  # noqa: E402 - registered after app exists
 from sci_rag.cli.draft import draft_app as _draft_app  # noqa: E402 - registered after app exists
 from sci_rag.cli.init import init as _init  # noqa: E402 - registered after app exists
+from sci_rag.cli.new import new as _new  # noqa: E402 - registered after app exists
 
 app.command("doctor")(_doctor)
 app.command("init")(_init)
+app.command("new")(_new)
 app.add_typer(_draft_app, name="draft")
 
 

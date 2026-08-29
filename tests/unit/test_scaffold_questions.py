@@ -104,3 +104,24 @@ def test_default_answers_walks_the_gates() -> None:
     # are never reached.
     assert "openalex_topic" not in answers
     assert answers["include_cloud_database"] == "No"
+
+
+def test_quick_mode_has_exactly_the_six_approved_base_questions() -> None:
+    assert [question.name for question in QUESTIONS if question.quick] == [
+        "project_name",
+        "description",
+        "contact_email",
+        "environment_manager",
+        "credentials",
+        "corpus_source",
+    ]
+
+
+def test_every_choice_has_human_help_and_python_is_a_menu() -> None:
+    python = next(question for question in QUESTIONS if question.name == "python_version")
+    assert python.choices == ("3.11", "3.12")
+
+    for question in QUESTIONS:
+        if question.choices:
+            assert set(question.choice_help) == set(question.choices), question.name
+            assert all(question.choice_help.values()), question.name

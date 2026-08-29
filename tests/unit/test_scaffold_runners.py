@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from sci_rag.scaffold.runners import get_runner, runner_keys
+from sci_rag.scaffold.runners import detect_environment_manager, get_runner, runner_keys
 
 
 def test_uv_profile_is_registered() -> None:
@@ -48,3 +48,13 @@ def test_run_with_an_empty_prefix_leaves_no_leading_space() -> None:
 def test_unknown_runner_is_rejected_by_name() -> None:
     with pytest.raises(KeyError, match="poetry"):
         get_runner("poetry")
+
+
+def test_environment_detection_prefers_profiles_in_runner_order(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    installed = {"pixi", "micromamba"}
+    monkeypatch.setattr(
+        "sci_rag.scaffold.runners.shutil.which",
+        lambda executable: f"/bin/{executable}" if executable in installed else None,
+    )
+
+    assert detect_environment_manager() == "pixi"

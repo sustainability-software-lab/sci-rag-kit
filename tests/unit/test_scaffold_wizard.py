@@ -12,7 +12,34 @@ from pathlib import Path
 import pytest
 import yaml
 
+from sci_rag.scaffold.questions import QUESTIONS, default_for, is_asked
 from sci_rag.scaffold.wizard import AnswerFileError, run_wizard
+
+
+def _advanced_input(
+    overrides: dict[str, str] | None = None,
+    *,
+    retries: dict[str, list[str]] | None = None,
+) -> io.StringIO:
+    """Build positional input by question name, including the setup fork."""
+    overrides = overrides or {}
+    retries = retries or {}
+    replies = ["2"]
+    gathered: dict[str, str] = {}
+    for question in QUESTIONS:
+        if not is_asked(question, gathered):
+            continue
+        default = default_for(question, gathered)
+        attempts = retries.get(question.name, [overrides.get(question.name, "")])
+        replies.extend(attempts)
+        final = attempts[-1]
+        if not final:
+            gathered[question.name] = default
+        elif question.choices and final.isdigit():
+            gathered[question.name] = question.choices[int(final) - 1]
+        else:
+            gathered[question.name] = final
+    return io.StringIO("\n".join(replies) + "\n")
 
 
 def test_defaults_need_no_input() -> None:
@@ -62,9 +89,79 @@ def test_pressing_enter_through_everything_yields_the_defaults() -> None:
     assert answers == run_wizard(defaults=True)
 
 
+def test_quick_mode_asks_six_questions_and_keeps_every_other_default() -> None:
+    output = io.StringIO()
+
+    answers = run_wizard(
+        quick=True,
+        input_stream=io.StringIO("\n" * 6),
+        output_stream=output,
+    )
+
+    assert answers == run_wizard(defaults=True)
+    transcript = output.getvalue()
+    for name in (
+        "project_name",
+        "description",
+        "contact_email",
+        "environment_manager",
+        "credentials",
+        "corpus_source",
+    ):
+        assert name in transcript
+    assert "repo_name" not in transcript
+    assert "embedding_dim" not in transcript
+    assert "include_cloud_database" not in transcript
+
+
+def test_plain_sessions_show_the_setup_fork_and_default_to_quick() -> None:
+    output = io.StringIO()
+
+    answers = run_wizard(
+        input_stream=io.StringIO("\n" * 7),
+        output_stream=output,
+    )
+
+    assert answers == run_wizard(defaults=True)
+    transcript = output.getvalue()
+    assert "Select Setup" in transcript
+    assert "1 - Quick" in transcript
+    assert "2 - Advanced" in transcript
+    assert "repo_name" not in transcript
+
+
+def test_tty_detection_preselects_the_first_installed_environment_manager(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from sci_rag.scaffold.prompt import QuestionaryPrompter
+
+    class StubPrompter(QuestionaryPrompter):
+        def __init__(self) -> None:
+            self.notes: list[str] = []
+
+        def banner(self) -> None:
+            pass
+
+        def text(self, question, default: str) -> str:  # type: ignore[no-untyped-def]
+            return default
+
+        def choice(self, question, default: str) -> str:  # type: ignore[no-untyped-def]
+            return default
+
+        def note(self, message: str) -> None:
+            self.notes.append(message)
+
+    prompter = StubPrompter()
+    monkeypatch.setattr("sci_rag.scaffold.prompt.make_prompter", lambda **_kwargs: prompter)
+    monkeypatch.setattr("sci_rag.scaffold.runners.detect_environment_manager", lambda: "pixi")
+
+    answers = run_wizard(quick=False)
+
+    assert answers.environment_manager == "pixi"
+    assert any("pixi" in note and "PATH" in note for note in prompter.notes)
+
+
 def test_the_interactive_session_asks_in_the_documented_order() -> None:
     output = io.StringIO()
-    run_wizard(input_stream=io.StringIO("\n" * 40), output_stream=output)
+    run_wizard(input_stream=_advanced_input(), output_stream=output)
     transcript = output.getvalue()
     assert transcript.index("project_name") < transcript.index("credentials")
     assert transcript.index("credentials") < transcript.index("corpus_source")
@@ -82,59 +179,30 @@ def test_choice_questions_are_numbered_like_the_documented_transcript() -> None:
 
 def test_answers_are_read_where_the_gates_open_them() -> None:
     """Choosing OpenAlex opens two follow-ups the default path never asks."""
-    replies = []
-    for name in _ORDER_WITH_OPENALEX:
-        replies.append(_REPLIES.get(name, ""))
-    answers = run_wizard(input_stream=io.StringIO("\n".join(replies) + "\n"))
+    answers = run_wizard(
+        input_stream=_advanced_input(
+            {
+                "corpus_source": "2",
+                "openalex_topic": "polyamide membrane fouling",
+                "max_results": "250",
+                "ontology": "2",
+            }
+        )
+    )
     assert answers.corpus_source == "openalex_topic"
     assert answers.openalex_topic == "polyamide membrane fouling"
     assert answers.max_results == 250
-
-
-_ORDER_WITH_OPENALEX = [
-    "project_name",
-    "repo_name",
-    "description",
-    "author_name",
-    "contact_email",
-    "python_version",
-    "environment_manager",
-    "credentials",
-    "embedding_provider",
-    "llm_model",
-    "embedding_model",
-    "embedding_dim",
-    "ontology",
-    "corpus_source",
-    "openalex_topic",
-    "max_results",
-    "pdf_parser",
-    "reranker",
-    "include_terraform",
-    "include_cloud_database",
-    "include_demo_corpus",
-    "open_source_license",
-    "initialize_git",
-]
-
-_REPLIES = {
-    "corpus_source": "2",
-    "openalex_topic": "polyamide membrane fouling",
-    "max_results": "250",
-    "ontology": "2",
-}
 
 
 def test_an_invalid_choice_is_re_asked() -> None:
     output = io.StringIO()
     # "9" is not a listed credential; the wizard must ask again rather than
     # accept it or crash.
-    replies = ["\n"] * 6 + ["\n", "9\n", "3\n"] + ["\n"] * 20
-    answers = run_wizard(input_stream=io.StringIO("".join(replies)), output_stream=output)
+    replies = ["1", "", "", "", "", "9", "3", ""]
+    answers = run_wizard(input_stream=io.StringIO("\n".join(replies) + "\n"), output_stream=output)
     assert answers.credentials == "offline"
 
 
 def test_an_invalid_text_answer_is_re_asked() -> None:
-    replies = ["\n"] * 5 + ["3.9\n", "3.11\n"] + ["\n"] * 20
-    answers = run_wizard(input_stream=io.StringIO("".join(replies)))
-    assert answers.python_version == "3.11"
+    answers = run_wizard(input_stream=_advanced_input(retries={"embedding_dim": ["many", "1024"]}))
+    assert answers.embedding_dim == 1024
