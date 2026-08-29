@@ -95,6 +95,12 @@ Rebuild and repush whenever your domain or corpus manifest changes.
     Dockerfile, add its source to both manifests;
     `tests/unit/test_build_context.py` fails if you forget.
 
+    Bytecode is the one exception both manifests spell out by name. It lives
+    inside `src/`, `domain/`, and `migrations/`, so the allowlist alone would
+    carry your local `.pyc` files into the image. With it excluded, building
+    from your working checkout and building from a clean `git archive` give
+    the same 145 file context.
+
     Do not delete `.gcloudignore` to "get everything uploaded". Without it,
     gcloud falls back to deriving the upload set from `.gitignore`, which
     misses anything ignored only through `.git/info/exclude`.

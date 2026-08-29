@@ -112,6 +112,19 @@ jobs:
               failed=1
             fi
           done
+          # Bytecode sits inside the admitted directories, so the allowlist
+          # alone cannot exclude it. actions/checkout gives a clean tree, so
+          # compile some first or this proves nothing. See #196.
+          python3 -m compileall -q src migrations domain > /dev/null 2>&1 || true
+          docker build -f Dockerfile.context-audit -t sci-rag-kit:context-audit-pyc .
+          found=$(docker run --rm sci-rag-kit:context-audit-pyc \
+            find /audit-context -name '*.pyc' -o -name '__pycache__' | head -5)
+          if [ -n "$found" ]; then
+            echo "::error::bytecode reached the build context: $found"
+            failed=1
+          else
+            echo "no bytecode reached the build context"
+          fi
           rm -f Dockerfile.context-audit
           exit "$failed"
 

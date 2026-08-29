@@ -20,6 +20,7 @@ Docker's own context resolution.
 from __future__ import annotations
 
 import re
+from fnmatch import fnmatch
 from pathlib import Path
 
 import pytest
@@ -53,6 +54,12 @@ SENSITIVE_PATHS = (
     ".ruff_cache/content",
     "site/index.html",
     ".git/config",
+    # Bytecode sits inside the admitted directories, so it is the one class
+    # the allowlist alone cannot exclude. See #196.
+    "src/sci_rag/__pycache__/config.cpython-312.pyc",
+    "migrations/versions/__pycache__/0001_initial.cpython-312.pyc",
+    "domain/__pycache__/anything.pyc",
+    "src/sci_rag/__pycache__",
 )
 
 # What the image documents as its runtime inputs.
@@ -67,26 +74,54 @@ RUNTIME_INPUTS = (
 )
 
 
-def _manifest(path: Path) -> tuple[str, list[str]]:
-    """Split a manifest into its exclude-all line and its allowlist."""
-    lines = [
+def _patterns(path: Path) -> list[str]:
+    return [
         line.strip()
         for line in path.read_text(encoding="utf-8").splitlines()
         if line.strip() and not line.strip().startswith("#")
     ]
+
+
+def _manifest(path: Path) -> tuple[str, list[str], list[str]]:
+    """Split a manifest into exclude-all, allowlist, and re-excluded names.
+
+    Both files have the same three-part shape: one line that excludes
+    everything, a block of `!` re-admissions, and a short trailing block that
+    takes bytecode back out because it lives inside the admitted directories.
+    """
+    lines = _patterns(path)
     assert lines, f"{path.name} has no patterns"
-    return lines[0], [line.lstrip("!").strip("/") for line in lines[1:]]
+    allowed = [line.lstrip("!").strip("/") for line in lines[1:] if line.startswith("!")]
+    reexcluded = [line for line in lines[1:] if not line.startswith("!")]
+    return lines[0], allowed, reexcluded
+
+
+def _reexcludes(patterns: list[str], candidate: str) -> bool:
+    """Whether a trailing re-exclusion matches any segment of ``candidate``.
+
+    Docker spells these `**/__pycache__` and gitignore spells them
+    `__pycache__/`, and both mean "at any depth", so the comparison is done
+    on the bare name.
+    """
+    for pattern in patterns:
+        bare = pattern.removeprefix("**/").rstrip("/")
+        if any(fnmatch(segment, bare) for segment in candidate.split("/")):
+            return True
+    return False
 
 
 def _admits(path: Path, candidate: str) -> bool:
     """Whether ``candidate``, a repository-relative path, survives the manifest.
 
-    Both manifests exclude every top-level entry and then re-admit whole
-    entries by name, so admission is decided by the first path segment. The
-    form test below is what keeps that simplification true.
+    Admission is decided by the first path segment, because the allowlist
+    re-admits whole top-level entries by name. The trailing block then takes
+    a few names back out at any depth. The form test below is what keeps
+    that simplification true.
     """
-    _, allowed = _manifest(path)
-    return candidate.split("/", 1)[0] in allowed
+    _, allowed, reexcluded = _manifest(path)
+    if candidate.split("/", 1)[0] not in allowed:
+        return False
+    return not _reexcludes(reexcluded, candidate)
 
 
 @pytest.mark.parametrize("manifest", [DOCKERIGNORE, GCLOUDIGNORE], ids=lambda p: p.name)
@@ -98,18 +133,25 @@ def test_the_manifest_exists(manifest: Path) -> None:
 @pytest.mark.parametrize("manifest", [DOCKERIGNORE, GCLOUDIGNORE], ids=lambda p: p.name)
 def test_the_manifest_is_an_allowlist_not_a_denylist(manifest: Path) -> None:
     """A denylist fails open. This is the shape the whole fix depends on."""
-    first, _ = _manifest(manifest)
+    first, allowed, reexcluded = _manifest(manifest)
     assert first == _EXCLUDE_ALL[manifest.name], (
         f"{manifest.name} must open by excluding everything, found {first!r}"
     )
-    rest = [
-        line.strip()
-        for line in manifest.read_text(encoding="utf-8").splitlines()
-        if line.strip() and not line.strip().startswith("#")
-    ][1:]
-    offenders = [line for line in rest if not line.startswith("!")]
-    assert offenders == [], (
-        f"{manifest.name} must only re-admit after the exclude-all line: {offenders}"
+    assert allowed, f"{manifest.name} admits nothing, so no build could succeed"
+
+    rest = _patterns(manifest)[1:]
+    admissions_end = len(rest) - len(reexcluded)
+    assert all(line.startswith("!") for line in rest[:admissions_end]), (
+        f"{manifest.name} interleaves exclusions with its allowlist: {rest}"
+    )
+    unnamed = [
+        line
+        for line in reexcluded
+        if line.removeprefix("**/").rstrip("/") not in {"__pycache__", "*.pyc", "*.pyo"}
+    ]
+    assert unnamed == [], (
+        f"{manifest.name} re-excludes something other than bytecode, which turns the "
+        f"allowlist back into a denylist: {unnamed}"
     )
 
 
@@ -170,8 +212,8 @@ def test_both_manifests_admit_exactly_the_same_set() -> None:
     If they diverge, an image that builds on a laptop can fail in Cloud Build
     for a reason nobody can see from either file alone.
     """
-    _, docker_allowed = _manifest(DOCKERIGNORE)
-    _, gcloud_allowed = _manifest(GCLOUDIGNORE)
+    _, docker_allowed, _ = _manifest(DOCKERIGNORE)
+    _, gcloud_allowed, _ = _manifest(GCLOUDIGNORE)
     assert sorted(docker_allowed) == sorted(gcloud_allowed)
 
 
@@ -193,3 +235,11 @@ def test_the_deployment_guide_warns_about_admitted_paths() -> None:
     assert ".gcloudignore" in guide
     assert ".dockerignore" in guide
     assert re.search(r"upload|build context", guide, re.IGNORECASE)
+
+
+def test_source_next_to_excluded_bytecode_is_still_admitted() -> None:
+    """Re-excluding bytecode must not take its neighbours with it."""
+    for manifest in (DOCKERIGNORE, GCLOUDIGNORE):
+        assert _admits(manifest, "src/sci_rag/config.py")
+        assert _admits(manifest, "migrations/versions/0001_initial.py")
+        assert _admits(manifest, "domain/domain.yaml")
