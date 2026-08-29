@@ -24,3 +24,10 @@
 !/migrations
 !/Dockerfile
 !/.dockerignore
+
+# Bytecode lives inside the directories above, so it survives the allowlist
+# and would upload one developer's .pyc to Cloud Build. Re-excluded by name
+# to keep that exception visible.
+__pycache__/
+*.pyc
+*.pyo

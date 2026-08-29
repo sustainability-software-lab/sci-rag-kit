@@ -26,3 +26,10 @@
 !migrations
 !Dockerfile
 !.dockerignore
+
+# Bytecode lives inside the directories above, so it survives the allowlist
+# and would carry one developer's .pyc into the image. Re-excluded by name
+# to keep that exception visible.
+**/__pycache__
+**/*.pyc
+**/*.pyo
