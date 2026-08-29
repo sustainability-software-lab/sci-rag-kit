@@ -821,29 +821,15 @@ async def _live_probe(settings) -> list[Check]:  # type: ignore[no-untyped-def]
                 "Check credentials and SCI_RAG_EMBEDDING_MODEL.",
             )
         )
-    try:
-        from sci_rag.llm import get_llm
+    from sci_rag.scaffold.preflight import probe_model_credentials
 
-        llm = get_llm(settings)
-        start = time.monotonic()
-        # Budget generously: reasoning models spend output tokens on thought
-        # before writing anything, so a tight cap makes a healthy provider
-        # look like it returned nothing.
-        reply = await llm.generate("Reply with the single word: ready", max_tokens=2048)
-        checks.append(
-            Check(
-                "generation probe",
-                "ok" if reply.strip() else "warn",
-                f"{llm.describe()}, {int((time.monotonic() - start) * 1000)} ms",
-            )
+    generation = await probe_model_credentials(settings)
+    checks.append(
+        Check(
+            "generation probe",
+            "ok" if generation.ok else "fail",
+            generation.detail,
+            generation.fix,
         )
-    except Exception as exc:
-        checks.append(
-            Check(
-                "generation probe",
-                "fail",
-                f"{type(exc).__name__}: {str(exc)[:120]}",
-                "Check credentials and SCI_RAG_LLM_MODEL.",
-            )
-        )
+    )
     return checks

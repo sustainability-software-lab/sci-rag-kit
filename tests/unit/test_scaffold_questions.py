@@ -23,6 +23,8 @@ EXPECTED_ORDER = [
     "environment_manager",
     "dependency_file",
     "credentials",
+    "google_api_key",
+    "gcp_project",
     "embedding_provider",
     "llm_model",
     "embedding_model",
@@ -49,7 +51,9 @@ def test_question_order_matches_the_documented_transcript() -> None:
 def test_every_question_has_a_default() -> None:
     """Pressing Enter through the whole session has to produce a project."""
     for question in QUESTIONS:
-        assert default_for(question, {}) != "", question.name
+        assert isinstance(default_for(question, {}), str), question.name
+    assert default_for(next(q for q in QUESTIONS if q.name == "google_api_key"), {}) == ""
+    assert default_for(next(q for q in QUESTIONS if q.name == "gcp_project"), {}) == ""
 
 
 def test_environment_manager_choices_come_from_runners() -> None:
@@ -106,13 +110,15 @@ def test_default_answers_walks_the_gates() -> None:
     assert answers["include_cloud_database"] == "No"
 
 
-def test_quick_mode_has_exactly_the_six_approved_base_questions() -> None:
+def test_quick_mode_has_the_six_base_questions_plus_the_gated_credential_value() -> None:
     assert [question.name for question in QUESTIONS if question.quick] == [
         "project_name",
         "description",
         "contact_email",
         "environment_manager",
         "credentials",
+        "google_api_key",
+        "gcp_project",
         "corpus_source",
     ]
 
@@ -125,3 +131,18 @@ def test_every_choice_has_human_help_and_python_is_a_menu() -> None:
         if question.choices:
             assert set(question.choice_help) == set(question.choices), question.name
             assert all(question.choice_help.values()), question.name
+
+
+def test_credential_values_are_gated_and_explain_how_to_get_them() -> None:
+    by_name = {question.name: question for question in QUESTIONS}
+    api_key = by_name["google_api_key"]
+    project = by_name["gcp_project"]
+
+    assert api_key.secret is True
+    assert "aistudio.google.com/apikey" in api_key.help
+    assert is_asked(api_key, {"credentials": "google_ai_studio"})
+    assert not is_asked(api_key, {"credentials": "vertex_ai"})
+
+    assert "gcloud auth application-default login" in project.help
+    assert is_asked(project, {"credentials": "vertex_ai"})
+    assert not is_asked(project, {"credentials": "google_ai_studio"})

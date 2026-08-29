@@ -196,6 +196,7 @@ Select credentials
 2 - vertex_ai
 3 - offline
 Choose from [1/2/3] (1): 1
+google_api_key ():
 Select embedding_provider
 1 - google
 2 - local-hash
@@ -251,6 +252,8 @@ Select draft_domain_files
 1 - Yes
 2 - No
 Choose from [1/2] (1):
+Checking the credential with one small model request...
+gemini-2.5-flash answered in 90 ms.
 
   Drafting an ontology for "Membrane chemistry and performance for water treatment"...
 

@@ -98,6 +98,17 @@ def test_plain_validated_choice_keeps_the_legacy_text_bytes() -> None:
     assert output.getvalue() == "python_version (3.12): \n"
 
 
+def test_plain_secret_prompt_never_echoes_the_answer() -> None:
+    output = io.StringIO()
+    prompter = PlainPrompter(io.StringIO("hidden-value\n"), output)
+
+    answer = prompter.secret(Question("key", "key", "", secret=True), "")
+
+    assert answer == "hidden-value"
+    assert output.getvalue() == "key (): \n"
+    assert "hidden-value" not in output.getvalue()
+
+
 def test_supported_tty_uses_the_interactive_prompt_adapter(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     monkeypatch.setattr(sys, "stdin", _TTY())
     monkeypatch.setattr(sys, "stdout", _TTY())
@@ -242,6 +253,31 @@ def test_interactive_text_and_secret_prompts_use_the_right_input_kind(monkeypatc
     assert [kind for kind, _message, _kwargs in shown] == ["text", "password"]
     assert shown[0][1] == "Project name"
     assert shown[0][2]["instruction"] == "Be concise."
+
+
+def test_interactive_text_accepts_an_unedited_hint_default(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    captured: dict[str, object] = {}
+
+    def build(_message: str, **kwargs):  # type: ignore[no-untyped-def]
+        captured.update(kwargs)
+        return SimpleNamespace(ask=lambda: "Hint rather than an email")
+
+    def email(value: str) -> str:
+        if "@" not in value:
+            raise ValueError("enter an email or leave the hint unchanged")
+        return value
+
+    fake = SimpleNamespace(Style=lambda rules: rules, text=build)
+    monkeypatch.setattr("sci_rag.scaffold.prompt.import_module", lambda _name: fake)
+    prompter = QuestionaryPrompter()
+    question = Question("email", "email", "", validator=email)
+
+    assert prompter.text(question, "Hint rather than an email") == "Hint rather than an email"
+    validate = captured["validate"]
+    assert callable(validate)
+    assert validate("Hint rather than an email") is True
+    assert validate("not-an-email") == "enter an email or leave the hint unchanged"
+    assert validate("you@example.org") is True
 
 
 def test_interactive_menu_returns_machine_value_and_marks_its_default(monkeypatch) -> None:  # type: ignore[no-untyped-def]

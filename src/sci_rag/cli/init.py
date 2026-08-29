@@ -108,10 +108,24 @@ def init(
                 "needs an interactive session. Keeping the worked example.[/yellow]"
             )
         else:
+            from sci_rag.scaffold.preflight import build_explicit_google_llm
+
+            api_key = raw.get("google_api_key", "")
+            gcp_project = raw.get("gcp_project", "")
+            llm = (
+                build_explicit_google_llm(
+                    api_key=api_key,
+                    gcp_project=gcp_project,
+                    model=raw.get("llm_model", "gemini-2.5-flash"),
+                )
+                if api_key or gcp_project
+                else None
+            )
             drafted = confirm_ontology_draft(
                 root / "domain",
                 project_name=raw["project_name"],
                 description=raw.get("description", ""),
+                llm=llm,
             )
     answers = ProjectAnswers.from_raw(raw, drafted_ontology=drafted)  # type: ignore[arg-type]
 

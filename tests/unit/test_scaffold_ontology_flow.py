@@ -88,3 +88,25 @@ def test_the_loop_gives_up_rather_than_spinning() -> None:
     config, transcript = _run(["junk"] * 10, "y\ny\ny\ny\ny\n")
     assert config is None
     assert "could not be used" in transcript
+
+
+def test_provider_exception_is_reported_without_a_traceback_or_secret() -> None:
+    class ExplodingLLM:
+        async def generate(self, *_args, **_kwargs):  # type: ignore[no-untyped-def]
+            raise RuntimeError("provider failed around secret-key-value")
+
+    output = io.StringIO()
+    config = confirm_ontology_draft(
+        DOMAIN_DIR,
+        project_name="Membrane KB",
+        description="Membrane chemistry",
+        llm=ExplodingLLM(),  # type: ignore[arg-type]
+        input_stream=io.StringIO("n\n"),
+        output_stream=output,
+    )
+
+    transcript = output.getvalue()
+    assert config is None
+    assert "RuntimeError" in transcript
+    assert "Traceback" not in transcript
+    assert "secret-key-value" not in transcript

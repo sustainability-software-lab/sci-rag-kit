@@ -174,8 +174,8 @@ def apply_env_file(answers: ProjectAnswers, root: Path) -> list[str]:
     api_key = answers.credentials == "google_ai_studio"
     vertex = answers.credentials == "vertex_ai"
     overrides: dict[str, tuple[str, bool]] = {
-        "SCI_RAG_GOOGLE_API_KEY": ("", api_key),
-        "SCI_RAG_GCP_PROJECT": ("", vertex),
+        "SCI_RAG_GOOGLE_API_KEY": (answers.google_api_key, api_key),
+        "SCI_RAG_GCP_PROJECT": (answers.gcp_project, vertex),
         "SCI_RAG_GCP_LOCATION": ("us-central1", vertex),
         "SCI_RAG_EMBEDDING_PROVIDER": (answers.embedding_provider, True),
         "SCI_RAG_EMBEDDING_MODEL": (answers.embedding_model, True),
@@ -211,7 +211,9 @@ def apply_env_file(answers: ProjectAnswers, root: Path) -> list[str]:
             "# OPENALEX_API_KEY=",
         ]
 
-    _write(root / ".env", "\n".join(lines) + "\n")
+    env_path = root / ".env"
+    _write(env_path, "\n".join(lines) + "\n")
+    env_path.chmod(0o600)
     return [
         _log(
             ".env",

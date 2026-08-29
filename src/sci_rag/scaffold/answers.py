@@ -53,6 +53,8 @@ class ProjectAnswers(BaseModel):
     environment_manager: str = "uv"
     dependency_file: Literal["pyproject.toml", "pixi.toml"] = "pyproject.toml"
     credentials: CredentialsChoice = "google_ai_studio"
+    google_api_key: str = Field(default="", repr=False, exclude=True)
+    gcp_project: str = ""
     embedding_provider: Literal["google", "local-hash"] = "google"
     llm_model: str = "gemini-2.5-flash"
     embedding_model: str = "gemini-embedding-001"

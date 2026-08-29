@@ -114,6 +114,26 @@ def test_quick_mode_asks_six_questions_and_keeps_every_other_default() -> None:
     assert "include_cloud_database" not in transcript
 
 
+@pytest.mark.parametrize("env_name", ["SCI_RAG_GOOGLE_API_KEY", "GOOGLE_API_KEY"])
+def test_existing_google_key_is_offered_for_reuse_without_being_displayed(
+    monkeypatch, env_name: str
+) -> None:  # type: ignore[no-untyped-def]
+    key = "existing-secret-key"
+    monkeypatch.setenv(env_name, key)
+    output = io.StringIO()
+
+    answers = run_wizard(
+        quick=True,
+        input_stream=io.StringIO("\n" * 7),
+        output_stream=output,
+    )
+
+    assert answers.google_api_key == key
+    transcript = output.getvalue()
+    assert "Use the Google API key already set in your environment?" in transcript
+    assert key not in transcript
+
+
 def test_plain_sessions_show_the_setup_fork_and_default_to_quick() -> None:
     output = io.StringIO()
 
@@ -144,6 +164,9 @@ def test_tty_detection_preselects_the_first_installed_environment_manager(monkey
             return default
 
         def choice(self, question, default: str) -> str:  # type: ignore[no-untyped-def]
+            return default
+
+        def secret(self, question, default: str) -> str:  # type: ignore[no-untyped-def]
             return default
 
         def note(self, message: str) -> None:

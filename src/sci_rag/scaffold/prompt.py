@@ -70,7 +70,21 @@ class PlainPrompter:
         return default
 
     def secret(self, question: Question, default: str) -> str:
-        return self.text(question, default)
+        for _ in range(_MAX_ATTEMPTS):
+            self.stdout.write(f"{question.prompt} ({default}): ")
+            raw = _read(self.stdin)
+            if raw is None:
+                return default
+            self.stdout.write("\n")
+            if not raw:
+                return default
+            if question.validator is None:
+                return raw
+            try:
+                return question.validator(raw)
+            except ValueError as exc:
+                self.stdout.write(f"  {exc}\n")
+        return default
 
     def choice(self, question: Question, default: str) -> str:
         # A validated choice was a text prompt before the TTY layer existed.
@@ -170,12 +184,14 @@ class QuestionaryPrompter:
         return answer
 
     @staticmethod
-    def _validator(question: Question) -> Callable[[str], bool | str] | None:
+    def _validator(question: Question, default: str) -> Callable[[str], bool | str] | None:
         validator = question.validator
         if validator is None:
             return None
 
         def validate(value: str) -> bool | str:
+            if value == default:
+                return True
             try:
                 validator(value)
             except ValueError as exc:
@@ -192,7 +208,7 @@ class QuestionaryPrompter:
             qmark="?",
             style=self._style,
             instruction=question.help or None,
-            validate=self._validator(question),
+            validate=self._validator(question, default),
         )
         return str(self._required(prompt.ask()))
 

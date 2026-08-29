@@ -66,6 +66,10 @@ def test_the_transcript_has_no_trailing_whitespace() -> None:
         assert line == line.rstrip(), repr(line)
 
 
+def test_the_transcript_never_exposes_the_scripted_key() -> None:
+    assert "cast-example-key" not in _transcript()
+
+
 def test_the_cast_is_valid_asciicast_v2() -> None:
     lines = _MODULE["render_cast"](_transcript()).splitlines()
     header = json.loads(lines[0])
