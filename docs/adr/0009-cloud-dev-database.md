@@ -73,8 +73,10 @@ pgvector are already on PATH.
 <!-- END GENERATED PROJECT FEATURE: cloud-helper -->
 
 <!-- BEGIN GENERATED PROJECT FEATURE: cloud-provisioning -->
-Provision `sci-rag-dev` in `us-west1` through the independent
-`infra/terraform/dev-database/` module. It uses PostgreSQL 16 on
+Provision the instance through the independent
+`infra/terraform/dev-database/` module. The module takes `project_id` and
+`instance_name` as required inputs with no defaults, so it cannot reach an
+instance the operator did not name. It uses PostgreSQL 16 on
 the Enterprise edition's `db-g1-small` shared-core tier, zonal availability,
 no backups, and deletion protection off by default. These are development
 cost choices, not production defaults. The edition is explicit because the
@@ -85,9 +87,9 @@ The instance has public IPv4 enabled with no authorized networks. Direct
 database connections are not admitted. Developers connect through the Cloud
 SQL Auth Proxy, which requires Google credentials, IAM authorization, and TLS.
 The Terraform IAM binding grants Cloud SQL Editor under a resource-name
-condition limited to `sci-rag-dev`; secret accessor is granted only on this
-instance's password secret. The existing production Cloud SQL instances are
-outside the condition.
+condition limited to the instance this module creates; secret accessor is
+granted only on that instance's password secret. Every other Cloud SQL
+instance in the project, production included, is outside the condition.
 <!-- END GENERATED PROJECT FEATURE: cloud-provisioning -->
 
 <!-- BEGIN GENERATED PROJECT FEATURE: cloud-helper -->
