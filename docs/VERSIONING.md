@@ -78,17 +78,17 @@ which verifies, publishes to TestPyPI, then publishes to PyPI:
 1. `verify` runs four checks. It confirms the `ci` workflow already
    passed for the tagged commit, confirms the tag matches
    `project.version` in `pyproject.toml`, runs `uv build`, and installs
-   the built wheel into a throwaway environment to check that both
-   `sci-rag` and `sci-rag-new` are on the path.
+   the built wheel into a throwaway environment to check the main `sci-rag`
+   CLI and the `sci-rag-new` compatibility entry point are both on the path.
 2. `testpypi` publishes to TestPyPI. It runs first on every release
    because PyPI does not allow re-uploading a version, even a broken one,
    so a packaging mistake found on PyPI costs a version number.
 3. `pypi` publishes to PyPI.
 
 The tag is the source of truth for the version, and the verify job enforces
-that. `sci-rag-new` fetches the template at the tag matching its own
-installed version, so a release whose tag and packaged version disagree
-would generate projects from the wrong commit.
+that. The project generator fetches the template at the tag matching its own
+installed version, so a release whose tag and packaged version disagree would
+generate projects from the wrong commit.
 
 ### One-time setup, by a maintainer
 
@@ -116,7 +116,8 @@ establish that trust once per index, by hand. CI cannot do it for you:
    WHEEL=$(curl -sS https://test.pypi.org/pypi/sci-rag-kit/<version>/json \
      | python -c "import json,sys; print(next(u['url'] for u in json.load(sys.stdin)['urls'] if u['packagetype']=='bdist_wheel'))")
    uv venv probe && VIRTUAL_ENV=probe uv pip install "$WHEEL"
-   probe/bin/sci-rag-new --defaults
+   probe/bin/sci-rag new --defaults
+   probe/bin/sci-rag-new --help
    ```
 
    Do not point the installer at both indexes at once. TestPyPI is full of
@@ -125,10 +126,12 @@ establish that trust once per index, by hand. CI cannot do it for you:
    one. Installing the single artifact by URL sidesteps that entirely: it
    tests the thing you built, with the dependencies your users will get.
 
-   What to check before approving: the entry points run, `sci_rag.__version__`
-   matches the tag, and `sci-rag-new --defaults` produces a project. That last
-   one is the only check that exercises the GitHub tag fetch, which is the part
-   a PyPI upload cannot tell you about.
+   What to check before approving: both entry points run,
+   `sci_rag.__version__` matches the tag, and `sci-rag new --defaults` produces
+   a project. The generation command is the only check that exercises the
+   GitHub tag fetch, which is the part a PyPI upload cannot tell you about. The
+   separate help command confirms the legacy executable remains available as a
+   compatibility alias.
 
 Skip step 2 on an index and that index's job fails with a
 missing-publisher error. It publishes nothing and costs nothing; configure

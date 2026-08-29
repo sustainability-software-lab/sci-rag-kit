@@ -90,10 +90,12 @@ rule.
 
 ## Drafting the ontology against your corpus
 
-The `sci-rag init` wizard can draft an ontology from a one-sentence description,
-before any document exists. That is the best guess available at that moment, and
-it is a guess. Once documents are ingested you can ask a better question: what do
-these documents actually talk about?
+`sci-rag new` and `sci-rag init` can draft an ontology from a one-sentence
+description, before any document exists. That is the best guess available at
+that moment, and it is a guess. Only `sci-rag new` checks the credential with a
+small live request first; `sci-rag init` uses the key or project captured in the
+session without that preflight. Once documents are ingested you can ask a better
+question: what do these documents actually talk about?
 
 === "Redraft from the corpus"
 

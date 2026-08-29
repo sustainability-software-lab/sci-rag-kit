@@ -34,6 +34,8 @@ $ uv run sci-rag doctor
 
 | Symptom | Most likely check | First action |
 |---|---|---|
+| Setup shows numbered prompts instead of arrow-key menus | Terminal capability check selected the plain prompt layer | Continue, or pass `--no-tty` when you want that behavior explicitly |
+| New-project credential check fails | The key, project, ADC session, or provider request was rejected | Use the recovery menu before the template download |
 | Connection refused on port 5433 | Selected backend is down or the URL differs | `SCI_RAG_DB_BACKEND=<docker|local|cloud> make db-up` |
 | Relation or table does not exist | Migrations have not run | `uv run sci-rag db upgrade` |
 | No Google credentials configured | The command needs a real model | Configure AI Studio or Vertex, or use offline retrieval |
@@ -45,6 +47,18 @@ $ uv run sci-rag doctor
 | API returns 401 or 403 | Missing key, unknown key, or missing scope | Check `SCI_RAG_API_KEYS` and the stable error `code` |
 | One retrieval layer timed out | That stage exceeded the profile timeout | Read `traces` and `degraded_stages`; the request intentionally survived |
 | Crossref enrichment reports a failure | Network, rate limit, or malformed work metadata | Retry the bounded set; failed documents keep their prior metadata |
+
+## Setup prompts look different
+
+The setup flow uses arrow-key menus when the terminal supports them. It falls
+back to plain numbered prompts when input or output is not a TTY, an explicit
+stream is in use, `NO_COLOR` is set, `TERM` is blank or `TERM=dumb`, or the
+prompt library cannot load. The questions, defaults, validation, and
+resulting files are the same in both presentations.
+
+Pass `--no-tty` to `sci-rag new` or `sci-rag init` when you want the numbered
+form even in a supported terminal. Pressing Ctrl-C cancels setup instead of
+treating the interruption as an answer.
 
 ## Postgres is unreachable
 
@@ -120,13 +134,23 @@ Use `uv run sci-rag doctor --probe` after configuring a credential. The probe sp
 
 ### Recover during project setup
 
-`sci-rag new` checks an entered Google credential before it downloads the template. If the check fails, the wizard explains the provider error and offers three choices:
+`sci-rag new` checks an entered Google credential with one small model request
+and a hard 15-second deadline before it downloads the template. A failed check
+uses actionable, safe error text and never prints the raw provider exception or
+credential value. The wizard then offers three choices:
 
 1. **Try a different credential** to replace the current key or project and run the check again.
 2. **Switch to an AI Studio key** to leave the Vertex path and enter a key from [Google AI Studio](https://aistudio.google.com/apikey).
 3. **Continue without a model** to finish the project with the worked example ontology.
 
 The third choice keeps your chosen credential mode and writes the entered key or project to `.env`. It skips only the ontology draft, so you can fix the credential or run `gcloud auth application-default login` later without rebuilding the project. Run `uv run sci-rag doctor --probe` after the fix to confirm the provider accepts it.
+
+The `--no-preflight` flag skips the preliminary model request. It is only
+available on `sci-rag new`; `sci-rag init` never runs that check. This
+escape hatch does not validate the credential, and an ontology draft can still
+call the provider later in the same session when a value was entered. Use it
+only when the preliminary probe itself is the problem, then run
+`uv run sci-rag doctor --probe` from the generated project.
 
 ### Running offline on purpose
 

@@ -33,7 +33,11 @@ Use these terms consistently when reading the docs:
 | **Your repository** | The copy your team owns and configures | Edit `domain/`, add corpus manifests, run tests, deploy |
 | **Runtime system** | The Postgres database and Sci-RAG service created from your repository | Ingest, retrieve, answer, evaluate, serve REST and MCP |
 
-There is no separate generated project tree. Clicking **Use this template** copies the live tree; `scripts/init_domain.py` then changes project-facing names and resets the domain seed material in that copy.
+There is no separate template-definition tree. `sci-rag new` fetches the live
+tree at the release tag and configures a new project in place. Clicking **Use
+this template** copies the same tree, while `sci-rag init` configures a checkout
+you already have. `scripts/init_domain.py` remains the narrow route for changing
+project-facing names and resetting the domain seed material.
 
 !!! why "Why a live template?"
     The template itself remains executable and testable. A maintainer can validate a change against the same files a new project receives, without maintaining a second layer of placeholder-filled source.
@@ -67,7 +71,12 @@ There is no separate generated project tree. Clicking **Use this template** copi
 ├── docker-compose.yml       local Postgres with pgvector
 └── Makefile                 readable shortcuts over the real commands</div>
 
-Entries marked optional are the ones the setup wizard asks about. Answer no to `include_terraform` or `include_demo_corpus` and they are not in your project, and neither the `Makefile` nor CI mentions them.
+Entries marked optional are choices in Advanced setup. Quick keeps production
+Terraform and the demo corpus, and leaves the Cloud SQL development helper out.
+Use `sci-rag new --advanced` for a new project, or `sci-rag init --advanced` in
+a checkout, when you want to change those defaults. If you answer no to
+`include_terraform` or `include_demo_corpus`, the files are removed and neither
+the `Makefile` nor CI mentions them.
 
 ## What you change
 

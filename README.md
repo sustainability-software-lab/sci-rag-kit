@@ -126,7 +126,8 @@ workflow that needs no model credentials.
 
 The step-by-step version with worked examples is
 [Bring your own domain](docs/bring-your-own-domain.md). Inside a checkout,
-`uv run sci-rag init` runs the full setup wizard;
+`uv run sci-rag init` lets you choose Quick or Advanced setup, while
+`uv run sci-rag init --advanced` asks every applicable question;
 `uv run python scripts/init_domain.py` is the narrow path when all you want is
 the project name, description, and a seed-question reset.
 
@@ -146,6 +147,8 @@ docs/              Methodology, tutorials, API reference, ADRs
 
 | Command | Purpose |
 |---------|---------|
+| `sci-rag new` | Create a configured project with Quick or Advanced setup |
+| `sci-rag init` | Configure the checkout in the current directory |
 | `sci-rag db upgrade` | Create or upgrade the database schema |
 | `sci-rag ingest <folder>` / `--manifest file.jsonl` | Parse, chunk, embed, store |
 | `sci-rag corpus enrich --mailto you@example.org` | Add Crossref journal, citation-count, and retraction metadata (`--dry-run` first) |

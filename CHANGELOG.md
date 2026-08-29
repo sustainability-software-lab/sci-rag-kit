@@ -8,6 +8,17 @@ Notable changes to sci-rag-kit. The format follows
 
 ### Changed
 
+- Project setup now offers Quick and Advanced paths. Quick asks for six setup
+  decisions, plus the credential value required by that mode, and defaults the
+  remaining fields. Advanced asks every applicable question. Supported
+  terminals use labeled arrow-key menus, while non-TTY sessions, `NO_COLOR`,
+  `TERM=dumb`, and `--no-tty` use the same validated plain numbered fallback.
+  The first supported environment manager found on `PATH` is preselected only
+  in an interactive terminal, and an existing environment key can be reused
+  without displaying its value. Reproducible defaults and answers files do not
+  inspect the machine.
+- `sci-rag new` and `sci-rag init` now use a shared completion report, so both
+  routes end with the same files, commands, and domain-drafting guidance.
 - Contextual compression is on again in the shipped demo domain, at
   `relevance_floor: 0.0`, and the model default floor moves from `0.3` to
   `0.0` to match. A floor sweep found the floor, not the summarizer, is what
@@ -20,6 +31,14 @@ Notable changes to sci-rag-kit. The format follows
 
 ### Added
 
+- `sci-rag new`, the main project-generation command under the existing CLI.
+  The standalone `sci-rag-new` executable remains a compatibility entry point.
+  Both reach the same generator and release-pinned template fetch.
+- A bounded new-project credential preflight before template download, with
+  retry, an AI Studio switch, and a continue-without-a-model path that keeps
+  the selected credential mode and the worked example ontology. Entered keys
+  stay out of output and model representations; generated `.env` files use
+  mode `0600`. `--no-preflight` skips the preliminary request explicitly.
 - An opt-in Cloud SQL development backend with one development database and
   one disposable test database per workspace, a workspace-owned Auth Proxy,
   explicit pause/resume cost controls, a separate dev-only Terraform module,

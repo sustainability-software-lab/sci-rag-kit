@@ -11,7 +11,7 @@ Install the kit with `pipx install sci-rag-kit`, run `sci-rag new`, and use thes
 
 [<span class="srag-row__title">Quickstart</span><span class="srag-row__copy">Install the kit, ingest the synthetic CC0 corpus, inspect retrieval, and expose the same service over REST and MCP. About 10 minutes.</span>](quickstart.md){ .srag-row }
 
-[<span class="srag-row__title">Tour the repository</span><span class="srag-row__copy">See what you configure, what you run, and why this is a live template repository rather than a generator.</span>](tour.md){ .srag-row }
+[<span class="srag-row__title">Tour the repository</span><span class="srag-row__copy">See what you configure, what you run, and why the generator configures the live template instead of rendering a separate tree.</span>](tour.md){ .srag-row }
 
 [<span class="srag-row__title">Choosing Sci RAG Kit</span><span class="srag-row__copy">Compare the kit honestly with LightRAG, PaperQA2, LlamaIndex, and Microsoft GraphRAG.</span>](choosing-sci-rag-kit.md){ .srag-row }
 
@@ -21,7 +21,8 @@ Install the kit with `pipx install sci-rag-kit`, run `sci-rag new`, and use thes
 
 ## Recommended path
 
-1. Run the [quickstart](quickstart.md) with the offline embedder.
+1. Run the [quickstart](quickstart.md), and choose Offline when you want the
+   credential-free first pass.
 2. Read the [repository tour](tour.md) before replacing the demo profile.
 3. Draft the ontology, corpus manifest, seed questions, and prompt wording with [LLM-assisted setup](llm-assisted-setup.md). Its copy-paste workflow needs no model credentials.
 4. Follow [Bring your own domain](bring-your-own-domain.md) with a small, well-understood corpus, or use a [corpus campaign](campaigns.md) to discover candidates and build a fail-closed open-access manifest.

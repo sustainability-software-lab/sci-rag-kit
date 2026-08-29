@@ -33,14 +33,33 @@ No Docker? [Run Postgres your way](run-postgres.md) covers conda-forge, a system
 
 ### The wizard
 
-For your own project, run the wizard from whatever directory you keep projects in. It asks about your domain, credentials, ontology, corpus, and environment manager, then writes a configured, git-initialized project directory:
+For your own project, run the wizard from whatever directory you keep projects in.
+It writes a configured, git-initialized project directory:
 
 ```console title="Terminal"
 $ pipx install sci-rag-kit
 $ sci-rag new
 ```
 
-Choose Quick for six setup questions and defaults for the rest. The credential check runs before the template download, and a failed check gives you recovery choices without discarding your answers. Continue at step 3 after the wizard finishes; use step 2 when you need to change the credential mode it wrote.
+Choose Quick for six setup decisions, plus the credential value required by the
+selected mode, and defaults for the rest. Those decisions cover the project name,
+description, contact email, environment manager, credential mode, and corpus source.
+Choose Offline explicitly when you do not want a model credential. Choose Advanced
+when you need to set models, ontology behavior, parsing, reranking, infrastructure,
+demo content, licensing, or Git initialization yourself.
+
+In a supported terminal the menus use arrow keys, show explanations and recommended
+choices, and keep API-key input masked. The environment-manager menu preselects the
+first supported environment manager found on `PATH`; that convenience does not change
+`--defaults` or an answers file. If `SCI_RAG_GOOGLE_API_KEY` or `GOOGLE_API_KEY` is
+already set, interactive setup offers to reuse it without displaying its value. Pass
+`--no-tty` to force plain numbered prompts.
+
+The credential check runs before the template download, and a failed check gives you
+recovery choices without discarding your answers. Continue at step 3 after the wizard
+finishes; use step 2 when you need to change the credential mode it wrote.
+[Troubleshooting](troubleshooting.md) covers terminal fallback and the credential-check
+escape hatch.
 
 ### Other ways in
 
@@ -54,12 +73,16 @@ $ cd sci-rag-kit
 The other secondary routes start from the same repository tree:
 
 - GitHub's **Use this template** button creates a repository under your account.
-- `sci-rag init` configures a checkout you already have.
+- `sci-rag init` configures a checkout you already have. It shares the Quick and
+  Advanced choices and completion report, but does not run the new-project credential
+  check.
 - The included dev container installs the project and starts Postgres. In GitHub Codespaces, continue at step 2 after it opens.
 
 ## 2. Choose a credential mode
 
-The wizard already created `.env`; keep it. If you used a clone or the GitHub template, create the local environment file:
+The wizard already created `.env` with owner-only mode `0600`; keep it out of
+Git. If you used a clone or the GitHub template, create the local environment
+file:
 
 ```console
 $ cp .env.example .env
