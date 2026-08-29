@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 import shutil
+import stat
 from pathlib import Path
 
 import pytest
@@ -134,6 +135,13 @@ def test_env_keeps_the_guided_comments_from_the_example(template: Path) -> None:
     assert "# --- Embeddings" in env
 
 
+def test_generated_env_is_private_to_its_owner(template: Path) -> None:
+    apply.apply_env_file(_answers(google_api_key="captured-secret"), template)
+
+    mode = stat.S_IMODE((template / ".env").stat().st_mode)
+    assert mode == 0o600
+
+
 def test_env_leaves_illustrative_examples_alone(template: Path) -> None:
     # .env.example documents the provider settings with commented
     # "provider:model" examples. Only the first assignment of a key is the
@@ -148,18 +156,30 @@ def test_env_leaves_illustrative_examples_alone(template: Path) -> None:
 
 
 def test_env_for_an_ai_studio_key_enables_only_that_option(template: Path) -> None:
-    apply.apply_env_file(_answers(credentials="google_ai_studio"), template)
+    apply.apply_env_file(
+        _answers(credentials="google_ai_studio", google_api_key="captured-studio-key"), template
+    )
     env = (template / ".env").read_text(encoding="utf-8")
-    assert "\nSCI_RAG_GOOGLE_API_KEY=" in env
+    assert "\nSCI_RAG_GOOGLE_API_KEY=captured-studio-key" in env
     assert "\nSCI_RAG_GCP_PROJECT=" not in env
 
 
 def test_env_for_vertex_enables_the_project_and_location(template: Path) -> None:
-    apply.apply_env_file(_answers(credentials="vertex_ai"), template)
+    apply.apply_env_file(_answers(credentials="vertex_ai", gcp_project="science-project"), template)
     env = (template / ".env").read_text(encoding="utf-8")
-    assert "\nSCI_RAG_GCP_PROJECT=" in env
+    assert "\nSCI_RAG_GCP_PROJECT=science-project" in env
     assert "\nSCI_RAG_GCP_LOCATION=us-central1" in env
     assert "\nSCI_RAG_GOOGLE_API_KEY=" not in env
+
+
+def test_env_change_log_never_contains_the_api_key(template: Path) -> None:
+    key = "secret-key-that-must-not-escape"
+
+    changes = apply.apply_env_file(
+        _answers(credentials="google_ai_studio", google_api_key=key), template
+    )
+
+    assert key not in repr(changes)
 
 
 def test_env_offline_leaves_both_credential_options_commented(template: Path) -> None:

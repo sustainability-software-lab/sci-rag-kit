@@ -12,11 +12,11 @@ Two artifacts come out of one run:
 * the static ``## Example`` transcript in ``docs/index.md``, between markers.
   It is copy-pasteable, survives no-JS, and is what CI asserts against.
 
-The only stubbed part is the model call behind the ontology draft: it uses the
-mock LLM client the tests use, so the drafting output is the real rendering
-code over a canned response rather than a live generation. Everything else,
-including the change log and the closing next steps, is the program's own
-output for these answers.
+The two model calls are stubbed: credential preflight returns a fixed success,
+and ontology drafting uses the same mock LLM client as the tests. Their output
+still passes through the real rendering code. Everything else, including the
+change log and closing next steps, is the program's own output for these
+answers.
 """
 
 from __future__ import annotations
@@ -27,9 +27,12 @@ import json
 import shutil
 from pathlib import Path
 
+from sci_rag.cli.new import _preflight_credentials
 from sci_rag.llm import MockLLM
 from sci_rag.scaffold.answers import ProjectAnswers
 from sci_rag.scaffold.apply import apply_all
+from sci_rag.scaffold.preflight import CredentialProbe
+from sci_rag.scaffold.prompt import PlainPrompter
 from sci_rag.scaffold.wizard import collect_answers, confirm_ontology_draft
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -45,6 +48,7 @@ SCRIPTED_ANSWERS = {
     "contact_email": "you@lbl.gov",
     "environment_manager": "2",
     "credentials": "1",
+    "google_api_key": "cast-example-key",
     "ontology": "1",
     "corpus_source": "2",
     "openalex_topic": "polyamide membrane fouling",
@@ -92,12 +96,24 @@ _TEMPLATE_TREES = ("domain", ".github", ".devcontainer")
 
 
 def _input_stream() -> io.StringIO:
-    """One line per question, in the order questions.py asks them."""
-    from sci_rag.scaffold.questions import QUESTIONS
+    """One line per visible question, following the same gates as the wizard."""
+    from sci_rag.scaffold.questions import QUESTIONS, default_for, is_asked
 
-    return io.StringIO(
-        "\n".join(SCRIPTED_ANSWERS.get(question.name, "") for question in QUESTIONS) + "\n"
-    )
+    replies: list[str] = []
+    gathered: dict[str, str] = {}
+    for question in QUESTIONS:
+        if not is_asked(question, gathered):
+            continue
+        default = default_for(question, gathered)
+        reply = SCRIPTED_ANSWERS.get(question.name, "")
+        replies.append(reply)
+        if not reply:
+            gathered[question.name] = default
+        elif question.choices and reply.isdigit():
+            gathered[question.name] = question.choices[int(reply) - 1]
+        else:
+            gathered[question.name] = reply
+    return io.StringIO("\n".join(replies) + "\n")
 
 
 def _scratch_template(root: Path) -> Path:
@@ -128,6 +144,11 @@ def render_transcript() -> str:
         quick=False,
         input_stream=_input_stream(),
         output_stream=output,
+    )
+    _preflight_credentials(
+        raw,
+        PlainPrompter(io.StringIO(), output),
+        probe=lambda **_kwargs: CredentialProbe(True, "gemini-2.5-flash answered in 90 ms."),
     )
 
     drafted = confirm_ontology_draft(

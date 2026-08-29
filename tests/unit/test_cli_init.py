@@ -149,3 +149,36 @@ def test_init_does_not_initialize_git_in_an_existing_checkout(tmp_path: Path) ->
 
     assert result.exit_code == 0, result.output
     assert not (checkout / ".git").exists()
+
+
+def test_init_passes_a_captured_key_explicitly_to_ontology_drafting(
+    tmp_path: Path, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    checkout = _checkout(tmp_path)
+    key = "init-key-that-must-not-escape"
+    captured: dict[str, object] = {}
+    llm = object()
+
+    def build(settings, **kwargs):  # type: ignore[no-untyped-def]
+        captured["settings"] = settings
+        captured.update(kwargs)
+        return llm
+
+    def draft(*_args, **kwargs):  # type: ignore[no-untyped-def]
+        captured["draft_llm"] = kwargs["llm"]
+        return None
+
+    monkeypatch.setattr("sci_rag.llm.get_llm", build)
+    monkeypatch.setattr("sci_rag.scaffold.wizard.confirm_ontology_draft", draft)
+    replies = ["", "", "", "", "", key, ""]
+
+    result = runner.invoke(
+        app,
+        ["init", "--quick", "--no-tty", "--target", str(checkout)],
+        input="\n".join(replies) + "\n",
+    )
+
+    assert result.exit_code == 0, result.output
+    assert captured["api_key_override"] == key
+    assert captured["draft_llm"] is llm
+    assert key not in result.output

@@ -242,6 +242,7 @@ $ sci-rag new [OPTIONS]
 | `--answers-file` | path | unset | A YAML file of answers, for reproducible generation. Unanswered questions take their default. |
 | `--quick, --advanced` | boolean | unset | Ask six setup questions, or expose every option. |
 | `--no-tty` | boolean | false | Use plain numbered prompts even in a supported terminal. |
+| `--no-preflight` | boolean | false | Skip the live credential check before downloading the template. |
 | `--ref` | text | unset | Fetch the template at this tag or branch instead of the tag matching this generator's version. |
 | `--template-path` | path | unset | Generate from a local checkout instead of downloading. No network needed. |
 

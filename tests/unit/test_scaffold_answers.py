@@ -133,3 +133,12 @@ def test_a_credentialed_project_keeps_the_drafters_offered() -> None:
     )
 
     assert answers.draft_domain_files is True
+
+
+def test_api_key_is_never_represented_or_dumped() -> None:
+    key = "secret-key-that-must-not-escape"
+    answers = _answers(credentials="google_ai_studio", google_api_key=key)
+
+    assert answers.google_api_key == key
+    assert key not in repr(answers)
+    assert "google_api_key" not in answers.model_dump()

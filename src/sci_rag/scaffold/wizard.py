@@ -14,6 +14,7 @@ worth more here than styled output.
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from typing import TextIO
@@ -104,6 +105,17 @@ def collect_answers(
             answers[question.name] = preset[question.name]
         elif non_interactive or (quick is True and not question.quick):
             answers[question.name] = default
+        elif question.name == "google_api_key" and (
+            existing_key := os.environ.get("SCI_RAG_GOOGLE_API_KEY")
+            or os.environ.get("GOOGLE_API_KEY")
+        ):
+            if prompter.confirm(
+                "Use the Google API key already set in your environment?", default=True
+            ):
+                answers[question.name] = existing_key
+                prompter.note("Using the existing environment key; its value stays hidden.")
+            else:
+                answers[question.name] = prompter.secret(question, default)
         elif question.secret:
             answers[question.name] = prompter.secret(question, default)
         elif question.choices:
@@ -168,8 +180,9 @@ def confirm_ontology_draft(
                     llm=llm,  # type: ignore[arg-type]
                 )
             )
-        except OntologyDraftError as exc:
-            stdout.write(f"  The draft could not be used: {exc}\n")
+        except Exception as exc:
+            detail = str(exc) if isinstance(exc, OntologyDraftError) else type(exc).__name__
+            stdout.write(f"  The draft could not be used: {detail}\n")
             if not _wants_retry(stdin, stdout):
                 return None
             continue
