@@ -61,6 +61,7 @@ Four types, from the [Diataxis](https://diataxis.fr/) framework. A page that can
 | `adr/0007-interactive-project-generator.md` | explanation |
 | `adr/0008-supported-postgresql-versions.md` | explanation |
 | `adr/0009-cloud-dev-database.md` | explanation |
+| `adr/0010-template-copy-boundary.md` | explanation |
 
 Three assignments are worth defending, because a reasonable person would put them elsewhere.
 

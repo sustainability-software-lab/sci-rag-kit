@@ -5,7 +5,7 @@ description: Short answers to what Sci RAG Kit is, who it is for, and why each d
 
 # Frequently asked questions
 
-The reasoning behind this kit is written down at length, in eight decision records and a methodology specification. This page is the short version: the answer first, the reason after it, and a link to the long argument when you want it.
+The reasoning behind this kit is written down at length, in ten decision records and a methodology specification. This page is the short version: the answer first, the reason after it, and a link to the long argument when you want it.
 
 ## What this is
 
@@ -170,6 +170,22 @@ round-trip their output through the same models the application loads, so a
 generated profile cannot be something `load_domain()` would reject.
 
 Full argument and reversal conditions: [ADR 0007](adr/0007-interactive-project-generator.md).
+
+### Will `--template-path` copy my credentials into a new project?
+
+No. Generating from a local checkout copies the files that checkout tracks, and
+nothing else.
+
+That matters because a checkout is not a template. Yours also holds a filled in
+`.env`, cached proxy credentials, a virtualenv, Terraform state that contains a
+generated database password, and whatever corpus you last ingested. Asking git
+which paths are tracked draws the boundary from the repository itself, so an
+ignored file is never even considered for copying, and the offline route ends up
+with the same content the download route produces. A directory git knows nothing
+about, such as an extracted archive, falls back to a fail closed rule: nothing
+hidden crosses unless the template genuinely ships it.
+
+Full argument and reversal conditions: [ADR 0010](adr/0010-template-copy-boundary.md).
 
 ### When should I use local PostgreSQL, Cloud SQL, or Docker?
 
