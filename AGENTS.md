@@ -89,15 +89,19 @@ Do not replace `uv.lock` workflows with ad hoc `pip` environments.
 
 ```bash
 uv sync
-docker compose up -d --wait
+make db-up
 uv run sci-rag db upgrade
 ```
 
-`make setup` runs those three commands for a normal local database. Copy `.env.example` to `.env`
-only when local runtime configuration is needed. Never print credential values or include them in
-logs, fixtures, snapshots, or commits. Prefer `SCI_RAG_EMBEDDING_PROVIDER=local-hash` for offline
-development. Real Google credentials are required only for model-backed embeddings, graph
-extraction, HyDE, community summaries, and generated answers.
+`make setup` synchronizes dependencies, starts the backend selected by
+`SCI_RAG_DB_BACKEND`, and applies migrations. Docker is the easiest CI-parity setup and the
+template default. `local` supports the bundled conda-forge server and any supported system
+PostgreSQL, including Postgres.app; `cloud` uses the optional Cloud SQL development helper. Copy
+`.env.example` to `.env` only when local runtime configuration is needed. Never print credential
+values or include them in logs, fixtures, snapshots, or commits. Prefer
+`SCI_RAG_EMBEDDING_PROVIDER=local-hash` for offline development. Real Google credentials are
+required only for model-backed embeddings, graph extraction, HyDE, community summaries, and
+generated answers.
 
 Tests force the deterministic local embedder, a 64-dimensional test vector, and blank Google
 credentials before importing the package. Keep that import-order guarantee intact because vector
@@ -112,7 +116,9 @@ a development corpus, shared database, staging instance, or production instance.
 
 The CI test database is PostgreSQL 16 with pgvector and is named `sci_rag_test`. Local integration
 tests skip, with a diagnostic message, when their database is unavailable. A skipped integration
-suite is not evidence that database behavior passed.
+suite is not evidence that database behavior passed. Create a disposable test database for Docker,
+local, or Cloud SQL and put only its URL in `SCI_RAG_TEST_DATABASE_URL` before claiming the
+database-backed suites passed.
 
 Supported servers are PostgreSQL 16 through 18, per
 [docs/adr/0008-supported-postgresql-versions.md](docs/adr/0008-supported-postgresql-versions.md).

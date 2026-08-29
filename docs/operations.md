@@ -118,6 +118,13 @@ instance; the Terraform module in `infra/` exposes both flags. Take a
 manual backup before every schema migration and every bulk operation
 (delete campaigns, re-embed runs).
 
+<!-- BEGIN GENERATED PROJECT FEATURE: cloud-helper -->
+The optional development Cloud SQL helper is a different path. Its instance
+has no backup guarantee, and backups plus deletion protection are disabled by
+default. Do not store the only copy of a valuable corpus there. Export or dump
+anything you need to keep before an operator pauses or replaces the instance.
+<!-- END GENERATED PROJECT FEATURE: cloud-helper -->
+
 ## Restore drill
 
 Rehearse this before an incident, on a scratch database:

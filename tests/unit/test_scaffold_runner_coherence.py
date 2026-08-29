@@ -39,7 +39,7 @@ _COPY_FILES = (
     "AGENTS.md",
     "uv.lock",
 )
-_COPY_TREES = ("domain", "docs", "scripts", ".github", ".devcontainer", "src")
+_COPY_TREES = ("domain", "docs", "scripts", ".github", ".devcontainer", "src", "infra")
 
 
 def _template(tmp_path: Path) -> Path:
@@ -49,8 +49,6 @@ def _template(tmp_path: Path) -> Path:
         shutil.copy(REPO_ROOT / name, root / name)
     for tree in _COPY_TREES:
         shutil.copytree(REPO_ROOT / tree, root / tree, ignore=shutil.ignore_patterns("__pycache__"))
-    (root / "infra" / "terraform").mkdir(parents=True)
-    (root / "infra" / "terraform" / "main.tf").write_text("# terraform\n", encoding="utf-8")
     (root / "data" / "demo").mkdir(parents=True)
     (root / "data" / "demo" / "manifest.jsonl").write_text("{}\n", encoding="utf-8")
     (root / "examples").mkdir()
@@ -58,7 +56,7 @@ def _template(tmp_path: Path) -> Path:
     return root
 
 
-def _generate(tmp_path: Path, manager: str) -> Path:
+def _generate(tmp_path: Path, manager: str, **overrides: str) -> Path:
     root = _template(tmp_path)
     raw = dict(default_answers())
     raw.update(
@@ -69,6 +67,7 @@ def _generate(tmp_path: Path, manager: str) -> Path:
             "initialize_git": "No",
         }
     )
+    raw.update(overrides)
     apply.apply_all(ProjectAnswers.from_raw(raw), root, year=2026)
     return root
 
@@ -166,3 +165,51 @@ def test_the_kits_planning_documents_do_not_ship(tmp_path: Path, manager: str) -
     """They are the template's development history, and they name every manager."""
     root = _generate(tmp_path, manager)
     assert not (root / "docs" / "planning").exists()
+
+
+@pytest.mark.parametrize("manager", runner_keys())
+@pytest.mark.parametrize(
+    ("include_cloud_database", "include_terraform"),
+    (("No", "No"), ("No", "Yes"), ("Yes", "No"), ("Yes", "Yes")),
+)
+def test_generated_docs_only_name_retained_cloud_assets(
+    tmp_path: Path,
+    manager: str,
+    include_cloud_database: str,
+    include_terraform: str,
+) -> None:
+    root = _generate(
+        tmp_path,
+        manager,
+        include_cloud_database=include_cloud_database,
+        include_terraform=include_terraform,
+    )
+    docs = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted((root / "docs").rglob("*.md"))
+    )
+    helper = root / "scripts" / "cloud_postgres.py"
+    module = root / "infra" / "terraform" / "dev-database"
+    profile = get_runner(manager)
+
+    assert "BEGIN GENERATED PROJECT FEATURE" not in docs
+    assert "END GENERATED PROJECT FEATURE" not in docs
+    assert "/Users/" not in docs
+    assert "tylerhuntington" not in docs.casefold()
+
+    if include_cloud_database == "Yes":
+        assert helper.exists()
+        command = profile.run("python scripts/cloud_postgres.py", project_slug=SLUG)
+        assert command in docs
+        assert "Use Cloud SQL in Conductor workspaces" in docs
+    else:
+        assert not helper.exists()
+        assert "scripts/cloud_postgres.py" not in docs
+        assert "SCI_RAG_CLOUD_PG_" not in docs
+        assert "Use Cloud SQL in Conductor workspaces" not in docs
+
+    if include_cloud_database == "Yes" and include_terraform == "Yes":
+        assert module.exists()
+        assert "infra/terraform/dev-database" in docs
+    else:
+        assert not module.exists()
+        assert "infra/terraform/dev-database" not in docs

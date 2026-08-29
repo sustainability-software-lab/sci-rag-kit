@@ -779,6 +779,16 @@ def _write_devcontainer(answers: ProjectAnswers, root: Path) -> None:
 _ONBOARDING_BEGIN = "<!-- BEGIN KIT ONBOARDING"
 _ONBOARDING_END = "<!-- END KIT ONBOARDING -->"
 
+_FEATURE_REGION = re.compile(
+    r"(?ms)^<!-- BEGIN GENERATED PROJECT FEATURE: (?P<name>[a-z0-9-]+) -->\n"
+    r"(?P<body>.*?)"
+    r"^<!-- END GENERATED PROJECT FEATURE: (?P=name) -->\n?"
+)
+_FEATURE_REQUIREMENTS = {
+    "cloud-helper": ("scripts/cloud_postgres.py",),
+    "cloud-provisioning": ("infra/terraform/dev-database",),
+}
+
 KIT_ONLY_DOCS = (
     "docs/assets/casts",
     "docs/assets/vendor/asciinema-player",
@@ -796,21 +806,44 @@ def _strip_marked_regions(text: str) -> str:
     return text
 
 
+def _render_feature_regions(text: str, root: Path) -> str:
+    """Keep marked documentation only when its required files survived pruning."""
+
+    def replace(match: re.Match[str]) -> str:
+        name = match.group("name")
+        try:
+            requirements = _FEATURE_REQUIREMENTS[name]
+        except KeyError as exc:
+            raise ValueError(f"unknown generated-project documentation feature: {name}") from exc
+        if all((root / requirement).exists() for requirement in requirements):
+            return match.group("body").rstrip("\n") + "\n"
+        return ""
+
+    return _FEATURE_REGION.sub(replace, text)
+
+
 def apply_docs(answers: ProjectAnswers, root: Path) -> list[str]:
-    """Remove the kit's own onboarding material from a generated project.
+    """Remove kit-only and pruned-feature material from generated documentation.
 
-    Everything here is about installing and running *sci-rag-kit*, not about
-    the user's project: the pipx instructions, the recorded wizard session, the
-    vendored player that shows it, and the renderer that keeps it current.
-    Their supporting entries in ``mkdocs.yml`` and the ``Makefile`` go with
-    them, because a dangling ``extra_javascript`` entry or a ``make docs`` step
-    calling a deleted script breaks the generated project's documentation build.
+    The pipx instructions and recorded wizard session install the kit, which a
+    generated project has already done. Feature regions follow their retained
+    files after pruning, so a project never documents a helper or module it no
+    longer has. This runs before runner rewriting so kept command examples still
+    adopt the selected environment manager.
+
+    The onboarding player's supporting entries in ``mkdocs.yml`` and the
+    ``Makefile`` go too, because a dangling asset or deleted renderer would break
+    the generated project's documentation build.
     """
-    del answers  # unconditional: no answer makes the kit's own pitch relevant
+    del answers  # retained files, not answers, decide which feature regions survive
 
-    index = root / "docs" / "index.md"
-    if index.exists():
-        _write(index, _strip_marked_regions(index.read_text(encoding="utf-8")))
+    docs = root / "docs"
+    if docs.exists():
+        for page in sorted(docs.rglob("*.md")):
+            text = _render_feature_regions(page.read_text(encoding="utf-8"), root)
+            if page == docs / "index.md":
+                text = _strip_marked_regions(text)
+            _write(page, text)
 
     for relative in KIT_ONLY_DOCS:
         path = root / relative

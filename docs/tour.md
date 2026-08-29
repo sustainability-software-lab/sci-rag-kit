@@ -66,17 +66,18 @@ project-facing names and resetting the domain seed material.
 ├── migrations/              Alembic history for Postgres and pgvector
 ├── tests/                   offline unit, integration, server, and smoke evidence
 ├── examples/                runnable library and notebook entry points (optional)
-├── infra/terraform/         optional Cloud SQL and Cloud Run deployment
+├── infra/terraform/         optional production deployment and development module
 ├── docs/                    this site, methodology, guides, and decisions
 ├── docker-compose.yml       local Postgres with pgvector
 └── Makefile                 readable shortcuts over the real commands</div>
 
 Entries marked optional are choices in Advanced setup. Quick keeps production
-Terraform and the demo corpus, and leaves the Cloud SQL development helper out.
+Terraform and the demo corpus, and removes the Cloud SQL development helper.
 Use `sci-rag new --advanced` for a new project, or `sci-rag init --advanced` in
-a checkout, when you want to change those defaults. If you answer no to
-`include_terraform` or `include_demo_corpus`, the files are removed and neither
-the `Makefile` nor CI mentions them.
+a checkout, when you want to change those defaults. Declining Terraform removes
+both Terraform modules. Retaining the Cloud helper while declining Terraform
+leaves a helper-only project that must connect to an existing compatible
+instance or copy the module from the upstream template.
 
 ## What you change
 

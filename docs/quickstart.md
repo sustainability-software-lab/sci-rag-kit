@@ -126,7 +126,9 @@ This mode exercises parsing, chunking, storage, ranking, and retrieval evaluatio
 $ make setup
 ```
 
-That installs dependencies, starts the compose Postgres on host port `5433`, and applies every migration.
+`make setup` starts the selected database backend, installs dependencies, and
+applies every migration. Docker is the template default and listens on host
+port `5433`; generated projects may select a different supported backend.
 
 **Expected output**
 

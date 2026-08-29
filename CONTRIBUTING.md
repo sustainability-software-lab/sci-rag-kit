@@ -12,17 +12,23 @@ Contributions are welcome! Thanks for helping us improve sci-rag-kit. These may 
 ## Development setup
 
 ```bash
-uv sync --group docs
-docker compose up -d --wait
+uv sync --group docs --group docs-test
+make setup          # install, start the selected backend, apply migrations
 make check          # ruff + mypy + the full test suite
 make docs           # generated references + strict build + public-artifact guard
 make docs-geometry  # optional: measure the built site's snippets in a browser
 uvx pre-commit install   # optional locally; CI runs every hook on the whole tree
 ```
 
-The whole suite runs offline (deterministic local embedder, mock LLMs)
-against the docker-compose Postgres. If Postgres is not reachable,
-integration tests skip with instructions rather than failing.
+Docker is the easiest CI-parity backend and the template default. pixi and
+conda can run PostgreSQL from conda-forge; uv, pixi, conda, and venv + pip can
+use a supported system server or the optional Cloud helper. The full matrix is
+in `docs/run-postgres.md`.
+
+The whole suite uses deterministic local embeddings and mock LLMs. Database
+tests destroy data in `SCI_RAG_TEST_DATABASE_URL`, so create a disposable test
+database for the selected backend. If PostgreSQL is unreachable, integration
+tests skip with instructions. A skipped database suite is not passing evidence.
 
 `make docs-geometry` is the same idea for the documentation site. Some
 presentation bugs are only visible as numbers from a rendered page, such as

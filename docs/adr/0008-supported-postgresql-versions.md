@@ -9,6 +9,11 @@ Sci RAG Kit supports PostgreSQL 16 through 18, and both ends of that range are t
 
 **Status:** accepted
 
+**Partially superseded by [ADR 0009](0009-cloud-dev-database.md).** The original
+decision below correctly records what each environment manager bundles. ADR
+0009 later established that every manager may use the `local` backend with a
+supported system server and may retain the optional Cloud helper.
+
 ## Context
 
 [ADR 0001](0001-graph-in-postgres.md) put the documents, chunks, vectors,

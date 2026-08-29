@@ -65,11 +65,17 @@ Graph extraction, HyDE, community summaries, generated answers, and model-based 
 
 It depends on your environment manager, and the answer changed recently.
 
-With pixi or conda, no. Those two declare `postgresql` and `pgvector` in the project manifest and run the server from conda-forge, with data in `.pgdata/` inside the project and the server on `127.0.0.1:5433`, which is the address `.env.example` already carries.
+With pixi or conda, no. Those managers bundle `postgresql` and `pgvector`
+from conda-forge and keep their data in `.pgdata/`.
 
-With uv or venv and pip, yes, or an external Postgres you already run. PyPI ships no PostgreSQL server, so those two managers cannot offer the Docker-free path. Supported servers are PostgreSQL 16 through 18.
+With uv or venv + pip, Docker is the easiest default, not a requirement. Every
+manager can use `SCI_RAG_DB_BACKEND=local` when PostgreSQL 16 through 18 and
+pgvector are already on the machine, including Postgres.app. Every manager can
+also retain the optional Cloud SQL helper through Advanced setup.
 
-The full argument, including the conditions under which we would reverse it, is in [ADR 0008](adr/0008-supported-postgresql-versions.md).
+[ADR 0008](adr/0008-supported-postgresql-versions.md) records the supported
+server range. [ADR 0009](adr/0009-cloud-dev-database.md) records the system-local
+and Cloud helper expansion.
 
 ### Do I have to clone the repository?
 

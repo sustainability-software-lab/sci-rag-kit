@@ -51,6 +51,7 @@ offer the local helper. They still cannot bundle a PostgreSQL server from
 PyPI, but they can now select `local` when a supported system PostgreSQL and
 pgvector are already on PATH.
 
+<!-- BEGIN GENERATED PROJECT FEATURE: cloud-helper -->
 `scripts/cloud_postgres.py` manages one workspace only:
 
 * The directory name is normalized into `sci_rag_<workspace>` and
@@ -60,8 +61,8 @@ pgvector are already on PATH.
 * `start` resumes the instance, creates missing databases, fetches the database
   password once, starts the proxy, waits for readiness, and enables pgvector in
   both databases. Repeating it is safe.
-* `stop` terminates only a process whose command line matches this workspace's
-  connection name. It never pauses the shared instance.
+* `stop` terminates only the workspace-local PID whose command line matches the
+  shared instance connection name. It never pauses the shared instance.
 * `pause` stops this workspace's proxy and sets activation policy `NEVER`.
   `resume` sets `ALWAYS`. These verbs are explicit because they affect every
   workspace using the shared instance. Terraform ignores only activation
@@ -69,7 +70,9 @@ pgvector are already on PATH.
 * `config` prints resolved non-secret settings and passwordless asyncpg URLs.
   Each URL references a mode-0600 pgpass file, so a paste-ready
   `SCI_RAG_DATABASE_URL=` line does not expose the generated password.
+<!-- END GENERATED PROJECT FEATURE: cloud-helper -->
 
+<!-- BEGIN GENERATED PROJECT FEATURE: cloud-provisioning -->
 Provision `sci-rag-dev` in `us-west1` through the independent
 `infra/terraform/dev-database/` module. It uses PostgreSQL 16 on
 the Enterprise edition's `db-g1-small` shared-core tier, zonal availability,
@@ -85,11 +88,14 @@ The Terraform IAM binding grants Cloud SQL Editor under a resource-name
 condition limited to `sci-rag-dev`; secret accessor is granted only on this
 instance's password secret. The existing production Cloud SQL instances are
 outside the condition.
+<!-- END GENERATED PROJECT FEATURE: cloud-provisioning -->
 
+<!-- BEGIN GENERATED PROJECT FEATURE: cloud-helper -->
 The live test is opt-in under `pytest.mark.cloud` and
 `SCI_RAG_RUN_CLOUD_TESTS=1`. CI does not hold project credentials. Offline unit
 tests use controlled fake binaries to prove lifecycle, isolation, and secret
 handling without contacting Google.
+<!-- END GENERATED PROJECT FEATURE: cloud-helper -->
 
 ## Measured latency
 
@@ -134,7 +140,7 @@ The cached password and pgpass file are credentials. Both are mode 0600 under
 the ignored `.cloudsql/` directory. Neither may appear in logs, test fixtures,
 snapshots, issue comments, or commits.
 
-## Revisit if
+## Reversal conditions
 
 * A supported VPN, Interconnect, or in-VPC proxy makes private-IP laptop
   access routine. Disable public IPv4 only after that route is proven.

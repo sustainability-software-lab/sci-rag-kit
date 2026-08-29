@@ -134,7 +134,7 @@ different formula. Expert labels supersede this seed set.
 make benchmark
 ```
 
-Prerequisites: Docker (for the pgvector Postgres), uv, and Google
+Prerequisites: a selected PostgreSQL backend with pgvector, uv, and Google
 credentials in `.env` (`SCI_RAG_GOOGLE_API_KEY` or
 `SCI_RAG_GCP_PROJECT`; see `.env.example`). The target ingests the
 demo corpus with real embeddings, builds the graph, snapshots the

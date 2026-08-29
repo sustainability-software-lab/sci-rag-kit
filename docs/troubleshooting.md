@@ -68,7 +68,9 @@ First identify the selected backend:
 $ echo "${SCI_RAG_DB_BACKEND:-docker}"
 ```
 
-For Docker, confirm the container and port before changing configuration:
+### Docker
+
+Confirm the container and port before changing configuration:
 
 ```console
 $ docker compose ps
@@ -76,9 +78,12 @@ $ docker compose up -d --wait
 $ uv run sci-rag db upgrade
 ```
 
-The included compose service maps PostgreSQL to host port `5433`. For a local
-PostgreSQL 16 through 18, including Postgres.app with pgvector, put `initdb`,
-`pg_ctl`, and `psql` on PATH and run:
+The included compose service maps PostgreSQL to host port `5433`.
+
+### Local or system PostgreSQL
+
+For PostgreSQL 16 through 18, including Postgres.app with pgvector, put
+`initdb`, `pg_ctl`, and `psql` on PATH and run:
 
 ```console
 $ SCI_RAG_DB_BACKEND=local make db-up
@@ -91,18 +96,33 @@ Postgres.app 16 normally needs this PATH entry:
 $ export PATH="/Applications/Postgres.app/Contents/Versions/16/bin:$PATH"
 ```
 
-For Cloud SQL, inspect the helper without exposing its cached password:
+<!-- BEGIN GENERATED PROJECT FEATURE: cloud-helper -->
+### Cloud SQL
+
+`start` resumes a paused instance before it creates databases or starts the
+workspace proxy. `resume` changes the instance activation policy; it does not
+start this workspace proxy. Inspect the helper without exposing its cached
+password:
 
 ```console
-$ python scripts/cloud_postgres.py config
-$ python scripts/cloud_postgres.py status
+$ uv run python scripts/cloud_postgres.py config
+$ uv run python scripts/cloud_postgres.py status
 $ tail -n 40 .cloudsql/proxy.log
 ```
 
-If `status` says the instance is stopped, run `resume`, then `start`. If the
-password secret was deliberately rotated, stop the proxy, remove only
-`.cloudsql/password` and `.cloudsql/pgpass`, then start again so the helper
-fetches the new version. Never paste either file into an issue.
+The helper chooses a dynamic port at or above `SCI_RAG_CLOUD_PG_PORT`. Copy the
+current URL from `config`; never assume the first port remained available. If
+the password secret was deliberately rotated, run `stop`, move only
+`.cloudsql/password` and `.cloudsql/pgpass` to a private backup location, then
+run `start` so the helper fetches the new version. Never paste either file into
+an issue.
+
+Missing `gcloud`, `cloud-sql-proxy`, or `psql` fails before the helper changes
+anything. Authentication errors need `gcloud auth application-default login`.
+Permission failures name the rejected Cloud SQL or Secret Manager operation.
+A stale port or proxy PID stays local to `.cloudsql/`; inspect `proxy.log`, stop
+the matching process through the helper, and run `start` again.
+<!-- END GENERATED PROJECT FEATURE: cloud-helper -->
 
 `SCI_RAG_DB_BACKEND` chooses what `make db-up` runs. It does not silently
 rewrite application configuration. For Cloud SQL or any external service, set
@@ -117,8 +137,8 @@ Database schema is up to date.
 ```
 
 If the selected backend is healthy but `doctor` cannot connect, compare `.env`
-with the helper's `config` output. A copied port `5432`, a different workspace
-database, or a stale Cloud SQL proxy port are common mismatches.
+with the selected helper's current configuration. A copied port, a different
+workspace database, or stale local proxy state are common mismatches.
 
 ## A command needs model credentials
 

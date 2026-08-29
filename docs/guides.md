@@ -23,7 +23,7 @@ Each guide starts from an outcome. Use the reference section when you need an ex
 
 [<span class="srag-row__title">Deploy on Google Cloud</span><span class="srag-row__copy">Provision Cloud SQL and Cloud Run from the included Terraform and verify the running service.</span>](deploy-gcp.md){ .srag-row }
 
-[<span class="srag-row__title">Run Postgres your way</span><span class="srag-row__copy">Get a server with pgvector using Docker, conda-forge, or one you already run, and know which path is yours.</span>](run-postgres.md){ .srag-row }
+[<span class="srag-row__title">Run Postgres your way</span><span class="srag-row__copy">Choose Docker, conda-forge, system PostgreSQL or Postgres.app, or an optional Cloud SQL development helper.</span>](run-postgres.md){ .srag-row }
 
 </div>
 

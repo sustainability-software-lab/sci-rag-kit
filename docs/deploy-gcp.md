@@ -33,13 +33,16 @@ pgvector, one Cloud Run service serving REST and MCP, one Cloud Run job
 for migrations and ingestion, a corpus bucket, secrets, and a
 least-privilege service account. This page walks it end to end.
 
+<!-- BEGIN GENERATED PROJECT FEATURE: cloud-provisioning -->
 !!! warning "The development database is a different module"
 
     `infra/terraform/dev-database/` provisions a shared, pausable development
-    instance for laptop access through the Cloud SQL Auth Proxy. It disables
-    backups and deletion protection by default and creates workspace-scoped
-    databases dynamically. Never point a deployment at it. This page and the
+    instance for laptop access through the Cloud SQL Auth Proxy. The
+    `scripts/cloud_postgres.py` helper, not Terraform, creates workspace-scoped
+    databases dynamically. The development module disables backups and deletion
+    protection by default. Never point a deployment at it. This page and the
     parent `infra/terraform/` module remain the production-shaped path.
+<!-- END GENERATED PROJECT FEATURE: cloud-provisioning -->
 
 Two honest notes before you start. First, this costs money while it
 exists. The database is the steady cost, since the default `db-g1-small`
