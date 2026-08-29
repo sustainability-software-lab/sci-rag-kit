@@ -12,8 +12,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from sci_rag.scaffold.questions import QUESTIONS, default_for, is_asked
-from sci_rag.scaffold.wizard import AnswerFileError, run_wizard
+from sci_rag.scaffold.questions import QUESTIONS, Question, default_for, is_asked
+from sci_rag.scaffold.wizard import AnswerFileError, collect_answers, run_wizard
 
 
 def _advanced_input(
@@ -157,6 +157,41 @@ def test_tty_detection_preselects_the_first_installed_environment_manager(monkey
 
     assert answers.environment_manager == "pixi"
     assert any("pixi" in note and "PATH" in note for note in prompter.notes)
+
+
+def test_defaults_do_not_inspect_the_environment_manager_on_a_tty(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from sci_rag.scaffold.prompt import QuestionaryPrompter
+
+    prompter = QuestionaryPrompter.__new__(QuestionaryPrompter)
+    monkeypatch.setattr("sci_rag.scaffold.prompt.make_prompter", lambda **_kwargs: prompter)
+
+    def unexpected_detection() -> str:
+        raise AssertionError("--defaults must not inspect PATH")
+
+    monkeypatch.setattr("sci_rag.scaffold.runners.detect_environment_manager", unexpected_detection)
+
+    assert run_wizard(defaults=True).environment_manager == "uv"
+
+
+def test_secret_questions_use_the_masked_prompt_method(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    seen: list[str] = []
+
+    class StubPrompter:
+        def banner(self) -> None:
+            pass
+
+        def secret(self, question: Question, default: str) -> str:
+            seen.append(question.name)
+            return "hidden"
+
+    monkeypatch.setattr(
+        "sci_rag.scaffold.wizard.QUESTIONS",
+        (Question("api_key", "api_key", "", quick=True, secret=True),),
+    )
+    monkeypatch.setattr("sci_rag.scaffold.prompt.make_prompter", lambda **_kwargs: StubPrompter())
+
+    assert collect_answers(quick=True) == {"api_key": "hidden"}
+    assert seen == ["api_key"]
 
 
 def test_the_interactive_session_asks_in_the_documented_order() -> None:

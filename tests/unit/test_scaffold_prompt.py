@@ -24,9 +24,22 @@ class _TTY(io.StringIO):
 
 def test_injected_streams_use_the_plain_prompt_contract() -> None:
     """Scripted callers must never enter a terminal UI event loop."""
-    prompter = make_prompter(input_stream=io.StringIO(), output_stream=io.StringIO())
+    input_stream = io.StringIO()
+    output_stream = io.StringIO()
+    prompter = make_prompter(input_stream=input_stream, output_stream=output_stream)
 
     assert isinstance(prompter, PlainPrompter)
+    assert prompter.stdin is input_stream
+    assert prompter.stdout is output_stream
+
+    input_only = io.StringIO()
+    output_only = io.StringIO()
+    with_input = make_prompter(input_stream=input_only)
+    with_output = make_prompter(output_stream=output_only)
+    assert isinstance(with_input, PlainPrompter)
+    assert isinstance(with_output, PlainPrompter)
+    assert with_input.stdin is input_only
+    assert with_output.stdout is output_only
 
 
 def test_plain_text_prompt_preserves_echo_and_validation_output() -> None:
@@ -67,6 +80,22 @@ def test_plain_choice_prompt_preserves_numbered_menu_and_retry_output() -> None:
         "2 - advanced\n"
         "Choose from [1/2] (1): 2\n"
     )
+
+
+def test_plain_validated_choice_keeps_the_legacy_text_bytes() -> None:
+    output = io.StringIO()
+    question = Question(
+        "python_version",
+        "python_version",
+        "3.12",
+        choices=("3.11", "3.12"),
+        validator=lambda value: value,
+    )
+
+    answer = PlainPrompter(io.StringIO("\n"), output).choice(question, "3.12")
+
+    assert answer == "3.12"
+    assert output.getvalue() == "python_version (3.12): \n"
 
 
 def test_supported_tty_uses_the_interactive_prompt_adapter(monkeypatch) -> None:  # type: ignore[no-untyped-def]

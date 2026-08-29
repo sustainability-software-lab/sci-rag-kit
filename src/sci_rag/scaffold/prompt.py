@@ -73,6 +73,11 @@ class PlainPrompter:
         return self.text(question, default)
 
     def choice(self, question: Question, default: str) -> str:
+        # A validated choice was a text prompt before the TTY layer existed.
+        # Keep injected-stream output stable while the TTY adapter renders it
+        # as an arrow-key menu.
+        if question.validator is not None:
+            return self.text(question, default)
         choices = list(question.choices or ())
         default_index = choices.index(default) + 1 if default in choices else 1
         menu = "/".join(str(i) for i in range(1, len(choices) + 1))
@@ -273,8 +278,8 @@ def make_prompter(
     plain: bool = False,
 ) -> Prompter:
     """Select a prompt adapter once for the whole wizard session."""
-    stdin = input_stream or sys.stdin
-    stdout = output_stream or sys.stdout
+    stdin = input_stream if input_stream is not None else sys.stdin
+    stdout = output_stream if output_stream is not None else sys.stdout
     term = os.environ.get("TERM", "")
     force_plain = (
         plain
