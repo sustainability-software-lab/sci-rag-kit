@@ -29,11 +29,14 @@
     var reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)"
     ).matches;
+    var autoPlay = el.dataset.autoplay === "true" && !reduceMotion;
+    el.classList.toggle("srag-cast--autoplaying", autoPlay);
     var player = AsciinemaPlayer.create(el.dataset.cast, el, {
-      autoPlay: !reduceMotion,
-      loop: !reduceMotion,
-      // A picture frame, not a video player: no control bar, restart on end.
-      controls: false,
+      autoPlay: autoPlay,
+      loop: autoPlay,
+      // The recommended Quick session loops as a picture frame. Advanced and
+      // reduced-motion sessions keep controls and wait for the reader.
+      controls: !autoPlay,
       preload: true,
       // Hold authored pauses after commands and choices; do not compress them.
       idleTimeLimit: 4,

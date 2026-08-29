@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import re
+from functools import cache
 from pathlib import Path
 from runpy import run_path
 
@@ -18,10 +19,12 @@ REPO_ROOT = Path(__file__).parents[2]
 _MODULE = run_path(str(REPO_ROOT / "scripts" / "render_cast.py"))
 
 
+@cache
 def _quick_transcript() -> str:
     return _MODULE["render_transcript"](quick=True)
 
 
+@cache
 def _advanced_transcript() -> str:
     return _MODULE["render_transcript"](quick=False)
 
@@ -199,6 +202,17 @@ def test_the_html_transcript_marks_commands_questions_and_answers() -> None:
     assert "pixi install" in markup
 
 
+def test_an_empty_secret_default_keeps_its_prompt_roles() -> None:
+    kind, parts = _MODULE["_parse_line"]("google_api_key ():", in_next=False)
+
+    assert kind == "prompt"
+    assert parts == [
+        ("key", "google_api_key"),
+        ("default", " ():"),
+        ("value", ""),
+    ]
+
+
 def test_the_player_assets_are_vendored_not_fetched() -> None:
     """A CDN reference would break the hermetic build and the offline link check."""
     vendor = REPO_ROOT / "docs" / "assets" / "vendor" / "asciinema-player"
@@ -223,9 +237,14 @@ def test_the_player_mounts_every_cast_on_the_page() -> None:
 
 def test_the_player_autoplays_at_real_time() -> None:
     script = (REPO_ROOT / "docs" / "javascripts" / "cast.js").read_text(encoding="utf-8")
-    assert "autoPlay: !reduceMotion" in script
-    assert "loop: !reduceMotion" in script
-    assert "controls: false" in script
+    index = (REPO_ROOT / "docs" / "index.md").read_text(encoding="utf-8")
+
+    assert 'data-autoplay="true"' in index
+    assert 'el.dataset.autoplay === "true" && !reduceMotion' in script
+    assert "autoPlay: autoPlay" in script
+    assert "loop: autoPlay" in script
+    assert "controls: !autoPlay" in script
+    assert 'classList.toggle("srag-cast--autoplaying", autoPlay)' in script
     assert "fit: false" in script
     assert 'terminalFontSize: "0.88em"' in script
     assert "speed: 1" in script

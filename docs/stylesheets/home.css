@@ -8,12 +8,6 @@
   width: 100%;
 }
 
-/* Material's content column starts 1.5rem below the header. The masthead
-   already has its own top padding, so that extra band is just empty air. */
-.md-main__inner:has(.srag-home-body) {
-  margin-top: 0;
-}
-
 @media screen and (min-width: 76.25em) {
   .srag-home-nav {
     display: none;
@@ -32,7 +26,12 @@
 
 .srag-home-section + .srag-home-section {
   border-top: 1px solid var(--srag-border);
-  padding-top: 1.1rem;
+}
+
+/* The figure carries detail that rewards width, so it runs wider than the
+   prose sections rather than being held to a reading measure. */
+.srag-home-section--figure {
+  max-width: 64rem;
 }
 
 .srag-home-section > :first-child {
@@ -50,9 +49,9 @@
 
 /* ── Masthead ───────────────────────────────────────────────────────── */
 
-.srag-home-section.srag-home-masthead {
-  padding-top: 1.4rem;
-  padding-bottom: 1.1rem;
+.srag-home-masthead {
+  padding-top: 3.2rem;
+  padding-bottom: 2.6rem;
 }
 
 .srag-home-masthead__brand {
@@ -61,7 +60,7 @@
 
 .srag-home-masthead__logo {
   display: block;
-  width: 20rem;
+  width: 14rem;
   height: auto;
 }
 
@@ -88,14 +87,11 @@
 }
 
 .md-typeset .srag-home-masthead__lede {
+  max-width: 54ch;
   margin: 0;
   color: var(--srag-muted-700);
   font-size: 0.92rem;
   line-height: 1.6;
-}
-
-.md-typeset .srag-home-masthead__lede > p {
-  margin: 0;
 }
 
 .md-typeset .srag-home-masthead__meta {
@@ -180,17 +176,12 @@
     padding: 2.1rem 1.2rem;
   }
 
-  .srag-home-section + .srag-home-section {
-    padding-top: 1.1rem;
-  }
-
-  .srag-home-section.srag-home-masthead {
-    padding-top: 1.1rem;
-    padding-bottom: 1.1rem;
+  .srag-home-masthead {
+    padding-top: 2.2rem;
   }
 
   .srag-home-masthead__logo {
-    width: 13rem;
+    width: 9rem;
   }
 
   .md-typeset .srag-home-figure img {
@@ -242,7 +233,7 @@
   background-color: transparent;
 }
 
-.srag-cast .ap-control-bar {
+.srag-cast--autoplaying .ap-control-bar {
   display: none;
 }
 

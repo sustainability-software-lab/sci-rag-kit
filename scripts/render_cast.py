@@ -191,7 +191,7 @@ def render_transcript(*, quick: bool = True) -> str:
     return "".join(f"{line.rstrip()}\n" for line in output.getvalue().splitlines())
 
 
-_PROMPT_LINE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*) \(([^)]+)\):(.*)$")
+_PROMPT_LINE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*) \(([^)]*)\):(.*)$")
 _CHOICE_LINE = re.compile(r"^(\d+) - (.+)$")
 _CHOOSE_LINE = re.compile(r"^(Choose from \S+ \([^)]+\):)(.*)$")
 _ACCEPT_LINE = re.compile(r"^(Accept this ontology\? \[[^\]]+\] \([^)]+\):)(.*)$")

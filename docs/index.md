@@ -53,7 +53,7 @@ $ pipx install sci-rag-kit
 $ sci-rag new
 ```
 
-<div id="srag-cast" class="srag-cast" data-cast="assets/casts/sci-rag-new.cast" aria-label="Recorded sci-rag new session"></div>
+<div id="srag-cast" class="srag-cast" data-cast="assets/casts/sci-rag-new.cast" data-autoplay="true" aria-label="Recorded sci-rag new session"></div>
 
 The same session is written out under [Example](#example), so you can read and copy it without JavaScript.
 
@@ -198,7 +198,7 @@ The recommended Quick session above, in full. `scripts/render_cast.py` builds it
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">vertex_ai</span></span>
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">offline</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3] (1):</span><span class="srag-term__value"> 1</span></span>
-<span class="srag-term__line srag-term__line--output">google_api_key ():</span>
+<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">google_api_key</span><span class="srag-term__default"> ():</span><span class="srag-term__value"></span></span>
 <span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select corpus_source</span></span>
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">local_files</span></span>
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">openalex_topic</span></span>
@@ -288,7 +288,7 @@ The recommended Quick session above, in full. `scripts/render_cast.py` builds it
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">vertex_ai</span></span>
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">offline</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3] (1):</span><span class="srag-term__value"> 1</span></span>
-<span class="srag-term__line srag-term__line--output">google_api_key ():</span>
+<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">google_api_key</span><span class="srag-term__default"> ():</span><span class="srag-term__value"></span></span>
 <span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select embedding_provider</span></span>
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">google</span></span>
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">local-hash</span></span>
