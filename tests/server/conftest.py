@@ -27,6 +27,10 @@ SERVER_KEYS = {
     "query-key": {"scopes": ["retrieval:query"]},
     "answer-key": {"scopes": ["retrieval:query", "retrieval:answer"]},
     "limited-key": {"scopes": ["retrieval:query"], "rate_limit_per_minute": 2},
+    # F-017: two keys sharing a six character prefix. They used to land in one
+    # rate limit bucket, so either one could throttle the other.
+    "shared-prefix-first": {"scopes": ["retrieval:query"], "rate_limit_per_minute": 1},
+    "shared-prefix-second": {"scopes": ["retrieval:query"], "rate_limit_per_minute": 1},
 }
 
 
