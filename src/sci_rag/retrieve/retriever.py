@@ -84,6 +84,17 @@ class Retriever:
             self._llm = get_llm(self.settings, role="extraction")
         return self._llm
 
+    def can_generate(self) -> bool:
+        """Whether a model is reachable for the layers that call one.
+
+        The question is about the client, not about the settings. A caller
+        that supplied one has generation whatever the environment says, which
+        is how the evaluation harness and the test suite drive graph and HyDE
+        with a stub under exactly the configuration the wizard writes for
+        ``credentials: offline``.
+        """
+        return self._llm is not None or not self.settings.is_offline()
+
     async def retrieve(
         self,
         query: str,
@@ -144,9 +155,15 @@ class Retriever:
         # the evaluation harness's ablations) override anything.
         vector_on = include_vector if include_vector is not None else True
         keyword_on = include_keyword if include_keyword is not None else True
-        graph_on = include_graph if include_graph is not None else deep
+        # Graph and HyDE call a model for every query, so a project with none
+        # cannot run them. Leaving them on spent one stage timeout each on the
+        # credential failure and reported `error`, which reads as a broken
+        # deployment rather than the mode the reader chose. An explicit
+        # include_* still wins: an ablation that names a stage means it.
+        model_layers = self.can_generate()
+        graph_on = include_graph if include_graph is not None else (deep and model_layers)
         community_on = include_community if include_community is not None else deep
-        hyde_on = include_hyde if include_hyde is not None else deep
+        hyde_on = include_hyde if include_hyde is not None else (deep and model_layers)
         cache_on = use_query_cache if use_query_cache is not None else not deep
         timeout = (
             self.settings.deep_stage_timeout_s

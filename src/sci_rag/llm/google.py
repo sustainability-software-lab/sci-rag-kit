@@ -29,7 +29,9 @@ class GoogleLLM(LLMClient):
         # Imported here so offline paths never load the SDK.
         from sci_rag.embed.google import make_genai_client
 
-        self._client = make_genai_client(settings, api_key_override=api_key_override)
+        self._client = make_genai_client(
+            settings, api_key_override=api_key_override, purpose="generation"
+        )
         self.model = model or settings.llm_model
 
     async def generate(

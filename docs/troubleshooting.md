@@ -198,6 +198,8 @@ only when the preliminary probe itself is the problem, then run
 
 A project that sets `SCI_RAG_EMBEDDING_PROVIDER=local-hash`, configures no credential for any provider, and leaves `SCI_RAG_LLM_MODEL` and its siblings at their shipped defaults is a supported mode, not a half-finished setup. The setup wizard writes exactly that for `credentials: offline`. `doctor` reports the unavailable generation features as warnings and exits `0`, so a green run means the offline pipeline is healthy rather than that a model is reachable.
 
+Retrieval in an offline project reports the model-only layers as `disabled`, not `error`. Graph and HyDE ask a model about every query, so a project with no credential cannot run them, and `disabled` is the status for a layer this project does not have. `error` is reserved for a layer that should have worked. Vector, keyword, and community retrieval run normally, and `sci-rag answer` refuses after them with the credential to set.
+
 Reaching for a model with no credential behind it is still a failure. `doctor` reports `FAIL` when the Google embedding provider is selected without credentials, and when a generation model is named explicitly, such as `SCI_RAG_LLM_MODEL=anthropic:claude-opus-5`, with no key or project behind it. Writing a model id is how you say you intend to generate, so the diagnosis follows what the configuration asks for rather than what happens to be missing.
 
 ## Retrieval is empty or unexpectedly narrow
