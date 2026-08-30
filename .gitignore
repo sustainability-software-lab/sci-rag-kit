@@ -33,6 +33,12 @@ data/demo/downloads/
 # Evaluation outputs
 eval_results/
 
+# Database dumps (docs/operations.md). A dump holds every source and chunk,
+# so for a private corpus the file is the corpus.
+backups/*
+!backups/.gitkeep
+*.dump
+
 # Docs site build
 site/
 

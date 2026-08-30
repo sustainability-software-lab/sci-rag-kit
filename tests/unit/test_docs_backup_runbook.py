@@ -131,3 +131,69 @@ def test_every_name_the_procedure_uses_is_defined_before_it_is_used() -> None:
         f"the backup snippet reads {undefined} without defining them, and nothing "
         "in the repository exports them"
     )
+
+
+# --- where the dump lands ----------------------------------------------------
+#
+# F-008: the runbook wrote a whole-database dump into the repository root with
+# a predictable name, and nothing ignored it. A private corpus backup showed up
+# as an ordinary untracked project file, one `git add .` from being committed.
+
+RESTORE_HEADING = "## Restore drill"
+
+
+def _documented_dump_paths(section: str) -> list[str]:
+    """Every .dump path the section names, with shell expansions collapsed."""
+    block = _first_bash_block(section)
+    paths = re.findall(r'"([^"]*\.dump)"', block)
+    # `sci-rag-$(date +%Y%m%d).dump` is a real filename once a date exists.
+    return [path.replace("$(date +%Y%m%d)", "20991231") for path in paths]
+
+
+def test_the_documented_backup_destination_is_ignored_before_pg_dump_runs() -> None:
+    paths = _documented_dump_paths(_section(LOCAL_BACKUP_HEADING))
+    assert paths, "the backup snippet no longer names a .dump file"
+
+    for path in paths:
+        ignored = subprocess.run(["git", "check-ignore", "-q", path], cwd=ROOT, capture_output=True)
+        assert ignored.returncode == 0, (
+            f"{path} is not ignored, so a whole-database dump lands in the "
+            "repository as an ordinary untracked file"
+        )
+
+
+def test_the_restore_drill_reads_from_the_documented_backup_directory() -> None:
+    """Two halves of one runbook must not name different places."""
+    backup = _documented_dump_paths(_section(LOCAL_BACKUP_HEADING))
+    restore = _documented_dump_paths(_section(RESTORE_HEADING))
+    assert restore, "the restore drill no longer names a .dump file"
+
+    backup_dirs = {path.rpartition("/")[0] for path in backup}
+    restore_dirs = {path.rpartition("/")[0] for path in restore}
+    assert backup_dirs == restore_dirs, (
+        f"backup writes to {backup_dirs} and restore reads from {restore_dirs}"
+    )
+    assert backup_dirs != {""}, "the destination is still the current directory"
+
+
+def test_the_backup_directory_exists_in_a_fresh_checkout() -> None:
+    """A destination that only appears after a mkdir is a step nobody documented."""
+    directory = next(
+        iter(
+            {
+                path.rpartition("/")[0]
+                for path in _documented_dump_paths(_section(LOCAL_BACKUP_HEADING))
+            }
+        )
+    )
+    assert (ROOT / directory).is_dir(), f"{directory}/ is missing from the repository"
+    keep = ROOT / directory / ".gitkeep"
+    assert keep.is_file(), f"{directory}/.gitkeep keeps the destination in a fresh checkout"
+
+
+def test_the_runbook_says_what_a_dump_contains() -> None:
+    """A reader deciding where to put this file needs to know what is in it."""
+    section = _section(LOCAL_BACKUP_HEADING)
+    lowered = section.lower()
+    assert "private" in lowered or "every source" in lowered
+    assert "encrypt" in lowered

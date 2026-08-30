@@ -220,6 +220,10 @@ These close findings from the 2026-08-29 end-to-end documentation route audit.
   sets, so it passed an empty argument, or aborted under `set -u`. The page
   now derives the libpq URL from `.env` without putting a password in shell
   history. Closes #158.
+- Database dumps are written to an ignored `backups/` directory instead of the
+  repository root, and `.dump` is ignored everywhere. A dump holds every source
+  and chunk, so for a private corpus it was one `git add .` from publication.
+  The restore drill reads from the same directory. Closes #160.
 
 ## [0.3.0] - 2026-08-28
 
