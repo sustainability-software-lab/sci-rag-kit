@@ -12,7 +12,7 @@ Set up a served, agent-accessible knowledge base over the bundled demo corpus. Y
   <div><strong>You'll need</strong>Python, pipx, uv, and a PostgreSQL backend</div>
   <div><strong>Time</strong>About 10 minutes</div>
   <div><strong>Credentials</strong>Optional</div>
-  <div><strong>Tested with</strong>v0.3</div>
+  <div><strong>Tested with</strong>v0.4</div>
 </div>
 
 Run the wizard from the directory where you keep projects. After it creates the repository, run the remaining commands from that repository's root.

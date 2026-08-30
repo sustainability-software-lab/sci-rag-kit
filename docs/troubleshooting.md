@@ -11,7 +11,7 @@ Every entry on this page starts from a symptom you can see and ends at the one c
   <div><strong>You'll build</strong>A diagnosis, from a symptom to its cause</div>
   <div><strong>You'll need</strong>The failing command and its output</div>
   <div><strong>Time</strong>Usually under 5 minutes</div>
-  <div><strong>Tested with</strong>v0.3</div>
+  <div><strong>Tested with</strong>v0.4</div>
 </div>
 
 ## Before you start

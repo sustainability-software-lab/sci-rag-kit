@@ -14,7 +14,7 @@ clients, and destroyable in one command.
   <div><strong>You'll need</strong>A Google Cloud project and billing enabled</div>
   <div><strong>Time</strong>About 45 minutes, most of it waiting</div>
   <div><strong>Cost</strong>Tens of dollars a month while it is up</div>
-  <div><strong>Tested with</strong>v0.3</div>
+  <div><strong>Tested with</strong>v0.4</div>
 </div>
 
 !!! note "Optional, and you may have declined it"

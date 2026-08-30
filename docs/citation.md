@@ -17,7 +17,7 @@ For work performed with the current release, cite the software title, version or
   title   = {Sci RAG Kit: Retrieval-augmented generation, built around your
              scientific domain},
   year    = {2026},
-  version = {0.3.0},
+  version = {0.4.0},
   url     = {https://github.com/sustainability-software-lab/sci-rag-kit},
   license = {BSD-3-Clause}
 }

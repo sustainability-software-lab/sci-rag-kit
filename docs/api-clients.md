@@ -12,7 +12,7 @@ authenticated request with a typed response.
   <div><strong>You'll build</strong>A Python package and a typed TypeScript client</div>
   <div><strong>You'll need</strong>A running server, uv, Node.js, and npm</div>
   <div><strong>Time</strong>Package download time plus two client runs</div>
-  <div><strong>Tested with</strong>v0.3.0 and the generator versions below</div>
+  <div><strong>Tested with</strong>v0.4 and the generator versions below</div>
 </div>
 
 ## Before you start

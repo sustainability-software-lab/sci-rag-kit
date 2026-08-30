@@ -15,7 +15,7 @@ corpus manifest, and a few environment variables.
   <div><strong>You'll need</strong>Documents on disk and a working quickstart</div>
   <div><strong>Time</strong>An afternoon for a first serious pass</div>
   <div><strong>Credentials</strong>Needed for the graph and cited answers; steps 1 to 6 have an offline route</div>
-  <div><strong>Tested with</strong>v0.3</div>
+  <div><strong>Tested with</strong>v0.4</div>
 </div>
 
 Worked example throughout: you study membrane materials for water
