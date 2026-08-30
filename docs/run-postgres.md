@@ -151,16 +151,29 @@ $ gcloud auth login
 $ gcloud auth application-default login
 $ cd infra/terraform/dev-database
 $ terraform init
-$ terraform apply -var "project_id=YOUR_PROJECT" \
+$ terraform plan -out=dev-database.tfplan \
+    -var "project_id=YOUR_PROJECT" \
+    -var "instance_name=YOUR_INSTANCE" \
     -var "developer_principal=user:YOUR_EMAIL"
+$ terraform show dev-database.tfplan     # read it before you apply it
+$ terraform apply dev-database.tfplan
 $ terraform output -raw sci_rag_cloud_pg_config
 $ cd ../../..
 ```
 
-Do not rely on the module's repository default for `project_id`; every apply
-should name its target. Terraform prints only non-secret helper settings, but
-Terraform state contains the generated database password. Store the state as a
-credential and never commit or paste it into an issue.
+Replace all three placeholders. `project_id` and `instance_name` have no
+defaults, so Terraform stops at input validation if you omit either one,
+before it reads state or plans a change. That is deliberate: a module that
+guessed either value could aim a change at an instance you never named.
+
+Read the saved plan before applying it. Every line should be a create. A
+change or a destroy on an instance you did not expect means the inputs point
+somewhere you did not intend, and applying anyway is how shared infrastructure
+gets reconciled by accident.
+
+Terraform prints only non-secret helper settings, but Terraform state contains
+the generated database password. Store the state as a credential and never
+commit or paste it into an issue.
 
 Advanced setup lets a generated project retain the helper while declining the
 Terraform tree. That helper-only project has no provisioning module. Connect it

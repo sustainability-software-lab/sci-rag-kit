@@ -145,6 +145,41 @@ jobs:
           terraform validate
           terraform -chdir=dev-database init -backend=false -input=false
           terraform -chdir=dev-database validate
+      # tests/unit/test_dev_database_terraform.py holds the static contract.
+      # This step is the part no unit test can do: ask Terraform itself
+      # whether it refuses before it can plan a mutation. See #171.
+      - name: The development module refuses to guess what it targets
+        run: |
+          failed=0
+          if terraform -chdir=dev-database plan -input=false \
+              -var 'developer_principal=user:nobody@example.invalid' \
+              > plan-without-target.log 2>&1; then
+            echo "::error::the module planned without being told what to target"
+            failed=1
+          fi
+          for required in project_id instance_name; do
+            # Terraform wraps its output, so match only the stable opening.
+            if grep -q "input variable \"$required\" is not set" plan-without-target.log; then
+              echo "refused before planning, no default: $required"
+            else
+              echo "::error::$required did not stop the run"
+              failed=1
+            fi
+          done
+          if terraform -chdir=dev-database plan -input=false \
+              -var 'project_id=Not A Project' \
+              -var 'instance_name=my-dev-instance' \
+              -var 'developer_principal=user:nobody@example.invalid' \
+              > plan-bad-project.log 2>&1; then
+            echo "::error::a malformed project id was accepted"
+            failed=1
+          else
+            grep -q "project_id must be a Google Cloud project id" plan-bad-project.log \
+              && echo "malformed project id rejected with a usable message" \
+              || { echo "::error::validation message missing"; failed=1; }
+          fi
+          rm -f plan-without-target.log plan-bad-project.log
+          exit "$failed"
 
   docs-links:
     runs-on: ubuntu-latest
