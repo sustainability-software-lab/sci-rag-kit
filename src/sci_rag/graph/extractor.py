@@ -18,6 +18,7 @@ left unstamped for the next run to retry.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -68,6 +69,8 @@ class ExtractedRelationship:
 class ExtractionStats:
     chunks_processed: int = 0
     batches_failed: int = 0
+    #: Batches whose response was unusable and which were retried smaller.
+    batches_split: int = 0
     entities_created: int = 0
     entities_updated: int = 0
     relationships_created: int = 0
@@ -197,20 +200,94 @@ async def extract_graph(
 
     for start in range(0, len(pending), batch_size):
         batch = pending[start : start + batch_size]
-        try:
-            await _extract_batch(batch, session_factory, llm, domain, stats)
-            stats.chunks_processed += len(batch)
-        except Exception as exc:
-            stats.batches_failed += 1
-            log.warning(
-                "graph_extract_batch_failed",
-                batch_start=start,
-                error=type(exc).__name__,
-                detail=str(exc)[:200],
-            )
+        await _extract_with_recovery(
+            batch,
+            session_factory,
+            llm,
+            domain,
+            stats,
+            rate_limit_s=rate_limit_s,
+        )
         if rate_limit_s and start + batch_size < len(pending):
             await asyncio.sleep(rate_limit_s)
     return stats
+
+
+def _batch_id(batch: Sequence[Row[tuple[str, str, str]]]) -> str:
+    """A stable, content-free name for a batch, so logs can be followed.
+
+    Derived from the chunk ids in order, which are identifiers rather than
+    text, so a batch keeps the same name across a split and across runs and
+    nothing about the documents reaches the log.
+    """
+    digest = hashlib.sha256("|".join(row[0] for row in batch).encode("utf-8"))
+    return digest.hexdigest()[:12]
+
+
+async def _extract_with_recovery(
+    batch: Sequence[Row[tuple[str, str, str]]],
+    session_factory: async_sessionmaker[AsyncSession],
+    llm: LLMClient,
+    domain: DomainProfile,
+    stats: ExtractionStats,
+    *,
+    rate_limit_s: float,
+) -> None:
+    """Extract one batch, halving it when the model's output is unusable.
+
+    A response the parser cannot read is usually a response that did not fit:
+    above some batch size the JSON exceeds the output cap and is cut off, and
+    every identical retry is cut off in the same place. Reruns cannot make
+    progress on that, which is what left the documented demo route stuck. A
+    smaller batch asks for less JSON, so it is the retry that can work.
+
+    Only unusable structured output is retried this way. A database or
+    provider failure is not made smaller by a smaller batch, so splitting it
+    would spend the same failure twice.
+
+    The split is a deterministic halving and stops at one chunk, so recovery
+    is bounded and a rerun repeats the same sequence rather than sampling.
+    """
+    try:
+        await _extract_batch(batch, session_factory, llm, domain, stats)
+        stats.chunks_processed += len(batch)
+        return
+    except ValueError as exc:
+        if len(batch) == 1:
+            stats.batches_failed += 1
+            log.warning(
+                "graph_extract_batch_failed",
+                batch=_batch_id(batch),
+                batch_size=1,
+                error=type(exc).__name__,
+                detail=str(exc)[:200],
+            )
+            return
+        stats.batches_split += 1
+        log.info(
+            "graph_extract_batch_split",
+            batch=_batch_id(batch),
+            batch_size=len(batch),
+            error=type(exc).__name__,
+        )
+    except Exception as exc:
+        stats.batches_failed += 1
+        log.warning(
+            "graph_extract_batch_failed",
+            batch=_batch_id(batch),
+            batch_size=len(batch),
+            error=type(exc).__name__,
+            detail=str(exc)[:200],
+        )
+        return
+
+    half = len(batch) // 2
+    for part in (batch[:half], batch[half:]):
+        await _extract_with_recovery(
+            part, session_factory, llm, domain, stats, rate_limit_s=rate_limit_s
+        )
+        if rate_limit_s:
+            await asyncio.sleep(rate_limit_s)
 
 
 async def _extract_batch(
