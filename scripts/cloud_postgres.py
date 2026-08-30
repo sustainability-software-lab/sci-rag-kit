@@ -18,14 +18,21 @@ authorization plus TLS. This is a development backend, never a deployment path.
     python scripts/cloud_postgres.py pause
     python scripts/cloud_postgres.py resume
 
+The project and instance have no defaults. `pause` and `resume` act on
+whatever they name, so a shipped default would aim a lifecycle change at
+somebody else's infrastructure. Provision an instance with
+infra/terraform/dev-database and take its settings from
+`terraform output -raw sci_rag_cloud_pg_config`.
+
 Environment:
-    SCI_RAG_CLOUD_PG_PROJECT    Google Cloud project (pisces-476117)
-    SCI_RAG_CLOUD_PG_INSTANCE   Cloud SQL instance (sci-rag-dev)
+    SCI_RAG_CLOUD_PG_PROJECT    Google Cloud project (required)
+    SCI_RAG_CLOUD_PG_INSTANCE   Cloud SQL instance (required)
     SCI_RAG_CLOUD_PG_REGION     Cloud SQL region (us-west1)
     SCI_RAG_CLOUD_PG_DIR        local state directory (.cloudsql)
     SCI_RAG_CLOUD_PG_PORT       first loopback port to try (5433)
     SCI_RAG_CLOUD_PG_WORKSPACE  database-name suffix (workspace directory)
     SCI_RAG_CLOUD_PG_USER       PostgreSQL user (sci_rag)
+    SCI_RAG_CLOUD_PG_CONFIG     KEY=VALUE file holding any of the above
 """
 
 from __future__ import annotations
@@ -47,15 +54,31 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-DEFAULT_PROJECT = "pisces-476117"
-DEFAULT_INSTANCE = "sci-rag-dev"
 DEFAULT_REGION = "us-west1"
+DEFAULT_CONFIG_NAME = "config.env"
 DEFAULT_STATE_DIR = ".cloudsql"
 DEFAULT_PORT = 5433
 DEFAULT_USER = "sci_rag"
 _MAX_IDENTIFIER = 63
 _INSTANCE_WAIT_SECONDS = 900
 _PROXY_WAIT_SECONDS = 30
+
+_MISSING_CONFIG = """\
+The cloud database backend needs the Cloud SQL project and instance to use.
+This template ships no default for either, because `pause` and `resume` act on
+whatever they name and a default would aim them at somebody else's instance.
+
+Provision one with the development module, then read its settings back:
+
+    terraform -chdir=infra/terraform/dev-database output -raw sci_rag_cloud_pg_config
+
+Export those lines, or save them where the helper looks:
+
+    ... > .cloudsql/config.env
+
+Point SCI_RAG_CLOUD_PG_CONFIG at that file to share one across several
+checkouts. Missing: {missing}
+"""
 
 _MISSING_TOOLS = """\
 The cloud database backend needs `gcloud`, `cloud-sql-proxy`, and `psql` on PATH.
@@ -203,22 +226,63 @@ def _proxy_is_running(config: Config) -> bool:
     return "cloud-sql-proxy" in command and config.connection_name in command
 
 
+def _config_file_settings(state_dir: Path) -> dict[str, str]:
+    """Settings from a KEY=VALUE file, which is the shape Terraform emits.
+
+    `terraform output -raw sci_rag_cloud_pg_config` already prints exactly
+    these lines, so saving that output is the whole setup step. A file is
+    needed as well as the environment because this workspace's setup script
+    asks the helper for its configuration before any `.env` exists, so the
+    values cannot live there.
+
+    The environment wins over the file: an explicit export is a deliberate
+    override of a stored default.
+    """
+    raw = os.environ.get("SCI_RAG_CLOUD_PG_CONFIG", "")
+    path = Path(raw).expanduser() if raw else state_dir / DEFAULT_CONFIG_NAME
+    values: dict[str, str] = {}
+    with contextlib.suppress(OSError):
+        for line in path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or "=" not in stripped:
+                continue
+            key, _, value = stripped.partition("=")
+            values[key.strip()] = value.strip()
+    return values
+
+
+def _setting(name: str, from_file: dict[str, str], default: str = "") -> str:
+    key = f"SCI_RAG_CLOUD_PG_{name}"
+    return os.environ.get(key) or from_file.get(key) or default
+
+
 def resolve_config() -> Config:
     raw_dir = os.environ.get("SCI_RAG_CLOUD_PG_DIR", DEFAULT_STATE_DIR)
     state_dir = (Path.cwd() / raw_dir).resolve()
+    from_file = _config_file_settings(state_dir)
+    project = _setting("PROJECT", from_file)
+    instance = _setting("INSTANCE", from_file)
+    missing = [
+        f"SCI_RAG_CLOUD_PG_{name}"
+        for name, value in (("PROJECT", project), ("INSTANCE", instance))
+        if not value
+    ]
+    if missing:
+        print(_MISSING_CONFIG.format(missing=", ".join(missing)), file=sys.stderr)
+        raise SystemExit(1)
     requested_port = int(os.environ.get("SCI_RAG_CLOUD_PG_PORT", str(DEFAULT_PORT)))
     saved_port: int | None = None
     with contextlib.suppress(FileNotFoundError, ValueError):
         saved_port = int((state_dir / "proxy.port").read_text(encoding="utf-8").strip())
     workspace = _workspace_slug(os.environ.get("SCI_RAG_CLOUD_PG_WORKSPACE", Path.cwd().name))
     provisional = Config(
-        project=os.environ.get("SCI_RAG_CLOUD_PG_PROJECT", DEFAULT_PROJECT),
-        instance=os.environ.get("SCI_RAG_CLOUD_PG_INSTANCE", DEFAULT_INSTANCE),
-        region=os.environ.get("SCI_RAG_CLOUD_PG_REGION", DEFAULT_REGION),
+        project=project,
+        instance=instance,
+        region=_setting("REGION", from_file, DEFAULT_REGION),
         state_dir=state_dir,
         port=saved_port or requested_port,
         workspace=workspace,
-        user=os.environ.get("SCI_RAG_CLOUD_PG_USER", DEFAULT_USER),
+        user=_setting("USER", from_file, DEFAULT_USER),
     )
     if saved_port is not None and _proxy_is_running(provisional):
         return provisional

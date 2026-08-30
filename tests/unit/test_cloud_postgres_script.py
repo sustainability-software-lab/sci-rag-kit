@@ -22,11 +22,41 @@ import pytest
 REPO_ROOT = Path(__file__).parents[2]
 SCRIPT = REPO_ROOT / "scripts" / "cloud_postgres.py"
 
+# The helper ships no project or instance, so every test names its own. These
+# are deliberately not any real instance: `pause` and `resume` act on whatever
+# they are given, and a test fixture that named live infrastructure would be
+# the same defect the script no longer has.
+FIXTURE_PROJECT = "example-project"
+FIXTURE_INSTANCE = "example-instance"
+FIXTURE_REGION = "us-west1"
+FIXTURE_CONNECTION = f"{FIXTURE_PROJECT}:{FIXTURE_REGION}:{FIXTURE_INSTANCE}"
+
+FIXTURE_CONFIG = {
+    "SCI_RAG_CLOUD_PG_PROJECT": FIXTURE_PROJECT,
+    "SCI_RAG_CLOUD_PG_INSTANCE": FIXTURE_INSTANCE,
+    "SCI_RAG_CLOUD_PG_REGION": FIXTURE_REGION,
+}
+
+# Settings the developer's own shell may carry. Clearing them keeps a test
+# from passing or failing because of the machine it ran on.
+_HELPER_VARS = (
+    "SCI_RAG_CLOUD_PG_PROJECT",
+    "SCI_RAG_CLOUD_PG_INSTANCE",
+    "SCI_RAG_CLOUD_PG_REGION",
+    "SCI_RAG_CLOUD_PG_DIR",
+    "SCI_RAG_CLOUD_PG_PORT",
+    "SCI_RAG_CLOUD_PG_WORKSPACE",
+    "SCI_RAG_CLOUD_PG_USER",
+    "SCI_RAG_CLOUD_PG_CONFIG",
+)
+
 
 def _run(
     *args: str, cwd: Path, env: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
-    environment = {**os.environ, **(env or {})}
+    environment = {key: value for key, value in os.environ.items() if key not in _HELPER_VARS}
+    environment.update(FIXTURE_CONFIG)
+    environment.update(env or {})
     return subprocess.run(
         [sys.executable, str(SCRIPT), *args],
         cwd=cwd,
@@ -74,7 +104,7 @@ state = state_path.read_text(encoding="utf-8").strip() if state_path.exists() el
 if args[:3] == ["sql", "instances", "describe"]:
     activation = "ALWAYS" if state == "RUNNABLE" else "NEVER"
     print(json.dumps({
-        "connectionName": "pisces-476117:us-west1:sci-rag-dev",
+        "connectionName": os.environ["FAKE_CONNECTION_NAME"],
         "state": state,
         "settings": {"activationPolicy": activation},
     }))
@@ -142,7 +172,73 @@ with pathlib.Path(os.environ["FAKE_PSQL_LOG"]).open("a", encoding="utf-8") as ha
         "FAKE_INSTANCE_STATE": str(state_file),
         "FAKE_DATABASES": str(databases_file),
         "FAKE_PSQL_LOG": str(psql_log),
+        "FAKE_CONNECTION_NAME": FIXTURE_CONNECTION,
     }
+
+
+@pytest.mark.parametrize("verb", ["config", "start", "status", "pause", "resume"])
+def test_an_unconfigured_helper_names_what_to_set_instead_of_guessing(
+    tmp_path: Path, verb: str
+) -> None:
+    """F-019's sibling: a shipped instance name is a target for `pause`.
+
+    Every verb goes through the same resolver, so none of them can reach an
+    instance the operator has not named. `pause` and `resume` matter most:
+    ADR 0009 says plainly that they affect every workspace using the instance.
+    """
+    result = _run(
+        verb,
+        cwd=tmp_path,
+        env={key: "" for key in ("SCI_RAG_CLOUD_PG_PROJECT", "SCI_RAG_CLOUD_PG_INSTANCE")},
+    )
+
+    assert result.returncode != 0
+    assert "SCI_RAG_CLOUD_PG_PROJECT" in result.stderr
+    assert "SCI_RAG_CLOUD_PG_INSTANCE" in result.stderr
+    assert "sci_rag_cloud_pg_config" in result.stderr, "say where the values come from"
+    assert result.stdout.strip() == "", "an unconfigured helper resolves to no instance at all"
+
+
+def test_settings_come_from_a_file_when_the_environment_is_silent(tmp_path: Path) -> None:
+    """The workspace setup script asks for configuration before `.env` exists.
+
+    A file is what closes that loop, and its format is exactly what
+    `terraform output -raw sci_rag_cloud_pg_config` already prints, so saving
+    that output is the whole setup step.
+    """
+    workspace = tmp_path / "from-file"
+    (workspace / ".cloudsql").mkdir(parents=True)
+    (workspace / ".cloudsql" / "config.env").write_text(
+        "# from terraform\n"
+        "SCI_RAG_CLOUD_PG_PROJECT=file-project\n"
+        "SCI_RAG_CLOUD_PG_INSTANCE=file-instance\n"
+        "SCI_RAG_CLOUD_PG_REGION=europe-west1\n"
+        "SCI_RAG_CLOUD_PG_USER=file-user\n",
+        encoding="utf-8",
+    )
+
+    result = _run("config", cwd=workspace, env=dict.fromkeys(FIXTURE_CONFIG, ""))
+
+    assert result.returncode == 0, result.stderr
+    values = dict(line.split("=", 1) for line in result.stdout.strip().splitlines())
+    assert values["connection_name"] == "file-project:europe-west1:file-instance"
+    assert values["user"] == "file-user"
+
+
+def test_an_explicit_export_overrides_the_stored_file(tmp_path: Path) -> None:
+    """A file holds a default; an export is a deliberate choice."""
+    workspace = tmp_path / "override"
+    (workspace / ".cloudsql").mkdir(parents=True)
+    (workspace / ".cloudsql" / "config.env").write_text(
+        "SCI_RAG_CLOUD_PG_PROJECT=file-project\nSCI_RAG_CLOUD_PG_INSTANCE=file-instance\n",
+        encoding="utf-8",
+    )
+
+    result = _run("config", cwd=workspace, env={"SCI_RAG_CLOUD_PG_INSTANCE": "exported-instance"})
+
+    assert result.returncode == 0, result.stderr
+    values = dict(line.split("=", 1) for line in result.stdout.strip().splitlines())
+    assert values["instance"] == "exported-instance"
 
 
 def test_config_reports_workspace_scoped_passwordless_urls(tmp_path: Path) -> None:
@@ -152,9 +248,9 @@ def test_config_reports_workspace_scoped_passwordless_urls(tmp_path: Path) -> No
 
     assert result.returncode == 0, result.stderr
     values = dict(line.split("=", 1) for line in result.stdout.strip().splitlines())
-    assert values["project"] == "pisces-476117"
-    assert values["instance"] == "sci-rag-dev"
-    assert values["region"] == "us-west1"
+    assert values["project"] == FIXTURE_PROJECT
+    assert values["instance"] == FIXTURE_INSTANCE
+    assert values["region"] == FIXTURE_REGION
     assert values["workspace"] == "davis_v3"
     assert values["database"] == "sci_rag_davis_v3"
     assert values["test_database"] == "sci_rag_test_davis_v3"
@@ -211,8 +307,8 @@ def test_proxy_readiness_retries_before_ps_exposes_the_command(
 ) -> None:
     module = runpy.run_path(str(SCRIPT), run_name="cloud_postgres_test")
     config = module["Config"](
-        project="pisces-476117",
-        instance="sci-rag-dev",
+        project=FIXTURE_PROJECT,
+        instance=FIXTURE_INSTANCE,
         region="us-west1",
         state_dir=tmp_path,
         port=_free_port(),
@@ -244,8 +340,8 @@ def test_pause_waits_through_transitional_instance_states(
 ) -> None:
     module = runpy.run_path(str(SCRIPT), run_name="cloud_postgres_test")
     config = module["Config"](
-        project="pisces-476117",
-        instance="sci-rag-dev",
+        project=FIXTURE_PROJECT,
+        instance=FIXTURE_INSTANCE,
         region="us-west1",
         state_dir=tmp_path,
         port=_free_port(),
