@@ -220,7 +220,7 @@ $ sci-rag init [OPTIONS]
 |---|---|---|---|
 | `--target` | path | . | The checkout to configure. Defaults to the current directory. |
 | `--defaults` | boolean | false | Take every default without asking. Useful in CI. |
-| `--answers-file` | path | unset | A YAML file of answers, for reproducible generation. Unanswered questions take their default. |
+| `--answers-file` | path | unset | A YAML file of answers, for reproducible generation. Unanswered questions take their default. Answers that need a person, such as accepting a drafted ontology, are refused rather than replaced. |
 | `--quick, --advanced` | boolean | unset | Ask six setup questions, or expose every option. |
 | `--no-tty` | boolean | false | Use plain numbered prompts even in a supported terminal. |
 | `--dry-run` | boolean | false | Show what would change without writing anything. |
@@ -239,7 +239,7 @@ $ sci-rag new [OPTIONS]
 |---|---|---|---|
 | `--output-dir, -o` | path | . | Where to create the project directory. Defaults to the current directory. |
 | `--defaults` | boolean | false | Take every default without asking. Useful in CI. |
-| `--answers-file` | path | unset | A YAML file of answers, for reproducible generation. Unanswered questions take their default. |
+| `--answers-file` | path | unset | A YAML file of answers, for reproducible generation. Unanswered questions take their default. Answers that need a person, such as accepting a drafted ontology, are refused rather than replaced. |
 | `--quick, --advanced` | boolean | unset | Ask six setup questions, or expose every option. |
 | `--no-tty` | boolean | false | Use plain numbered prompts even in a supported terminal. |
 | `--no-preflight` | boolean | false | Skip the live credential check before downloading the template. |

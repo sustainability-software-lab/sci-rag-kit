@@ -49,7 +49,8 @@ def init(
         None,
         "--answers-file",
         help="A YAML file of answers, for reproducible generation. Unanswered questions "
-        "take their default.",
+        "take their default. Answers that need a person, such as accepting a drafted "
+        "ontology, are refused rather than replaced.",
     ),
     quick: bool | None = typer.Option(
         None,

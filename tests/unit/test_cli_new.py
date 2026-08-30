@@ -154,8 +154,19 @@ def test_an_existing_non_empty_directory_is_refused(tmp_path: Path) -> None:
     assert (existing / "mine.txt").read_text(encoding="utf-8") == "do not touch\n"
 
 
-def test_the_llm_draft_is_skipped_without_an_interactive_session(tmp_path: Path) -> None:
-    """--defaults answers draft_with_llm, but nobody can accept or redraft it."""
+# F-012 in the 2026-08-29 documentation route audit: an answers file could
+# ask for `ontology: draft_with_llm`, and every answers-file run is
+# noninteractive, so the draft was skipped and the answer replaced with
+# `keep_demo_example`. Generation exited 0 and produced the worked demo
+# ontology, which is not what the file asked for.
+#
+# The contract is now that the value is invalid in an answers file. Drafting
+# still happens interactively, and `sci-rag draft ontology --print-prompt`
+# with `--from-file` is the deterministic route for automation.
+
+
+def test_defaults_pick_a_deterministic_ontology_with_no_fallback(tmp_path: Path) -> None:
+    """--defaults selected nothing, so it should not announce a skipped draft."""
     result = runner.invoke(
         app,
         [
@@ -167,8 +178,87 @@ def test_the_llm_draft_is_skipped_without_an_interactive_session(tmp_path: Path)
         ],
     )
     output = _ANSI.sub("", result.output)
-    assert "Skipping the LLM ontology draft" in output
-    assert "worked example" in output
+
+    assert result.exit_code == 0, output
+    assert "Skipping the LLM ontology draft" not in output
+    assert "no draft was accepted" not in output
+
+
+def test_an_answers_file_asking_to_draft_the_ontology_is_refused(tmp_path: Path) -> None:
+    answers = tmp_path / "answers.yaml"
+    answers.write_text(
+        yaml.safe_dump({"ontology": "draft_with_llm", "initialize_git": "No"}), encoding="utf-8"
+    )
+    workspace = tmp_path / "workspace"
+
+    result = runner.invoke(
+        app,
+        [
+            "--answers-file",
+            str(answers),
+            "--template-path",
+            str(_checkout(tmp_path)),
+            "--output-dir",
+            str(workspace),
+        ],
+    )
+    output = _ANSI.sub("", result.output)
+
+    assert result.exit_code != 0, output
+    assert "draft_with_llm" in output
+    assert "keep_demo_example" in output and "blank" in output, (
+        "a refusal has to name what to write instead"
+    )
+    assert "sci-rag draft ontology" in output, (
+        "a refusal should point at the route that does work without a terminal"
+    )
+
+
+def test_the_refusal_happens_before_anything_is_generated(tmp_path: Path) -> None:
+    """Failing after a template copy would leave a half-made project behind."""
+    answers = tmp_path / "answers.yaml"
+    answers.write_text(
+        yaml.safe_dump({"ontology": "draft_with_llm", "initialize_git": "No"}), encoding="utf-8"
+    )
+    workspace = tmp_path / "workspace"
+
+    runner.invoke(
+        app,
+        [
+            "--answers-file",
+            str(answers),
+            "--template-path",
+            str(_checkout(tmp_path)),
+            "--output-dir",
+            str(workspace),
+        ],
+    )
+
+    assert not workspace.exists() or list(workspace.iterdir()) == []
+
+
+def test_the_deterministic_ontology_answers_still_work(tmp_path: Path) -> None:
+    checkout = _checkout(tmp_path)
+    for choice in ("keep_demo_example", "blank"):
+        answers = tmp_path / f"answers-{choice}.yaml"
+        answers.write_text(
+            yaml.safe_dump(
+                {"ontology": choice, "repo_name": f"kb-{choice}", "initialize_git": "No"}
+            ),
+            encoding="utf-8",
+        )
+        result = runner.invoke(
+            app,
+            [
+                "--answers-file",
+                str(answers),
+                "--template-path",
+                str(checkout),
+                "--output-dir",
+                str(tmp_path / "workspace"),
+            ],
+        )
+        assert result.exit_code == 0, _ANSI.sub("", result.output)
 
 
 def test_next_steps_use_the_chosen_managers_commands(tmp_path: Path) -> None:
