@@ -205,6 +205,13 @@ Terraform tree. That helper-only project has no provisioning module. Connect it
 to an existing compatible instance or copy the development module from the
 upstream template before provisioning.
 
+Save the printed settings where the helper reads them. The output is already
+`KEY=VALUE` lines, so this is the whole configuration step:
+
+```console title="Terminal"
+$ terraform -chdir=infra/terraform/dev-database output -raw sci_rag_cloud_pg_config > .cloudsql/config.env
+```
+
 <div class="srag-checkpoint" markdown>
 **Checkpoint: provisioning returned helper configuration**
 
@@ -216,18 +223,37 @@ no database password.
 <!-- BEGIN GENERATED PROJECT FEATURE: cloud-helper -->
 ## Start a Cloud SQL workspace
 
-Configure the helper with these inputs. The defaults are the current script
-contract, not a reason to omit an explicit project in Terraform.
+Configure the helper with these inputs. The project and the instance have no
+defaults, because `pause` and `resume` act on whatever they name and a shipped
+default would aim them at somebody else's database.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `SCI_RAG_CLOUD_PG_PROJECT` | internal repository default; override required | Google Cloud project containing the instance |
-| `SCI_RAG_CLOUD_PG_INSTANCE` | `sci-rag-dev` | Shared development instance name |
+| `SCI_RAG_CLOUD_PG_PROJECT` | none; required | Google Cloud project containing the instance |
+| `SCI_RAG_CLOUD_PG_INSTANCE` | none; required | Cloud SQL instance name |
 | `SCI_RAG_CLOUD_PG_REGION` | `us-west1` | Instance region |
 | `SCI_RAG_CLOUD_PG_DIR` | `.cloudsql` | Ignored workspace-local proxy and credential state |
 | `SCI_RAG_CLOUD_PG_PORT` | `5433` | First loopback port to try; the helper chooses the next free port |
 | `SCI_RAG_CLOUD_PG_WORKSPACE` | current directory name | Suffix for same-basename collision avoidance |
 | `SCI_RAG_CLOUD_PG_USER` | `sci_rag` | Shared PostgreSQL role |
+| `SCI_RAG_CLOUD_PG_CONFIG` | `.cloudsql/config.env` | File holding any of the above as `KEY=VALUE` lines |
+
+The configuration file holds one `KEY=VALUE` line per setting, which is the
+format provisioning prints:
+
+```dotenv title="~/.cloudsql/config.env"
+SCI_RAG_CLOUD_PG_PROJECT=your-project
+SCI_RAG_CLOUD_PG_INSTANCE=your-instance
+SCI_RAG_CLOUD_PG_REGION=us-west1
+SCI_RAG_CLOUD_PG_USER=sci_rag
+```
+
+An exported variable wins over the file, so the file holds the default and an
+export is a deliberate override. Point `SCI_RAG_CLOUD_PG_CONFIG` at a path
+outside any checkout to share one instance across several of them without a
+per-checkout step. Without a project and an instance the helper prints what to
+set and exits nonzero, for every verb, rather than resolving to an instance
+nobody named.
 
 The helper normalizes the workspace name into
 `sci_rag_<workspace>` and `sci_rag_test_<workspace>`. Override
@@ -292,6 +318,10 @@ clone, not in each worktree. The settings call them through
 
 ```toml title="~/.conductor/settings.local.toml"
 "$schema" = "https://conductor.build/schemas/settings.repo.schema.json"
+
+[environment_variables.local]
+# One file outside every worktree, so a new workspace needs no extra step.
+SCI_RAG_CLOUD_PG_CONFIG = "~/.config/sci-rag/cloud-pg.env"
 
 [scripts]
 setup = '"$CONDUCTOR_ROOT_PATH/.conductor/setup-cloud-workspace.sh"'

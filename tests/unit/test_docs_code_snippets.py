@@ -27,6 +27,9 @@ READER_CREATED_PATHS = frozenset(
         ".conductor/run-cloud-tests.sh",
         ".conductor/settings.local.toml",
         ".conductor/setup-cloud-workspace.sh",
+        # Written by `terraform output`, or by hand, when a reader configures
+        # the Cloud SQL helper. Ignored, so never present in a checkout.
+        ".cloudsql/config.env",
         "data/corpus.jsonl",
         "generated/typescript/status.ts",
         "openapi-python-client.yaml",

@@ -169,11 +169,12 @@ hierarchical communities) are NOT yours; leave them in ROADMAP.
   "CREATE DATABASE <name>"`, then `SCI_RAG_DATABASE_URL=...` on the
   command). Offline demos use `SCI_RAG_EMBEDDING_PROVIDER=local-hash
   SCI_RAG_EMBEDDING_DIM=64`; cloud demos use
-  `SCI_RAG_GCP_PROJECT=pisces-476117 SCI_RAG_GCP_LOCATION=us-central1`
+  `SCI_RAG_GCP_PROJECT=<your-project> SCI_RAG_GCP_LOCATION=us-central1`
   (ADC is configured on this machine; models: gemini-2.5-flash +
   gemini-embedding-001; a full demo-corpus benchmark run costs cents).
-  Any other gcloud invocation must pass `--project=pisces-476117`
-  explicitly.
+  Any other gcloud invocation must pass `--project=<your-project>`
+  explicitly. The concrete project id was redacted by #200; this
+  repository names no maintained Google Cloud project.
 - The release-wrap sub-issue re-runs `make benchmark` (it is the REAL
   pipeline end to end: ingest, graph, snapshot, full ablation, judged
   answers, calibration, re-render `docs/benchmarks.md`) so the page

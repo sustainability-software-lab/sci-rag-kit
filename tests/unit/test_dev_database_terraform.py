@@ -10,7 +10,6 @@ mutation is aimed at are now required inputs with no defaults.
 from __future__ import annotations
 
 import re
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -19,9 +18,11 @@ REPO_ROOT = Path(__file__).parents[2]
 TERRAFORM_ROOT = REPO_ROOT / "infra" / "terraform"
 MODULE = TERRAFORM_ROOT / "dev-database"
 
-# The identifiers that name real infrastructure somebody else maintains. A
-# public template must not carry them, and no test may assert their presence.
-MAINTAINED_IDENTIFIERS = ("pisces-476117", "sci-rag-dev")
+# The identifiers that name real infrastructure somebody else maintains lived
+# here, guarded across this module's own files. #200 found the same two
+# strings shipped in `scripts/cloud_postgres.py`, so the guard moved to
+# `test_maintained_identifiers.py` and now covers every tracked file. Naming
+# them here as well would put them back in a tracked file.
 
 # Inputs that decide what a mutation is aimed at. Cost and shape inputs such
 # as region, tier, and database user may keep defaults; these may not.
@@ -67,28 +68,6 @@ def test_an_input_that_aims_a_mutation_has_no_default(name: str) -> None:
 def test_an_input_that_aims_a_mutation_validates_what_it_is_given(name: str) -> None:
     """A required variable stops the run. Validation says why in one line."""
     assert "validation" in _variable_block(name)
-
-
-def _tracked_terraform_files() -> list[Path]:
-    listed = subprocess.run(
-        ["git", "ls-files", "-z", "--", "infra/terraform"],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        check=True,
-    )
-    names = [name for name in listed.stdout.decode().split("\0") if name]
-    return [REPO_ROOT / name for name in names]
-
-
-@pytest.mark.parametrize("identifier", MAINTAINED_IDENTIFIERS)
-def test_no_tracked_terraform_file_names_maintained_infrastructure(identifier: str) -> None:
-    """This is what a generated project's terraform tree is copied from."""
-    offenders = [
-        path.relative_to(REPO_ROOT)
-        for path in _tracked_terraform_files()
-        if identifier in path.read_text(encoding="utf-8", errors="ignore")
-    ]
-    assert offenders == [], f"{identifier} appears in public Terraform: {offenders}"
 
 
 def test_dev_instance_uses_proxy_only_public_connectivity() -> None:
