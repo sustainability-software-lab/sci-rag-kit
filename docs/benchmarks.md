@@ -20,6 +20,8 @@ axes other than benchmark scores.
 - Code: commit `d011632`
 - Rendered: 2026-08-28
 
+Graph construction and judged answers are stochastic. Repeating the command below reproduces these numbers within a declared tolerance of 0.1 absolute on a metric and 10% on a count, and `--check` fails visibly when one moves further. A number that moves beyond it is a finding, not a refresh: publishing it needs a reviewed source report and an explanation of which recorded input changed.
+
 ## Retrieval ablations
 
 Cells are mean [95% bootstrap CI], resampled per question. The

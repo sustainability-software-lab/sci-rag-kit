@@ -751,7 +751,10 @@ def apply_pruning(answers: ProjectAnswers, root: Path) -> list[str]:
         makefile = root / "Makefile"
         if makefile.exists():
             text = makefile.read_text(encoding="utf-8")
-            for target in ("demo", "demo-cloud", "benchmark"):
+            # benchmark-check before benchmark: the remover matches a target
+            # name at the start of a line, and dropping `benchmark` first
+            # would leave its check target pointing at reports nothing writes.
+            for target in ("demo", "demo-cloud", "benchmark-check", "benchmark"):
                 text = _remove_make_target(text, target)
             text = re.sub(r"(?m)^(\.PHONY:.*)$", lambda m: _drop_phony(m.group(1)), text, count=1)
             text = _drop_lint_path(text, "examples")
@@ -766,7 +769,7 @@ def apply_pruning(answers: ProjectAnswers, root: Path) -> list[str]:
     return [_log("removed", ", ".join(removed))]
 
 
-_PRUNED_PHONY = {"demo", "demo-cloud", "benchmark", "clean-demo"}
+_PRUNED_PHONY = {"demo", "demo-cloud", "benchmark", "benchmark-check", "clean-demo"}
 
 
 def _drop_phony(line: str) -> str:

@@ -44,6 +44,7 @@ def retrieval_fixture() -> dict:
         "generated_at": "2026-08-27T16:00:00+00:00",
         "git_commit": "abc1234",
         "snapshot": "v0.2-demo",
+        "provenance": PROVENANCE,
         "corpus": {
             "documents": 5,
             "chunks": 34,
@@ -61,11 +62,26 @@ def retrieval_fixture() -> dict:
     }
 
 
+#: The receipt every fixture carries. Reports rendered onto one page have to
+#: agree about their inputs, so they share one.
+PROVENANCE = {
+    "embedding": "gemini-embedding-001@1536",
+    "models": {
+        "answer": "google:gemini-2.5-flash",
+        "extraction": "google:gemini-2.5-flash",
+        "judge": "google:gemini-2.5-flash",
+    },
+    "domain_digest": "a" * 64,
+    "decoding": {"temperature": 0.0, "judge_temperature": 0.0, "json_mode": True},
+}
+
+
 def answers_fixture() -> dict:
     return {
         "kind": "answers",
         "git_commit": "abc1234",
         "snapshot": "v0.2-demo",
+        "provenance": PROVENANCE,
         "corpus": {"documents": 5, "chunks": 34},
         "summary": {"n": 10.0, "graded": 10.0, "failed": 0.0},
         "summary_ci": {
@@ -144,6 +160,7 @@ def compressed_fixture(*, quality_holds: bool) -> dict:
         "kind": "answers",
         "git_commit": "abc1234",
         "snapshot": "v0.2-demo",
+        "provenance": PROVENANCE,
         "corpus": {"documents": 5, "chunks": 34},
         "summary": {
             "n": 10.0,

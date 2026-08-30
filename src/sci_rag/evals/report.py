@@ -9,6 +9,7 @@ its corpus fingerprint is just a rumor.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 from collections.abc import Iterable, Sequence
@@ -89,6 +90,47 @@ async def corpus_fingerprint(session_factory: async_sessionmaker[AsyncSession]) 
     }
 
 
+#: The receipt a published number carries. Corpus counts are outcomes; these
+#: are the inputs that produce them, and without them a reader cannot tell
+#: expected model variance from a changed prompt, model, or ontology.
+PROVENANCE_FIELDS = ("embedding", "models", "domain_digest", "decoding")
+
+#: The decoding settings the evaluation paths actually send. They are constants
+#: rather than settings today, and recording them says so: a later change to
+#: any of them explains a metric move that would otherwise look like variance.
+_DECODING = {"temperature": 0.0, "judge_temperature": 0.0, "json_mode": True}
+
+
+def domain_digest(domain_dir: Path) -> str:
+    """A digest over the ontology and every prompt, in a stable order.
+
+    Editing a prompt changes every entity the extractor emits, and no count in
+    the corpus fingerprint records that it happened. This does.
+    """
+    hasher = hashlib.sha256()
+    paths = [domain_dir / "domain.yaml", *sorted((domain_dir / "prompts").glob("*.md"))]
+    for path in paths:
+        try:
+            body = path.read_bytes()
+        except OSError:
+            continue
+        hasher.update(path.name.encode("utf-8"))
+        hasher.update(body)
+    return hasher.hexdigest()
+
+
+def provenance_block(settings: Any, *, domain_dir: Path | None = None) -> dict[str, Any]:
+    """Everything a reader needs to explain a number that moved."""
+    return {
+        "embedding": f"{settings.embedding_model}@{settings.embedding_dim}",
+        "models": {
+            role: str(settings.model_spec_for(role)) for role in ("answer", "extraction", "judge")
+        },
+        "domain_digest": domain_digest(domain_dir or settings.domain_dir),
+        "decoding": dict(_DECODING),
+    }
+
+
 def git_commit() -> str | None:
     try:
         return (
@@ -133,6 +175,7 @@ def retrieval_payload(
     *,
     snapshot: str | None = None,
     questions: list[SeedQuestion] | None = None,
+    provenance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """The machine-readable report.
 
@@ -146,6 +189,7 @@ def retrieval_payload(
         "generated_at": datetime.now(UTC).isoformat(),
         "git_commit": git_commit(),
         "snapshot": snapshot,
+        "provenance": provenance or {},
         "corpus": fingerprint,
     }
     if questions is not None:
@@ -252,12 +296,14 @@ def answers_payload(
     snapshot: str | None = None,
     models: dict[str, str] | None = None,
     config: dict[str, Any] | None = None,
+    provenance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "kind": "answers",
         "generated_at": datetime.now(UTC).isoformat(),
         "git_commit": git_commit(),
         "snapshot": snapshot,
+        "provenance": provenance or {},
         "models": models or {},
         "config": config or {},
         "corpus": fingerprint,
