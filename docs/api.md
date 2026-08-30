@@ -123,6 +123,13 @@ event: citations           data: {"citations": [{"index": 1, "title": "...", "ci
 event: done                data: {"finish_reason": "stop"}
 ```
 
+`finish_reason` is `stop` for a generated answer, `no_sources` when the
+allowed scope holds no matching material, `no_relevant_sources` when what was
+retrieved does not support an answer, and `retrieval_timeout` when the stages
+that could have supplied evidence ran out of budget. The last one also carries
+`timed_out_stages`, and it is deliberately distinct from `no_sources`: a
+corpus nobody could reach is not an empty corpus.
+
 An `error` event (`code`, `message`) replaces the tail on failure.
 
 **JSON.** `"stream": false` returns one body: `answer`, `model`,

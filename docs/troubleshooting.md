@@ -207,7 +207,7 @@ Reaching for a model with no credential behind it is still a failure. `doctor` r
 Check in this order:
 
 1. `uv run sci-rag stats` confirms documents and chunks exist.
-2. The result `traces` show which stages were `success`, `empty`, `skipped`, `timeout`, or `error`.
+2. The result `traces` show which stages were `success`, `empty`, `skipped`, `timeout`, or `error`. `timeout` is not a statement about the corpus: `sci-rag answer` says so in its refusal and names the setting to raise, and `SCI_RAG_PROVIDER_CALL_TIMEOUT_S` is the one to reach for when the slow part is an embedding or generation call rather than a database query.
 3. Remove filters one family at a time: year, author/journal/DOI, source, then license.
 4. Confirm that an explicit empty `license_classes` list was not sent. Empty means deny all by design.
 5. Use `--profile interactive` to isolate vector and keyword retrieval from model-dependent layers.

@@ -10,6 +10,12 @@ With ``stream: true`` (the default) the response is Server-Sent Events:
     event: done                {"finish_reason": "stop"}
     event: error               {"code": "...", "message": "..."}  (only on failure)
 
+``finish_reason`` is ``stop``, ``no_sources``, ``no_relevant_sources``, or
+``retrieval_timeout``. The last one carries ``timed_out_stages`` and is
+separate from ``no_sources`` on purpose: a corpus nobody could reach inside
+the stage budget is not an empty corpus, and reporting it as one sends a
+reader to look at their data instead of at their timeouts.
+
 With ``stream: false`` the same work returns as one JSON body.
 
 Bring-your-own-key: a request may carry ``llm_api_key`` (requires the
