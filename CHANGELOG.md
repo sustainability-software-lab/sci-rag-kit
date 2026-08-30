@@ -294,6 +294,14 @@ These close findings from the 2026-08-29 end-to-end documentation route audit.
   own appendix says the copyright belongs in a `NOTICE` file rather than in the
   license, so generation prints that guidance instead of editing the text.
   Closes #165.
+- The no-placeholder claim in `docs/faq.md` and ADR 0007 describes what is
+  actually enforced. It said a test proves a generated project contains no bare
+  double brace, while containing that token four times itself; a real generated
+  project has seven, including valid BibTeX and ADR 0004's deliberate
+  illustration of the syntax this project refuses. The guard now runs against a
+  real generated tree for every environment manager, where the old one ran
+  against a five-file fixture with nothing capable of violating it, and accepts
+  three contexts by content rather than by filename. Closes #166.
 
 ## [0.3.0] - 2026-08-28
 

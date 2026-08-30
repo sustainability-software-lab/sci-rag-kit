@@ -161,9 +161,12 @@ Full argument and reversal conditions: [ADR 0006](adr/0006-multi-provider-llms.m
 Because a generator that rendered placeholders would drag back everything the template decision refused.
 
 `sci-rag new` downloads this repository at a pinned tag and rewrites its
-configuration files in place. There is no `{{ }}` syntax and no `{{ }}` directory
-anywhere in the tree, and a test asserts a generated project contains no bare `{{`
-in any Markdown, TOML, YAML, or JSONL file. The generator fetches this repository
+configuration files in place. Nothing in the tree is a placeholder waiting to be
+rendered, and no directory name is one either. A test generates a project for
+every environment manager and fails on any placeholder-looking token it cannot
+account for, allowing only three by content: a GitHub Actions expression, BibTeX
+brace protection, and the illustration in ADR 0004 of the syntax this project
+refuses. The generator fetches this repository
 byte for byte, so the template stays browsable, runnable, and tested as itself. The
 wizard is ordinary tested code under `src/sci_rag/scaffold/`, and the appliers
 round-trip their output through the same models the application loads, so a

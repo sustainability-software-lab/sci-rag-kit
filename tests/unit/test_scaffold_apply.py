@@ -425,17 +425,12 @@ def test_apply_all_reports_every_file_it_touched(template: Path) -> None:
         assert expected in joined
 
 
-def test_apply_all_leaves_no_template_placeholder_behind(template: Path) -> None:
-    """ADR 0004's constraint, asserted: this is an applier, not a template.
-
-    GitHub Actions expressions (``${{ ... }}``) are real workflow syntax and
-    stay; a bare ``{{`` would mean a placeholder leaked into the output.
-    """
-    apply.apply_all(_answers(initialize_git="No"), template, year=2026)
-    placeholder = re.compile(r"(?<!\$)\{\{")
-    for path in template.rglob("*"):
-        if path.is_file() and path.suffix in {".md", ".toml", ".yaml", ".yml", ".jsonl"}:
-            assert not placeholder.search(path.read_text(encoding="utf-8", errors="ignore")), path
+# ADR 0004's no-placeholder constraint used to be asserted here, against the
+# five-file fixture above. That fixture has nothing under docs/, so the check
+# could not see any file capable of violating it, and the documentation's
+# claim about it was false for two years. It now lives in
+# tests/unit/test_scaffold_runner_coherence.py, which generates from the real
+# template for every environment manager. See #166.
 
 
 def test_git_init_works_where_git_has_no_configured_identity(template: Path) -> None:
