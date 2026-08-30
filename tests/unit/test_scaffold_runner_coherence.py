@@ -14,6 +14,7 @@ added to the repository is covered the moment it is listed in
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -38,6 +39,7 @@ _COPY_FILES = (
     "CONTRIBUTING.md",
     "AGENTS.md",
     "uv.lock",
+    ".python-version",
 )
 _COPY_TREES = ("domain", "docs", "scripts", ".github", ".devcontainer", "src", "infra")
 
@@ -213,3 +215,87 @@ def test_generated_docs_only_name_retained_cloud_assets(
     else:
         assert not module.exists()
         assert "infra/terraform/dev-database" not in docs
+
+
+# --- every pin says the same Python ------------------------------------------
+#
+# F-011 in the 2026-08-29 documentation route audit: selecting 3.11 updated the
+# package metadata, the CI matrix, and both Docker stages, and left
+# `.python-version` at 3.12. Three pins agreed with the answer and one did not,
+# which is worse than none agreeing: a reader who trusts pyenv or `uv python`
+# gets a different interpreter from the one their CI and their image use.
+#
+# The point of reading every pin in one test is that the next pin somebody adds
+# is covered by naming it here, rather than by remembering to write another
+# test for it.
+
+SUPPORTED_PYTHON = ("3.11", "3.12")
+
+
+def _generated_python_pins(root: Path) -> dict[str, str]:
+    """Every place a generated project states which Python it runs on."""
+    pins: dict[str, str] = {}
+
+    pyproject = (root / "pyproject.toml").read_text(encoding="utf-8")
+    pins["pyproject requires-python"] = re.search(
+        r'(?m)^requires-python = ">=([0-9.]+)"$', pyproject
+    ).group(1)
+
+    pins[".python-version"] = (root / ".python-version").read_text(encoding="utf-8").strip()
+
+    pins["pyproject mypy"] = re.search(r'(?m)^python_version = "([0-9.]+)"$', pyproject).group(1)
+
+    # pixi pins its interpreter in pyproject; the pixi and conda base images
+    # take theirs from the manifest, so their Dockerfile names no Python.
+    pixi = re.search(r'(?m)^python = "([0-9.]+)\.\*"$', pyproject)
+    if pixi:
+        pins["pyproject pixi"] = pixi.group(1)
+
+    environment = root / "environment.yml"
+    if environment.exists():
+        conda = re.search(r"python=([0-9.]+)", environment.read_text(encoding="utf-8"))
+        if conda:
+            pins["environment.yml"] = conda.group(1)
+
+    dockerfile = (root / "Dockerfile").read_text(encoding="utf-8")
+    docker_versions = set(re.findall(r"python:?3\.(\d+)", dockerfile))
+    if docker_versions:
+        assert len(docker_versions) == 1, f"Dockerfile names several Pythons: {docker_versions}"
+        pins["Dockerfile"] = f"3.{docker_versions.pop()}"
+
+    workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    pins["ci matrix"] = re.search(r'python-version: \["([0-9.]+)"\]', workflow).group(1)
+
+    return pins
+
+
+@pytest.mark.parametrize("python_version", SUPPORTED_PYTHON)
+@pytest.mark.parametrize("manager", runner_keys())
+def test_every_generated_python_pin_matches_the_selected_version(
+    tmp_path: Path, manager: str, python_version: str
+) -> None:
+    root = _generate(tmp_path, manager, python_version=python_version)
+
+    pins = _generated_python_pins(root)
+    disagreeing = {where: pin for where, pin in pins.items() if pin != python_version}
+
+    assert disagreeing == {}, f"selected Python {python_version}, but {disagreeing} says otherwise"
+
+
+@pytest.mark.parametrize("python_version", SUPPORTED_PYTHON)
+@pytest.mark.parametrize("manager", runner_keys())
+def test_the_pins_agree_with_each_other(tmp_path: Path, manager: str, python_version: str) -> None:
+    """Stated separately from the answer: a uniformly wrong set is still wrong."""
+    pins = _generated_python_pins(_generate(tmp_path, manager, python_version=python_version))
+
+    assert len(set(pins.values())) == 1, pins
+
+
+@pytest.mark.parametrize("manager", runner_keys())
+def test_the_pin_set_is_not_quietly_empty(tmp_path: Path, manager: str) -> None:
+    """A reader of the test above should know it is checking something."""
+    pins = _generated_python_pins(_generate(tmp_path, manager, python_version="3.12"))
+
+    assert len(pins) >= 4, pins
+    assert ".python-version" in pins
+    assert "pyproject requires-python" in pins

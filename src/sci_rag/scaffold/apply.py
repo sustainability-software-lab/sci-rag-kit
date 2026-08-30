@@ -224,6 +224,25 @@ def apply_env_file(answers: ProjectAnswers, root: Path) -> list[str]:
     ]
 
 
+# --- .python-version --------------------------------------------------------
+
+
+def apply_python_version(answers: ProjectAnswers, root: Path) -> list[str]:
+    """Pin the interpreter file to the selected version.
+
+    pyenv, uv, and rye all read this file, so leaving it at the template's
+    value gave a reader a different interpreter from the one their CI, their
+    image, and their package metadata had all agreed on.
+    """
+    path = root / ".python-version"
+    if not path.exists():
+        return []
+    if path.read_text(encoding="utf-8").strip() == answers.python_version:
+        return []
+    _write(path, f"{answers.python_version}\n")
+    return [_log(".python-version", answers.python_version)]
+
+
 # --- uv.lock ----------------------------------------------------------------
 
 
@@ -343,6 +362,15 @@ def apply_pyproject(answers: ProjectAnswers, root: Path) -> list[str]:
     text = re.sub(
         r'(?m)^requires-python = ">=.*"$',
         f'requires-python = ">={answers.python_version}"',
+        text,
+        count=1,
+    )
+    # mypy's floor is a pin too. Left at the template's value, a project that
+    # supports only 3.12 would be type checked against semantics it declares
+    # it does not run on.
+    text = re.sub(
+        r'(?m)^python_version = ".*"$',
+        f'python_version = "{answers.python_version}"',
         text,
         count=1,
     )
@@ -712,6 +740,7 @@ def apply_all(
     changes += apply_seed_questions(answers, root)
     changes += apply_env_file(answers, root)
     changes += apply_pyproject(answers, root)
+    changes += apply_python_version(answers, root)
     changes += apply_makefile(answers, root)
     changes += apply_docs(answers, root)
     changes += apply_runner(answers, root)
