@@ -149,5 +149,20 @@ benchmark: db-up
 		--retrieval $$(ls -d eval_results/*-retrieval-ablation | sort | tail -1) \
 		--answers "$$uncompressed" \
 		--answers-compressed "$$compressed" \
-		--output docs/benchmarks.md
-	@echo "docs/benchmarks.md regenerated."
+		--output docs/benchmarks.md \
+		--update
+	@echo "docs/benchmarks.md regenerated. Every number that moved is listed above;"
+	@echo "a MATERIAL move is a finding to explain, not a refresh to commit."
+
+## benchmark-check: reproduce the published numbers without republishing them.
+## Same inputs as `benchmark`, and it exits nonzero when a number has moved
+## beyond the declared tolerance. Needs the reports `benchmark` wrote.
+benchmark-check:
+	@set -e; \
+	roles="$$(uv run python scripts/render_benchmarks.py --select-answer-roles eval_results)"; \
+	uv run python scripts/render_benchmarks.py \
+		--retrieval $$(ls -d eval_results/*-retrieval-ablation | sort | tail -1) \
+		--answers "$$(printf '%s\n' "$$roles" | sed -n 1p)" \
+		--answers-compressed "$$(printf '%s\n' "$$roles" | sed -n 2p)" \
+		--output docs/benchmarks.md \
+		--check

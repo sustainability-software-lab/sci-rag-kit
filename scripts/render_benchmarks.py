@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -33,6 +35,135 @@ def _ci_cell(ci: dict[str, float] | None) -> str:
 
 class ReportRoleError(RuntimeError):
     """Two answer reports were handed over in a shape that cannot be rendered."""
+
+
+class ProvenanceError(RuntimeError):
+    """A report cannot support the claims this page makes about its inputs."""
+
+
+#: What a report has to carry before its numbers may be published. `snapshot`
+#: and `git_commit` pin the corpus and the code; `provenance` pins the models,
+#: the prompts, and the decoding, which are what move a number when neither of
+#: the other two has.
+REQUIRED_REPORT_FIELDS = ("git_commit", "snapshot", "provenance")
+
+#: Fields two reports rendered onto one page have to agree about. A retrieval
+#: run from one commit and an answers run from another describe neither.
+SHARED_REPORT_FIELDS = ("git_commit", "snapshot", "provenance")
+
+#: How far a published number may move before a re-render is a finding rather
+#: than noise. Metrics are absolute on a 0 to 1 scale; counts are relative,
+#: because a graph is built rather than measured. Both are deliberately loose:
+#: the demo corpus has single-digit questions and the intervals are wide, so a
+#: tighter bound would report weather.
+TOLERANCES = {"metric": 0.10, "count": 0.10}
+
+
+@dataclass(frozen=True)
+class PageChange:
+    """One published number that moved between two renders."""
+
+    label: str
+    before: str
+    after: str
+    material: bool
+
+    def describe(self) -> str:
+        verdict = "MATERIAL" if self.material else "within tolerance"
+        return f"  {self.label}: {self.before} -> {self.after} ({verdict})"
+
+
+_COUNTS = re.compile(
+    r"(?P<value>[\d,]+) (?P<label>documents|chunks|entities|relationships|communities)"
+)
+_TABLE_CELL = re.compile(r"^\|\s*(?P<config>[a-z_]+)\s*\|(?P<cells>.*)\|\s*$")
+
+
+def _page_numbers(page: str) -> dict[str, str]:
+    """Every published number, keyed by what it is.
+
+    Read from the rendered page rather than from the reports, because the page
+    is what a reader compares against and what a commit records.
+    """
+    numbers: dict[str, str] = {}
+    for match in _COUNTS.finditer(page):
+        numbers[match.group("label")] = match.group("value").replace(",", "")
+    for line in page.splitlines():
+        cell = _TABLE_CELL.match(line.strip())
+        if cell is None:
+            continue
+        for index, raw in enumerate(cell.group("cells").split("|")):
+            value = raw.strip()
+            if value and value[0].isdigit():
+                numbers[f"{cell.group('config')}[{index}]"] = value
+    return numbers
+
+
+def _is_material(label: str, before: str, after: str) -> bool:
+    try:
+        old_value = float(before.split()[0])
+        new_value = float(after.split()[0])
+    except (TypeError, ValueError):
+        return before != after
+    if label in {"documents", "chunks", "entities", "relationships", "communities"}:
+        if old_value == 0:
+            return new_value != 0
+        return abs(new_value - old_value) / old_value > TOLERANCES["count"]
+    return abs(new_value - old_value) > TOLERANCES["metric"]
+
+
+def compare_pages(committed: str, rendered: str) -> list[PageChange]:
+    """Every published number that moved, and whether the move is material."""
+    before = _page_numbers(committed)
+    after = _page_numbers(rendered)
+    changes: list[PageChange] = []
+    for label in sorted(set(before) | set(after)):
+        old = before.get(label, "absent")
+        new = after.get(label, "absent")
+        if old == new:
+            continue
+        changes.append(PageChange(label, old, new, _is_material(label, old, new)))
+    return changes
+
+
+def check_against_committed(rendered: str, committed_path: Path) -> None:
+    """Report every move, and refuse to pass when one is material."""
+    committed = committed_path.read_text(encoding="utf-8") if committed_path.exists() else ""
+    changes = compare_pages(committed, rendered)
+    if not changes:
+        print(f"{committed_path}: reproduced, no published number moved")
+        return
+    print(f"{committed_path}: {len(changes)} published number(s) moved")
+    for change in changes:
+        print(change.describe())
+    material = [change for change in changes if change.material]
+    if material:
+        print(
+            f"\n{len(material)} moved beyond the declared tolerance "
+            f"(metrics {TOLERANCES['metric']}, counts {TOLERANCES['count']:.0%}). "
+            "Publishing these numbers needs a reviewed source report and an "
+            "explanation of what changed; re-run with --update once you have both."
+        )
+        raise SystemExit(1)
+
+
+def _require_provenance(report: dict[str, Any], path: Path) -> None:
+    missing = [field for field in REQUIRED_REPORT_FIELDS if not report.get(field)]
+    if missing:
+        raise ProvenanceError(
+            f"{path} is missing {', '.join(missing)}, so its numbers cannot be published. "
+            "Re-run the evaluation; reports written before the provenance contract "
+            "predate these fields."
+        )
+
+
+def _require_agreement(first: dict[str, Any], second: dict[str, Any], where: str) -> None:
+    disagree = [field for field in SHARED_REPORT_FIELDS if first.get(field) != second.get(field)]
+    if disagree:
+        raise ProvenanceError(
+            f"{where} disagree about {', '.join(disagree)}. One page cannot describe "
+            "two runs; render from reports produced by a single benchmark."
+        )
 
 
 def _load(path: Path | None) -> dict[str, Any] | None:
@@ -141,19 +272,28 @@ def render_benchmarks(
     assert retrieval is not None
     answers = _load(answers_path)
     compressed = _load(compressed_path)
+    _require_provenance(retrieval, retrieval_path)
+    if answers is not None and answers_path is not None:
+        _require_provenance(answers, answers_path)
+        _require_agreement(retrieval, answers, f"{retrieval_path} and {answers_path}")
+    if compressed is not None and compressed_path is not None:
+        _require_provenance(compressed, compressed_path)
+        _require_agreement(retrieval, compressed, f"{retrieval_path} and {compressed_path}")
     _validate_roles(answers, answers_path, compressed, compressed_path)
     calibration = _calibration_for(answers_path)
     corpus = retrieval.get("corpus", {})
     snapshot = retrieval.get("snapshot")
     commit = retrieval.get("git_commit", "unknown")
-    versions = ", ".join(corpus.get("embedding_versions", [])) or "unknown"
-
-    try:
-        from sci_rag.config import get_settings
-
-        llm_model = get_settings().llm_model
-    except Exception:
-        llm_model = "unknown"
+    provenance = retrieval["provenance"]
+    versions = provenance.get("embedding") or (
+        ", ".join(corpus.get("embedding_versions", [])) or "unknown"
+    )
+    # The models that produced these numbers, from the report. Reading
+    # `get_settings()` here published whichever model the renderer's own shell
+    # happened to name, which on a re-render is not the one that ran.
+    models = provenance.get("models", {})
+    llm_model = ", ".join(f"{role} `{spec}`" for role, spec in sorted(models.items())) or "unknown"
+    digest = provenance.get("domain_digest", "unknown")
 
     lines = [
         "---",
@@ -180,9 +320,17 @@ def render_benchmarks(
         "demo corpus shipped in `data/demo/`)",
         f"- Corpus snapshot: `{snapshot or 'not recorded'}` "
         "(see `data/snapshots/`; the digest pins the exact document set)",
-        f"- Embedding: `{versions}`; generation and judging: `{llm_model}`",
-        f"- Code: commit `{commit}`",
+        f"- Embedding: `{versions}`; models: {llm_model}",
+        f"- Code: commit `{commit}`; domain and prompts: `{digest[:12]}`",
         f"- Rendered: {datetime.now(UTC).strftime('%Y-%m-%d')}",
+        "",
+        "Graph construction and judged answers are stochastic. Repeating the "
+        "command below reproduces these numbers within a declared tolerance of "
+        f"{TOLERANCES['metric']} absolute on a metric and "
+        f"{TOLERANCES['count']:.0%} on a count, and `--check` fails visibly "
+        "when one moves further. A number that moves beyond it is a finding, "
+        "not a refresh: publishing it needs a reviewed source report and an "
+        "explanation of which recorded input changed.",
         "",
         "## Retrieval ablations",
         "",
@@ -451,6 +599,22 @@ def main() -> None:
             "config.compression rather than from directory timestamps."
         ),
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help=(
+            "Compare the render against the committed page and exit nonzero when a "
+            "published number moved beyond the declared tolerance. Writes nothing."
+        ),
+    )
+    parser.add_argument(
+        "--update",
+        action="store_true",
+        help=(
+            "Write the page, after printing every published number that moved. "
+            "Required to overwrite committed numbers, so a refresh cannot be silent."
+        ),
+    )
     args = parser.parse_args()
 
     if args.select_answer_roles is not None:
@@ -461,7 +625,29 @@ def main() -> None:
 
     if args.retrieval is None:
         parser.error("--retrieval is required unless --select-answer-roles is given")
+    if args.check and args.update:
+        parser.error("--check and --update are mutually exclusive")
     page = render_benchmarks(args.retrieval, args.answers, args.answers_compressed)
+
+    if args.check:
+        check_against_committed(page, args.output)
+        return
+
+    if not args.update:
+        parser.error(
+            "refusing to overwrite published numbers without --update. Run --check "
+            "first to see what moved, then --update to publish it with that "
+            "comparison in the change description."
+        )
+
+    committed = args.output.read_text(encoding="utf-8") if args.output.exists() else ""
+    changes = compare_pages(committed, page)
+    if changes:
+        print(f"{args.output}: {len(changes)} published number(s) moved")
+        for change in changes:
+            print(change.describe())
+    else:
+        print(f"{args.output}: reproduced, no published number moved")
     args.output.write_text(page, encoding="utf-8")
     print(f"wrote {args.output}")
 

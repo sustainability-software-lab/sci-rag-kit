@@ -821,6 +821,7 @@ def eval_retrieval(
 
     from sqlalchemy import func, select
 
+    from sci_rag.config import get_settings
     from sci_rag.db import EntityResolutionAudit, get_session_factory
     from sci_rag.evals import (
         DEFAULT_ABLATIONS,
@@ -829,6 +830,7 @@ def eval_retrieval(
     )
     from sci_rag.evals.report import (
         corpus_fingerprint,
+        provenance_block,
         retrieval_markdown,
         retrieval_payload,
         write_report,
@@ -870,7 +872,15 @@ def eval_retrieval(
         else "retrieval-ablation"
         if ablation
         else "retrieval",
-        payload=retrieval_payload(results, fingerprint, snapshot=snapshot, questions=questions),
+        payload=retrieval_payload(
+            results,
+            fingerprint,
+            snapshot=snapshot,
+            questions=questions,
+            # The ablation runs graph and HyDE, which call a model, so a
+            # retrieval number depends on inputs the corpus counts do not name.
+            provenance=provenance_block(get_settings()),
+        ),
         markdown=retrieval_markdown(results, fingerprint, questions=questions),
     )
     console.print(f"Report written to [bold]{md_path}[/bold] (and {json_path.name}).")
@@ -903,6 +913,7 @@ def eval_answers(
         answers_markdown,
         answers_payload,
         corpus_fingerprint,
+        provenance_block,
         write_report,
     )
     from sci_rag.llm import get_llm
@@ -948,6 +959,7 @@ def eval_answers(
             snapshot=snapshot,
             models=models,
             config={"compression": compressed},
+            provenance=provenance_block(get_settings()),
         ),
         markdown=answers_markdown(
             records,
