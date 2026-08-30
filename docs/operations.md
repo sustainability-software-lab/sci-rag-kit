@@ -91,14 +91,34 @@ records identity; it does not contain the data. Backup does.
 
 ### Local or self-hosted Postgres
 
+`.env` is not exported into your shell, and `pg_dump` speaks libpq rather
+than the application's async driver. Derive one connection string from the
+other before you run anything:
+
 ```bash
+# libpq does not understand the +asyncpg driver marker, so drop it.
+SCI_RAG_DATABASE_URL_SYNC="$(
+  grep -m1 '^SCI_RAG_DATABASE_URL=' .env |
+    cut -d= -f2- |
+    sed 's/^postgresql+asyncpg:/postgresql:/'
+)"
+
 # Plain-format dump of the whole knowledge base (schema + data).
 pg_dump "$SCI_RAG_DATABASE_URL_SYNC" --format=custom \
   --file "sci-rag-$(date +%Y%m%d).dump"
 ```
 
-(`pg_dump` speaks the sync driver URL: strip the `+asyncpg` marker,
-e.g. `postgresql://sci_rag:sci_rag@localhost:5433/sci_rag`.)
+Reading the URL out of the file keeps the password out of your shell history,
+which typing it would not. If the URL carries `?passfile=`, as the Cloud SQL
+helper writes it, the password stays out of the command line as well.
+
+If your database is not configured through `.env`, set the same name by hand
+and let libpq find the password in `~/.pgpass` instead of putting it in the
+URL:
+
+```bash
+SCI_RAG_DATABASE_URL_SYNC='postgresql://sci_rag@localhost:5433/sci_rag'
+```
 
 The pgvector extension types are included in the dump; the restore
 target needs the extension available (`CREATE EXTENSION vector` runs in
