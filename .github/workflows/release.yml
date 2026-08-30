@@ -82,6 +82,28 @@ jobs:
           assert ref == '${GITHUB_REF_NAME}', f'{ref} != ${GITHUB_REF_NAME}'
           "
 
+      # F-002: published v0.3.0 had no `new` subcommand, so `pipx install
+      # sci-rag-kit` followed by `sci-rag new` (the first two commands in the
+      # README, the homepage, and the quickstart) exited 2 on `No such command
+      # 'new'`. Installing the wheel and running `--help`, which the step above
+      # does, cannot see that: the route breaks at the command the front door
+      # leads with, and `sci-rag new` also fetches the template at its own tag,
+      # which no import check exercises. So the release runs the public pair,
+      # through pipx, from a home that holds nothing.
+      - name: The documented two-command route works from a clean pipx home
+        run: |
+          set -e
+          python -m pip install --quiet --upgrade pipx
+          export PIPX_HOME="$RUNNER_TEMP/pipx-home"
+          export PIPX_BIN_DIR="$RUNNER_TEMP/pipx-bin"
+          pipx install ./dist/*.whl
+          "$PIPX_BIN_DIR/sci-rag" --help | grep -q ' new ' \
+            || { echo "::error::the published CLI has no 'new' command"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/onboarding"
+          cd "$RUNNER_TEMP/onboarding"
+          "$PIPX_BIN_DIR/sci-rag" new --defaults
+          test -f ./*/pyproject.toml
+
       - uses: actions/upload-artifact@v7
         with:
           name: dist

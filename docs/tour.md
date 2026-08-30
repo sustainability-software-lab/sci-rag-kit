@@ -11,7 +11,7 @@ By the end of this page you can point at the file that owns each part of the sys
   <div><strong>You'll build</strong>A map of what you own and what you run</div>
   <div><strong>You'll need</strong>A checkout, open in an editor</div>
   <div><strong>Time</strong>About 10 minutes</div>
-  <div><strong>Tested with</strong>v0.3</div>
+  <div><strong>Tested with</strong>v0.4</div>
 </div>
 
 ## Before you start

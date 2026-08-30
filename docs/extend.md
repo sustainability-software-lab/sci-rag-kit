@@ -11,7 +11,7 @@ Sci RAG Kit has no plug-in registry. It has five small boundaries where real pro
   <div><strong>You'll build</strong>A new parser, collector, reranker, provider, or auth backend</div>
   <div><strong>You'll need</strong>A working checkout and its test suite</div>
   <div><strong>Time</strong>An hour to a day, depending on the seam</div>
-  <div><strong>Tested with</strong>v0.3</div>
+  <div><strong>Tested with</strong>v0.4</div>
 </div>
 
 ## Before you start

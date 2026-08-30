@@ -13,7 +13,7 @@ the database **holds**, and rehearse the restore before you need it.
   <div><strong>You'll build</strong>A backup, a restore drill, and a snapshot habit</div>
   <div><strong>You'll need</strong>Database access and `pg_dump`</div>
   <div><strong>Time</strong>About 30 minutes for the first pass</div>
-  <div><strong>Tested with</strong>v0.3</div>
+  <div><strong>Tested with</strong>v0.4</div>
 </div>
 
 ## Before you start

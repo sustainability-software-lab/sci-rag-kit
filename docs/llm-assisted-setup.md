@@ -20,7 +20,7 @@ and the kit is built to keep that distinction visible so you cannot forget it.
   <div><strong>You'll need</strong>Your documents on disk</div>
   <div><strong>Time</strong>About 30 minutes, plus review</div>
   <div><strong>Credentials</strong>Optional, there is a copy-paste path</div>
-  <div><strong>Tested with</strong>v0.3</div>
+  <div><strong>Tested with</strong>v0.4</div>
 </div>
 
 ## Before you start

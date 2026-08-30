@@ -16,7 +16,7 @@ corpus.
   <div><strong>You'll need</strong>A topic or a DOI list, and a contact email</div>
   <div><strong>Time</strong>Minutes to run, longer to review</div>
   <div><strong>Credentials</strong>Optional, for the screening model only</div>
-  <div><strong>Tested with</strong>v0.3</div>
+  <div><strong>Tested with</strong>v0.4</div>
 </div>
 
 ## Before you start

@@ -6,6 +6,19 @@ Notable changes to sci-rag-kit. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-30
+
+Everything below was unreleased until this version. The headline is that
+`sci-rag new` reaches PyPI: published v0.3.0 had no `new` subcommand, so the
+first two commands in the README, the homepage, and the quickstart ended at
+`No such command 'new'`. The release workflow now runs that exact pair from a
+clean pipx home before publishing, so a release that cannot open the wizard
+fails before it reaches an index.
+
+This version also closes the P0 documentation route audit, whose findings are
+recorded under the sections below.
+
+
 ### Breaking
 
 - An answers file may no longer request `ontology: draft_with_llm`. Every
