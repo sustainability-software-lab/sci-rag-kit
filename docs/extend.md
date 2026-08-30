@@ -142,7 +142,7 @@ Where a provider may reject a knob, the adapters retry once without it before fa
 
 `SCI_RAG_EMBEDDING_PROVIDER` accepts `google` or `local-hash`, and there is no third option by design. Anthropic ships no embedding API, and on Vertex the only *managed* text embeddings are Google's; every alternative means deploying and paying for your own Model Garden endpoint.
 
-More to the point, an embedder is not a runtime-swappable choice here. A migration bakes `SCI_RAG_EMBEDDING_DIM` into the pgvector column (see [ADR 0002](adr/0002-embeddings-1536-hnsw.md)), and each chunk stores the `version` that produced it. Changing embedder means a migration, a full re-embed, and an index rebuild. `sci-rag embed plan` exists to scope exactly that work. Point `SCI_RAG_EMBEDDING_MODEL` at a different Google embedding model freely; treat anything beyond that as a data migration, not a configuration change.
+More to the point, an embedder is not a runtime-swappable choice here. A migration bakes `SCI_RAG_EMBEDDING_DIM` into the pgvector column (see [ADR 0002](adr/0002-embeddings-1536-hnsw.md)), and each chunk stores the `version` that produced it. Changing embedder means a migration, a full re-embed, and an index rebuild. `sci-rag embed reindex` scopes exactly that work: it plans by default, reporting which rows a version change left behind and writing nothing, and it refuses outright when the dimension you configured does not match the live column. `--apply` is the separate step that re-embeds. Point `SCI_RAG_EMBEDDING_MODEL` at a different Google embedding model freely; treat anything beyond that as a data migration, not a configuration change.
 
 ## 5. Add an authentication backend
 

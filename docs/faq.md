@@ -152,7 +152,7 @@ Full argument and reversal conditions: [ADR 0006](adr/0006-multi-provider-llms.m
 
 Because switching embedder is a data migration wearing a configuration flag's clothes.
 
-A migration bakes `SCI_RAG_EMBEDDING_DIM` into the pgvector column, and every chunk records the version that produced it. Changing the embedder means a migration, a full re-embed, and an index rebuild. A provider setting would advertise all of that as a one-line config change. There is also little to switch to: Anthropic ships no embedding API, and Vertex's only managed text embeddings are Google's, so the alternatives mean deploying and paying for a GPU endpoint. You can point `SCI_RAG_EMBEDDING_MODEL` at a different Google model freely, and `sci-rag embed plan` scopes the re-embedding work when you need more.
+A migration bakes `SCI_RAG_EMBEDDING_DIM` into the pgvector column, and every chunk records the version that produced it. Changing the embedder means a migration, a full re-embed, and an index rebuild. A provider setting would advertise all of that as a one-line config change. There is also little to switch to: Anthropic ships no embedding API, and Vertex's only managed text embeddings are Google's, so the alternatives mean deploying and paying for a GPU endpoint. You can point `SCI_RAG_EMBEDDING_MODEL` at a different Google model freely. `sci-rag embed reindex` scopes the re-embedding work when you need more: it plans by default and writes nothing until you pass `--apply`.
 
 Full argument and reversal conditions: [ADR 0006](adr/0006-multi-provider-llms.md).
 

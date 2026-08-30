@@ -5,6 +5,7 @@ surface the docs promise.
 """
 
 import re
+from pathlib import Path
 
 from typer.testing import CliRunner
 
@@ -114,3 +115,117 @@ def test_resolved_entity_eval_requires_a_named_snapshot() -> None:
 
     assert result.exit_code != 0
     assert "--snapshot" in _plain(result.output)
+
+
+# --- the commands the documentation promises exist ---------------------------
+#
+# F-007 in the 2026-08-29 documentation route audit: two published pages told
+# readers to run `sci-rag embed plan`, which has never existed. `sci-rag embed`
+# lists only `reindex`, so the reader got exit code 2 and `No such command`.
+#
+# The guard walks the real command tree rather than help text. Note the shape
+# of the check: `isinstance(node, click.Group)` looks right and is silently
+# always false here, because `typer.main.get_command` returns a
+# `typer._click.core.Command` rather than a `click.core.Group`. A guard written
+# that way passes on everything, including the defect it was added for.
+
+DOC_ROOTS = ("README.md", "AGENTS.md", "CONTRIBUTING.md")
+EXCLUDED_DOC_DIRS = ("planning",)
+
+# A mention only counts when it is formatted as a command. `docs/api.md` says
+# "several sci-rag deployments", which is prose about deployments.
+CODE_MENTION = re.compile(r"(?<![\w-])sci-rag((?:\s+[A-Za-z0-9_./-]+)*)")
+INLINE_CODE = re.compile(r"`([^`\n]+)`")
+FENCE = re.compile(r"^(?:```|~~~)[^\n]*\n(.*?)^(?:```|~~~)", re.DOTALL | re.MULTILINE)
+COMMAND_TOKEN = re.compile(r"^[a-z][a-z0-9-]*$")
+
+# Stale commands that belong to another open finding. Each entry names the
+# issue that owns it, and `test_every_pending_exception_still_describes_a_real
+# _mention` fails once the documentation no longer says it, so an exception
+# cannot outlive its fix.
+PENDING_FINDINGS = {
+    ("campaign", "report"): "#157, F-005: the campaign checkpoint names a report command",
+}
+
+
+def _documented_pages() -> list[Path]:
+    root = Path(__file__).resolve().parents[2]
+    pages = [root / name for name in DOC_ROOTS]
+    pages += [
+        path
+        for path in sorted((root / "docs").rglob("*.md"))
+        if not any(part in EXCLUDED_DOC_DIRS for part in path.parts)
+    ]
+    return [path for path in pages if path.is_file()]
+
+
+def _code_spans(text: str) -> list[str]:
+    spans = [block for block in FENCE.findall(text)]
+    spans += INLINE_CODE.findall(text)
+    return spans
+
+
+def _mentioned_command_paths() -> dict[tuple[str, ...], set[str]]:
+    """Every `sci-rag ...` path the documentation formats as a command."""
+    found: dict[tuple[str, ...], set[str]] = {}
+    for page in _documented_pages():
+        text = page.read_text(encoding="utf-8")
+        for span in _code_spans(text):
+            for mention in CODE_MENTION.finditer(span):
+                tokens: list[str] = []
+                for raw in mention.group(1).split():
+                    if not COMMAND_TOKEN.match(raw):
+                        break
+                    tokens.append(raw)
+                if tokens:
+                    found.setdefault(tuple(tokens), set()).add(page.name)
+    return found
+
+
+def _resolve(tokens: tuple[str, ...]) -> tuple[str, ...] | None:
+    """The first path prefix that names nothing, or None when all of it resolves.
+
+    Duck-typed on ``commands`` rather than on ``click.Group``. Once a leaf
+    command is reached the remaining tokens are arguments, not subcommands.
+    """
+    from typer.main import get_command
+
+    node = get_command(app)
+    for index, token in enumerate(tokens):
+        if not hasattr(node, "commands"):
+            return None
+        child = node.commands.get(token)
+        if child is None:
+            return tokens[: index + 1]
+        node = child
+    return None
+
+
+def test_the_guard_can_see_a_command_that_does_not_exist() -> None:
+    """A resolver that never fails would make every test below vacuous."""
+    assert _resolve(("embed", "reindex")) is None
+    assert _resolve(("embed", "plan")) == ("embed", "plan")
+    assert _resolve(("doctor",)) is None
+    # Arguments after a leaf command are not subcommands.
+    assert _resolve(("doctor", "anything")) is None
+
+
+def test_every_documented_command_exists() -> None:
+    offenders = []
+    for tokens, pages in sorted(_mentioned_command_paths().items()):
+        missing = _resolve(tokens)
+        if missing is None or missing in PENDING_FINDINGS:
+            continue
+        offenders.append(f"sci-rag {' '.join(missing)} in {sorted(pages)}")
+    assert offenders == [], f"documented commands that do not exist: {offenders}"
+
+
+def test_every_pending_exception_still_describes_a_real_mention() -> None:
+    """An exception that outlives its fix is a guard with a hole in it."""
+    mentioned = _mentioned_command_paths()
+    stale = [
+        f"sci-rag {' '.join(tokens)} ({owner})"
+        for tokens, owner in PENDING_FINDINGS.items()
+        if not any(path[: len(tokens)] == tokens for path in mentioned)
+    ]
+    assert stale == [], f"remove these exceptions, the documentation no longer says them: {stale}"

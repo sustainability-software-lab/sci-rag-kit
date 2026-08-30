@@ -235,6 +235,11 @@ These close findings from the 2026-08-29 end-to-end documentation route audit.
   that could not hold the vectors it was about to make. It now reads the width
   off the live pgvector columns, and `--apply` refuses before any embedding
   call or write. Closes #175.
+- `docs/extend.md` and `docs/faq.md` name `sci-rag embed reindex` instead of
+  `sci-rag embed plan`, which never existed, and both say that planning is the
+  default and `--apply` is the separate mutating step. A new guard walks the
+  real command tree and fails when a documented command does not resolve.
+  Closes #159.
 
 ## [0.3.0] - 2026-08-28
 
