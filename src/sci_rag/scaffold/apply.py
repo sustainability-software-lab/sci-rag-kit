@@ -23,7 +23,7 @@ import yaml
 
 from sci_rag.domain import DomainConfig, RetrievalTuning, load_domain
 from sci_rag.scaffold.answers import ProjectAnswers
-from sci_rag.scaffold.licenses import render_license
+from sci_rag.scaffold.licenses import needs_notice_file, render_license
 
 SEED_TEMPLATE = """\
 # Ground-truth questions for the evaluation harness (one JSON object per line).
@@ -570,6 +570,19 @@ def apply_license(answers: ProjectAnswers, root: Path, *, year: int | None = Non
         path.unlink(missing_ok=True)
         return [_log("LICENSE", "removed (no license file)")]
     _write(path, text)
+    if needs_notice_file(answers.open_source_license):
+        # Apache's own appendix says the copyright belongs in a NOTICE file
+        # or a source header, so the generator says it here rather than
+        # editing a published legal text.
+        return [
+            _log("LICENSE", f"{answers.open_source_license}, full text"),
+            _log(
+                "note",
+                "Apache-2.0 keeps your copyright out of LICENSE. Add a NOTICE file, "
+                f'or a source header, reading "Copyright {resolved_year} '
+                f'{answers.author_name or "the authors"}".',
+            ),
+        ]
     return [_log("LICENSE", answers.open_source_license)]
 
 

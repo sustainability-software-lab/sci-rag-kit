@@ -286,6 +286,14 @@ These close findings from the 2026-08-29 end-to-end documentation route audit.
   steady across the pair and then omitted one, which worked only because ten is
   also the default. A guard now compares the selectors in every paired example.
   Closes #173.
+- Choosing `Apache-2.0` generates the full canonical Apache License 2.0 text
+  rather than a nineteen-line notice pointing at it. The other two offered
+  licenses always shipped complete, so one menu entry meant something different
+  from the other two. The text is the SPDX copy, cross-checked against the
+  independent one shipped by `packaging`, and a test pins it by hash. Apache's
+  own appendix says the copyright belongs in a `NOTICE` file rather than in the
+  license, so generation prints that guidance instead of editing the text.
+  Closes #165.
 
 ## [0.3.0] - 2026-08-28
 

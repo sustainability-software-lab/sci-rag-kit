@@ -602,3 +602,31 @@ def test_the_uv_leg_of_generated_projects_checks_the_lockfile() -> None:
     assert "uv lock --check" in workflow, (
         "the generated uv project is never checked against its own lockfile"
     )
+
+
+def test_an_apache_project_is_told_where_its_copyright_goes(template: Path) -> None:
+    """The license itself says NOTICE, so generation has to say it too. See #165."""
+    changes = apply.apply_license(
+        _answers(open_source_license="Apache-2.0", author_name="A Scientist"),
+        template,
+        year=2026,
+    )
+
+    license_text = (template / "LICENSE").read_text(encoding="utf-8")
+    assert "END OF TERMS AND CONDITIONS" in license_text
+    assert "A Scientist" not in license_text
+
+    guidance = " ".join(changes)
+    assert "NOTICE" in guidance
+    assert "Copyright 2026 A Scientist" in guidance
+
+
+def test_a_bsd_project_gets_no_notice_advice_it_does_not_need(template: Path) -> None:
+    changes = apply.apply_license(
+        _answers(open_source_license="BSD-3-Clause", author_name="A Scientist"),
+        template,
+        year=2026,
+    )
+
+    assert "A Scientist" in (template / "LICENSE").read_text(encoding="utf-8")
+    assert "NOTICE" not in " ".join(changes)
