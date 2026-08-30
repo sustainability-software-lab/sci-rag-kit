@@ -31,6 +31,7 @@ import secrets
 import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import structlog
@@ -106,13 +107,23 @@ class OpenBackend(AuthBackend):
 
 class _MinuteWindowLimiter:
     """A small fixed-window limiter, per key, in process memory. Good enough
-    for a single instance; put a shared limiter in front for fleets."""
+    for a single instance; put a shared limiter in front for fleets.
 
-    def __init__(self) -> None:
+    The window is wall-clock: it starts at the top of a minute rather than at
+    the caller's first request, so a caller that arrives late in a minute gets
+    a short one. That is the accepted trade for a limiter this small, and it
+    is why the clock is injectable. A test that spends a budget and asserts
+    the refusal would otherwise pass or fail on when in the minute it ran, and
+    two of them did.
+    """
+
+    def __init__(self, clock: Callable[[], float] = time.time) -> None:
+        self._clock = clock
         self._windows: dict[str, tuple[int, int]] = defaultdict(lambda: (0, 0))
 
     def allow(self, key_id: str, per_minute: int) -> tuple[bool, int]:
-        window = int(time.time() // 60)
+        now = self._clock()
+        window = int(now // 60)
         if len(self._windows) > 1024:
             # Keys rotate; stale windows must not accumulate forever.
             stale = [k for k, (w, _) in self._windows.items() if w != window]
@@ -122,7 +133,7 @@ class _MinuteWindowLimiter:
         if current_window != window:
             current_window, used = window, 0
         if used >= per_minute:
-            retry_after = 60 - int(time.time() % 60)
+            retry_after = 60 - int(now % 60)
             return False, max(retry_after, 1)
         self._windows[key_id] = (current_window, used + 1)
         return True, 0

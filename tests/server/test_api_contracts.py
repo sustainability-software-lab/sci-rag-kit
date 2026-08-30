@@ -71,7 +71,7 @@ async def test_scope_enforcement(secured_client) -> None:  # type: ignore[no-unt
     assert forbidden.json()["code"] == "insufficient_scope"
 
 
-async def test_rate_limit_returns_429_with_retry_after(secured_client) -> None:  # type: ignore[no-untyped-def]
+async def test_rate_limit_returns_429_with_retry_after(secured_client, frozen_minute) -> None:  # type: ignore[no-untyped-def]
     headers = {"Authorization": "Bearer limited-key"}
     for _ in range(2):
         assert (
@@ -83,7 +83,35 @@ async def test_rate_limit_returns_429_with_retry_after(secured_client) -> None: 
     assert int(third.headers["Retry-After"]) >= 1
 
 
-async def test_same_prefix_keys_do_not_share_a_rate_limit_bucket(secured_client) -> None:  # type: ignore[no-untyped-def]
+async def test_a_budget_refills_when_the_wall_clock_minute_turns(  # type: ignore[no-untyped-def]
+    secured_client, frozen_minute
+) -> None:
+    """The window is wall-clock, not per-caller, and that is worth asserting.
+
+    It is also what made these tests flaky: three requests that straddled a
+    minute boundary reset the counter, so the third returned 200 and the run
+    failed for reasons that had nothing to do with the change under test.
+    Pinning the clock moves that behavior from an accident into a test.
+    """
+    headers = {"Authorization": "Bearer limited-key"}
+    for _ in range(2):
+        assert (
+            await secured_client.post("/v1/query", json={"query": "rice"}, headers=headers)
+        ).status_code == 200
+    assert (
+        await secured_client.post("/v1/query", json={"query": "rice"}, headers=headers)
+    ).status_code == 429
+
+    frozen_minute.advance(60)
+
+    assert (
+        await secured_client.post("/v1/query", json={"query": "rice"}, headers=headers)
+    ).status_code == 200
+
+
+async def test_same_prefix_keys_do_not_share_a_rate_limit_bucket(
+    secured_client, frozen_minute
+) -> None:  # type: ignore[no-untyped-def]
     """F-017: two callers whose keys begin alike are still two callers.
 
     Both keys allow one request a minute. The first spends its own budget.
