@@ -83,6 +83,25 @@ $ uv run sci-rag db upgrade
 
 The included compose service maps PostgreSQL to host port `5433`.
 
+Compose scopes the container, network, and volume to the project directory, so
+several Sci RAG Kit projects can each keep their own database. The published
+host port is machine-wide, so only one of them can hold `5433` at a time. If
+`docker compose up` reports that the port is already allocated, either stop the
+other project's database with `make db-down` there, or give this project a free
+port. Publishing a different port takes two matching edits:
+
+```yaml title="~/docker-compose.yml"
+    ports:
+      - "5434:5432"
+```
+
+```dotenv title="~/.env"
+SCI_RAG_DATABASE_URL=postgresql+asyncpg://sci_rag:sci_rag@localhost:5434/sci_rag
+```
+
+Then run `make db-up` again. `docker compose ps` shows the port Compose
+actually published, which is the value `SCI_RAG_DATABASE_URL` has to match.
+
 ### Local or system PostgreSQL
 
 For PostgreSQL 16 through 18, including Postgres.app with pgvector, put

@@ -132,6 +132,12 @@ $ make setup
 applies every migration. Docker is the template default and listens on host
 port `5433`; generated projects may select a different supported backend.
 
+If port `5433` is already taken, usually by another Sci RAG Kit project whose
+database is running, publish a free one: change the `ports` entry in
+`docker-compose.yml` to `"5434:5432"` and set the same port in
+`SCI_RAG_DATABASE_URL`. [Troubleshooting](troubleshooting.md#docker) has the
+full recovery.
+
 **Expected output**
 
 ```text

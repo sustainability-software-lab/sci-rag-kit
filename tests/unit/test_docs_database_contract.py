@@ -11,6 +11,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -31,6 +33,51 @@ def test_setup_starts_the_selected_backend_with_docker_as_the_template_default()
 
     readme = _read("README.md")
     assert "[Run Postgres your way](docs/run-postgres.md)" in readme
+
+
+def test_compose_service_claims_no_process_global_container_name() -> None:
+    """Two copies of this template have to be able to start their own database.
+
+    Docker reserves the name of a stopped container too, so a fixed
+    ``container_name`` made a second generated project fail before Compose
+    reached port binding, on a machine where nothing was running and port
+    5433 was free. Without one, Compose derives the container name from the
+    project directory, which is what already scopes the network and the
+    named volume.
+    """
+    compose = yaml.safe_load(_read("docker-compose.yml"))
+
+    for name, service in compose["services"].items():
+        assert "container_name" not in service, name
+
+    for name, volume in compose["volumes"].items():
+        assert not (volume or {}).get("external"), name
+
+
+def test_docker_docs_say_how_to_move_a_host_port_another_project_holds() -> None:
+    """The published host port is the one thing Compose cannot namespace.
+
+    Removing the global container name lets two projects coexist while only
+    one database runs. Running both at once still needs a free port, and a
+    reader who is not told that reads the collision as a broken template.
+    """
+    quickstart = _one_line("docs/quickstart.md")
+    assert "port `5433` is already taken" in quickstart
+    assert "docker-compose.yml" in quickstart
+    assert "SCI_RAG_DATABASE_URL" in quickstart
+
+    docker = re.sub(
+        r"\s+",
+        " ",
+        _read("docs/troubleshooting.md").partition("### Docker")[2].partition("### ")[0],
+    )
+    assert "Compose scopes the container, network, and volume" in docker
+    assert "already allocated" in docker
+    # The two edits have to agree, so the page shows both and the same port.
+    assert '- "5434:5432"' in docker
+    assert "SCI_RAG_DATABASE_URL=postgresql+asyncpg://sci_rag:sci_rag@localhost:5434/sci_rag" in (
+        docker
+    )
 
 
 def test_postgres_guide_publishes_the_backend_matrix_and_cloud_stages() -> None:
