@@ -215,6 +215,11 @@ These close findings from the 2026-08-29 end-to-end documentation route audit.
   `0600`. `cp` inherits the public example's mode, so the file was readable by
   every account on the machine before the reader pasted a key into it. Closes
   #183.
+- The local backup runbook defines its connection string before using it.
+  `pg_dump "$SCI_RAG_DATABASE_URL_SYNC"` read a name nothing in the repository
+  sets, so it passed an empty argument, or aborted under `set -u`. The page
+  now derives the libpq URL from `.env` without putting a password in shell
+  history. Closes #158.
 
 ## [0.3.0] - 2026-08-28
 
