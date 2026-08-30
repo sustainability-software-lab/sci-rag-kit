@@ -490,7 +490,7 @@ def _rename_project(answers: ProjectAnswers, root: Path) -> None:
     apply.apply_uv_lock(answers, root, relock=_stub_relock)
 
 
-def _stub_relock(root: Path) -> str | None:
+def _stub_relock(root: Path) -> apply.RelockOutcome:
     """What `uv lock --offline` does to the root record, minus the resolver."""
     path = root / "uv.lock"
     name = re.search(
@@ -502,7 +502,7 @@ def _stub_relock(root: Path) -> str | None:
             blocks[index] = re.sub(r'(?m)^name = ".*"$', f'name = "{name}"', block, count=1)
             break
     path.write_text("[[package]]".join(blocks), encoding="utf-8")
-    return None
+    return apply.RelockOutcome(how="offline")
 
 
 def _lock_root_record(root: Path) -> dict[str, str]:
@@ -552,10 +552,30 @@ def test_a_lock_that_cannot_be_relocked_is_removed_rather_than_shipped(
     template: Path,
 ) -> None:
     """The one thing that must never happen is a lock describing something else."""
-    changes = apply.apply_uv_lock(_answers(), template, relock=lambda root: "uv is not available")
+    changes = apply.apply_uv_lock(
+        _answers(),
+        template,
+        relock=lambda root: apply.RelockOutcome(how=None, reason="uv is not available"),
+    )
 
     assert not (template / "uv.lock").exists()
     assert any("uv.lock" in change and "removed" in change for change in changes), changes
+    assert any("uv is not available" in change for change in changes), (
+        "a silent fallback hides why the reader has no lockfile"
+    )
+
+
+def test_a_relock_says_whether_it_reached_the_network(template: Path) -> None:
+    """`--template-path` promises no network, so the report has to say."""
+    offline = apply.apply_uv_lock(
+        _answers(), template, relock=lambda root: apply.RelockOutcome(how="offline")
+    )
+    assert any("relocked offline" in change for change in offline), offline
+
+    online = apply.apply_uv_lock(
+        _answers(), template, relock=lambda root: apply.RelockOutcome(how="online")
+    )
+    assert any("relocked online" in change for change in online), online
 
 
 def test_a_relocked_project_reports_it(template: Path) -> None:

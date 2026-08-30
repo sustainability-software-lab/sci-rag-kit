@@ -15,6 +15,7 @@ import re
 import shutil
 import subprocess
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -226,10 +227,20 @@ def apply_env_file(answers: ProjectAnswers, root: Path) -> list[str]:
 # --- uv.lock ----------------------------------------------------------------
 
 
-def _uv_relock(root: Path) -> str | None:
-    """Bring the retained lockfile in line with the rewritten pyproject.
+@dataclass(frozen=True)
+class RelockOutcome:
+    """Whether the lockfile could be brought in line, and how.
 
-    Returns None on success, or a one-line reason on failure.
+    `how` says which attempt succeeded, so a reader can tell whether their
+    generator reached the network. The offline route is the ordinary one.
+    """
+
+    how: str | None
+    reason: str = ""
+
+
+def _uv_relock(root: Path) -> RelockOutcome:
+    """Bring the retained lockfile in line with the rewritten pyproject.
 
     The generated project only ever narrows the manifest: the package is
     renamed, the Python floor rises to the selected version, and unselected
@@ -243,9 +254,9 @@ def _uv_relock(root: Path) -> str | None:
     satisfy it, one online attempt follows, because a correct lockfile is
     worth a download and the alternative is no lockfile at all.
     """
-    attempts = (["uv", "lock", "--offline"], ["uv", "lock"])
+    attempts = ((["uv", "lock", "--offline"], "offline"), (["uv", "lock"], "online"))
     reason = "uv is not available"
-    for command in attempts:
+    for command, label in attempts:
         try:
             completed = subprocess.run(
                 command, cwd=root, capture_output=True, check=False, timeout=300
@@ -254,11 +265,11 @@ def _uv_relock(root: Path) -> str | None:
             reason = f"{' '.join(command)}: {type(exc).__name__}"
             continue
         if completed.returncode == 0:
-            return None
+            return RelockOutcome(how=label)
         reason = _first_error_line(completed.stderr.decode("utf-8", "replace")) or (
             f"{' '.join(command)} exited {completed.returncode}"
         )
-    return reason
+    return RelockOutcome(how=None, reason=reason)
 
 
 def _first_error_line(stderr: str) -> str:
@@ -273,7 +284,7 @@ def apply_uv_lock(
     answers: ProjectAnswers,
     root: Path,
     *,
-    relock: Callable[[Path], str | None] = _uv_relock,
+    relock: Callable[[Path], RelockOutcome] = _uv_relock,
 ) -> list[str]:
     """Make the lockfile describe the generated project, or take it away.
 
@@ -291,12 +302,12 @@ def apply_uv_lock(
     path = root / "uv.lock"
     if not path.exists():
         return []
-    reason = relock(root)
-    if reason is None:
-        return [_log("uv.lock", f"relocked for {answers.repo_name}")]
+    outcome = relock(root)
+    if outcome.how is not None:
+        return [_log("uv.lock", f"relocked {outcome.how} for {answers.repo_name}")]
     path.unlink()
     return [
-        _log("uv.lock", f"removed, `uv lock` recreates it. Could not relock: {reason}"),
+        _log("uv.lock", f"removed, `uv lock` recreates it. Could not relock: {outcome.reason}"),
     ]
 
 
