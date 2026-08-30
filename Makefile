@@ -1,7 +1,7 @@
 # Convenience targets. Everything here is just the underlying command,
 # spelled out; run `make <target>` or copy the command, whichever you like.
 
-.PHONY: setup db-up db-down db-upgrade demo demo-cloud test lint typecheck check serve mcp eval eval-ablation docs docs-geometry docs-serve docs-reference cast clean-demo
+.PHONY: setup db-up db-down db-upgrade demo demo-cloud test lint typecheck check serve mcp eval eval-ablation providers-check docs docs-geometry docs-serve docs-reference cast clean-demo
 
 SCI_RAG_DB_BACKEND ?= docker
 
@@ -94,6 +94,12 @@ docs-reference:
 ## `make docs` fails if it is stale, so you cannot forget.
 cast:
 	uv run python scripts/render_cast.py
+
+## providers-check: ask the provider whether the documented partner models still answer.
+## Needs SCI_RAG_GCP_PROJECT and application-default credentials. Not a CI job:
+## it calls a model, and a check that always skips is a check nobody reads.
+providers-check:
+	uv run --extra anthropic --extra openai python scripts/check_partner_models.py
 
 ## docs: build the documentation exactly as CI and GitHub Pages do.
 docs:

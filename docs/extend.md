@@ -121,6 +121,28 @@ On Google Cloud the third row is the only route to the non-Google partner models
 
     Which models a project can reach also depends on what is enabled in its Model Garden, so treat the ids above as examples to check with `doctor`, not a guaranteed menu.
 
+!!! note "Partner model ids are dated examples"
+
+    Partner models come and go on a schedule this project does not control, so
+    every id named here and in `.env.example` carries a date. All of them last
+    answered both an ordinary generation call and a strict JSON call on
+    **2026-08-30**, from `global`. Google states each model's lifecycle on its
+    own card under
+    [Vertex AI partner-models](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/partner-models),
+    which is where a deprecation or shutdown date appears first.
+
+    Ask again rather than trusting the date:
+
+    ```console title="Terminal"
+    $ make providers-check
+    ```
+
+    It calls each named model at its documented location and fails when one no
+    longer answers. It needs `SCI_RAG_GCP_PROJECT` and application-default
+    credentials, so it is a maintainer command and not a CI job. A model that
+    is merely absent from your Model Garden fails it too, and the diagnostic
+    says which of the two you have.
+
 ### What a new adapter has to normalize
 
 `LLMClient` presents one signature to every call site, so an adapter absorbs the differences between providers and never exposes them:
