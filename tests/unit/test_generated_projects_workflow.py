@@ -194,6 +194,28 @@ def test_the_demo_leg_generates_the_corpus_source_whose_demo_can_pass() -> None:
     assert 'include_demo_corpus: "Yes"' in generate
 
 
+def test_the_matrix_also_runs_the_corpus_source_a_reader_gets_by_default() -> None:
+    """`demo_only` is not the shape most readers generate.
+
+    `local_files` is the wizard default and the demo corpus defaults to Yes,
+    so pressing Enter through Quick setup produces a project with its own
+    corpus source that still keeps the demo. That project's `make demo` was
+    the one that could not complete, and the matrix could not see it because
+    every leg generated `demo_only`.
+    """
+    scripts = [step.get("run", "") for step in _generate_steps()]
+    default_shape = [
+        script
+        for script in scripts
+        if "corpus_source: local_files" in script and 'include_demo_corpus: "Yes"' in script
+    ]
+
+    assert default_shape, "no leg generates the shape a reader gets by default"
+    assert any("make demo" in script for script in default_shape), (
+        "and that shape has to run its own demo target"
+    )
+
+
 def test_codeql_has_security_permissions_and_all_three_triggers() -> None:
     workflow = _load_workflow(CODEQL)
 

@@ -156,21 +156,42 @@ def apply_domain_yaml(answers: ProjectAnswers, root: Path) -> list[str]:
     ]
 
 
+#: The demo's own ground truth, beside the documents it answers. The demo
+#: targets read this, so they work whatever the reader's corpus source is.
+DEMO_SEED_QUESTIONS = Path("data") / "demo" / "eval_seed_questions.jsonl"
+
+
 def apply_seed_questions(answers: ProjectAnswers, root: Path) -> list[str]:
-    """Reset the evaluation seeds, unless the demo corpus is the corpus.
+    """Give the demo its own ground truth, and the reader theirs.
 
-    The bundled questions are ground truth for the shipped synthetic
-    documents, so for any other corpus they are somebody else's answers and
-    the reset is what stops a new project from scoring itself against them.
+    Two files, because there are two corpora and two sets of questions.
 
-    A `demo_only` project has no other corpus. Blanking its seeds removed the
-    only ground truth its own `make demo` target has, and the documented run
-    ended at `No questions found in domain/eval_seed_questions.jsonl`.
+    `data/demo/eval_seed_questions.jsonl` belongs to the synthetic corpus and
+    travels with it. The `demo`, `demo-cloud`, and `benchmark` targets name it
+    explicitly, so they score the documents they ingest.
+
+    `domain/eval_seed_questions.jsonl` is the reader's. It is reset to a
+    guided blank, because the bundled questions are answers about documents
+    their corpus does not contain, and a bare `sci-rag eval retrieval` reading
+    that blank refuses rather than scoring their corpus against synthetic
+    ground truth. A `demo_only` project is the case where the two coincide:
+    the demo is their corpus, so their file keeps the bundled questions.
     """
+    log: list[str] = []
+    source = root / "domain" / "eval_seed_questions.jsonl"
+    bundled = source.read_text(encoding="utf-8") if source.exists() else ""
+
+    if answers.include_demo_corpus and bundled:
+        _write(root / DEMO_SEED_QUESTIONS, bundled)
+        log.append(_log(str(DEMO_SEED_QUESTIONS), "ground truth for the demo corpus"))
+
     if answers.corpus_source == "demo_only":
-        return [_log("domain/eval_seed_questions.jsonl", "kept: the demo corpus is the corpus")]
-    _write(root / "domain" / "eval_seed_questions.jsonl", SEED_TEMPLATE)
-    return [_log("domain/eval_seed_questions.jsonl", "guided blank")]
+        log.append(_log("domain/eval_seed_questions.jsonl", "kept: the demo corpus is the corpus"))
+        return log
+
+    _write(source, SEED_TEMPLATE)
+    log.append(_log("domain/eval_seed_questions.jsonl", "guided blank"))
+    return log
 
 
 # --- .env -------------------------------------------------------------------
@@ -607,8 +628,45 @@ def apply_makefile(answers: ProjectAnswers, root: Path) -> list[str]:
         text = _default_to_local_postgres(text)
         notes.append("database defaults to conda-forge, no Docker needed")
 
+    if answers.include_demo_corpus:
+        text = _score_demo_targets_against_demo_questions(text)
+
     _write(path, text)
     return [_log("Makefile", ", ".join(notes))]
+
+
+#: Targets that ingest the demo corpus and then evaluate it. They score the
+#: demo's ground truth, not the reader's. `eval` and `eval-ablation` are the
+#: reader's own and are deliberately absent.
+_DEMO_EVAL_TARGETS = ("demo", "demo-cloud", "benchmark")
+_EVAL_COMMANDS = ("sci-rag eval retrieval", "sci-rag eval answers")
+
+
+def _score_demo_targets_against_demo_questions(text: str) -> str:
+    """Point the demo targets at the questions that came with the demo corpus.
+
+    Without this they read `domain/eval_seed_questions.jsonl`, which is the
+    reader's file and a guided blank for every corpus source but `demo_only`,
+    so the target ingested and retrieved and then exited 1 on `No questions
+    found`. Naming the demo's own file keeps the two sets of ground truth
+    apart: a bare `sci-rag eval retrieval` still reads the reader's, and still
+    refuses when it is empty.
+    """
+    lines = text.splitlines(keepends=True)
+    for name in _DEMO_EVAL_TARGETS:
+        start = next(
+            (i for i, line in enumerate(lines) if re.match(rf"^{re.escape(name)}:( |$)", line)),
+            None,
+        )
+        if start is None:
+            continue
+        index = start + 1
+        while index < len(lines) and (lines[index].startswith("\t") or not lines[index].strip()):
+            line = lines[index]
+            if any(command in line for command in _EVAL_COMMANDS):
+                lines[index] = line.rstrip("\n") + f" --questions {DEMO_SEED_QUESTIONS}\n"
+            index += 1
+    return "".join(lines)
 
 
 def _default_to_local_postgres(text: str) -> str:

@@ -313,6 +313,48 @@ jobs:
           $RUN sci-rag db upgrade
           make demo
 
+      # Every step above generates `corpus_source: demo_only`, which is not
+      # the shape most readers get: `local_files` is the wizard default and
+      # the demo corpus defaults to Yes. That project keeps the demo targets
+      # while its own seed questions are correctly blank, and its `make demo`
+      # was the one that could not complete (#223). uv only, because this
+      # tests generation and evaluation rather than a manager.
+      - name: The default corpus source keeps a demo it can still complete
+        if: matrix.manager == 'uv'
+        shell: bash -el {0}
+        run: |
+          target="$RUNNER_TEMP/default-shape"
+          mkdir -p "$target"
+          git archive HEAD | tar -x -C "$target"
+          cat > "$RUNNER_TEMP/default-answers.yaml" <<EOF
+          project_name: Default Shape KB
+          repo_name: default-shape-kb
+          description: The project a reader gets by pressing Enter.
+          author_name: sci-rag-kit CI
+          contact_email: ""
+          python_version: "3.12"
+          environment_manager: uv
+          credentials: offline
+          ontology: keep_demo_example
+          corpus_source: local_files
+          include_terraform: "No"
+          include_cloud_database: "No"
+          include_demo_corpus: "Yes"
+          open_source_license: BSD-3-Clause
+          initialize_git: "No"
+          EOF
+          uv run sci-rag init --answers-file "$RUNNER_TEMP/default-answers.yaml" --target "$target"
+          cd "$target"
+          # The reader's own ground truth is blank on purpose, so a bare eval
+          # has to refuse. The demo target scores the demo's questions.
+          uv sync
+          uv run sci-rag db upgrade
+          if uv run sci-rag eval retrieval; then
+            echo "::error::a blank seed file scored something"
+            exit 1
+          fi
+          make demo
+
       # The demo above passing does not by itself prove which database it
       # talked to, and a leg that quietly used the service container would
       # look identical. Ask the conda-forge server directly.
