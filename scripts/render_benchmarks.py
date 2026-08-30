@@ -31,12 +31,95 @@ def _ci_cell(ci: dict[str, float] | None) -> str:
     return f"{ci['mean']:.2f} [{ci['lo']:.2f}, {ci['hi']:.2f}]"
 
 
+class ReportRoleError(RuntimeError):
+    """Two answer reports were handed over in a shape that cannot be rendered."""
+
+
 def _load(path: Path | None) -> dict[str, Any] | None:
     if path is None:
         return None
     if path.is_dir():
         path = path / "report.json"
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _declared_compression(report: dict[str, Any], path: Path) -> bool:
+    """Whether this answers run enabled compression, per its own report.
+
+    Every answers run records `config.compression`. Reading it here is the
+    whole fix: F-026 selected the two reports by directory modification time,
+    and calibration updates one of those times, so the roles reversed.
+    """
+    config = report.get("config")
+    if not isinstance(config, dict) or "compression" not in config:
+        raise ReportRoleError(
+            f"{path} does not record config.compression, so its role cannot be "
+            "established. Re-run `sci-rag eval answers`; reports written by an "
+            "older version predate the role marker."
+        )
+    return bool(config["compression"])
+
+
+def select_answer_reports(root: Path) -> tuple[Path, Path]:
+    """The newest uncompressed and compressed answers runs under ``root``.
+
+    Ordering is by directory name, which carries the run timestamp, rather
+    than by modification time, which anything writing into a directory can
+    change. Roles come from each report rather than from its position.
+    """
+    uncompressed: Path | None = None
+    compressed: Path | None = None
+    for directory in sorted(root.glob("*-answers"), key=lambda path: path.name, reverse=True):
+        report_path = directory / "report.json"
+        if not report_path.is_file():
+            continue
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        if _declared_compression(report, directory):
+            compressed = compressed or directory
+        else:
+            uncompressed = uncompressed or directory
+        if uncompressed is not None and compressed is not None:
+            break
+
+    missing = [
+        name
+        for name, found in (("uncompressed", uncompressed), ("compressed", compressed))
+        if found is None
+    ]
+    if missing:
+        raise ReportRoleError(
+            f"no {' or '.join(missing)} answers report under {root}. The paired gate "
+            "needs one `sci-rag eval answers` run and one `--compressed` run."
+        )
+    assert uncompressed is not None and compressed is not None
+    return uncompressed, compressed
+
+
+def _validate_roles(
+    answers: dict[str, Any] | None,
+    answers_path: Path | None,
+    compressed: dict[str, Any] | None,
+    compressed_path: Path | None,
+) -> None:
+    """Refuse a pair that is reversed, duplicated, or unlabelled."""
+    if answers is None or compressed is None:
+        return
+    assert answers_path is not None and compressed_path is not None
+    if answers_path.resolve() == compressed_path.resolve():
+        raise ReportRoleError(
+            f"{answers_path} was given as both the ordinary and the compressed "
+            "run. The paired gate compares two runs, not one against itself."
+        )
+    if _declared_compression(answers, answers_path):
+        raise ReportRoleError(
+            f"{answers_path} was given as the ordinary run but its report records "
+            "config.compression = true. The two reports are the wrong way round."
+        )
+    if not _declared_compression(compressed, compressed_path):
+        raise ReportRoleError(
+            f"{compressed_path} was given as the compressed run but its report records "
+            "config.compression = false. The two reports are the wrong way round."
+        )
 
 
 def _calibration_for(answers_path: Path | None) -> dict[str, Any] | None:
@@ -58,6 +141,7 @@ def render_benchmarks(
     assert retrieval is not None
     answers = _load(answers_path)
     compressed = _load(compressed_path)
+    _validate_roles(answers, answers_path, compressed, compressed_path)
     calibration = _calibration_for(answers_path)
     corpus = retrieval.get("corpus", {})
     snapshot = retrieval.get("snapshot")
@@ -300,6 +384,18 @@ def _compression_section(answers: dict[str, Any], compressed: dict[str, Any]) ->
         for d in _JUDGED_DIMENSIONS
         if (comp_ci.get(d) or {}).get("mean", 0) < (base_ci.get(d) or {}).get("mean", 0)
     ]
+    # The gate has two halves. Quality holding while tokens stay flat buys
+    # nothing, and the page used to call that a hold.
+    tokens_fell = before is not None and after is not None and after < before
+    if not fell and not tokens_fell:
+        lines += [
+            "On this run the gate does not hold: judged quality held, but"
+            " measured prompt tokens did not fall. Compression that costs"
+            " nothing and saves nothing is not evidence for a default, and"
+            " the saving is the only thing it is meant to buy.",
+            "",
+        ]
+        return lines
     if fell:
         lines += [
             f"On this run the gate does not hold: {len(fell)} of"
@@ -340,11 +436,31 @@ def _compression_section(answers: dict[str, Any], compressed: dict[str, Any]) ->
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--retrieval", type=Path, required=True)
+    parser.add_argument("--retrieval", type=Path, default=None)
     parser.add_argument("--answers", type=Path, default=None)
     parser.add_argument("--answers-compressed", type=Path, default=None)
     parser.add_argument("--output", type=Path, default=Path("docs/benchmarks.md"))
+    parser.add_argument(
+        "--select-answer-roles",
+        type=Path,
+        default=None,
+        metavar="DIR",
+        help=(
+            "Print the newest uncompressed answers run and the newest compressed one, "
+            "one per line, and exit. Roles come from each report's own "
+            "config.compression rather than from directory timestamps."
+        ),
+    )
     args = parser.parse_args()
+
+    if args.select_answer_roles is not None:
+        uncompressed, compressed = select_answer_reports(args.select_answer_roles)
+        print(uncompressed)
+        print(compressed)
+        return
+
+    if args.retrieval is None:
+        parser.error("--retrieval is required unless --select-answer-roles is given")
     page = render_benchmarks(args.retrieval, args.answers, args.answers_compressed)
     args.output.write_text(page, encoding="utf-8")
     print(f"wrote {args.output}")

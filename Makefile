@@ -134,11 +134,20 @@ benchmark: db-up
 	@# The paired half of the compression gate. Both runs are needed: a token
 	@# saving with no quality comparison is not evidence for a default.
 	uv run sci-rag eval answers --compressed --snapshot $(BENCH_SNAP)
+	@# Roles come from each report's own config.compression, not from a
+	@# directory timestamp. Calibration writes into the uncompressed run, so
+	@# an `ls -t` selector reverses the pair right before the page is drawn.
+	@set -e; \
+	roles="$$(uv run python scripts/render_benchmarks.py --select-answer-roles eval_results)"; \
+	uncompressed="$$(printf '%s\n' "$$roles" | sed -n 1p)"; \
+	compressed="$$(printf '%s\n' "$$roles" | sed -n 2p)"; \
+	echo "uncompressed: $$uncompressed"; \
+	echo "compressed:   $$compressed"; \
 	uv run sci-rag eval calibrate --labels domain/eval_calibration_labels.jsonl \
-		--report $$(ls -td eval_results/*-answers | head -2 | tail -1)
+		--report "$$uncompressed"; \
 	uv run python scripts/render_benchmarks.py \
-		--retrieval $$(ls -td eval_results/*-retrieval-ablation | head -1) \
-		--answers $$(ls -td eval_results/*-answers | head -2 | tail -1) \
-		--answers-compressed $$(ls -td eval_results/*-answers | head -1) \
+		--retrieval $$(ls -d eval_results/*-retrieval-ablation | sort | tail -1) \
+		--answers "$$uncompressed" \
+		--answers-compressed "$$compressed" \
 		--output docs/benchmarks.md
 	@echo "docs/benchmarks.md regenerated."
