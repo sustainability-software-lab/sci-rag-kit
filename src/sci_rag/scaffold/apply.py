@@ -226,34 +226,54 @@ def apply_env_file(answers: ProjectAnswers, root: Path) -> list[str]:
 # --- uv.lock ----------------------------------------------------------------
 
 
-def _uv_relock(root: Path) -> bool:
+def _uv_relock(root: Path) -> str | None:
     """Bring the retained lockfile in line with the rewritten pyproject.
 
-    `--offline` is not a fallback here, it is the point. The generated project
-    only ever narrows the manifest: the package is renamed, the Python floor
-    rises to the selected version, and unselected extras go away. Nothing new
-    has to be resolved, so uv can do this from the lockfile it already has.
-    Measured on a generated project, it removed 91 packages, retained 112, and
-    changed the pinned version of none of them.
+    Returns None on success, or a one-line reason on failure.
+
+    The generated project only ever narrows the manifest: the package is
+    renamed, the Python floor rises to the selected version, and unselected
+    extras go away. Nothing new has to be resolved, so uv can usually do this
+    from the lockfile it already has. Measured on a generated project, it
+    removed 91 packages, retained 112, and changed the pinned version of none
+    of them.
+
+    Offline is tried first because it is the honest default: a generator
+    should not reach the network without saying so. If the cache cannot
+    satisfy it, one online attempt follows, because a correct lockfile is
+    worth a download and the alternative is no lockfile at all.
     """
-    try:
-        completed = subprocess.run(
-            ["uv", "lock", "--offline"],
-            cwd=root,
-            capture_output=True,
-            check=False,
-            timeout=180,
+    attempts = (["uv", "lock", "--offline"], ["uv", "lock"])
+    reason = "uv is not available"
+    for command in attempts:
+        try:
+            completed = subprocess.run(
+                command, cwd=root, capture_output=True, check=False, timeout=300
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            reason = f"{' '.join(command)}: {type(exc).__name__}"
+            continue
+        if completed.returncode == 0:
+            return None
+        reason = _first_error_line(completed.stderr.decode("utf-8", "replace")) or (
+            f"{' '.join(command)} exited {completed.returncode}"
         )
-    except (OSError, subprocess.TimeoutExpired):
-        return False
-    return completed.returncode == 0
+    return reason
+
+
+def _first_error_line(stderr: str) -> str:
+    for line in stderr.splitlines():
+        stripped = line.strip()
+        if stripped.lower().startswith("error"):
+            return stripped[:200]
+    return ""
 
 
 def apply_uv_lock(
     answers: ProjectAnswers,
     root: Path,
     *,
-    relock: Callable[[Path], bool] = _uv_relock,
+    relock: Callable[[Path], str | None] = _uv_relock,
 ) -> list[str]:
     """Make the lockfile describe the generated project, or take it away.
 
@@ -271,11 +291,12 @@ def apply_uv_lock(
     path = root / "uv.lock"
     if not path.exists():
         return []
-    if relock(root):
-        return [_log("uv.lock", f"relocked offline for {answers.repo_name}")]
+    reason = relock(root)
+    if reason is None:
+        return [_log("uv.lock", f"relocked for {answers.repo_name}")]
     path.unlink()
     return [
-        _log("uv.lock", "removed: could not be relocked here, `uv lock` recreates it"),
+        _log("uv.lock", f"removed, `uv lock` recreates it. Could not relock: {reason}"),
     ]
 
 

@@ -490,7 +490,7 @@ def _rename_project(answers: ProjectAnswers, root: Path) -> None:
     apply.apply_uv_lock(answers, root, relock=_stub_relock)
 
 
-def _stub_relock(root: Path) -> bool:
+def _stub_relock(root: Path) -> str | None:
     """What `uv lock --offline` does to the root record, minus the resolver."""
     path = root / "uv.lock"
     name = re.search(
@@ -502,7 +502,7 @@ def _stub_relock(root: Path) -> bool:
             blocks[index] = re.sub(r'(?m)^name = ".*"$', f'name = "{name}"', block, count=1)
             break
     path.write_text("[[package]]".join(blocks), encoding="utf-8")
-    return True
+    return None
 
 
 def _lock_root_record(root: Path) -> dict[str, str]:
@@ -552,7 +552,7 @@ def test_a_lock_that_cannot_be_relocked_is_removed_rather_than_shipped(
     template: Path,
 ) -> None:
     """The one thing that must never happen is a lock describing something else."""
-    changes = apply.apply_uv_lock(_answers(), template, relock=lambda root: False)
+    changes = apply.apply_uv_lock(_answers(), template, relock=lambda root: "uv is not available")
 
     assert not (template / "uv.lock").exists()
     assert any("uv.lock" in change and "removed" in change for change in changes), changes
