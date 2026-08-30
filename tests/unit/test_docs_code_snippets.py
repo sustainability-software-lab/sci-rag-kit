@@ -111,3 +111,77 @@ def test_snippets_that_quote_a_project_file_carry_its_path() -> None:
     ]
 
     assert not offenders, f"these snippets quote a project file without naming it: {offenders}"
+
+
+# --- paired drafter commands select the same passages ------------------------
+#
+# F-021 in the 2026-08-29 documentation route audit. The no-credential drafting
+# route is two commands: `--print-prompt` renders a corpus-grounded prompt, and
+# `--from-file` validates the reply against the same passages. `--count` and
+# `--folder` decide which passages those are, so the page says to pass the same
+# values to both. Its own example passed `--count 10` only to the first, and
+# worked anyway because ten is also the default. The stated invariant and the
+# copy-paste commands only agreed by coincidence.
+
+SELECTORS = ("--count", "--folder")
+
+
+def _drafter_commands(block: str) -> list[list[str]]:
+    """Every `sci-rag draft ...` invocation in one code block, tokenised."""
+    commands = []
+    for line in block.splitlines():
+        stripped = line.strip().removeprefix("$ ")
+        if "sci-rag draft " not in stripped:
+            continue
+        commands.append(stripped.split())
+    return commands
+
+
+def _selector_values(tokens: list[str]) -> dict[str, str]:
+    found = {}
+    for selector in SELECTORS:
+        if selector in tokens:
+            index = tokens.index(selector)
+            if index + 1 < len(tokens):
+                found[selector] = tokens[index + 1]
+    return found
+
+
+def _paired_blocks() -> list[tuple[Path, str]]:
+    """Code blocks that show both halves of the no-credential route."""
+    blocks = []
+    for page in _site_pages():
+        text = page.read_text(encoding="utf-8")
+        for block in re.findall(
+            r"^\s*(?:```|~~~)[^\n]*\n(.*?)^\s*(?:```|~~~)", text, re.DOTALL | re.MULTILINE
+        ):
+            if "--print-prompt" in block and "--from-file" in block:
+                blocks.append((page, block))
+    return blocks
+
+
+def test_the_documentation_still_shows_the_paired_route() -> None:
+    """If nothing pairs them, the test below is asserting nothing."""
+    assert _paired_blocks(), "no page shows --print-prompt and --from-file together"
+
+
+def test_paired_drafter_commands_repeat_their_selectors() -> None:
+    """Changing a selector between the halves validates a reply against
+    passages the assistant never saw, which surfaces as evidence phrases
+    dropped for being ungrounded."""
+    offenders = []
+    for page, block in _paired_blocks():
+        printing = [c for c in _drafter_commands(block) if "--print-prompt" in c]
+        reading = [c for c in _drafter_commands(block) if "--from-file" in c]
+        for first, second in zip(printing, reading, strict=False):
+            printed = _selector_values(first)
+            read = _selector_values(second)
+            if printed != read:
+                offenders.append(
+                    f"{page.relative_to(DOCS.parent)}: --print-prompt passes {printed}, "
+                    f"--from-file passes {read}"
+                )
+
+    assert offenders == [], "paired drafter commands must select the same passages: " + "; ".join(
+        offenders
+    )

@@ -54,7 +54,7 @@ Every drafter offers the same three routes to the same validated file.
     ```bash title="Terminal"
     uv run sci-rag draft questions --count 10 --print-prompt > prompt.txt
     # paste prompt.txt into an assistant, save the JSON reply as reply.json
-    uv run sci-rag draft questions --from-file reply.json
+    uv run sci-rag draft questions --count 10 --from-file reply.json
     ```
 
 === "Write it yourself"
@@ -73,6 +73,10 @@ passages get sampled, so pass the same values to `--print-prompt` and to
 `--from-file`. Change them in between and you are validating a reply against
 passages the assistant never saw, which shows up as evidence phrases dropped
 for being ungrounded.
+
+The example above repeats `--count 10` on both commands even though ten is the
+default. Relying on the default would make the pair agree by coincidence, and
+the coincidence would end the first time somebody changed one of them.
 
 ## What the drafters ask you for
 
