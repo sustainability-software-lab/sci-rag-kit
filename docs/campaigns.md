@@ -205,9 +205,12 @@ reconcile without pretending the campaign is complete.
 <div class="srag-checkpoint" markdown>
 **Checkpoint: every row has a decision or a reason**
 
-`sci-rag campaign report --name rice-straw` should reconcile: included plus
-excluded plus `awaiting_review` equals the candidate count. No row is missing,
-and no row is included without a rights answer you can point at.
+`sci-rag campaign review --name rice-straw` ends by printing the
+PRISMA-aligned counts and the path to
+`data/campaigns/rice-straw/screening-report.json`, which it rewrites from the
+latest decisions. In that table `included` plus `excluded` plus
+`awaiting review` equals `screened`. No row is missing, and no row is included
+without a rights answer you can point at.
 </div>
 
 ## Next steps

@@ -150,3 +150,32 @@ def test_campaign_screen_and_review_cli_preserve_a_human_decision(
     loaded = CampaignState(campaign_root / "review-demo" / "state.jsonl")
     assert loaded.records[-1].status == "screen_included"
     assert loaded.records[-1].payload["source"] == "human"
+
+
+def test_campaign_guide_checkpoint_names_the_shipped_report_and_the_real_invariant() -> None:
+    """The guide's last checkpoint has to be reachable and has to state the real sum.
+
+    It sent readers to `sci-rag campaign report`, which was never a registered
+    command, and reconciled against "the candidate count". What the code
+    actually checks is `PrismaCounts.reconciles`: included plus excluded plus
+    awaiting review equals screened. Naming the measures by their field names
+    means renaming one breaks this guard rather than the reader's arithmetic.
+    """
+    import re
+
+    from sci_rag.campaigns.prisma import PrismaCounts
+
+    page = (Path(__file__).parents[2] / "docs" / "campaigns.md").read_text(encoding="utf-8")
+    checkpoint = re.sub(
+        r"\s+",
+        " ",
+        page.rpartition('<div class="srag-checkpoint"')[2].partition("</div>")[0],
+    )
+
+    for measure in ("included", "excluded", "awaiting_review", "screened"):
+        assert measure in PrismaCounts.__dataclass_fields__, measure
+
+    assert "campaign report" not in checkpoint
+    assert "`sci-rag campaign review --name rice-straw`" in checkpoint
+    assert "`data/campaigns/rice-straw/screening-report.json`" in checkpoint
+    assert "`included` plus `excluded` plus `awaiting review` equals `screened`" in checkpoint

@@ -142,10 +142,9 @@ COMMAND_TOKEN = re.compile(r"^[a-z][a-z0-9-]*$")
 # Stale commands that belong to another open finding. Each entry names the
 # issue that owns it, and `test_every_pending_exception_still_describes_a_real
 # _mention` fails once the documentation no longer says it, so an exception
-# cannot outlive its fix.
-PENDING_FINDINGS = {
-    ("campaign", "report"): "#157, F-005: the campaign checkpoint names a report command",
-}
+# cannot outlive its fix. Empty is the intended steady state: the last entry,
+# `campaign report`, retired with #157.
+PENDING_FINDINGS: dict[tuple[str, ...], str] = {}
 
 
 def _documented_pages() -> list[Path]:
