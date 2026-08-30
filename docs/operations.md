@@ -103,7 +103,7 @@ SCI_RAG_DATABASE_URL_SYNC="$(
     sed 's/^postgresql+asyncpg:/postgresql:/'
 )"
 
-# Plain-format dump of the whole knowledge base (schema + data).
+# Custom-format archive of the whole knowledge base (schema + data).
 pg_dump "$SCI_RAG_DATABASE_URL_SYNC" --format=custom \
   --file "backups/sci-rag-$(date +%Y%m%d).dump"
 ```
@@ -132,9 +132,14 @@ URL:
 SCI_RAG_DATABASE_URL_SYNC='postgresql://sci_rag@localhost:5433/sci_rag'
 ```
 
-The pgvector extension types are included in the dump; the restore
+`--format=custom` is why the restore drill below reaches for `pg_restore`
+rather than `psql`. A custom-format archive is compressed and supports
+restoring one table at a time; plain output would be SQL you replay, and the
+two are not interchangeable.
+
+The pgvector extension types are included in the archive; the restore
 target needs the extension available (`CREATE EXTENSION vector` runs in
-migration 0001, and `pg_restore` recreates it from the dump).
+migration 0001, and `pg_restore` recreates it from the archive).
 
 ### Cloud SQL (the deploy-gcp.md path)
 

@@ -197,3 +197,51 @@ def test_the_runbook_says_what_a_dump_contains() -> None:
     lowered = section.lower()
     assert "private" in lowered or "every source" in lowered
     assert "encrypt" in lowered
+
+
+# --- the archive format the reader is actually given -------------------------
+#
+# F-009: the snippet labelled its output a plain-format dump while passing
+# --format=custom, and the restore drill used pg_restore, which reads custom
+# archives and not plain SQL. Three signals, two of them agreeing and one of
+# them wrong, is worse than none: a reader who believes the label reaches for
+# psql and gets an unreadable file.
+
+# What each pg_dump format is restored with. Plain output is SQL you replay.
+RESTORE_TOOL_FOR_FORMAT = {"custom": "pg_restore", "directory": "pg_restore", "plain": "psql"}
+
+FORMAT_WORDS = {"custom": "custom-format", "directory": "directory-format", "plain": "plain-format"}
+
+
+def _selected_format() -> str:
+    block = _first_bash_block(_section(LOCAL_BACKUP_HEADING))
+    match = re.search(r"--format=(\w+)", block)
+    assert match, "the backup snippet no longer selects a pg_dump format"
+    return match.group(1)
+
+
+def test_the_prose_names_the_format_the_command_selects() -> None:
+    selected = _selected_format()
+    assert selected in FORMAT_WORDS, f"unknown pg_dump format {selected!r}"
+
+    section = _section(LOCAL_BACKUP_HEADING).lower()
+    expected = FORMAT_WORDS[selected]
+    assert expected in section, f"the command selects {selected} but the page never says {expected}"
+
+    wrong = [word for name, word in FORMAT_WORDS.items() if name != selected and word in section]
+    assert wrong == [], f"the page also calls it {wrong} while the command selects {selected}"
+
+
+def test_the_restore_drill_uses_the_tool_that_reads_that_format() -> None:
+    selected = _selected_format()
+    restore = _first_bash_block(_section(RESTORE_HEADING))
+
+    expected = RESTORE_TOOL_FOR_FORMAT[selected]
+    assert expected in restore, f"a {selected}-format archive is restored with {expected}"
+
+    wrong = [
+        tool
+        for form, tool in RESTORE_TOOL_FOR_FORMAT.items()
+        if tool != expected and re.search(rf"\b{tool}\b", restore)
+    ]
+    assert wrong == [], f"the restore drill also reaches for {wrong}"
