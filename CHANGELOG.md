@@ -302,6 +302,12 @@ These close findings from the 2026-08-29 end-to-end documentation route audit.
   real generated tree for every environment manager, where the old one ran
   against a five-file fixture with nothing capable of violating it, and accepts
   three contexts by content rather than by filename. Closes #166.
+- A generated pixi project with a standalone `pixi.toml` builds its Dockerfile.
+  The builder copied only `pyproject.toml` and `README.md` before running
+  `pixi install`, so the manifest defining the workspace stayed on the host. The
+  Dockerfile now copies whichever manifest shape the project uses, before the
+  source so the dependency layer still caches, and container CI builds both
+  shapes. Closes #162.
 
 ## [0.3.0] - 2026-08-28
 

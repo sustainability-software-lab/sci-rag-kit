@@ -135,6 +135,41 @@ jobs:
         working-directory: ${{ runner.temp }}/generated
         run: uv lock --check --offline
 
+      # F-010: pixi tables can live in pyproject.toml or in a standalone
+      # pixi.toml, and `pixi install` resolves whichever one the project has.
+      # The unit tests assert the rendered Dockerfile copies it; only a real
+      # build proves the copy resolves. Builder stage only, because that is
+      # where the manifest matters and the runtime stage adds nothing here.
+      - name: Both pixi manifest shapes build their builder stage
+        if: matrix.manager == 'pixi'
+        run: |
+          set -e
+          for shape in pyproject.toml pixi.toml; do
+            target="$RUNNER_TEMP/pixi-${shape%%.*}"
+            mkdir -p "$target"
+            git archive HEAD | tar -x -C "$target"
+            cat > "$RUNNER_TEMP/pixi-answers.yaml" <<EOF
+          project_name: Pixi Shape KB
+          repo_name: pixi-shape-kb
+          python_version: "3.12"
+          environment_manager: pixi
+          dependency_file: $shape
+          credentials: offline
+          ontology: keep_demo_example
+          corpus_source: demo_only
+          include_terraform: "No"
+          include_cloud_database: "No"
+          include_demo_corpus: "Yes"
+          open_source_license: BSD-3-Clause
+          initialize_git: "No"
+          EOF
+            uv run sci-rag init --answers-file "$RUNNER_TEMP/pixi-answers.yaml" --target "$target"
+            echo "::group::$shape builder"
+            grep -n '^COPY' "$target/Dockerfile" | head -3
+            docker build --target builder -t "sci-rag-pixi-${shape%%.*}:ci" "$target"
+            echo "::endgroup::"
+          done
+
       - name: Cloud helper documentation matches every retained asset shape
         run: |
           # This validation reads generated files only and makes no live GCP call.

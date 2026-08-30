@@ -132,9 +132,29 @@ class RunnerProfile:
                 lines.append(f"          {name}: {value.replace('$PYTHON', python_version)}")
         return "\n".join(lines)
 
-    def dockerfile(self, *, python_version: str, project_slug: str) -> str:
+    def dockerfile(
+        self,
+        *,
+        python_version: str,
+        project_slug: str,
+        dependency_file: str = "pyproject.toml",
+    ) -> str:
+        """The image for this manager, for the manifest shape the project uses.
+
+        ``dependency_file`` matters to pixi alone. Its tables can live in
+        `pyproject.toml` or in a standalone `pixi.toml`, and `pixi install`
+        resolves whichever one the project has, so the builder needs it. The
+        other three templates carry no slot for it.
+        """
+        manifests = "pyproject.toml"
+        if dependency_file != "pyproject.toml":
+            # The dependency lists stay in pyproject.toml either way; the
+            # standalone file adds the workspace, environment, and task tables.
+            manifests = f"pyproject.toml {dependency_file}"
         header = Template(_DOCKER_HEADER).substitute(SLUG=project_slug)
-        body = self.docker_template.substitute(PYTHON=python_version, SLUG=project_slug)
+        body = self.docker_template.substitute(
+            PYTHON=python_version, SLUG=project_slug, MANIFESTS=manifests
+        )
         return header + body + _DOCKER_RUNTIME_TRAILER
 
     def substitutions_from_uv(self, *, project_slug: str) -> tuple[tuple[str, str], ...]:
@@ -213,7 +233,7 @@ ENV PATH="/app/.venv/bin:$$PATH"
 _PIXI_DOCKER = Template("""\
 FROM ghcr.io/prefix-dev/pixi:bookworm-slim AS builder
 WORKDIR /app
-COPY pyproject.toml README.md ./
+COPY $MANIFESTS README.md ./
 COPY src ./src
 # Commit pixi.lock and add --locked here once you have one; the lock does not
 # exist until the first `pixi install`, so a fresh project could not build.

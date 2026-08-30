@@ -871,7 +871,9 @@ def _write_dockerfile(answers: ProjectAnswers, root: Path) -> None:
     _write(
         root / "Dockerfile",
         answers.runner.dockerfile(
-            python_version=answers.python_version, project_slug=answers.repo_name
+            python_version=answers.python_version,
+            project_slug=answers.repo_name,
+            dependency_file=answers.dependency_file,
         ),
     )
 
