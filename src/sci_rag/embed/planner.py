@@ -15,20 +15,46 @@ Two hard rules:
   columns are created with a fixed dimension; changing it is a schema
   migration plus a full rebuild, and pretending otherwise here would
   fail halfway through with opaque database errors.
+
+The refusal reads the width off the live columns rather than off
+``db.models.EMBEDDING_DIM``. Both the embedder and that constant come from
+``SCI_RAG_EMBEDDING_DIM``, so comparing them moved both sides of the safety
+check at once: changing the setting on a populated database left the guard
+seeing no difference at all, which is what F-023 reproduced. The persisted
+schema is the only side of this comparison the caller cannot move.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from sci_rag.db.models import EMBEDDING_DIM, Chunk, KgCommunity
 from sci_rag.embed.provider import EmbeddingProvider
 
 DEFAULT_BATCH_SIZE = 32
+
+# Every vector column a reindex writes to. Both are created by the same
+# migration, so in practice they agree, and checking both means a partially
+# migrated database is refused rather than half rewritten.
+_VECTOR_COLUMNS = (
+    (Chunk.__tablename__, "embedding"),
+    (KgCommunity.__tablename__, "summary_embedding"),
+)
+
+_VECTOR_TYPE = re.compile(r"^vector\((\d+)\)$")
+
+# to_regclass returns NULL for a table that does not exist, so an unmigrated
+# database falls out of the join rather than raising.
+_COLUMN_TYPE_SQL = text(
+    "SELECT format_type(a.atttypid, a.atttypmod) "
+    "FROM pg_attribute a "
+    "WHERE a.attrelid = to_regclass(:table) AND a.attname = :column AND a.attnum > 0"
+)
 
 
 class ReindexRefused(RuntimeError):
@@ -57,14 +83,48 @@ class ReindexOutcome:
     batches: int = 0
 
 
-def _check_dimension(embedder: EmbeddingProvider) -> None:
+async def live_vector_dimension(session: AsyncSession, table: str, column: str) -> int | None:
+    """The width of a persisted pgvector column, or None if it is not there yet.
+
+    Reading the width from the database is the whole point. The alternative,
+    ``db.models.EMBEDDING_DIM``, is initialized from the same setting the
+    embedder is built from, so it cannot disagree with the embedder no matter
+    what the database actually holds.
+    """
+    rendered = await session.scalar(_COLUMN_TYPE_SQL, {"table": table, "column": column})
+    if rendered is None:
+        return None
+    match = _VECTOR_TYPE.match(rendered)
+    return int(match.group(1)) if match else None
+
+
+def _refusal(embedder: EmbeddingProvider, persisted: int, *, where: str) -> ReindexRefused:
+    return ReindexRefused(
+        f"embedder {embedder.version} produces {embedder.dim}-dimension vectors but {where} "
+        f"is vector({persisted}). A dimension change is a schema migration plus a full "
+        "re-ingest, not a reindex. Set SCI_RAG_EMBEDDING_DIM back to "
+        f"{persisted}, or migrate the schema first."
+    )
+
+
+async def _check_dimension(session: AsyncSession, embedder: EmbeddingProvider) -> None:
+    """Refuse before any embedding call or write when the widths disagree."""
+    checked_any = False
+    for table, column in _VECTOR_COLUMNS:
+        persisted = await live_vector_dimension(session, table, column)
+        if persisted is None:
+            continue
+        checked_any = True
+        if embedder.dim != persisted:
+            raise _refusal(embedder, persisted, where=f"the live {table}.{column} column")
+
+    if checked_any:
+        return
+    # Nothing is persisted yet, so there is no live schema to disagree with.
+    # The configured width is still worth checking: it catches an embedder
+    # constructed by hand with the wrong one.
     if embedder.dim != EMBEDDING_DIM:
-        raise ReindexRefused(
-            f"embedder {embedder.version} produces {embedder.dim}-dimension vectors but the "
-            f"database columns are vector({EMBEDDING_DIM}). A dimension change is a schema "
-            "migration plus a full re-ingest, not a reindex. Set SCI_RAG_EMBEDDING_DIM back, "
-            "or migrate the schema first."
-        )
+        raise _refusal(embedder, EMBEDDING_DIM, where="the configured schema width")
 
 
 def _stale_chunks_condition(version: str):  # type: ignore[no-untyped-def]
@@ -80,9 +140,9 @@ def _stale_communities_condition(version: str):  # type: ignore[no-untyped-def]
 async def plan_reindex(
     session_factory: async_sessionmaker[AsyncSession], embedder: EmbeddingProvider
 ) -> ReindexPlan:
-    _check_dimension(embedder)
     version = embedder.version
     async with session_factory() as session:
+        await _check_dimension(session, embedder)
         total_chunks = (await session.scalar(select(func.count(Chunk.id)))) or 0
         rows = await session.execute(
             select(Chunk.embedding_version, func.count(Chunk.id))
@@ -112,7 +172,9 @@ async def apply_reindex(
     progress: Callable[[str], None] | None = None,
 ) -> ReindexOutcome:
     """Re-embed stale rows in batches, committing after each batch."""
-    _check_dimension(embedder)
+    async with session_factory() as session:
+        # Read only, and before anything else: a refusal must cost nothing.
+        await _check_dimension(session, embedder)
     version = embedder.version
     outcome = ReindexOutcome()
 

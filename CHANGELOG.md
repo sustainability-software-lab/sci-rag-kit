@@ -228,6 +228,13 @@ These close findings from the 2026-08-29 end-to-end documentation route audit.
   `--format=custom` produces and what the `pg_restore` drill below it reads. It
   had been labelled plain-format, so a reader who believed the label would have
   reached for `psql` and found the file unreadable. Closes #161.
+- `sci-rag embed reindex` refuses a dimension change it can actually see.
+  The guard compared the embedder's width against `db.models.EMBEDDING_DIM`,
+  and both came from `SCI_RAG_EMBEDDING_DIM`, so changing that setting moved
+  both sides at once and the command reported a normal plan against a column
+  that could not hold the vectors it was about to make. It now reads the width
+  off the live pgvector columns, and `--apply` refuses before any embedding
+  call or write. Closes #175.
 
 ## [0.3.0] - 2026-08-28
 
