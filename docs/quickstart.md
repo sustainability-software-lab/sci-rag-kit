@@ -189,7 +189,7 @@ $ uv run sci-rag answer "How much rice straw was generated in the Colusa Basin i
 
 The demo answer is approximately 302,000 dry tons and cites the synthetic resource assessment. Check the cited passage. The number alone is not success.
 
-In offline mode this command reports that no LLM is configured. That refusal is expected: the system does not fabricate an answer when generation is unavailable.
+In offline mode this command retrieves normally, then refuses: no model credential means no generated answer, and the system does not fabricate one. The refusal names the credential to set and says that ingestion, retrieval, and retrieval evaluation keep working without it. Graph and HyDE report `disabled` in the stage table rather than running into the same missing credential.
 
 ## 6. Build the graph and run the deep path
 

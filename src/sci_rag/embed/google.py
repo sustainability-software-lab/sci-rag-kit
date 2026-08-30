@@ -10,6 +10,7 @@ Works in either credential mode without code changes:
 from __future__ import annotations
 
 import asyncio
+from typing import Literal
 
 import structlog
 from google import genai
@@ -29,9 +30,31 @@ _TASK_TYPES: dict[EmbeddingTask, str] = {
 _BATCH_SIZE = 20
 _MAX_ATTEMPTS = 4
 
+#: Which capability is asking for a client. It decides only what a missing
+#: credential is reported as, since both capabilities need the same one.
+ClientPurpose = Literal["embeddings", "generation"]
 
-def make_genai_client(settings: Settings, *, api_key_override: str | None = None) -> genai.Client:
-    """Build a google-genai client for whichever credentials are configured.
+
+_CREDENTIAL_REPAIR = (
+    "Set SCI_RAG_GOOGLE_API_KEY (easiest; get one at "
+    "https://aistudio.google.com/apikey) or SCI_RAG_GCP_PROJECT "
+    "(after `gcloud auth application-default login`)."
+)
+
+
+def make_genai_client(
+    settings: Settings,
+    *,
+    api_key_override: str | None = None,
+    purpose: ClientPurpose = "embeddings",
+) -> genai.Client:
+    """Build the Google client for whichever capability asked for it.
+
+    Both the embedder and ``GoogleLLM`` build their client here, which is why
+    ``purpose`` exists. Generation used to fail with the embedder's advice,
+    ending on ``SCI_RAG_EMBEDDING_PROVIDER=local-hash``: a setting an offline
+    project already has, and one that cannot produce an answer at any value.
+    A reader who followed it changed nothing and learned nothing.
 
     ``api_key_override`` supports the server's bring-your-own-key flow; it is
     used for this client only and never stored or logged.
@@ -45,11 +68,16 @@ def make_genai_client(settings: Settings, *, api_key_override: str | None = None
         return genai.Client(
             vertexai=True, project=settings.gcp_project, location=settings.gcp_location
         )
+    if purpose == "generation":
+        raise RuntimeError(
+            "No model credentials configured, so this project cannot generate. "
+            f"{_CREDENTIAL_REPAIR} Ingestion, retrieval, and retrieval evaluation "
+            "keep working without one. SCI_RAG_EMBEDDING_PROVIDER selects an "
+            "embedder and cannot enable generation."
+        )
     raise RuntimeError(
-        "No Google credentials configured. Set SCI_RAG_GOOGLE_API_KEY (easiest; "
-        "get one at https://aistudio.google.com/apikey) or SCI_RAG_GCP_PROJECT "
-        "(after `gcloud auth application-default login`). For a no-credential "
-        "dry run, set SCI_RAG_EMBEDDING_PROVIDER=local-hash."
+        f"No Google credentials configured. {_CREDENTIAL_REPAIR} For a "
+        "no-credential dry run, set SCI_RAG_EMBEDDING_PROVIDER=local-hash."
     )
 
 
