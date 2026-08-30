@@ -281,6 +281,11 @@ These close findings from the 2026-08-29 end-to-end documentation route audit.
   `python_version` follows the selection now too, and a coherence test reads
   every generated pin for every manager and every supported version and
   requires them to agree. Closes #163.
+- The no-credential drafting example repeats `--count 10` on both halves of the
+  `--print-prompt` and `--from-file` pair. The page says to keep the selectors
+  steady across the pair and then omitted one, which worked only because ten is
+  also the default. A guard now compares the selectors in every paired example.
+  Closes #173.
 
 ## [0.3.0] - 2026-08-28
 
