@@ -20,7 +20,12 @@ from sci_rag.licensing import LICENSE_CLASSES
 
 @dataclass
 class CampaignBuildReport:
+    #: Candidates this invocation worked on, after the maximum was applied.
     candidates: int
+    #: Candidates the campaign holds in state. Equal to ``candidates`` when no
+    #: maximum applied. Reported separately because a trial that says
+    #: "candidates 100" reads as having processed 100 of them.
+    retained: int = 0
     resolutions: dict[str, OaResolution] = field(default_factory=dict)
     download_outcomes: list[DownloadOutcome] = field(default_factory=list)
     failed: int = 0
@@ -72,9 +77,25 @@ async def build_campaign(
     dry_run: bool,
     max_pdf_bytes: int = 25 * 1024 * 1024,
     unpaywall_base_url: str = UNPAYWALL_API_URL,
+    max_results: int | None = None,
 ) -> CampaignBuildReport:
-    """Resolve all candidates, then optionally download and write a manifest."""
-    report = CampaignBuildReport(candidates=len(works))
+    """Resolve candidates, then optionally download and write a manifest.
+
+    ``max_results`` bounds how many retained candidates this invocation works
+    on. It has to be applied here rather than only at discovery, because a
+    campaign with state resumes from that state: a reader who discovers 100
+    works and then runs a bounded trial over 20 was making 100 Unpaywall
+    requests and would have attempted 100 downloads.
+
+    The bound is a prefix of the candidate list, and campaign state is
+    append-only, so the same candidates are in scope on every retry. A trial
+    that resumed onto a different subset would resolve rights for more works
+    than the reader authorized, one retry at a time.
+    """
+    retained = len(works)
+    if max_results is not None:
+        works = works[:max_results]
+    report = CampaignBuildReport(candidates=len(works), retained=retained)
     manifest_items: list[ManifestItem] = []
     cached = _cached_resolutions(state)
 
