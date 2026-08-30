@@ -636,7 +636,12 @@ def _use_cloud_postgres(text: str, answers: ProjectAnswers) -> str:
 
 
 def _remove_cloud_postgres_dispatch(text: str) -> str:
-    """Remove the cloud branch when its helper is pruned from a project."""
+    """Remove the cloud branch, and the offer of it, when the helper is pruned.
+
+    The fallback message is part of the dispatch. Removing the branch and
+    leaving the message listing `cloud` gives a reader a recipe that
+    recommends a backend and then exits 2 when they take it.
+    """
     for action in ("start", "stop"):
         block = (
             "ifeq ($(SCI_RAG_DB_BACKEND),cloud)\n"
@@ -644,7 +649,7 @@ def _remove_cloud_postgres_dispatch(text: str) -> str:
             "else ifeq ($(SCI_RAG_DB_BACKEND),local)"
         )
         text = text.replace(block, "ifeq ($(SCI_RAG_DB_BACKEND),local)")
-    return text
+    return text.replace("choose docker, local, or cloud.", "choose docker or local.")
 
 
 # --- license ----------------------------------------------------------------

@@ -302,6 +302,28 @@ def test_a_pruned_cloud_helper_leaves_no_cloud_backend(
 
 @_NEEDS_MAKE
 @pytest.mark.parametrize("manager", runner_keys())
+def test_the_unknown_backend_message_offers_only_backends_the_project_has(
+    generated: Callable[..., Path], manager: str
+) -> None:
+    """A menu that lists a choice the project cannot make is worse than none.
+
+    Pruning the Cloud helper removed the `cloud` branch from `db-up` and
+    `db-down` but left the fallback message offering `cloud` as one of three
+    choices. A reader who took it got exit 2 from the same recipe that had
+    just recommended it.
+    """
+    pruned = _make_dry_run(generated(manager), "db-up", backend="nonsense")
+
+    assert "choose docker or local." in pruned
+    assert "cloud" not in pruned
+
+    kept = _make_dry_run(generated(manager, include_cloud="Yes"), "db-up", backend="nonsense")
+
+    assert "choose docker, local, or cloud." in kept
+
+
+@_NEEDS_MAKE
+@pytest.mark.parametrize("manager", runner_keys())
 def test_the_declared_default_is_the_server_that_actually_starts(
     generated: Callable[..., Path], manager: str
 ) -> None:
