@@ -66,7 +66,9 @@ Graph extraction, HyDE, community summaries, generated answers, and model-based 
 It depends on your environment manager, and the answer changed recently.
 
 With pixi or conda, no. Those managers bundle `postgresql` and `pgvector`
-from conda-forge and keep their data in `.pgdata/`.
+from conda-forge, keep their data in `.pgdata/`, and default to
+`SCI_RAG_DB_BACKEND=local`. Docker stays selectable in those projects for
+anyone who sets `SCI_RAG_DB_BACKEND=docker`.
 
 With uv or venv + pip, Docker is the easiest default, not a requirement. Every
 manager can use `SCI_RAG_DB_BACKEND=local` when PostgreSQL 16 through 18 and

@@ -203,6 +203,16 @@ Notable changes to sci-rag-kit. The format follows
 
 These close findings from the 2026-08-29 end-to-end documentation route audit.
 
+- `SCI_RAG_DB_BACKEND` dispatches to the backend it names in generated pixi and
+  conda projects. Bundling a conda-forge PostgreSQL server used to replace the
+  Docker recipes outright, so both `docker` and `local` started the same
+  loopback cluster with trust authentication while the Makefile still declared
+  `SCI_RAG_DB_BACKEND ?= docker`. Bundling a server now changes only the
+  declared default, which those projects set to `local`. An explicit `docker`
+  reaches the Compose service, `local` reaches `scripts/local_postgres.py`, and
+  a retained Cloud helper still answers `cloud` alone. Tests read the effective
+  command out of `make -n` for every retained backend across all four
+  environment managers. Closes #180.
 - Generating with `--template-path` no longer copies a checkout's ignored state
   into the new project. The copy boundary is what the repository tracks, which
   is the same content the download route already produces, so credentials under

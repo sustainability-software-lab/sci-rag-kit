@@ -364,7 +364,7 @@ The recommended Quick session above, in full. `scripts/render_cast.py` builds it
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  domain/eval_seed_questions.jsonl   guided blank</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  .env                   google_ai_studio, gemini-2.5-flash, gemini-embedding-001</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  pyproject.toml         name, description, extras: docling</span></span>
-<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Makefile               commands prefixed with `pixi run`, database runs from conda-forge, no Docker</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Makefile               commands prefixed with `pixi run`, database defaults to conda-forge, no Docker needed</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  docs/                  kit onboarding, player, and cast removed</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  pyproject.toml          workspace, environments, tasks</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Dockerfile             pixi base image</span></span>
