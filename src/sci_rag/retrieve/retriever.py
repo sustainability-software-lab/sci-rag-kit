@@ -59,6 +59,28 @@ log = structlog.get_logger(__name__)
 
 Profile = str  # "interactive" | "deep"
 
+#: Stages that make a provider round trip before they reach SQL. Vector and
+#: community await the shared query embedding, graph extracts query entities
+#: with a model, and HyDE generates a passage and then embeds it. Keyword is
+#: the only purely local stage.
+PROVIDER_BACKED_STAGES = frozenset({"vector", "community", "graph", "hyde"})
+
+
+def stage_budget_s(stage: str, profile_timeout_s: float, settings: Settings) -> float:
+    """How long ``stage`` is allowed, for this profile.
+
+    The profile budget bounds a stage's own database work, and that is the
+    right shape for it: a slow SQL layer should not hold a request open. A
+    remote call has a different latency profile entirely, so a stage that has
+    to make one gets that budget in addition rather than out of the same
+    allowance. Charging the two to one number is what made a supported live
+    Vertex project return nothing at all: a 33-second query embedding cannot
+    fit in 30 seconds, and every stage sharing that embedding failed with it.
+    """
+    if stage in PROVIDER_BACKED_STAGES:
+        return profile_timeout_s + settings.provider_call_timeout_s
+    return profile_timeout_s
+
 
 class Retriever:
     def __init__(
@@ -246,7 +268,7 @@ class Retriever:
         ]
 
         stage_runs = [
-            self._timed_stage(name, factory, timeout)
+            self._timed_stage(name, factory, stage_budget_s(name, timeout, self.settings))
             for name, factory in plan
             if factory is not None
         ]

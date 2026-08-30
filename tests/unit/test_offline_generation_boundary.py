@@ -118,3 +118,64 @@ def test_an_offline_project_cannot_reach_a_generation_model() -> None:
         session_factory=object(),  # type: ignore[arg-type]
     )
     assert credentialed.can_generate() is True
+
+
+# --- a timed-out retrieval is not an empty knowledge base -------------------
+
+
+def _traced(statuses: dict[str, str]):  # type: ignore[no-untyped-def]
+    from sci_rag.retrieve.types import RetrievalResult, StageTrace
+
+    return RetrievalResult(
+        items=[],
+        traces=[StageTrace(stage=stage, status=status) for stage, status in statuses.items()],
+        profile="deep",
+    )
+
+
+async def test_a_retrieval_that_timed_out_says_so_instead_of_claiming_no_material() -> None:
+    """The two refusals mean opposite things and used to read identically.
+
+    An empty corpus and a corpus nobody could reach both produced "The
+    knowledge base has no material matching this question". On a live Vertex
+    project the second was the truth, and the reader was told the first.
+    """
+    from sci_rag.answer import AnswerEngine
+
+    class _Retriever:
+        domain = None
+
+        async def retrieve(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+            return _traced({"vector": "timeout", "keyword": "empty", "hyde": "timeout"})
+
+    engine = AnswerEngine(settings=_offline(), retriever=_Retriever())  # type: ignore[arg-type]
+    events = [event async for event in engine.answer_stream("anything")]
+
+    text = "".join(e.data["text"] for e in events if e.type == "delta")
+    assert "timed out" in text
+    assert "SCI_RAG_PROVIDER_CALL_TIMEOUT_S" in text
+    assert "no material" not in text
+
+    done = next(e for e in events if e.type == "done")
+    assert done.data["finish_reason"] == "retrieval_timeout"
+
+
+async def test_an_actually_empty_corpus_still_gets_the_no_material_refusal() -> None:
+    """The honest empty answer is the one this must not swallow."""
+    from sci_rag.answer import AnswerEngine
+
+    class _Retriever:
+        domain = None
+
+        async def retrieve(self, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+            return _traced({"vector": "empty", "keyword": "empty"})
+
+    engine = AnswerEngine(settings=_offline(), retriever=_Retriever())  # type: ignore[arg-type]
+    events = [event async for event in engine.answer_stream("anything")]
+
+    text = "".join(e.data["text"] for e in events if e.type == "delta")
+    assert "no material matching this question" in text
+    assert "timed out" not in text
+
+    done = next(e for e in events if e.type == "done")
+    assert done.data["finish_reason"] == "no_sources"

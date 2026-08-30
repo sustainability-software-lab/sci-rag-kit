@@ -38,6 +38,7 @@ renderer, including commented optional values.
 | `SCI_RAG_JUDGE_MODEL` | str \| NoneType | unset | Optional evaluation judge model; unset inherits the generation model. Naming a different provider avoids self-graded answers. |
 | `SCI_RAG_INTERACTIVE_STAGE_TIMEOUT_S` | float | 8.0 | Per-stage timeout for the low-latency interactive profile. |
 | `SCI_RAG_DEEP_STAGE_TIMEOUT_S` | float | 30.0 | Per-stage timeout for deep and agent-oriented retrieval. |
+| `SCI_RAG_PROVIDER_CALL_TIMEOUT_S` | float | 60.0 | Extra budget for a stage that calls an embedding or generation provider before its database work: vector, community, graph, and HyDE. |
 | `SCI_RAG_DOMAIN_DIR` | Path | domain | Path to the validated domain profile and prompts. |
 | `SCI_RAG_DATA_DIR` | Path | data | Base path for corpus data and snapshots. |
 | `SCI_RAG_SERVER_HOST` | str | 127.0.0.1 | Host interface for the FastAPI server. |

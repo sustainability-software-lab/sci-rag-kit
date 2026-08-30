@@ -40,6 +40,7 @@ SETTING_DESCRIPTIONS = {
     "openai_base_url": "Endpoint for the OpenAI-compatible provider. Unset derives the Vertex Model Garden URL from the project and location.",
     "interactive_stage_timeout_s": "Per-stage timeout for the low-latency interactive profile.",
     "deep_stage_timeout_s": "Per-stage timeout for deep and agent-oriented retrieval.",
+    "provider_call_timeout_s": "Extra budget for a stage that calls an embedding or generation provider before its database work: vector, community, graph, and HyDE.",
     "domain_dir": "Path to the validated domain profile and prompts.",
     "data_dir": "Base path for corpus data and snapshots.",
     "server_host": "Host interface for the FastAPI server.",

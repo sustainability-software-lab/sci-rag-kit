@@ -189,6 +189,8 @@ $ uv run sci-rag answer "How much rice straw was generated in the Colusa Basin i
 
 The demo answer is approximately 302,000 dry tons and cites the synthetic resource assessment. Check the cited passage. The number alone is not success.
 
+Retrieval stages that call a provider get `SCI_RAG_PROVIDER_CALL_TIMEOUT_S` on top of the profile's own budget, which is 60 seconds by default. A slow region can still exceed it. If the stage table shows `timeout` for vector, graph, or HyDE, raise that value rather than reading the result as an empty knowledge base; the refusal text says which it was.
+
 In offline mode this command retrieves normally, then refuses: no model credential means no generated answer, and the system does not fabricate one. The refusal names the credential to set and says that ingestion, retrieval, and retrieval evaluation keep working without it. Graph and HyDE report `disabled` in the stage table rather than running into the same missing credential.
 
 ## 6. Build the graph and run the deep path

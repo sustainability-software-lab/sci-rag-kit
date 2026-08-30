@@ -188,6 +188,27 @@ class AnswerEngine:
         )
 
         if not retrieval.items:
+            # An empty corpus and a corpus nobody could reach are opposite
+            # findings, and they used to read identically. On a live provider
+            # slower than the stage budget every candidate-producing stage
+            # times out, and reporting that as "no material" tells a reader
+            # their knowledge base is empty when it is fine.
+            timed_out = sorted(t.stage for t in retrieval.traces if t.status == "timeout")
+            if timed_out:
+                text = (
+                    f"Retrieval timed out before any evidence was collected "
+                    f"({', '.join(timed_out)}), so I cannot give a grounded answer. "
+                    "This is not a statement about the corpus. Raise "
+                    "SCI_RAG_PROVIDER_CALL_TIMEOUT_S if a provider call is slow, or "
+                    "SCI_RAG_DEEP_STAGE_TIMEOUT_S if the database stage is."
+                )
+                yield AnswerEvent(type="delta", data={"text": text})
+                yield AnswerEvent(type="citations", data={"citations": [], "_sources": []})
+                yield AnswerEvent(
+                    type="done",
+                    data={"finish_reason": "retrieval_timeout", "timed_out_stages": timed_out},
+                )
+                return
             text = (
                 "The knowledge base has no material matching this question within "
                 "the allowed scope, so I cannot give a grounded answer."

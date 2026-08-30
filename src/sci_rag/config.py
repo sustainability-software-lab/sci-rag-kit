@@ -86,8 +86,16 @@ class Settings(BaseSettings):
 
     # --- Retrieval stage timeouts (seconds) ---------------------------------
     # "interactive" keeps a user waiting; "deep" is for offline/agent use.
+    # Both bound a stage's own database work.
     interactive_stage_timeout_s: float = 8.0
     deep_stage_timeout_s: float = 30.0
+    # Four of the five stages call an embedding or generation provider before
+    # they reach SQL, and a remote round trip has nothing to do with how long
+    # a database stage should take. Charging one to the other made a supported
+    # live Vertex project return nothing: its query embedding took 33 seconds
+    # against a 30-second budget, and every stage sharing that embedding
+    # failed together. Those stages get this in addition to the budget above.
+    provider_call_timeout_s: float = 60.0
 
     # --- Paths --------------------------------------------------------------
     domain_dir: Path = Path("domain")
