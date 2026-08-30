@@ -100,6 +100,15 @@ The dry run queries Unpaywall for each DOI, prints direct-PDF counts and the
 license-class distribution, and writes only resumable state. It does not
 create `pdfs/` or `corpus.jsonl`.
 
+`--max-results` bounds the work this invocation does, not only what discovery
+adds. The campaign above retains 100 candidates, so `--max-results 20` resolves
+the first 20 of them and leaves the rest untouched, in dry run and in download
+mode alike. The report says both numbers, `retained` and `candidates`, so a
+bounded trial cannot read as a full run. Campaign state is append-only and the
+bound takes a prefix of it, so a retry works on the same 20 rather than
+sampling a new set. Pass `--all-candidates` when you want every retained
+candidate regardless of the maximum.
+
 ## Fail-closed rights mapping
 
 Availability and redistribution rights are different signals. Unpaywall

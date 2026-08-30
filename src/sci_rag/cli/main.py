@@ -1218,7 +1218,12 @@ def campaign_build(
         100,
         "--max-results",
         min=1,
-        help="Maximum total candidates for a topic campaign.",
+        help="Work on at most this many candidates, including ones already in state.",
+    ),
+    all_candidates: bool = typer.Option(
+        False,
+        "--all-candidates",
+        help="Ignore --max-results and process every candidate the campaign retains.",
     ),
     max_pdf_mb: int = typer.Option(
         25,
@@ -1269,6 +1274,10 @@ def campaign_build(
                 max_pdf_bytes=max_pdf_mb * 1024 * 1024,
                 unpaywall_base_url=os.environ.get("SCI_RAG_UNPAYWALL_BASE_URL")
                 or "https://api.unpaywall.org/v2",
+                # The bound applies to the candidates in state, not only to
+                # the ones discovered this run. A resumed campaign has all of
+                # them, and a trial has to stay a trial.
+                max_results=None if all_candidates else max_results,
             )
             return discovery, report
 
@@ -1278,6 +1287,7 @@ def campaign_build(
     table.add_column("Measure")
     table.add_column("Count", justify="right")
     for label, count in (
+        ("retained", report.retained),
         ("candidates", report.candidates),
         ("resolved", report.resolved),
         ("direct PDFs", report.direct_pdfs),
@@ -1289,6 +1299,11 @@ def campaign_build(
     ):
         table.add_row(label, str(count))
     console.print(table)
+    if report.retained > report.candidates:
+        console.print(
+            f"Bounded to {report.candidates} of {report.retained} retained candidate(s) "
+            "by --max-results. Pass --all-candidates to process every one."
+        )
     console.print(
         f"{report.resolved} resolved, {report.direct_pdfs} direct PDF(s), "
         f"{report.downloaded} downloaded, {report.resumed} resumed, "

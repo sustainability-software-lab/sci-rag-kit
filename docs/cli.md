@@ -590,7 +590,8 @@ $ sci-rag campaign build [OPTIONS]
 | `--name` | text | unset | Campaign directory name (derived from the input when omitted). |
 | `--mailto` | text | required | Contact email sent to OpenAlex, Crossref, and Unpaywall. |
 | `--dry-run` | boolean | false | Resolve and report rights without downloading PDFs or writing a manifest. |
-| `--max-results` | integer range | 100 | Maximum total candidates for a topic campaign. |
+| `--max-results` | integer range | 100 | Work on at most this many candidates, including ones already in state. |
+| `--all-candidates` | boolean | false | Ignore --max-results and process every candidate the campaign retains. |
 | `--max-pdf-mb` | integer range | 25 | Reject a PDF larger than this many MiB. |
 | `--campaign-root` | directory | data/campaigns | Parent directory for campaign state, PDFs, and manifest. |
 
