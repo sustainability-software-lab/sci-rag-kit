@@ -6,6 +6,24 @@ Notable changes to sci-rag-kit. The format follows
 
 ## [Unreleased]
 
+### Breaking
+
+- An answers file may no longer request `ontology: draft_with_llm`. Every
+  answers-file run is noninteractive, and drafting an ontology means reading
+  what the model proposed and accepting or redrafting it, so the value was
+  accepted and then replaced with `keep_demo_example`: generation exited 0 and
+  produced the worked demo ontology rather than the draft the file asked for.
+  It is now refused before anything is generated, with a message naming the
+  alternatives.
+
+  **Migration.** Write `ontology: keep_demo_example` or `ontology: blank` in
+  the answers file, then draft into the generated project with
+  `sci-rag draft ontology --from-corpus`. For automation with no terminal and
+  no model call, that command's `--print-prompt` and `--from-file` pair runs
+  the same validation. Interactive `sci-rag new` and `sci-rag init` are
+  unchanged, and `--defaults` now selects `keep_demo_example` outright instead
+  of announcing a skipped draft it was never going to attempt. Closes #164.
+
 ### Changed
 
 - Database setup documentation now treats `make setup` as selected-backend

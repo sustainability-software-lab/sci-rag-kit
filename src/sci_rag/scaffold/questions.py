@@ -36,6 +36,11 @@ class Question:
     name: str
     prompt: str
     default: str | Callable[[Answers], str]
+    # What `--defaults` uses when the interactive default needs a person.
+    # Drafting an ontology is the only such answer today: it is the right
+    # first suggestion when somebody is there to accept the draft, and not a
+    # thing an unattended run can do. See #164.
+    noninteractive_default: str | None = None
     choices: tuple[str, ...] | None = None
     label: str = ""
     choice_help: Mapping[str, str] = field(default_factory=dict)
@@ -209,6 +214,7 @@ QUESTIONS: tuple[Question, ...] = (
         "ontology",
         "ontology",
         "draft_with_llm",
+        noninteractive_default="keep_demo_example",
         choices=("draft_with_llm", "keep_demo_example", "blank"),
         label="Starting ontology",
         choice_help={

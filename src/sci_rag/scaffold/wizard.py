@@ -40,7 +40,36 @@ def _load_answer_file(path: Path) -> dict[str, str]:
             f"{path} names questions the wizard does not ask: {', '.join(unknown)}. "
             f"Known questions: {', '.join(q.name for q in QUESTIONS)}."
         )
-    return {key: str(value) for key, value in raw.items()}
+    answers = {key: str(value) for key, value in raw.items()}
+    _refuse_interactive_only_answers(path, answers)
+    return answers
+
+
+# Values a person has to be present for. An answers file that names one used
+# to be accepted and then quietly replaced, which is how a reproducible
+# generation route produced something nobody asked for. See #164.
+_INTERACTIVE_ONLY = {
+    "ontology": {
+        "draft_with_llm": (
+            "Drafting an ontology means reading what the model proposed and "
+            "accepting or redrafting it, which needs a terminal. Write "
+            "`ontology: keep_demo_example` or `ontology: blank` instead, then "
+            "draft into the generated project with `sci-rag draft ontology "
+            "--from-corpus`. That command also takes `--print-prompt` and "
+            "`--from-file`, which run the same validation with no model call."
+        )
+    }
+}
+
+
+def _refuse_interactive_only_answers(path: Path, answers: dict[str, str]) -> None:
+    for question, refused in _INTERACTIVE_ONLY.items():
+        value = answers.get(question)
+        if value in refused:
+            raise AnswerFileError(
+                f"{path} answers `{question}: {value}`, which an answers file cannot do. "
+                f"{refused[value]}"
+            )
 
 
 def _read(stream: TextIO) -> str | None:
@@ -103,6 +132,8 @@ def collect_answers(
             prompter.note(f"Detected {detected_manager} on PATH; preselected below.")
         if question.name in preset:
             answers[question.name] = preset[question.name]
+        elif non_interactive and question.noninteractive_default is not None:
+            answers[question.name] = question.noninteractive_default
         elif non_interactive or (quick is True and not question.quick):
             answers[question.name] = default
         elif question.name == "google_api_key" and (

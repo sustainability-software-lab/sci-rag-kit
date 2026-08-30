@@ -182,3 +182,23 @@ def test_init_passes_a_captured_key_explicitly_to_ontology_drafting(
     assert captured["api_key_override"] == key
     assert captured["draft_llm"] is llm
     assert key not in result.output
+
+
+def test_init_also_refuses_an_answers_file_that_asks_to_draft(tmp_path: Path) -> None:
+    """`sci-rag init` shares the wizard, so it shares the contract. See #164."""
+    answers = tmp_path / "answers.yaml"
+    answers.write_text(
+        yaml.safe_dump({"ontology": "draft_with_llm", "initialize_git": "No"}), encoding="utf-8"
+    )
+    target = _checkout(tmp_path)
+    before = sorted(path.name for path in target.iterdir())
+
+    result = runner.invoke(app, ["init", "--answers-file", str(answers), "--target", str(target)])
+    output = result.output
+
+    assert result.exit_code != 0, output
+    assert "draft_with_llm" in output
+    assert "keep_demo_example" in output
+    assert sorted(path.name for path in target.iterdir()) == before, (
+        "a refused run must not have started configuring the checkout"
+    )

@@ -42,6 +42,30 @@ def _advanced_input(
     return io.StringIO("\n".join(replies) + "\n")
 
 
+# One answer needs a person: drafting an ontology means reading what the model
+# proposed and accepting or redrafting it. Interactively that is the right
+# first suggestion, so pressing Enter still selects it. `--defaults` runs
+# unattended and takes `keep_demo_example` instead, which is why these
+# comparisons hold everything else equal rather than asserting plain equality.
+# Before #164 the two converged only because an unaccepted draft was coerced
+# back to the demo after the fact.
+INTERACTIVE_ONLY_ANSWERS = ("ontology",)
+
+
+def _besides_interactive_only(answers: object) -> dict[str, object]:
+    return {
+        field: value
+        for field, value in vars(answers).items()
+        if field not in INTERACTIVE_ONLY_ANSWERS and field != "coercions"
+    }
+
+
+def _matches_defaults(answers: object) -> bool:
+    return _besides_interactive_only(answers) == _besides_interactive_only(
+        run_wizard(defaults=True)
+    )
+
+
 def test_defaults_need_no_input() -> None:
     answers = run_wizard(defaults=True)
     assert answers.project_name == "My Scientific KB"
@@ -86,7 +110,24 @@ def test_an_unknown_key_in_an_answers_file_is_rejected(tmp_path: Path) -> None:
 
 def test_pressing_enter_through_everything_yields_the_defaults() -> None:
     answers = run_wizard(input_stream=io.StringIO("\n" * 40))
-    assert answers == run_wizard(defaults=True)
+
+    assert _matches_defaults(answers)
+
+
+def test_only_an_unattended_run_settles_the_ontology_in_advance() -> None:
+    """The one answer the two routes choose differently, stated out loud.
+
+    Asserted on the raw answers rather than on ProjectAnswers, because an
+    interactive selection of `draft_with_llm` that never gets a draft accepted
+    is coerced back to the demo afterwards. That coercion is a runtime
+    fallback for a human whose credential check failed; `--defaults` should
+    not be walking into it at all.
+    """
+    interactive = collect_answers(input_stream=io.StringIO("\n" * 40), output_stream=io.StringIO())
+    unattended = collect_answers(defaults=True)
+
+    assert interactive["ontology"] == "draft_with_llm"
+    assert unattended["ontology"] == "keep_demo_example"
 
 
 def test_quick_mode_asks_six_questions_and_keeps_every_other_default() -> None:
@@ -98,7 +139,7 @@ def test_quick_mode_asks_six_questions_and_keeps_every_other_default() -> None:
         output_stream=output,
     )
 
-    assert answers == run_wizard(defaults=True)
+    assert _matches_defaults(answers)
     transcript = output.getvalue()
     for name in (
         "project_name",
@@ -142,7 +183,7 @@ def test_plain_sessions_show_the_setup_fork_and_default_to_quick() -> None:
         output_stream=output,
     )
 
-    assert answers == run_wizard(defaults=True)
+    assert _matches_defaults(answers)
     transcript = output.getvalue()
     assert "Select Setup" in transcript
     assert "1 - Quick" in transcript
