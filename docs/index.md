@@ -222,6 +222,7 @@ The recommended Quick session above, in full. `scripts/render_cast.py` builds it
 <span class="srag-term__line srag-term__line--empty"></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  removed                docs/planning/, scripts/cloud_postgres.py, infra/terraform/dev-database/</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  domain/domain.yaml     8 entity types, 6 relation types, 4 query classes</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  data/demo/eval_seed_questions.jsonl   ground truth for the demo corpus</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  domain/eval_seed_questions.jsonl   guided blank</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  .env                   google_ai_studio, gemini-2.5-flash, gemini-embedding-001</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  pyproject.toml         name, description, extras: none</span></span>
