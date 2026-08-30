@@ -256,6 +256,13 @@ These close findings from the 2026-08-29 end-to-end documentation route audit.
   removed 91 packages, retained 112, and changed the pinned version of none of
   them. If uv cannot be run during generation the lock is removed and the
   report says so, as the other three managers already do. Closes #170.
+- A generated project's `.python-version` matches the Python the reader
+  selected. It stayed at the template's `3.12` while the package metadata, the
+  CI matrix, and both Docker stages moved to `3.11`, so pyenv and `uv python`
+  produced a different interpreter from everything else. mypy's
+  `python_version` follows the selection now too, and a coherence test reads
+  every generated pin for every manager and every supported version and
+  requires them to agree. Closes #163.
 
 ## [0.3.0] - 2026-08-28
 
