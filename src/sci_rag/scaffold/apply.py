@@ -224,6 +224,79 @@ def apply_env_file(answers: ProjectAnswers, root: Path) -> list[str]:
     ]
 
 
+# --- build context ----------------------------------------------------------
+
+
+_BUILD_DEFINITION_FILES = ("Dockerfile", ".dockerignore")
+_BUILD_MANIFESTS = ((".dockerignore", ""), (".gcloudignore", "/"))
+
+
+def dockerfile_context_sources(dockerfile: str) -> list[str]:
+    """The paths a Dockerfile copies out of its build context.
+
+    ``COPY --from=<stage>`` reads from an earlier stage, not the context.
+    """
+    sources: list[str] = []
+    for line in dockerfile.splitlines():
+        stripped = line.strip()
+        if not stripped.upper().startswith("COPY ") or "--from=" in stripped:
+            continue
+        parts = [part for part in stripped.split()[1:-1] if not part.startswith("--")]
+        sources.extend(parts)
+    return sources
+
+
+def apply_build_context(answers: ProjectAnswers, root: Path) -> list[str]:
+    """Admit exactly what this project's own Dockerfile copies.
+
+    The kit's `.dockerignore` is fail closed and its allowlist is uv's:
+    `pyproject.toml`, `uv.lock`, and the runtime inputs. A generated project
+    keeps that file but not that Dockerfile. pixi copies a `pixi.toml`, conda
+    an `environment.yml`, venv + pip a `requirements.txt`, and every one of
+    those was excluded by the manifest it inherited, so the documented
+    container route could not build.
+
+    Deriving the allowlist from the rendered Dockerfile rather than from a
+    per-manager list is what keeps the two from drifting again: a template
+    that starts copying something new admits it in the same change.
+    """
+    dockerfile = root / "Dockerfile"
+    if not dockerfile.exists():
+        return []
+
+    admitted = sorted(
+        {
+            source.split("/", 1)[0]
+            for source in dockerfile_context_sources(dockerfile.read_text(encoding="utf-8"))
+        }
+        | set(_BUILD_DEFINITION_FILES)
+    )
+
+    changed: list[str] = []
+    for name, anchor in _BUILD_MANIFESTS:
+        path = root / name
+        if not path.exists():
+            continue
+        rewritten = _readmit(path.read_text(encoding="utf-8"), admitted, anchor=anchor)
+        if rewritten != path.read_text(encoding="utf-8"):
+            _write(path, rewritten)
+            changed.append(_log(name, f"admits {', '.join(admitted)}"))
+    return changed
+
+
+def _readmit(text: str, admitted: list[str], *, anchor: str) -> str:
+    """Replace the re-admission block, keeping everything else exactly as is.
+
+    The comments, the exclude-everything line, and the trailing bytecode
+    exclusions are all load bearing and none of them depend on the manager.
+    """
+    lines = text.splitlines()
+    first = next(index for index, line in enumerate(lines) if line.startswith("!"))
+    last = max(index for index, line in enumerate(lines) if line.startswith("!"))
+    block = [f"!{anchor}{name}" for name in admitted]
+    return "\n".join(lines[:first] + block + lines[last + 1 :]) + "\n"
+
+
 # --- .python-version --------------------------------------------------------
 
 
@@ -871,7 +944,9 @@ def _write_dockerfile(answers: ProjectAnswers, root: Path) -> None:
     _write(
         root / "Dockerfile",
         answers.runner.dockerfile(
-            python_version=answers.python_version, project_slug=answers.repo_name
+            python_version=answers.python_version,
+            project_slug=answers.repo_name,
+            dependency_file=answers.dependency_file,
         ),
     )
 
@@ -1042,6 +1117,7 @@ def apply_runner(answers: ProjectAnswers, root: Path) -> list[str]:
         (root / "uv.lock").unlink(missing_ok=True)
     else:
         changes += apply_uv_lock(answers, root)
+    changes += apply_build_context(answers, root)
 
     changes.append(_log("Dockerfile", f"{profile.label} base image"))
     changes.append(_log(".devcontainer/", profile.devcontainer_feature or "plain python feature"))

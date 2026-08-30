@@ -40,6 +40,8 @@ _COPY_FILES = (
     "AGENTS.md",
     "uv.lock",
     ".python-version",
+    ".dockerignore",
+    ".gcloudignore",
 )
 _COPY_TREES = ("domain", "docs", "scripts", ".github", ".devcontainer", "src", "infra")
 
@@ -394,3 +396,87 @@ def test_every_accepted_context_still_occurs(tmp_path: Path, pattern: object, re
     )
 
     assert found, f"nothing in a generated project still needs this exception: {reason}"
+
+
+# --- a generated project can build its own Dockerfile ------------------------
+#
+# #179 gave the kit a fail-closed .dockerignore: exclude everything, re-admit
+# the build inputs. Those inputs are uv's. A generated project keeps the
+# manifest, so pixi, conda, and venv+pip inherited an allowlist that excludes
+# the very manifest their own Dockerfile copies:
+#
+#   pixi      COPY pyproject.toml pixi.toml README.md ./   pixi.toml excluded
+#   conda     COPY environment.yml README.md ./            environment.yml excluded
+#   venv+pip  COPY requirements.txt pyproject.toml ...     requirements.txt excluded
+#
+# CI found the pixi case while building both manifest shapes for #162. The
+# other two were never built anywhere, so nothing would have said so.
+
+
+def _dockerignore_allowlist(root: Path) -> list[str]:
+    return [
+        line.strip().lstrip("!").strip("/")
+        for line in (root / ".dockerignore").read_text(encoding="utf-8").splitlines()
+        if line.strip().startswith("!")
+    ]
+
+
+def _dockerfile_context_sources(root: Path) -> list[str]:
+    sources = []
+    for line in (root / "Dockerfile").read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("COPY ") or "--from=" in stripped:
+            continue
+        sources.extend(part for part in stripped.split()[1:-1] if not part.startswith("--"))
+    return sources
+
+
+def test_a_standalone_pixi_manifest_reaches_the_build_context(tmp_path: Path) -> None:
+    """The shape CI caught: pixi.toml is copied and was excluded. See #162."""
+    root = _generate(tmp_path, "pixi", dependency_file="pixi.toml")
+
+    assert "pixi.toml" in _dockerfile_context_sources(root)
+    assert "pixi.toml" in _dockerignore_allowlist(root)
+
+
+@pytest.mark.parametrize("manager", runner_keys())
+def test_a_generated_project_admits_every_source_its_dockerfile_copies(
+    tmp_path: Path, manager: str
+) -> None:
+    root = _generate(tmp_path, manager)
+
+    allowed = _dockerignore_allowlist(root)
+    missing = [
+        source
+        for source in _dockerfile_context_sources(root)
+        if source.split("/", 1)[0] not in allowed
+    ]
+
+    assert missing == [], (
+        f"the {manager} Dockerfile copies {missing}, which its own .dockerignore excludes"
+    )
+
+
+@pytest.mark.parametrize("manager", runner_keys())
+def test_a_generated_project_still_keeps_local_state_out_of_its_build(
+    tmp_path: Path, manager: str
+) -> None:
+    """Rewriting the allowlist must not reopen what #179 closed."""
+    root = _generate(tmp_path, manager)
+    allowed = _dockerignore_allowlist(root)
+
+    for local in (".env", ".cloudsql", ".context", "data", "infra", ".venv"):
+        assert local not in allowed, f"{manager} readmitted {local} to its build context"
+
+
+@pytest.mark.parametrize("manager", runner_keys())
+def test_the_two_generated_manifests_agree(tmp_path: Path, manager: str) -> None:
+    root = _generate(tmp_path, manager)
+
+    gcloud = [
+        line.strip().lstrip("!").strip("/")
+        for line in (root / ".gcloudignore").read_text(encoding="utf-8").splitlines()
+        if line.strip().startswith("!")
+    ]
+
+    assert sorted(_dockerignore_allowlist(root)) == sorted(gcloud)

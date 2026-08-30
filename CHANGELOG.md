@@ -302,6 +302,20 @@ These close findings from the 2026-08-29 end-to-end documentation route audit.
   real generated tree for every environment manager, where the old one ran
   against a five-file fixture with nothing capable of violating it, and accepts
   three contexts by content rather than by filename. Closes #166.
+- A generated pixi project with a standalone `pixi.toml` builds its Dockerfile.
+  The builder copied only `pyproject.toml` and `README.md` before running
+  `pixi install`, so the manifest defining the workspace stayed on the host. The
+  Dockerfile now copies whichever manifest shape the project uses, before the
+  source so the dependency layer still caches, and container CI builds both
+  shapes. Closes #162.
+- A generated project's `.dockerignore` and `.gcloudignore` admit the manifest
+  its own Dockerfile copies. The fail-closed allowlist added with the build
+  context fix was uv's, so pixi projects excluded `pixi.toml`, conda projects
+  excluded `environment.yml`, and venv + pip projects excluded
+  `requirements.txt`: the documented container route could not build for three
+  of the four managers. The allowlist is now derived from the rendered
+  Dockerfile, so a template that copies something new admits it in the same
+  change.
 
 ## [0.3.0] - 2026-08-28
 

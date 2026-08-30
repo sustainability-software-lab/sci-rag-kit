@@ -8,6 +8,8 @@ in test_scaffold_runner_coherence.py.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from sci_rag.scaffold.runners import PROFILES, get_runner, runner_keys
@@ -111,3 +113,82 @@ def test_every_dockerfile_ends_at_the_same_entrypoint() -> None:
         rendered = get_runner(key).dockerfile(python_version="3.12", project_slug="demo-kb")
         assert 'CMD ["sci-rag", "serve"]' in rendered
         assert "COPY domain ./domain" in rendered
+
+
+# --- the builder gets the manifest it is about to resolve --------------------
+#
+# F-010 in the 2026-08-29 documentation route audit: the Advanced wizard can
+# put the pixi tables in a standalone `pixi.toml`, and the Dockerfile copied
+# only `pyproject.toml` and `README.md` before running `pixi install`. The
+# manifest that defines the workspace stayed on the host, so the generated
+# container route could not resolve it.
+
+PIXI_MANIFEST_SHAPES = ("pyproject.toml", "pixi.toml")
+
+
+def _copy_targets(dockerfile: str) -> list[str]:
+    """Everything COPYed into the builder stage, in order."""
+    targets = []
+    for line in dockerfile.splitlines():
+        if line.startswith("RUN pixi install"):
+            break
+        if line.startswith("COPY "):
+            targets.extend(line.split()[1:-1])
+    return targets
+
+
+@pytest.mark.parametrize("dependency_file", PIXI_MANIFEST_SHAPES)
+def test_the_pixi_builder_copies_the_selected_manifest(dependency_file: str) -> None:
+    rendered = get_runner("pixi").dockerfile(
+        python_version="3.12", project_slug="demo-kb", dependency_file=dependency_file
+    )
+
+    copied = _copy_targets(rendered)
+    assert dependency_file in copied, (
+        f"pixi install resolves {dependency_file}, which the builder never receives: {copied}"
+    )
+    assert "pyproject.toml" in copied, "the dependency lists live in pyproject.toml either way"
+
+
+@pytest.mark.parametrize("dependency_file", PIXI_MANIFEST_SHAPES)
+def test_manifests_are_copied_before_source_so_the_layer_caches(
+    dependency_file: str,
+) -> None:
+    rendered = get_runner("pixi").dockerfile(
+        python_version="3.12", project_slug="demo-kb", dependency_file=dependency_file
+    )
+    copied = _copy_targets(rendered)
+
+    assert copied.index(dependency_file) < copied.index("src"), (
+        "a source edit would invalidate the dependency layer"
+    )
+
+
+def test_the_embedded_shape_does_not_copy_a_file_that_does_not_exist() -> None:
+    """An embedded project has no pixi.toml, and COPY of a missing path fails."""
+    rendered = get_runner("pixi").dockerfile(
+        python_version="3.12", project_slug="demo-kb", dependency_file="pyproject.toml"
+    )
+
+    assert "pixi.toml" not in _copy_targets(rendered)
+
+
+@pytest.mark.parametrize("key", EXPECTED)
+def test_every_manager_still_renders_without_naming_a_manifest(key: str) -> None:
+    """The argument is pixi-specific; nothing else may start depending on it."""
+    assert get_runner(key).dockerfile(python_version="3.12", project_slug="demo-kb")
+
+
+def test_container_ci_builds_a_pixi_manifest_shape() -> None:
+    """The unit tests above check the rendered text. Only a build proves it.
+
+    The standalone shape is absent on purpose: it declares an environment
+    built from a `dev` feature it never defines, so `pixi install` refuses it
+    before Docker is involved. #215 fixes that and puts it back.
+    """
+    workflow = (
+        Path(__file__).resolve().parents[2] / ".github" / "workflows" / "generated-projects.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "builds its builder stage" in workflow
+    assert "docker build --target builder" in workflow
