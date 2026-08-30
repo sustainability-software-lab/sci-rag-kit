@@ -316,6 +316,13 @@ These close findings from the 2026-08-29 end-to-end documentation route audit.
   of the four managers. The allowlist is now derived from the rendered
   Dockerfile, so a template that copies something new admits it in the same
   change.
+- A generated project with a standalone `pixi.toml` resolves. The manifest
+  declared `default = { features = ["dev"] }` and defined no such feature,
+  because pixi only maps `[dependency-groups] dev` to a feature of that name
+  when `pyproject.toml` is its manifest. `pixi install` refused the file
+  outright. The standalone shape now spells out the feature tables, with a test
+  holding them in step with `[dependency-groups]`, and container CI builds both
+  manifest shapes. Closes #215, and with it #162.
 
 ## [0.3.0] - 2026-08-28
 

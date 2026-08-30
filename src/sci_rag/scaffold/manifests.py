@@ -75,6 +75,53 @@ def _selected_extra_requirements(answers: ProjectAnswers, deps: Dependencies) ->
 # --- pixi -------------------------------------------------------------------
 
 
+def _requirement_name(requirement: str) -> str:
+    """The distribution name out of a requirement string."""
+    for separator in (">=", "==", "<=", "~=", "!=", ">", "<", ";", "["):
+        requirement = requirement.split(separator)[0]
+    return requirement.strip()
+
+
+def _pixi_feature_tables(answers: ProjectAnswers, deps: Dependencies) -> str:
+    """Feature tables for a standalone manifest, which gets no free mapping.
+
+    When pixi reads `pyproject.toml` as its own manifest it turns
+    `[dependency-groups] dev` and each `[project.optional-dependencies]` entry
+    into a feature of the same name. A standalone `pixi.toml` is the manifest,
+    so pixi never looks at `pyproject.toml` and those features do not exist.
+    Naming one anyway is what made `pixi install` refuse the file outright.
+
+    pixi has no way to reference a PEP 735 dependency group from here, so the
+    lists are written out. `test_the_standalone_dev_feature_does_not_drift_from
+    _pyproject` is what keeps them from disagreeing.
+    """
+    blocks = []
+    for name, requirements in [("dev", deps.dev)] + [
+        (extra, deps.extras.get(extra, [])) for extra in answers.extras
+    ]:
+        if not requirements:
+            continue
+        pinned = "\n".join(
+            f'{_requirement_name(requirement)} = "{_pixi_version_spec(requirement)}"'
+            for requirement in requirements
+        )
+        blocks.append(f"[feature.{name}.pypi-dependencies]\n{pinned}\n")
+    if not blocks:
+        return ""
+    return (
+        "\n# pixi reads this file rather than pyproject.toml, so the groups it would\n"
+        "# otherwise map for itself are spelled out here. Keep them in step with\n"
+        "# [dependency-groups] and [project.optional-dependencies].\n" + "\n".join(blocks)
+    )
+
+
+def _pixi_version_spec(requirement: str) -> str:
+    """The version constraint, in the form pixi's pypi table expects."""
+    name = _requirement_name(requirement)
+    remainder = requirement[len(name) :].strip()
+    return remainder or "*"
+
+
 def _pixi_tables(answers: ProjectAnswers, deps: Dependencies, *, standalone: bool) -> str:
     prefix = "" if standalone else "tool.pixi."
     profile = answers.runner
@@ -84,6 +131,7 @@ def _pixi_tables(answers: ProjectAnswers, deps: Dependencies, *, standalone: boo
     )
     platforms = ", ".join(f'"{platform}"' for platform in PIXI_PLATFORMS)
     database = "\n".join(f'{name} = "{spec}"' for name, spec in profile.conda_forge_packages)
+    feature_tables = _pixi_feature_tables(answers, deps) if standalone else ""
     return f"""
 [{prefix}workspace]
 channels = ["conda-forge"]
@@ -103,7 +151,7 @@ python = "{answers.python_version}.*"
 
 [{prefix}environments]
 default = {{ features = [{features}], solve-group = "default" }}
-
+{feature_tables}
 # `make` is the portable entry point for every manager; these mirror it so
 # `pixi run test` works natively too.
 [{prefix}tasks]
