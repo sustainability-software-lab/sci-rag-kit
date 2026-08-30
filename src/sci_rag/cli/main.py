@@ -602,8 +602,18 @@ def graph_extract(
         f"[green]{stats_result.relationships_created} relationships created[/green], "
         f"[red]{stats_result.batches_failed} batch(es) failed[/red]."
     )
+    if stats_result.batches_split:
+        console.print(
+            f"[dim]{stats_result.batches_split} batch(es) returned unusable output and were "
+            "retried at half the size.[/dim]"
+        )
     if stats_result.batches_failed:
-        console.print("[yellow]Failed batches stay unprocessed; rerun to retry them.[/yellow]")
+        console.print(
+            "[yellow]Those chunks keep no extraction stamp, so a later run picks them up "
+            "again. Each one was already retried down to a single chunk, so an identical "
+            "rerun fails the same way: the model could not produce usable output for that "
+            "chunk. The log names each failed batch and the size that was attempted.[/yellow]"
+        )
         raise typer.Exit(1)
 
 

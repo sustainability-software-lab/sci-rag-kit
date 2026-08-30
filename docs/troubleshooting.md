@@ -202,6 +202,25 @@ Retrieval in an offline project reports the model-only layers as `disabled`, not
 
 Reaching for a model with no credential behind it is still a failure. `doctor` reports `FAIL` when the Google embedding provider is selected without credentials, and when a generation model is named explicitly, such as `SCI_RAG_LLM_MODEL=anthropic:claude-opus-5`, with no key or project behind it. Writing a model id is how you say you intend to generate, so the diagnosis follows what the configuration asks for rather than what happens to be missing.
 
+## Graph extraction reports a failed batch
+
+`sci-rag graph extract` sends chunks to the model in batches and asks for one
+JSON object back. When that response is unusable, usually because it was cut
+off at the output cap, the command retries the same chunks at half the batch
+size, down to a single chunk. Halving is what can work: an identical rerun
+gets an identical truncation, which is why a rerun alone used to leave the
+route stuck.
+
+A chunk that still fails alone keeps no extraction stamp, so a later run picks
+it up again, and nothing partial is written for it. The log records each
+attempt with a stable batch identifier and the size that was tried, and
+carries no chunk text.
+
+If a single chunk keeps failing, the chunk is the thing to look at. An
+unusually long passage, or one carrying heavy markup, is the common cause.
+`--batch-size` is still available if you want to start smaller, and
+`--max-chunks` limits a trial run.
+
 ## Retrieval is empty or unexpectedly narrow
 
 Check in this order:
