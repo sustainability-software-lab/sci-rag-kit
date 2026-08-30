@@ -140,15 +140,14 @@ jobs:
       # The unit tests assert the rendered Dockerfile copies it; only a real
       # build proves the copy resolves. Builder stage only, because that is
       # where the manifest matters and the runtime stage adds nothing here.
-      # Only the embedded shape for now. The standalone pixi.toml declares an
-      # environment built from a `dev` feature it never defines, so
-      # `pixi install` refuses it before Docker is involved at all. That is
-      # #215, and it restores pixi.toml to this list.
-      - name: The pixi manifest shape builds its builder stage
+      # Both shapes. The standalone pixi.toml was absent here until #215 gave
+      # it the feature tables pixi only maps for free when pyproject.toml is
+      # the manifest.
+      - name: Both pixi manifest shapes build their builder stage
         if: matrix.manager == 'pixi'
         run: |
           set -e
-          for shape in pyproject.toml; do
+          for shape in pyproject.toml pixi.toml; do
             target="$RUNNER_TEMP/pixi-${shape%%.*}"
             mkdir -p "$target"
             git archive HEAD | tar -x -C "$target"

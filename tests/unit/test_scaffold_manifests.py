@@ -164,3 +164,89 @@ def test_pixi_has_no_setup_task(project: Path) -> None:
     """For pixi, `setup` is `pixi install`; a task by that name would confuse."""
     manifests.write_pixi(_answers(environment_manager="pixi"), project)
     assert 'setup = "' not in (project / "pyproject.toml").read_text(encoding="utf-8")
+
+
+# --- the standalone pixi manifest has to resolve -----------------------------
+#
+# #215, found underneath F-010. The standalone `pixi.toml` declared
+# `default = { features = ["dev"], ... }` and defined no such feature:
+#
+#   Error: The feature 'dev' is not defined in the manifest, at line 21 of
+#   pixi.toml, where the default environment names it.
+#
+# The embedded shape works because pixi reads pyproject.toml as its own
+# manifest and maps [dependency-groups] dev to a feature of the same name.
+# A standalone pixi.toml gets no such mapping, so every feature it names has
+# to be defined in it.
+
+
+def _standalone(project: Path, **overrides: object) -> dict:
+    import tomllib
+
+    manifests.write_pixi(
+        _answers(environment_manager="pixi", dependency_file="pixi.toml", **overrides), project
+    )
+    return tomllib.loads((project / "pixi.toml").read_text(encoding="utf-8"))
+
+
+def _embedded(project: Path, **overrides: object) -> dict:
+    import tomllib
+
+    manifests.write_pixi(
+        _answers(environment_manager="pixi", dependency_file="pyproject.toml", **overrides), project
+    )
+    return tomllib.loads((project / "pyproject.toml").read_text(encoding="utf-8"))["tool"]["pixi"]
+
+
+def test_every_feature_the_standalone_manifest_names_is_defined_in_it(project: Path) -> None:
+    """The exact failure: a named feature with nowhere to look it up."""
+    parsed = _standalone(project)
+
+    referenced = {
+        feature
+        for environment in parsed.get("environments", {}).values()
+        for feature in environment.get("features", [])
+    }
+    defined = set(parsed.get("feature", {}))
+
+    assert referenced <= defined, (
+        f"pixi.toml names features it does not define: {sorted(referenced - defined)}"
+    )
+
+
+def test_the_standalone_dev_feature_carries_the_dev_dependencies(project: Path) -> None:
+    parsed = _standalone(project)
+
+    dev = parsed["feature"]["dev"]["pypi-dependencies"]
+    assert any(name == "pytest" for name in dev), dev
+    assert any(name == "mypy" for name in dev), dev
+
+
+def test_the_standalone_dev_feature_does_not_drift_from_pyproject(project: Path) -> None:
+    """pixi cannot reference a PEP 735 group from a standalone manifest, so the
+    list is written twice. This is what stops the two disagreeing."""
+    declared = manifests.read_dependencies(project).dev
+    parsed = _standalone(project)
+
+    names = set(parsed["feature"]["dev"]["pypi-dependencies"])
+    expected = {
+        requirement.split(">=")[0].split("[")[0].split("==")[0].strip() for requirement in declared
+    }
+
+    assert names == expected, "pixi.toml dev feature differs from [dependency-groups] dev"
+
+
+def test_a_selected_extra_becomes_a_defined_feature(project: Path) -> None:
+    parsed = _standalone(project, reranker="local_cross_encoder")
+
+    referenced = set(parsed["environments"]["default"]["features"])
+    assert referenced - {"dev"}, "the extra was not carried into the environment"
+    assert (referenced - {"dev"}) <= set(parsed["feature"])
+
+
+def test_the_embedded_shape_still_defines_no_features_of_its_own(project: Path) -> None:
+    """pixi maps them for free there, and writing them twice would be worse."""
+    parsed = _embedded(project)
+
+    assert "feature" not in parsed
+    assert parsed["environments"]["default"]["features"] == ["dev"]
