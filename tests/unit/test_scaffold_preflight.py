@@ -156,3 +156,128 @@ async def test_doctor_generation_probe_uses_the_shared_failure_mapping(monkeypat
     assert generation.status == "fail"
     assert generation.detail == "Mapped provider failure."
     assert generation.fix == "Use the mapped fix."
+
+
+# --- wrong location for a partner model -------------------------------------
+
+
+@pytest.fixture()
+def stub_adc(monkeypatch):  # type: ignore[no-untyped-def]
+    """Vertex mode resolves ADC before it calls the model; keep that offline."""
+    monkeypatch.setattr(
+        "google.auth.default",
+        lambda **_kwargs: (SimpleNamespace(), "detected-project"),
+    )
+
+
+#
+# F-029: `docs/extend.md` tells a reader that a partner model served only from
+# `global` fails with "a clear `400 ... is not servable in region` or `404 ...
+# not found`, so `sci-rag doctor --probe` will catch it before a pipeline run
+# does". The probe caught the failure and then classified it as a generic
+# credential problem, so the guide's own repair, `SCI_RAG_GCP_LOCATION=global`,
+# appeared nowhere in the diagnosis.
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        # Vertex, Anthropic publisher model, wrong region.
+        RuntimeError(
+            "400 Publisher Model `projects/p/locations/us-central1/publishers/anthropic/"
+            "models/claude-haiku-4-5` is not servable in region us-central1."
+        ),
+        # Vertex, OpenAI-compatible partner endpoint, same cause, 404 shape.
+        RuntimeError(
+            "404 Publisher Model `publishers/xai/models/grok-4-fast` not found in "
+            "location us-central1."
+        ),
+    ],
+    ids=["not-servable-in-region", "not-found-in-location"],
+)
+def test_a_wrong_location_names_the_location_setting(
+    monkeypatch, stub_adc, failure: Exception
+) -> None:  # type: ignore[no-untyped-def]
+    _install_client(monkeypatch, failure=failure)
+
+    result = probe_google_credentials(gcp_project="a-project", location="us-central1", timeout_s=1)
+
+    assert result.ok is False
+    # The effective location, so a reader can see what was actually asked.
+    assert "us-central1" in result.detail
+    assert "SCI_RAG_GCP_LOCATION=global" in result.fix
+    # Not the generic branch, which names five unrelated things.
+    assert "Check the project ID, ADC login" not in result.fix
+
+
+def test_a_location_404_also_offers_the_model_garden_reading(monkeypatch, stub_adc) -> None:  # type: ignore[no-untyped-def]
+    """A 404 has a second cause a 400 does not, and it has to say so.
+
+    `not servable in region` means the model exists and is served elsewhere.
+    `not found in location` also covers a model id that is wrong, or one whose
+    Model Garden offering was never enabled for this project. Collapsing them
+    would send a reader to change a location that was never the problem.
+    """
+    _install_client(
+        monkeypatch,
+        failure=RuntimeError(
+            "404 Publisher Model `publishers/xai/models/typo` not found in location us-central1."
+        ),
+    )
+
+    result = probe_google_credentials(gcp_project="a-project", location="us-central1", timeout_s=1)
+
+    assert "SCI_RAG_GCP_LOCATION=global" in result.fix
+    assert "Model Garden" in result.fix
+
+
+def test_a_location_diagnostic_does_not_reprint_the_provider_payload(monkeypatch, stub_adc) -> None:  # type: ignore[no-untyped-def]
+    """The raw message names an internal project path; the diagnosis must not."""
+    _install_client(
+        monkeypatch,
+        failure=RuntimeError(
+            "400 Publisher Model `projects/secret-project-1234/locations/us-central1/"
+            "publishers/anthropic/models/claude-haiku-4-5` is not servable in region us-central1."
+        ),
+    )
+
+    result = probe_google_credentials(gcp_project="a-project", location="us-central1", timeout_s=1)
+
+    assert "secret-project-1234" not in repr(result)
+    assert "Publisher Model" not in repr(result)
+
+
+@pytest.mark.parametrize(
+    ("failure", "detail"),
+    [
+        (
+            RuntimeError("403 SERVICE_DISABLED: Vertex AI API is disabled"),
+            "The Google model API is not enabled for this project.",
+        ),
+        (
+            RuntimeError("400 `not-a-model` is not a valid publisher model name"),
+            "Credential check failed (RuntimeError).",
+        ),
+        (
+            RuntimeError("Could not automatically determine credentials"),
+            "Application Default Credentials were not found.",
+        ),
+    ],
+    ids=["api-disabled", "malformed-model", "authentication"],
+)
+def test_failures_that_are_not_about_location_keep_their_own_diagnosis(  # type: ignore[no-untyped-def]
+    monkeypatch, stub_adc, failure: Exception, detail: str
+) -> None:
+    """A new branch must not swallow the ones already answering correctly.
+
+    Quota is deliberately absent. A 429 or `RESOURCE_EXHAUSTED` is retryable
+    by design, so it reaches this mapper only after the shared retry budget
+    and cannot be exercised against a one-second probe deadline without
+    testing the backoff instead of the classification.
+    """
+    _install_client(monkeypatch, failure=failure)
+
+    result = probe_google_credentials(gcp_project="a-project", location="us-central1", timeout_s=1)
+
+    assert result.detail == detail
+    assert "SCI_RAG_GCP_LOCATION" not in result.fix

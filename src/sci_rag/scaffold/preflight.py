@@ -114,7 +114,11 @@ async def probe_model_credentials(
             "Check the network or proxy, then try again.",
         )
     except Exception as exc:
-        return _failure_result(exc, vertex=settings.credentials_mode() == "vertex")
+        return _failure_result(
+            exc,
+            vertex=settings.credentials_mode() == "vertex",
+            location=settings.gcp_location,
+        )
 
 
 async def _generate_once(settings: Settings, *, api_key_override: str | None) -> CredentialProbe:
@@ -141,8 +145,21 @@ async def _generate_once(settings: Settings, *, api_key_override: str | None) ->
     return CredentialProbe(True, f"{llm.describe()} answered in {elapsed_ms} ms.")
 
 
-def _failure_result(exc: Exception, *, vertex: bool) -> CredentialProbe:
-    """Translate provider failures without copying exception text or secrets."""
+#: Vertex refuses a model served somewhere else in two stable shapes. The
+#: first says the model exists and this region does not serve it. The second
+#: is a plain 404, which covers the same cause plus two others: a model id
+#: that is wrong, and a Model Garden offering the project never enabled.
+_NOT_SERVABLE_MARKERS = ("not servable in region", "not servable in location")
+_NOT_FOUND_MARKERS = ("not found in location", "not found in region")
+
+
+def _failure_result(exc: Exception, *, vertex: bool, location: str = "") -> CredentialProbe:
+    """Translate provider failures without copying exception text or secrets.
+
+    The raw messages name an internal resource path, so every branch builds
+    its own sentence from values the caller already holds rather than
+    forwarding the provider's.
+    """
     if isinstance(exc, DefaultCredentialsError):
         return CredentialProbe(
             False,
@@ -177,6 +194,23 @@ def _failure_result(exc: Exception, *, vertex: bool) -> CredentialProbe:
             False,
             "Application Default Credentials were not found.",
             "Run `gcloud auth application-default login`, then try again.",
+        )
+    where = f" in {location}" if location else ""
+    if any(marker in message for marker in _NOT_SERVABLE_MARKERS):
+        return CredentialProbe(
+            False,
+            f"The model is not served{where}.",
+            "Partner models such as Claude and Grok are served from the global "
+            "location. Set SCI_RAG_GCP_LOCATION=global and try again.",
+        )
+    if any(marker in message for marker in _NOT_FOUND_MARKERS):
+        return CredentialProbe(
+            False,
+            f"The model was not found{where}.",
+            "Set SCI_RAG_GCP_LOCATION=global if this is a partner model such as "
+            "Claude or Grok, which are served only from there. If it is already "
+            "global, check the model id and that the model's Model Garden "
+            "offering is enabled for this project.",
         )
     if isinstance(exc, (ConnectionError, OSError)) or any(
         marker in message
