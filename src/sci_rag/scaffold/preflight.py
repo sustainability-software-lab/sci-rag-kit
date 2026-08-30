@@ -145,12 +145,25 @@ async def _generate_once(settings: Settings, *, api_key_override: str | None) ->
     return CredentialProbe(True, f"{llm.describe()} answered in {elapsed_ms} ms.")
 
 
-#: Vertex refuses a model served somewhere else in two stable shapes. The
-#: first says the model exists and this region does not serve it. The second
-#: is a plain 404, which covers the same cause plus two others: a model id
-#: that is wrong, and a Model Garden offering the project never enabled.
-_NOT_SERVABLE_MARKERS = ("not servable in region", "not servable in location")
+#: Vertex refuses a model served somewhere else in several shapes. Two say
+#: the model exists and this region does not serve it, so the location is the
+#: only thing to change. The 404 covers the same cause plus two others: a
+#: model id that is wrong, and a Model Garden offering the project never
+#: enabled, so it is answered separately.
+#:
+#: `only available via global endpoint` is the one a live call returns, and it
+#: is here because #181's first two came from the guide rather than from a
+#: response. Prose is the weak part of this match, so a `FAILED_PRECONDITION`
+#: on a partner model is treated the same way: the status is what Vertex uses
+#: for "right model, wrong place", and it outlives a rewording.
+_NOT_SERVABLE_MARKERS = (
+    "not servable in region",
+    "not servable in location",
+    "only available via global endpoint",
+    "only available via the global endpoint",
+)
 _NOT_FOUND_MARKERS = ("not found in location", "not found in region")
+_WRONG_PLACE_STATUS = "failed_precondition"
 
 
 def _failure_result(exc: Exception, *, vertex: bool, location: str = "") -> CredentialProbe:
@@ -196,7 +209,10 @@ def _failure_result(exc: Exception, *, vertex: bool, location: str = "") -> Cred
             "Run `gcloud auth application-default login`, then try again.",
         )
     where = f" in {location}" if location else ""
-    if any(marker in message for marker in _NOT_SERVABLE_MARKERS):
+    wrong_place = any(marker in message for marker in _NOT_SERVABLE_MARKERS) or (
+        _WRONG_PLACE_STATUS in message and "region" in message
+    )
+    if wrong_place:
         return CredentialProbe(
             False,
             f"The model is not served{where}.",

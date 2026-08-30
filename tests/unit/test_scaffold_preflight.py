@@ -192,8 +192,18 @@ def stub_adc(monkeypatch):  # type: ignore[no-untyped-def]
             "404 Publisher Model `publishers/xai/models/grok-4-fast` not found in "
             "location us-central1."
         ),
+        # The message a live call actually returns, captured on 2026-08-30
+        # with SCI_RAG_GCP_LOCATION=us-central1 against a partner model that
+        # answers from global. #181 took its two phrasings from the guide
+        # rather than from a response, and this third one matched neither, so
+        # the case it was written for fell back to the generic diagnosis.
+        RuntimeError(
+            "Error code: 400 - [{'error': {'code': 400, 'message': \"Publisher model "
+            "'xai/grok-4.1-fast-non-reasoning' in region 'us-central1' is only "
+            "available via global endpoint.\", 'status': 'FAILED_PRECONDITION'}}]"
+        ),
     ],
-    ids=["not-servable-in-region", "not-found-in-location"],
+    ids=["not-servable-in-region", "not-found-in-location", "only-via-global-endpoint"],
 )
 def test_a_wrong_location_names_the_location_setting(
     monkeypatch, stub_adc, failure: Exception
