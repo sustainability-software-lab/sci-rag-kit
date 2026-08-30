@@ -14,7 +14,7 @@ corpus manifest, and a few environment variables.
   <div><strong>You'll build</strong>A knowledge base over your own corpus</div>
   <div><strong>You'll need</strong>Documents on disk and a working quickstart</div>
   <div><strong>Time</strong>An afternoon for a first serious pass</div>
-  <div><strong>Credentials</strong>Recommended, and there is a path without them</div>
+  <div><strong>Credentials</strong>Needed for the graph and cited answers; steps 1 to 6 have an offline route</div>
   <div><strong>Tested with</strong>v0.3</div>
 </div>
 
@@ -27,8 +27,28 @@ treatment, and you have 60 PDFs of papers, theses, and technical reports.
 |---|---|---|
 | A finished [quickstart](quickstart.md) | The database and schema have to exist before anything here lands in them | `uv run sci-rag doctor` |
 | Your documents on disk, usually under `data/raw/` | Every step below reads them | `ls data/raw \| wc -l` |
-| A model credential | The drafters and the graph extractor call a model. Without one, use `--print-prompt` and `--from-file` throughout | `grep SCI_RAG_GOOGLE .env` |
+| A model credential | Four steps need one; the rest of the tutorial does not. See the two routes below | `grep SCI_RAG_GOOGLE .env` |
 | A domain expert's attention, for one hour | Step 6 needs questions somebody can vouch for, and nothing substitutes | |
+
+This tutorial has two end states, and you should know now which one is yours.
+
+**With a model credential** you finish with your corpus ingested, a knowledge
+graph over your own ontology, community summaries, retrieval scored against
+your own questions, judged answers, and a cited answer to a question in your
+field. That is the full result, and it is the one to aim at.
+
+**Without one** you finish with your corpus ingested, your ontology and seed
+questions written and validated, and retrieval scored against those questions
+on your own documents. Four commands are unavailable: `graph extract`,
+`graph communities`, `eval answers`, and `sci-rag answer`. The graph, the
+judged answer metrics, and the cited answer are what a credential buys. The
+drafters stay available either way through `--print-prompt` and `--from-file`,
+which render the corpus-grounded prompt for you to answer yourself and read
+the reply back through the same validation.
+
+Every step below marks the parts that need a credential, and
+[Offline: what you can prove without a model](#offline-what-you-can-prove-without-a-model)
+collects the offline route in one place.
 
 If you got here from `sci-rag new`, setup already wrote the decisions you
 made and the defaults behind them. Quick asks for six setup decisions, plus
@@ -286,12 +306,30 @@ wording moves every downstream number, so re-run
 
 ## Step 5: ingest and build
 
+Ingestion and retrieval run on any embedding provider, including the offline
+one:
+
 ```bash
 uv run sci-rag ingest --manifest data/corpus.jsonl
-uv run sci-rag graph extract
-uv run sci-rag graph communities
 uv run sci-rag stats
+uv run sci-rag retrieve "a question in your field" --profile interactive
 ```
+
+The graph is the part that needs a model. It reads every chunk and asks for
+entities and relationships in your ontology, so there is no offline lane for
+it:
+
+!!! note "Needs a model credential"
+
+    ```bash
+    uv run sci-rag graph extract
+    uv run sci-rag graph communities
+    uv run sci-rag stats
+    ```
+
+    Without a credential these exit 1 at the model boundary. Skip them, keep
+    reading, and come back when you have one: nothing later in this tutorial
+    depends on the graph except the graph's own checkpoint below.
 
 <div class="srag-checkpoint" markdown>
 **Checkpoint: the corpus and the graph both look like your field**
@@ -305,11 +343,16 @@ distributed the way you declared them.
 `sci-rag retrieve "some question" --profile interactive`: the top chunks should
 be recognizable, and the stage table tells you which layer found each one.
 
-`sci-rag stats` after `graph extract`: a 50-document corpus should show entities
-in the low hundreds. Near zero means the ontology and the corpus are talking
-past each other, usually because the types are too abstract or the documents
-too thin. Thousands means the types are too loose. Either way, go back to
-step 3 and redraft with `--refine`.
+`sci-rag stats` after `graph extract`, if you ran it: a 50-document corpus
+should show entities in the low hundreds. Near zero means the ontology and the
+corpus are talking past each other, usually because the types are too abstract
+or the documents too thin. Thousands means the types are too loose. Either way,
+go back to step 3 and redraft with `--refine`.
+
+Offline, the first two readings are your checkpoint and there are no entities
+to count. A corpus that ingests cleanly and retrieves recognizable chunks is
+the whole of what this step can prove without a model, and it is worth
+proving.
 </div>
 
 ## Step 6: write seed questions, then measure
@@ -353,8 +396,17 @@ Then:
 
 ```bash
 uv run sci-rag eval retrieval --ablation   # which layers contribute on your corpus
-uv run sci-rag eval answers                # generated answers, graded by the blind judge
 ```
+
+That one runs offline. It scores retrieval on your own corpus against your own
+questions, and the ablation table is where the improvement loop below starts.
+Judging generated answers is a second pass and it needs a model:
+
+!!! note "Needs a model credential"
+
+    ```bash
+    uv run sci-rag eval answers   # generated answers, graded by the blind judge
+    ```
 
 Read the ablation table by comparing every row against `full_deep`. If
 `no_graph` matches `full_deep`, your graph is not contributing yet
@@ -380,10 +432,49 @@ and `unknown` documents stay internal. The
 <div class="srag-checkpoint" markdown>
 **Checkpoint: it is your knowledge base now**
 
-A question in your own field, asked through `sci-rag answer` or through
-`POST /v1/query`, comes back with numbered citations pointing at documents you
-put there. Ask one the corpus cannot answer, and it should say so.
+Offline, ask a question in your own field through `POST /v1/query`. The
+response should name documents you put there, with the license class you
+declared and the retrieval layer that found each one. That is your end state,
+and it is a real one: your corpus, your ontology, your questions, your
+retrieval scores.
+
+With a credential, the same question through `POST /v1/answer` or
+`sci-rag answer` comes back with numbered citations pointing at those
+documents. Ask one the corpus cannot answer, and it should say so.
 </div>
+
+!!! note "Needs a model credential"
+
+    ```bash
+    uv run sci-rag answer "a question in your field"
+    ```
+
+## Offline: what you can prove without a model
+
+The whole route, in order, with nothing that exits at a credential boundary:
+
+```bash
+uv run sci-rag draft manifest --folder data/raw --print-prompt   # answer it yourself
+uv run sci-rag draft manifest --folder data/raw --from-file reply.json --apply
+uv run sci-rag manifest lint data/corpus.jsonl
+uv run sci-rag draft ontology --from-corpus --print-prompt
+uv run sci-rag draft ontology --from-corpus --from-file reply.json --apply
+uv run sci-rag ingest --manifest data/corpus.jsonl
+uv run sci-rag stats
+uv run sci-rag retrieve "a question in your field" --profile interactive
+uv run sci-rag draft questions --count 10 --print-prompt
+uv run sci-rag draft questions --count 10 --from-file reply.json --apply
+uv run sci-rag eval retrieval --ablation
+uv run sci-rag serve
+```
+
+Set `SCI_RAG_EMBEDDING_PROVIDER=local-hash` first. Its similarity is lexical
+rather than semantic, so treat the retrieval scores as a floor on your own
+corpus and not as a comparison with a credentialed run.
+
+What this route does not reach: the knowledge graph, community summaries,
+judged answer metrics, and generated cited answers. Those are the four
+commands gated above, and they are what a credential buys.
 
 ## The improvement loop
 
