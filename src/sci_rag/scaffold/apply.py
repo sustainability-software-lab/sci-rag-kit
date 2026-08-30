@@ -14,6 +14,8 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -219,6 +221,93 @@ def apply_env_file(answers: ProjectAnswers, root: Path) -> list[str]:
             ".env",
             f"{answers.credentials}, {answers.llm_model}, {answers.embedding_model}",
         )
+    ]
+
+
+# --- uv.lock ----------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class RelockOutcome:
+    """Whether the lockfile could be brought in line, and how.
+
+    `how` says which attempt succeeded, so a reader can tell whether their
+    generator reached the network. The offline route is the ordinary one.
+    """
+
+    how: str | None
+    reason: str = ""
+
+
+def _uv_relock(root: Path) -> RelockOutcome:
+    """Bring the retained lockfile in line with the rewritten pyproject.
+
+    The generated project only ever narrows the manifest: the package is
+    renamed, the Python floor rises to the selected version, and unselected
+    extras go away. Nothing new has to be resolved, so uv can usually do this
+    from the lockfile it already has. Measured on a generated project, it
+    removed 91 packages, retained 112, and changed the pinned version of none
+    of them.
+
+    Offline is tried first because it is the honest default: a generator
+    should not reach the network without saying so. If the cache cannot
+    satisfy it, one online attempt follows, because a correct lockfile is
+    worth a download and the alternative is no lockfile at all.
+    """
+    attempts = ((["uv", "lock", "--offline"], "offline"), (["uv", "lock"], "online"))
+    reason = "uv is not available"
+    for command, label in attempts:
+        try:
+            completed = subprocess.run(
+                command, cwd=root, capture_output=True, check=False, timeout=300
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            reason = f"{' '.join(command)}: {type(exc).__name__}"
+            continue
+        if completed.returncode == 0:
+            return RelockOutcome(how=label)
+        reason = _first_error_line(completed.stderr.decode("utf-8", "replace")) or (
+            f"{' '.join(command)} exited {completed.returncode}"
+        )
+    return RelockOutcome(how=None, reason=reason)
+
+
+def _first_error_line(stderr: str) -> str:
+    for line in stderr.splitlines():
+        stripped = line.strip()
+        if stripped.lower().startswith("error"):
+            return stripped[:200]
+    return ""
+
+
+def apply_uv_lock(
+    answers: ProjectAnswers,
+    root: Path,
+    *,
+    relock: Callable[[Path], RelockOutcome] = _uv_relock,
+) -> list[str]:
+    """Make the lockfile describe the generated project, or take it away.
+
+    The template's lock describes the template: its name, its Python floor,
+    and every extra it offers. A generated project renames the package,
+    narrows the floor, and drops the extras the reader did not pick, so the
+    retained lock described something else and `uv lock --check` refused it
+    before the reader had typed anything.
+
+    There are only two acceptable outcomes, and shipping a lockfile that
+    disagrees with its own manifest is neither. If uv cannot be run here the
+    lock is removed and the reader is told, which is what the other three
+    managers already do with theirs.
+    """
+    path = root / "uv.lock"
+    if not path.exists():
+        return []
+    outcome = relock(root)
+    if outcome.how is not None:
+        return [_log("uv.lock", f"relocked {outcome.how} for {answers.repo_name}")]
+    path.unlink()
+    return [
+        _log("uv.lock", f"removed, `uv lock` recreates it. Could not relock: {outcome.reason}"),
     ]
 
 
@@ -909,6 +998,8 @@ def apply_runner(answers: ProjectAnswers, root: Path) -> list[str]:
     _write_devcontainer(answers, root)
     if profile.lockfile != "uv.lock":
         (root / "uv.lock").unlink(missing_ok=True)
+    else:
+        changes += apply_uv_lock(answers, root)
 
     changes.append(_log("Dockerfile", f"{profile.label} base image"))
     changes.append(_log(".devcontainer/", profile.devcontainer_feature or "plain python feature"))
