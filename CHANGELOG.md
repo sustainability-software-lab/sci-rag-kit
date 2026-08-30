@@ -224,6 +224,10 @@ These close findings from the 2026-08-29 end-to-end documentation route audit.
   repository root, and `.dump` is ignored everywhere. A dump holds every source
   and chunk, so for a private corpus it was one `git add .` from publication.
   The restore drill reads from the same directory. Closes #160.
+- The backup runbook calls its output a custom-format archive, which is what
+  `--format=custom` produces and what the `pg_restore` drill below it reads. It
+  had been labelled plain-format, so a reader who believed the label would have
+  reached for `psql` and found the file unreadable. Closes #161.
 
 ## [0.3.0] - 2026-08-28
 
