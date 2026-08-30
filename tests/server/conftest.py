@@ -121,6 +121,36 @@ async def client(open_app):  # type: ignore[no-untyped-def]
         yield c
 
 
+class _FrozenMinute:
+    """A clock that only moves when a test says so."""
+
+    def __init__(self, start: float = 1_800_000_000.0) -> None:
+        self.now = start
+
+    def __call__(self) -> float:
+        return self.now
+
+    def advance(self, seconds: float) -> None:
+        self.now += seconds
+
+
+@pytest.fixture()
+def frozen_minute(secured_app):  # type: ignore[no-untyped-def]
+    """Pin the rate limiter's wall clock for the tests that spend a budget.
+
+    The limiter's window starts at the top of a minute, not at the caller's
+    first request, so three requests that straddle a boundary reset the
+    counter. Two contract tests were failing on that, on diffs with no server
+    code in them. Pinning the clock makes them assert the limit; the boundary
+    itself is asserted separately by advancing this.
+    """
+    from sci_rag.server.auth import _MinuteWindowLimiter
+
+    clock = _FrozenMinute()
+    secured_app.state.auth_backend._limiter = _MinuteWindowLimiter(clock)
+    return clock
+
+
 @pytest_asyncio.fixture()
 async def secured_client(secured_app):  # type: ignore[no-untyped-def]
     transport = httpx.ASGITransport(app=secured_app)
