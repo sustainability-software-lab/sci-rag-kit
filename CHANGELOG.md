@@ -240,6 +240,14 @@ These close findings from the 2026-08-29 end-to-end documentation route audit.
   default and `--apply` is the separate mutating step. A new guard walks the
   real command tree and fails when a documented command does not resolve.
   Closes #159.
+- `make benchmark` binds the two judged-answer reports to their roles from
+  each report's own `config.compression` rather than from directory
+  modification time. Calibration writes into the uncompressed run, so the old
+  `ls -td` selectors handed the compressed report in as the ordinary one and
+  the published page reversed the compression columns, showed 1318 to 1318 as
+  0 percent lower, still claimed the gate held, and dropped calibration. The
+  renderer now refuses a reversed, duplicated, or unlabelled pair, and the
+  gate cannot claim a hold when prompt tokens do not fall. Closes #178.
 
 ## [0.3.0] - 2026-08-28
 
