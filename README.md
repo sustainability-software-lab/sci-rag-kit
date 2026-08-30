@@ -76,6 +76,7 @@ git clone https://github.com/sustainability-software-lab/sci-rag-kit.git
 cd sci-rag-kit
 
 cp .env.example .env
+chmod 600 .env          # owner only: it is about to hold a credential
 # In .env, set one of:
 #   SCI_RAG_GOOGLE_API_KEY=...              AI Studio key
 #   SCI_RAG_GCP_PROJECT=...                 Vertex AI (after gcloud auth application-default login)
