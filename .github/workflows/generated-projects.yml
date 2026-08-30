@@ -127,6 +127,14 @@ jobs:
           uv run sci-rag init --answers-file "$RUNNER_TEMP/answers.yaml" \
             --target "$RUNNER_TEMP/generated"
 
+      # The generated project must pass its own consistency check before the
+      # reader touches it. A static assertion did not catch F-018; only the
+      # resolver did. uv legs only: the other managers write their own lock.
+      - name: The generated uv project agrees with its own lockfile
+        if: matrix.manager == 'uv'
+        working-directory: ${{ runner.temp }}/generated
+        run: uv lock --check --offline
+
       - name: Cloud helper documentation matches every retained asset shape
         run: |
           # This validation reads generated files only and makes no live GCP call.

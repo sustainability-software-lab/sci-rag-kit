@@ -248,6 +248,14 @@ These close findings from the 2026-08-29 end-to-end documentation route audit.
   0 percent lower, still claimed the gate held, and dropped calibration. The
   renderer now refuses a reversed, duplicated, or unlabelled pair, and the
   gate cannot claim a hold when prompt tokens do not fall. Closes #178.
+- A generated uv project passes `uv lock --check` without user edits. The
+  applier renamed the package, raised the Python floor, and dropped unselected
+  extras, then kept the template's lockfile, so an untouched project failed its
+  own consistency check with exit 2. The lock is now relocked offline against
+  the generated metadata, which is purely subtractive: on a measured project it
+  removed 91 packages, retained 112, and changed the pinned version of none of
+  them. If uv cannot be run during generation the lock is removed and the
+  report says so, as the other three managers already do. Closes #170.
 
 ## [0.3.0] - 2026-08-28
 

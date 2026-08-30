@@ -29,6 +29,7 @@ _TEMPLATE_FILES = (
     "Makefile",
     ".env.example",
     "README.md",
+    "uv.lock",
     ".github/workflows/ci.yml",
 )
 
@@ -468,3 +469,116 @@ def test_a_configured_git_identity_is_not_overridden(template: Path) -> None:
     identity = apply._git_identity(template, _answers(author_name="Someone Else"))
 
     assert identity == []
+
+
+# --- the generated lockfile still describes the generated project ------------
+#
+# F-018 in the 2026-08-29 documentation route audit: the applier renamed the
+# package in pyproject.toml and left the root record in uv.lock saying
+# `sci-rag-kit`, so an untouched generated project failed `uv lock --check
+# --offline` with exit 2 before the reader had typed anything.
+
+
+def _rename_project(answers: ProjectAnswers, root: Path) -> None:
+    """The two appliers that together decide what the lockfile must say.
+
+    `relock` stands in for uv so this stays a unit test. What uv does when it
+    is really there is proved by the `generate (uv)` CI leg, which runs
+    `uv lock --check --offline` against the generated project.
+    """
+    apply.apply_pyproject(answers, root)
+    apply.apply_uv_lock(answers, root, relock=_stub_relock)
+
+
+def _stub_relock(root: Path) -> bool:
+    """What `uv lock --offline` does to the root record, minus the resolver."""
+    path = root / "uv.lock"
+    name = re.search(
+        r'(?m)^name = "([^"]+)"$', (root / "pyproject.toml").read_text(encoding="utf-8")
+    ).group(1)
+    blocks = path.read_text(encoding="utf-8").split("[[package]]")
+    for index, block in enumerate(blocks):
+        if 'source = { editable = "." }' in block:
+            blocks[index] = re.sub(r'(?m)^name = ".*"$', f'name = "{name}"', block, count=1)
+            break
+    path.write_text("[[package]]".join(blocks), encoding="utf-8")
+    return True
+
+
+def _lock_root_record(root: Path) -> dict[str, str]:
+    """The name and version of the editable root package in uv.lock."""
+    text = (root / "uv.lock").read_text(encoding="utf-8")
+    for block in text.split("[[package]]"):
+        if 'source = { editable = "." }' not in block:
+            continue
+        return {
+            "name": re.search(r'name = "([^"]+)"', block).group(1),
+            "version": re.search(r'version = "([^"]+)"', block).group(1),
+        }
+    raise AssertionError("uv.lock has no editable root package record")
+
+
+def _pyproject_field(root: Path, field: str) -> str:
+    text = (root / "pyproject.toml").read_text(encoding="utf-8")
+    return re.search(rf'(?m)^{field} = "([^"]+)"$', text).group(1)
+
+
+def test_the_lock_root_record_follows_the_renamed_package(template: Path) -> None:
+    _rename_project(
+        _answers(project_name="Membrane Materials KB", repo_name="membrane-materials-kb"), template
+    )
+
+    assert _pyproject_field(template, "name") == "membrane-materials-kb"
+    assert _lock_root_record(template)["name"] == "membrane-materials-kb"
+
+
+def test_the_lock_and_pyproject_agree_on_the_version(template: Path) -> None:
+    """uv checks the version too, so moving only the name would still fail."""
+    _rename_project(
+        _answers(project_name="Membrane Materials KB", repo_name="membrane-materials-kb"), template
+    )
+
+    assert _lock_root_record(template)["version"] == _pyproject_field(template, "version")
+
+
+def test_the_default_project_name_is_covered_too(template: Path) -> None:
+    """The audit reproduced this with --defaults as well as an answers file."""
+    _rename_project(_answers(), template)
+
+    assert _lock_root_record(template)["name"] == _pyproject_field(template, "name")
+
+
+def test_a_lock_that_cannot_be_relocked_is_removed_rather_than_shipped(
+    template: Path,
+) -> None:
+    """The one thing that must never happen is a lock describing something else."""
+    changes = apply.apply_uv_lock(_answers(), template, relock=lambda root: False)
+
+    assert not (template / "uv.lock").exists()
+    assert any("uv.lock" in change and "removed" in change for change in changes), changes
+
+
+def test_a_relocked_project_reports_it(template: Path) -> None:
+    changes = apply.apply_uv_lock(
+        _answers(repo_name="membrane-materials-kb"), template, relock=_stub_relock
+    )
+
+    assert (template / "uv.lock").exists()
+    assert any("membrane-materials-kb" in change for change in changes), changes
+
+
+def test_a_project_with_no_lock_is_left_alone(template: Path) -> None:
+    """pixi, conda, and venv + pip delete theirs before this ever runs."""
+    (template / "uv.lock").unlink()
+
+    assert apply.apply_uv_lock(_answers(), template, relock=_stub_relock) == []
+
+
+def test_the_uv_leg_of_generated_projects_checks_the_lockfile() -> None:
+    """A static assertion did not catch this. The resolver has to run."""
+    workflow = (REPO_ROOT / ".github" / "workflows" / "generated-projects.yml").read_text(
+        encoding="utf-8"
+    )
+    assert "uv lock --check" in workflow, (
+        "the generated uv project is never checked against its own lockfile"
+    )
