@@ -308,6 +308,14 @@ These close findings from the 2026-08-29 end-to-end documentation route audit.
   Dockerfile now copies whichever manifest shape the project uses, before the
   source so the dependency layer still caches, and container CI builds both
   shapes. Closes #162.
+- A generated project's `.dockerignore` and `.gcloudignore` admit the manifest
+  its own Dockerfile copies. The fail-closed allowlist added with the build
+  context fix was uv's, so pixi projects excluded `pixi.toml`, conda projects
+  excluded `environment.yml`, and venv + pip projects excluded
+  `requirements.txt`: the documented container route could not build for three
+  of the four managers. The allowlist is now derived from the rendered
+  Dockerfile, so a template that copies something new admits it in the same
+  change.
 
 ## [0.3.0] - 2026-08-28
 
