@@ -62,10 +62,13 @@ treating the interruption as an answer.
 
 ## Postgres is unreachable
 
-First identify the selected backend:
+First identify the backend your project would start. This prints the command
+itself, whether the value comes from your environment or from the Makefile
+default, which is `docker` in uv and venv + pip projects and `local` in pixi
+and conda projects:
 
 ```console
-$ echo "${SCI_RAG_DB_BACKEND:-docker}"
+$ make -n db-up
 ```
 
 ### Docker

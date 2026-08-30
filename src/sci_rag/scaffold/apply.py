@@ -592,24 +592,29 @@ def apply_makefile(answers: ProjectAnswers, root: Path) -> list[str]:
     else:
         text = _remove_cloud_postgres_dispatch(text)
     if answers.runner.offers_local_postgres:
-        text = _use_local_postgres(text, answers)
-        notes.append("database runs from conda-forge, no Docker")
+        text = _default_to_local_postgres(text)
+        notes.append("database defaults to conda-forge, no Docker needed")
 
     _write(path, text)
     return [_log("Makefile", ", ".join(notes))]
 
 
-def _use_local_postgres(text: str, answers: ProjectAnswers) -> str:
-    """Point the database targets at the project's own server.
+def _default_to_local_postgres(text: str) -> str:
+    """Make the bundled server the backend a reader gets by default.
 
-    Only reached for a manager whose channel ships PostgreSQL. Doing this by
-    substitution rather than by rewriting the targets keeps the Makefile the
-    user reads identical to the template's apart from these two recipes.
+    Only reached for a manager whose channel ships PostgreSQL. Bundling a
+    server changes which branch runs when nobody chooses, and nothing else:
+    `SCI_RAG_DB_BACKEND` is a public contract, so `docker` still has to reach
+    the compose service and `local` still has to reach the helper script.
+    Rewriting the docker recipe instead would start a loopback cluster with
+    trust authentication for a reader who explicitly asked for the isolated
+    container, which is a claim about their machine that is not true.
+
+    The `local` recipe needs no work here. It already names the helper, and
+    the runner pass rewrites its `uv run` prefix along with every other
+    command in the file.
     """
-    run = answers.runner.run("python scripts/local_postgres.py", project_slug=answers.repo_name)
-    return text.replace("docker compose up -d --wait", f"{run} start").replace(
-        "docker compose down", f"{run} stop"
-    )
+    return text.replace("SCI_RAG_DB_BACKEND ?= docker", "SCI_RAG_DB_BACKEND ?= local", 1)
 
 
 def _use_cloud_postgres(text: str, answers: ProjectAnswers) -> str:

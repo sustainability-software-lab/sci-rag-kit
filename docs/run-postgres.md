@@ -24,25 +24,38 @@ and keep destructive tests pointed at a disposable database.
 | PostgreSQL 16 through 18 with pgvector | The application, migrations, and tests all need it | `psql --version` and `CREATE EXTENSION vector` |
 
 `SCI_RAG_DB_BACKEND` controls which backend `make db-up`, `make db-down`, and
-`make setup` dispatch to. `SCI_RAG_DATABASE_URL` controls the application
+`make setup` dispatch to. It takes `docker` for the Compose service and
+`local` for `scripts/local_postgres.py`.
+<!-- BEGIN GENERATED PROJECT FEATURE: cloud-helper -->
+It also takes `cloud` for the optional `scripts/cloud_postgres.py`.
+<!-- END GENERATED PROJECT FEATURE: cloud-helper -->
+Every project keeps all of its retained backends selectable, and your
+environment manager decides only which one you get when you set nothing.
+`SCI_RAG_DATABASE_URL` controls the application
 connection. `SCI_RAG_TEST_DATABASE_URL` separately controls the destructive
 integration and server suites. Selecting a backend never rewrites either URL.
 
 ## Recommended defaults
 
 Docker is the template default and the closest local match to the PostgreSQL 16
-service in CI. Generated pixi and conda projects use their bundled conda-forge
-server by default. Every manager can select `local` when a supported system
+service in CI. Generated pixi and conda projects default to `local`, because
+their manifests already bundle a PostgreSQL server and pgvector from
+conda-forge. Every manager can select `local` when a supported system
 PostgreSQL and pgvector are on `PATH`, including Postgres.app. Every manager can
 also retain the optional Cloud helper through Advanced setup. Quick setup
 removes that helper from generated projects.
 
-| Environment manager | Recommended default | Other local path | Optional shared path |
+A default is a starting point. Set any value your project retained and
+`make db-up` dispatches to that backend.
+
+| Environment manager | Default value | What the default starts | Also selectable |
 |---|---|---|---|
-| uv | Docker | system PostgreSQL | Cloud SQL |
-| pixi | conda-forge PostgreSQL | Docker or system PostgreSQL | Cloud SQL |
-| conda | conda-forge PostgreSQL | Docker or system PostgreSQL | Cloud SQL |
-| venv + pip | Docker | system PostgreSQL | Cloud SQL |
+| uv | `docker` | the Compose service | `local`, `cloud` |
+| pixi | `local` | the bundled conda-forge server | `docker`, `cloud` |
+| conda | `local` | the bundled conda-forge server | `docker`, `cloud` |
+| venv + pip | `docker` | the Compose service | `local`, `cloud` |
+
+`cloud` is selectable only in a project that retained the Cloud helper.
 
 ## Run Postgres in Docker
 
@@ -55,6 +68,13 @@ $ make setup
 That synchronizes dependencies, starts the selected database backend, and
 applies every migration. Docker is the template default, so this checkout
 starts the compose service on host port `5433`.
+
+A generated pixi or conda project defaults to its bundled server, so ask for
+the compose service by name there:
+
+```console title="Terminal"
+$ SCI_RAG_DB_BACKEND=docker make setup
+```
 
 Stop the selected backend when you are done:
 
@@ -72,16 +92,17 @@ healthy. An empty corpus is fine at this point.
 ## Run Postgres from conda-forge
 
 Generated pixi and conda projects declare `postgresql` and `pgvector` in their
-manifest. Their rewritten `make setup` starts `scripts/local_postgres.py`, not
-the compose service:
+manifest, so their Makefile defaults to `SCI_RAG_DB_BACKEND=local` and
+`make setup` starts `scripts/local_postgres.py`:
 
 ```console title="Terminal"
 $ make setup
 ```
 
 The helper keeps data under `.pgdata/`, listens on loopback, and uses trust
-authentication. This is a machine-local development server and never a
-deployment path.
+authentication. This is the machine-local development server that `local`
+selects. It is never a deployment path, and it is never what an explicit
+`SCI_RAG_DB_BACKEND=docker` starts.
 
 ```console title="Terminal"
 $ make db-down
@@ -96,9 +117,13 @@ report a healthy database and current schema.
 
 ## Point at a system PostgreSQL
 
-Any environment manager can use `local` when `initdb`, `pg_ctl`, and `psql`
-from PostgreSQL 16 through 18 are on `PATH`. Postgres.app is one supported
-source on macOS. Add its versioned `bin` directory to `PATH`, then run:
+`local` is one backend with two server sources. It runs
+`scripts/local_postgres.py`, which drives whichever PostgreSQL is on `PATH`:
+the bundled conda-forge build in a pixi or conda project, and a system install
+everywhere else. Any environment manager can use it when `initdb`, `pg_ctl`,
+and `psql` from PostgreSQL 16 through 18 are on `PATH`. Postgres.app is one
+supported source on macOS. Add its versioned `bin` directory to `PATH`, then
+run:
 
 ```console title="Terminal"
 $ SCI_RAG_DB_BACKEND=local make setup

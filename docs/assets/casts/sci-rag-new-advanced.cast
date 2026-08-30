@@ -241,7 +241,7 @@
 [63.718,"o","\u001b[2m  domain/eval_seed_questions.jsonl   guided blank\u001b[0m\r\n"]
 [63.898,"o","\u001b[2m  .env                   google_ai_studio, gemini-2.5-flash, gemini-embedding-001\u001b[0m\r\n"]
 [64.078,"o","\u001b[2m  pyproject.toml         name, description, extras: docling\u001b[0m\r\n"]
-[64.258,"o","\u001b[2m  Makefile               commands prefixed with `pixi run`, database runs from conda-forge, no Docker\u001b[0m\r\n"]
+[64.258,"o","\u001b[2m  Makefile               commands prefixed with `pixi run`, database defaults to conda-forge, no Docker needed\u001b[0m\r\n"]
 [64.438,"o","\u001b[2m  docs/                  kit onboarding, player, and cast removed\u001b[0m\r\n"]
 [64.618,"o","\u001b[2m  pyproject.toml          workspace, environments, tasks\u001b[0m\r\n"]
 [64.798,"o","\u001b[2m  Dockerfile             pixi base image\u001b[0m\r\n"]
