@@ -81,11 +81,13 @@ The other secondary routes start from the same repository tree:
 ## 2. Choose a credential mode
 
 The wizard already created `.env` with owner-only mode `0600`; keep it out of
-Git. If you used a clone or the GitHub template, create the local environment
-file:
+Git. If you used a clone or the GitHub template, create the same file yourself.
+Both commands matter: `cp` inherits the public example's mode, so without the
+`chmod` every account on the machine can read the key you are about to paste in.
 
 ```console
 $ cp .env.example .env
+$ chmod 600 .env
 ```
 
 Pick exactly one. **Start with AI Studio** unless your organization already runs on Google Cloud, in which case use Vertex. Offline mode is for machines that cannot reach a model at all, and it costs you the graph and every generated answer.

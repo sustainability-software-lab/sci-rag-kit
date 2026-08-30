@@ -1,6 +1,11 @@
 """The public onboarding path recommends one command before listing alternatives."""
 
+import re
+import stat
+import subprocess
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -202,3 +207,97 @@ def test_unreleased_changelog_records_the_guided_onboarding_batch() -> None:
 def test_wizard_environment_file_is_owner_readable() -> None:
     quickstart = _read("docs/quickstart.md")
     assert "owner-only mode `0600`" in quickstart
+
+
+# --- the clone and template route creates the same file ----------------------
+#
+# F-031 in the 2026-08-29 documentation route audit: the wizard chmods its
+# generated .env to 0600, but the clone and GitHub-template routes told the
+# reader to `cp .env.example .env`, which inherits the public example's mode.
+# In a clean clone under a normal umask that produced 0644, so every local
+# user could read the key the next paragraph asks the reader to paste in.
+#
+# These tests run the documented sequence rather than reading it, because the
+# only thing that settles a file mode question is a file.
+
+ENV_SETUP_PAGES = ("docs/quickstart.md", "README.md")
+
+# The sequence may only use commands that exist on every supported macOS and
+# Linux shell. This is a portability guard, and it also keeps the test from
+# executing anything surprising that lands in a documentation block later.
+PORTABLE_COMMANDS = frozenset({"cp", "chmod", "install", "umask"})
+
+
+def _env_file_commands(page: str) -> list[str]:
+    """The documented commands that create `.env` from the example.
+
+    Takes the command that reads `.env.example` plus every command
+    immediately after it that still concerns `.env`, so a `chmod` on the next
+    line is part of the sequence and an unrelated `make setup` is not.
+    """
+    for block in re.findall(r"^(?:```|~~~)[^\n]*\n(.*?)^(?:```|~~~)", page, re.DOTALL | re.M):
+        lines = [
+            line.removeprefix("$ ").strip()
+            for line in block.splitlines()
+            if line.strip() and not line.strip().startswith("#")
+        ]
+        starts = [index for index, line in enumerate(lines) if ".env.example" in line]
+        if not starts:
+            continue
+        sequence = [lines[starts[0]]]
+        for line in lines[starts[0] + 1 :]:
+            if ".env" not in line:
+                break
+            sequence.append(line)
+        return sequence
+    return []
+
+
+@pytest.mark.parametrize("page", ENV_SETUP_PAGES)
+def test_the_documented_clone_sequence_uses_portable_commands(page: str) -> None:
+    commands = _env_file_commands(_read(page))
+    assert commands, f"{page} no longer documents creating .env from the example"
+    programs = {command.split()[0] for command in commands}
+    assert programs <= PORTABLE_COMMANDS, (
+        f"{page} creates .env with something that is not portable: {programs}"
+    )
+
+
+@pytest.mark.parametrize("page", ENV_SETUP_PAGES)
+def test_the_documented_clone_sequence_produces_an_owner_only_file(
+    page: str, tmp_path: Path
+) -> None:
+    """Run it in a scratch clone under a normal umask and stat the result."""
+    example = tmp_path / ".env.example"
+    example.write_text("SCI_RAG_DATABASE_URL=\n", encoding="utf-8")
+    example.chmod(0o644)  # what a fresh checkout gives you
+
+    script = "umask 022\n" + "\n".join(_env_file_commands(_read(page)))
+    subprocess.run(["sh", "-c", script], cwd=tmp_path, check=True, capture_output=True)
+
+    created = tmp_path / ".env"
+    assert created.is_file(), f"{page} did not create .env"
+    mode = stat.S_IMODE(created.stat().st_mode)
+    assert mode == 0o600, f"{page} leaves .env at {oct(mode)}; a credential file must be owner only"
+
+
+def test_both_routes_state_the_same_owner_only_contract() -> None:
+    """A reader must not have to guess which route protects the file."""
+    quickstart = _read("docs/quickstart.md")
+    readme = _read("README.md")
+
+    assert "owner-only mode `0600`" in quickstart
+    assert "0600" in quickstart.partition("## 2. Choose a credential mode")[2]
+    assert "600" in readme
+
+
+def test_the_example_file_is_still_ignored_and_holds_no_credential() -> None:
+    ignored = subprocess.run(
+        ["git", "check-ignore", ".env"], cwd=ROOT, capture_output=True, text=True
+    )
+    assert ignored.returncode == 0, ".env must stay ignored"
+
+    example = _read(".env.example")
+    for line in example.splitlines():
+        if line.startswith("SCI_RAG_GOOGLE_API_KEY=") or line.startswith("SCI_RAG_API_KEYS="):
+            assert line.split("=", 1)[1].strip() == "", "the example must not carry a value"

@@ -181,6 +181,41 @@ Notable changes to sci-rag-kit. The format follows
   in a row sit at the same point, which it read as a zero-pixel gap between blocks a
   reader can never see at the same time.
 
+### Fixed
+
+These close findings from the 2026-08-29 end-to-end documentation route audit.
+
+- Generating with `--template-path` no longer copies a checkout's ignored state
+  into the new project. The copy boundary is what the repository tracks, which
+  is the same content the download route already produces, so credentials under
+  `.cloudsql/`, agent files under `.context/`, a filled in `.env`, Terraform
+  state, and the corpus under `data/raw/` cannot cross. A directory git knows
+  nothing about falls back to a fail closed rule. See ADR 0010. Closes #153.
+- `.dockerignore` and `.gcloudignore` bound what `docker build .` and
+  `gcloud builds submit .` hand to a builder. Both exclude everything and
+  re-admit only the documented build inputs, so the same local state stays
+  local. Measured on the previous main, 433 files reached the Docker context
+  and 429 were uploaded to Cloud Build; both are now 145. Closes #179.
+- Bytecode no longer reaches either build context. `__pycache__` lives inside
+  the admitted directories, so an allowlist alone could not exclude it, and a
+  build from a working checkout carried the developer's `.pyc` files into the
+  image. A working checkout and a clean export now produce the same context.
+  Closes #196.
+- Two API keys that share their first six characters no longer share a rate
+  limit bucket. Accounting uses an opaque identity derived from the whole
+  token under a per process salt, while the human readable label stays
+  truncated. Error envelopes, status codes, and `Retry-After` are unchanged.
+  Closes #169.
+- The public `dev-database` Terraform module no longer defaults `project_id`
+  and `instance_name` to maintained infrastructure. Both are required inputs,
+  so Terraform stops at input validation before it can plan a change against
+  an instance the reader never named. `docs/run-postgres.md` now shows the
+  saved plan and the review step before the apply. Closes #171.
+- The clone and GitHub template routes create `.env` with owner-only mode
+  `0600`. `cp` inherits the public example's mode, so the file was readable by
+  every account on the machine before the reader pasted a key into it. Closes
+  #183.
+
 ## [0.3.0] - 2026-08-28
 
 The "Campaigns" release: the kit gets the parts that make it better for
