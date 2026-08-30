@@ -105,8 +105,20 @@ SCI_RAG_DATABASE_URL_SYNC="$(
 
 # Plain-format dump of the whole knowledge base (schema + data).
 pg_dump "$SCI_RAG_DATABASE_URL_SYNC" --format=custom \
-  --file "sci-rag-$(date +%Y%m%d).dump"
+  --file "backups/sci-rag-$(date +%Y%m%d).dump"
 ```
+
+`backups/` is ignored by Git, and it ships with a `.gitkeep` so it is there
+before you need it. That matters more than it looks: a dump holds every
+source and every chunk you have ingested, so for a private corpus the file is
+the corpus. Writing it into the repository root, as this page used to, left it
+one `git add .` away from being published.
+
+Keep only working copies there. Anything you intend to retain belongs
+encrypted, on a destination the repository cannot reach, under whatever
+retention your corpus licenses require. Credentials and Terraform state are a
+separate problem with a separate answer; a database dump does not contain
+them.
 
 Reading the URL out of the file keeps the password out of your shell history,
 which typing it would not. If the URL carries `?passfile=`, as the Cloud SQL
@@ -152,7 +164,7 @@ Rehearse this before an incident, on a scratch database:
 ```bash
 createdb sci_rag_restore
 pg_restore --dbname "postgresql://sci_rag:sci_rag@localhost:5433/sci_rag_restore" \
-  --no-owner "sci-rag-20260827.dump"
+  --no-owner "backups/sci-rag-20260827.dump"
 
 # Point the kit at the restored copy and verify:
 SCI_RAG_DATABASE_URL="postgresql+asyncpg://sci_rag:sci_rag@localhost:5433/sci_rag_restore" \
