@@ -65,9 +65,13 @@ preflight. These presentation and validation layers still converge on the same
 
 Four properties keep this inside ADR 0004:
 
-* No placeholders. There is no `{{ }}` syntax and no `{{ }}` directory
-  anywhere in the repository. A test asserts that a generated project
-  contains no bare `{{` in any Markdown, TOML, YAML, or JSONL file.
+* No placeholders. Nothing in the repository is a token waiting to be
+  rendered, and no directory name is one either. A test generates a
+  project for every environment manager and fails on any
+  placeholder-looking token it cannot account for. Three contexts are
+  accepted, by content rather than by filename: a GitHub Actions
+  expression, BibTeX brace protection, and the illustration in ADR 0004
+  of the syntax this project refuses.
 * The template stays the runnable application. What the generator
   fetches is this repository, byte for byte: browsable, runnable, and
   CI-tested as itself. Nothing here becomes real code only after
@@ -127,5 +131,5 @@ Revisit if any of these stop being true:
   answers file is the primary interface and the interactive path is the
   fallback, which is a different tool.
 * No placeholder syntax appears anywhere in the tree. That is the
-  specific failure ADR 0004 refused, and the reason the no-`{{` test
-  exists.
+  specific failure ADR 0004 refused, and the reason the unresolved
+  placeholder test exists.

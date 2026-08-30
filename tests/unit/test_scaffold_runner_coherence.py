@@ -299,3 +299,98 @@ def test_the_pin_set_is_not_quietly_empty(tmp_path: Path, manager: str) -> None:
     assert len(pins) >= 4, pins
     assert ".python-version" in pins
     assert "pyproject requires-python" in pins
+
+
+# --- no unresolved scaffold placeholder survives generation ------------------
+#
+# F-014 in the 2026-08-29 documentation route audit. ADR 0004 refuses template
+# placeholders, and the documentation claimed a test proved a generated project
+# contains no bare double brace anywhere. A real generated project contains
+# seven, four of which are the claim describing itself, one is valid BibTeX,
+# and one is a deliberate illustration of the syntax ADR 0004 refuses.
+#
+# The guard that was supposed to prove it lived in test_scaffold_apply.py and
+# ran against a five-file fixture with nothing under docs/, so it could not
+# have seen any of them. The invariant was not merely misstated, it was
+# untested against anything capable of violating it.
+#
+# The real invariant is about unresolved placeholders, not about a character
+# pair. Contexts are accepted by content rather than by path, so a genuine leak
+# cannot hide in a file that happens to be on an allowlist.
+
+PLACEHOLDER = re.compile(r"\{\{")
+PLACEHOLDER_SUFFIXES = {".md", ".toml", ".yaml", ".yml", ".jsonl", ".json", ".txt"}
+
+ACCEPTED_PLACEHOLDER_CONTEXTS = (
+    (
+        re.compile(r"\$\{\{"),
+        "a GitHub Actions expression, which is real workflow syntax",
+    ),
+    (
+        re.compile(r"^\s*\w+\s*=\s*\{\{.*\}\},?\s*$"),
+        "BibTeX brace protection, which stops a renderer lowercasing a name",
+    ),
+    (
+        re.compile(r"\{\{\s*cookiecutter\."),
+        "a named illustration of the syntax ADR 0004 refuses",
+    ),
+)
+
+
+def _unresolved_placeholders(root: Path) -> list[str]:
+    """Placeholder-looking tokens that no accepted context explains."""
+    offenders = []
+    for path in sorted(root.rglob("*")):
+        if not path.is_file() or path.suffix not in PLACEHOLDER_SUFFIXES:
+            continue
+        for number, line in enumerate(
+            path.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1
+        ):
+            if not PLACEHOLDER.search(line):
+                continue
+            if any(pattern.search(line) for pattern, _ in ACCEPTED_PLACEHOLDER_CONTEXTS):
+                continue
+            offenders.append(f"{path.relative_to(root)}:{number}: {line.strip()[:90]}")
+    return offenders
+
+
+@pytest.mark.parametrize("manager", runner_keys())
+def test_a_generated_project_carries_no_unresolved_placeholder(
+    tmp_path: Path, manager: str
+) -> None:
+    root = _generate(tmp_path, manager)
+
+    offenders = _unresolved_placeholders(root)
+
+    assert offenders == [], "unresolved placeholders in a generated project:\n" + "\n".join(
+        offenders
+    )
+
+
+def test_the_guard_still_catches_a_leaked_placeholder(tmp_path: Path) -> None:
+    """An allowlist that explains everything proves nothing."""
+    root = _generate(tmp_path, "uv")
+    (root / "docs" / "leaked.md").write_text(
+        "# Leaked\n\nname: {{ project_name }}\n", encoding="utf-8"
+    )
+
+    offenders = _unresolved_placeholders(root)
+
+    assert any("leaked.md" in offender for offender in offenders), offenders
+
+
+@pytest.mark.parametrize(
+    "pattern,reason", ACCEPTED_PLACEHOLDER_CONTEXTS, ids=lambda value: str(value)[:20]
+)
+def test_every_accepted_context_still_occurs(tmp_path: Path, pattern: object, reason: str) -> None:
+    """An exception nothing uses any more is an exception nobody is checking."""
+    root = _generate(tmp_path, "uv")
+
+    found = any(
+        pattern.search(line)  # type: ignore[attr-defined]
+        for path in root.rglob("*")
+        if path.is_file() and path.suffix in PLACEHOLDER_SUFFIXES
+        for line in path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    )
+
+    assert found, f"nothing in a generated project still needs this exception: {reason}"
