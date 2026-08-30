@@ -157,6 +157,18 @@ def apply_domain_yaml(answers: ProjectAnswers, root: Path) -> list[str]:
 
 
 def apply_seed_questions(answers: ProjectAnswers, root: Path) -> list[str]:
+    """Reset the evaluation seeds, unless the demo corpus is the corpus.
+
+    The bundled questions are ground truth for the shipped synthetic
+    documents, so for any other corpus they are somebody else's answers and
+    the reset is what stops a new project from scoring itself against them.
+
+    A `demo_only` project has no other corpus. Blanking its seeds removed the
+    only ground truth its own `make demo` target has, and the documented run
+    ended at `No questions found in domain/eval_seed_questions.jsonl`.
+    """
+    if answers.corpus_source == "demo_only":
+        return [_log("domain/eval_seed_questions.jsonl", "kept: the demo corpus is the corpus")]
     _write(root / "domain" / "eval_seed_questions.jsonl", SEED_TEMPLATE)
     return [_log("domain/eval_seed_questions.jsonl", "guided blank")]
 

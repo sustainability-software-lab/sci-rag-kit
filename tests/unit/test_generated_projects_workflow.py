@@ -153,6 +153,47 @@ def test_generated_projects_cover_every_cloud_asset_shape_for_every_manager() ->
     assert "no live GCP call" in runs
 
 
+def test_the_generated_project_runs_its_whole_demo_target() -> None:
+    """F-004 hid here, because this leg stopped one command short of it.
+
+    The step ingested and retrieved, then skipped `eval retrieval` under a
+    comment calling the blanked seed questions "the point of the reset, not a
+    regression". That was the command a reader's `make demo` failed on, so the
+    matrix proved the demo worked while the demo did not. Running the target
+    itself is the only version of this check that could have caught it: the
+    target owns the sequence, and a leg that reimplements the sequence is free
+    to leave out the part that breaks.
+    """
+    steps = _generate_steps()
+    scripts = [step.get("run", "") for step in steps]
+
+    assert any("make demo" in script for script in scripts), (
+        "the generated project has to run its own demo target, not a subset of it"
+    )
+    for script in scripts:
+        if "make demo" in script:
+            continue
+        assert "sci-rag retrieve" not in script, (
+            "a hand-written copy of the demo sequence can drift from the target"
+        )
+
+
+def test_the_demo_leg_generates_the_corpus_source_whose_demo_can_pass() -> None:
+    """A demo target scores retrieval, so this leg needs demo ground truth.
+
+    `demo_only` is the corpus choice that keeps the bundled seed questions,
+    because there the synthetic corpus is the corpus. Any other choice blanks
+    them on purpose, so a green leg has to be generated with this one.
+    """
+    generate = next(
+        script
+        for script in (step.get("run", "") for step in _generate_steps())
+        if "sci-rag init --answers-file" in script and "cloud-answers" not in script
+    )
+    assert "corpus_source: demo_only" in generate
+    assert 'include_demo_corpus: "Yes"' in generate
+
+
 def test_codeql_has_security_permissions_and_all_three_triggers() -> None:
     workflow = _load_workflow(CODEQL)
 

@@ -126,6 +126,40 @@ def test_seed_questions_are_reset_to_a_guided_blank(template: Path) -> None:
     assert "rice straw" not in seeds
 
 
+@pytest.mark.parametrize("corpus_source", ("local_files", "doi_list", "openalex_topic"))
+def test_every_corpus_source_that_is_not_the_demo_gets_the_guided_blank(
+    template: Path, corpus_source: str
+) -> None:
+    """Ground truth for someone else's corpus is worse than none at all."""
+    apply.apply_seed_questions(_answers(corpus_source=corpus_source), template)
+    seeds = (template / "domain" / "eval_seed_questions.jsonl").read_text(encoding="utf-8")
+    assert seeds.startswith("# Ground-truth questions")
+    # The template's comment block quotes the field names, so the check is for
+    # an actual question line rather than for the word "id".
+    assert not [line for line in seeds.splitlines() if line.startswith("{")]
+
+
+def test_demo_only_keeps_the_seed_questions_its_corpus_answers(template: Path) -> None:
+    """`make demo` scores retrieval, so a demo project needs demo ground truth.
+
+    The reset exists so a new project does not evaluate its own corpus against
+    the synthetic one's answers. When the synthetic corpus is the corpus, the
+    reset removed the only ground truth the shipped `demo` target has, and the
+    documented run ended at `No questions found`.
+    """
+    before = (template / "domain" / "eval_seed_questions.jsonl").read_text(encoding="utf-8")
+
+    changes = apply.apply_seed_questions(_answers(corpus_source="demo_only"), template)
+
+    after = (template / "domain" / "eval_seed_questions.jsonl").read_text(encoding="utf-8")
+    assert after == before
+    assert [line for line in after.splitlines() if line.startswith("{")], (
+        "the demo corpus questions have to survive generation"
+    )
+    assert "rice straw" in after.casefold()
+    assert any("kept" in change for change in changes)
+
+
 # --- .env -------------------------------------------------------------------
 
 
