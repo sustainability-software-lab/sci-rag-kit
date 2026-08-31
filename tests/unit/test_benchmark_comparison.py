@@ -32,6 +32,7 @@ def _renderer() -> dict:  # type: ignore[type-arg]
 
 
 TOLERANCES = _renderer()["TOLERANCES"]
+GRAPH_COUNT_CAVEAT = _renderer()["GRAPH_COUNT_CAVEAT"]
 compare_pages = _renderer()["compare_pages"]
 
 
@@ -108,3 +109,22 @@ def test_the_published_page_states_the_tolerance_the_renderer_judges_against() -
     assert f"{TOLERANCES['metric']} absolute on a metric" in page
     assert f"{TOLERANCES['count']:.0%} on a count" in page
     assert "a finding, not a refresh" in page
+
+
+def test_the_published_page_names_the_graph_counts_as_the_known_exception() -> None:
+    """The tolerance claim has a documented counterexample, so the page says so.
+
+    Two reruns from identical recorded inputs moved the entity count 13% down
+    and 12% up, both outside the 10% count tolerance the paragraph above
+    promises. A reader who runs the command and sees a different entity count
+    has reproduced the documented behavior, and the page has to tell them that
+    before they go hunting for what they broke.
+
+    Held against the renderer's own constant, the way the tolerance is, so a
+    later re-render cannot keep the numbers and drop the caveat.
+    """
+    page = Path("docs/benchmarks.md").read_text(encoding="utf-8")
+
+    assert GRAPH_COUNT_CAVEAT in page
+    assert "does not make the extractor deterministic" in GRAPH_COUNT_CAVEAT
+    assert "one draw from a distribution" in GRAPH_COUNT_CAVEAT

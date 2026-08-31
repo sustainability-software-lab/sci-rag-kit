@@ -87,3 +87,24 @@ def test_eval_payload_records_snapshot_name() -> None:
     assert payload["snapshot"] == "baseline"
     without = retrieval_payload([], {"documents": 2})
     assert without.get("snapshot") is None
+
+
+async def test_a_written_snapshot_is_committable_as_it_stands(
+    clean_tables, corpus_entries, local_embedder, tmp_path
+):  # type: ignore[no-untyped-def]
+    """The file ends with a newline, because these get committed.
+
+    Snapshots live in `data/snapshots/` and are tracked, and this
+    repository runs `end-of-file-fixer` over every file in CI. A writer
+    that omits the final newline produces an artifact that fails the
+    project's own hook the first time anyone commits one, which is what
+    happened to `benchmark-20260831-041957.json`. The three snapshots
+    already in the tree end with a newline only because the hook rewrote
+    them on the way in.
+    """
+    await ingest_entries(corpus_entries, embedder=local_embedder)
+    info = await write_snapshot(get_session_factory(), name="committable", base_dir=tmp_path)
+
+    raw = info.path.read_text(encoding="utf-8")
+    assert raw.endswith("\n")
+    assert not raw.endswith("\n\n")

@@ -14,13 +14,15 @@ axes other than benchmark scores.
 
 ## What was measured
 
-- Corpus: 5 documents, 34 chunks, 83 entities, 79 relationships, 7 communities (the synthetic agricultural-residue demo corpus shipped in `data/demo/`)
-- Corpus snapshot: `benchmark-20260828-162913` (see `data/snapshots/`; the digest pins the exact document set)
-- Embedding: `gemini-embedding-001@1536`; generation and judging: `gemini-2.5-flash`
-- Code: commit `d011632`
-- Rendered: 2026-08-28
+- Corpus: 5 documents, 34 chunks, 72 entities, 72 relationships, 7 communities (the synthetic agricultural-residue demo corpus shipped in `data/demo/`)
+- Corpus snapshot: `benchmark-20260831-041957` (see `data/snapshots/`; the digest pins the exact document set)
+- Embedding: `gemini-embedding-001@1536`; models: answer `google:gemini-2.5-flash`, extraction `google:gemini-2.5-flash`, judge `google:gemini-2.5-flash`
+- Code: commit `49130d1`; domain and prompts: `11194722ed59`
+- Rendered: 2026-08-31
 
 Graph construction and judged answers are stochastic. Repeating the command below reproduces these numbers within a declared tolerance of 0.1 absolute on a metric and 10% on a count, and `--check` fails visibly when one moves further. A number that moves beyond it is a finding, not a refresh: publishing it needs a reviewed source report and an explanation of which recorded input changed.
+
+The graph counts are the known exception to that promise. Two reruns from identical recorded inputs, the same corpus, the same models, and the same ontology, moved the entity count 13% down and 12% up. Decoding at `temperature: 0.0` does not make the extractor deterministic, and these numbers are the evidence. Read `entities` and `relationships` as one draw from a distribution. A different count on your machine is the documented behavior, not a sign that you have broken something.
 
 ## Retrieval ablations
 
@@ -28,33 +30,33 @@ Cells are mean [95% bootstrap CI], resampled per question. The
 demo corpus has single-digit questions, so intervals are wide by
 construction: treat differences whose intervals overlap heavily as
 noise, and read the table for the qualitative story (which layers
-earn their keep), and not decimal places. On a small sample
+earn their keep) rather than decimal places. On a small sample
 like this, that qualitative story is the only defensible claim.
 
 | Config | hit@5 | hit@10 | MRR | nDCG@10 | n |
 |--------|---:|---:|---:|---:|---:|
-| full_deep | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.93 [0.88, 0.98] | 9 |
+| full_deep | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.95 [0.91, 0.98] | 9 |
 | interactive | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.96 [0.91, 1.00] | 9 |
 | vector_only | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.96 [0.91, 1.00] | 9 |
 | keyword_only | 0.33 [0.00, 0.67] | 0.33 [0.00, 0.67] | 0.33 [0.00, 0.67] | 0.33 [0.00, 0.67] | 9 |
-| no_graph | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.97 [0.93, 1.00] | 9 |
-| confidence_weighted | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.91 [0.84, 0.97] | 9 |
-| with_citations | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.93 [0.88, 0.98] | 9 |
-| no_hyde | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.89, 0.98] | 9 |
-| no_community | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.92 [0.85, 0.98] | 9 |
-| with_rerank | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.95 [0.91, 0.98] | 9 |
-| no_rerank | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.90, 0.98] | 9 |
-| auto_routed | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.88, 0.98] | 9 |
-| no_retracted | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.92 [0.86, 0.97] | 9 |
+| no_graph | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.92 [0.83, 0.99] | 9 |
+| confidence_weighted | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.93 [0.78, 1.00] | 0.92 [0.85, 0.98] | 9 |
+| with_citations | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.90, 0.98] | 9 |
+| no_hyde | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.96 [0.92, 0.99] | 9 |
+| no_community | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.92 [0.82, 0.98] | 9 |
+| with_rerank | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.95 [0.91, 0.99] | 9 |
+| no_rerank | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.95 [0.93, 0.98] | 9 |
+| auto_routed | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.95 [0.90, 0.99] | 9 |
+| no_retracted | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.90, 0.98] | 9 |
 
-`resolved_entities` is absent, and that is a result and not an
+`resolved_entities` is absent, and that is a result rather than an
 omission. It is a separate condition (`sci-rag eval retrieval
 --condition resolved_entities`) measured on a post-resolution
 snapshot, and it requires at least one persisted resolution audit
 row. On this corpus `sci-rag graph resolve-entities` finds no
 automatic pairs and plans no merges: 67 extracted entities with
 nothing duplicated enough to merge. The command refuses to run the
-condition, and reports no number that would just be
+condition rather than report a number that would just be
 `full_deep` under another name. A corpus with real alias variation
 is what would exercise it.
 
@@ -77,7 +79,7 @@ How to read it:
 | groundedness | 2.00 [2.00, 2.00] |
 | citation_accuracy | 2.00 [2.00, 2.00] |
 | completeness | 2.00 [2.00, 2.00] |
-| correctness | 1.30 [0.70, 1.80] |
+| correctness | 1.70 [1.30, 2.00] |
 | graded / total | 10 / 10 |
 
 The grounding judge never sees the reference answer; correctness
@@ -93,19 +95,18 @@ quality to HOLD while measured prompt tokens fall. A
 token saving on its own is not evidence; it is half of a trade.
 
 Measured at `relevance_floor: 0.0`, which is the load-bearing
-setting rather than a detail. The floor decides whether a source is
-dropped or summarized, and dropping evidence is what an
-answer cannot recover from. Raising it trades groundedness for
-tokens; that is a different trade from summarizing, and it needs its
-own paired run.
+setting, not a detail. The floor decides whether a source is dropped
+or summarized, and dropping evidence is what an answer cannot recover
+from. Raising it trades groundedness for tokens; that is a different
+trade from summarizing, and it needs its own paired run.
 
 | Dimension | Uncompressed | Compressed |
 |-----------|-------------:|-----------:|
 | groundedness | 2.00 [2.00, 2.00] | 2.00 [2.00, 2.00] |
 | citation_accuracy | 2.00 [2.00, 2.00] | 2.00 [2.00, 2.00] |
 | completeness | 2.00 [2.00, 2.00] | 2.00 [2.00, 2.00] |
-| correctness | 1.30 [0.70, 1.80] | 1.70 [1.20, 2.00] |
-| median prompt tokens | 1336 | 987 (26% lower) |
+| correctness | 1.70 [1.30, 2.00] | 1.80 [1.50, 2.00] |
+| median prompt tokens | 1391 | 977 (30% lower) |
 
 Sources dropped by the relevance floor: 0. Compression failures: 0. Questions: 10.
 
@@ -122,7 +123,7 @@ and the judge's scores on the same answers:
 | groundedness | 1.00 | 1.00 | 10 |
 | citation_accuracy | 1.00 | 1.00 | 10 |
 | completeness | 1.00 | 1.00 | 10 |
-| correctness | 0.00 | 0.60 | 10 |
+| correctness | 0.00 | 0.80 | 10 |
 
 Kappa is reported as measured, never asserted as a target. A
 kappa of 0 with high exact agreement means one rater was

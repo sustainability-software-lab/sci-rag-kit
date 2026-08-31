@@ -91,7 +91,10 @@ async def write_snapshot(
             {"id": row.id, "title": row.title, "content_hash": row.content_hash} for row in rows
         ],
     }
-    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    # Trailing newline because these files get committed, and this project
+    # runs end-of-file-fixer over the whole tree in CI. Without it the first
+    # commit of any fresh snapshot fails a hook that then rewrites it.
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     return SnapshotInfo(name=name, path=path)
 
 
