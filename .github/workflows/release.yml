@@ -97,8 +97,17 @@ jobs:
           export PIPX_HOME="$RUNNER_TEMP/pipx-home"
           export PIPX_BIN_DIR="$RUNNER_TEMP/pipx-bin"
           pipx install ./dist/*.whl
-          "$PIPX_BIN_DIR/sci-rag" --help | grep -q ' new ' \
-            || { echo "::error::the published CLI has no 'new' command"; exit 1; }
+          # Ask the CLI whether the subcommand resolves. Typer exits 2 with
+          # "No such command" when it does not, which is F-002's own symptom.
+          # An earlier version grepped the rendered help table for " new " and
+          # failed on a runner with the command present: Rich decides that
+          # layout from terminal detection, so the check was testing the
+          # renderer rather than the CLI.
+          if ! "$PIPX_BIN_DIR/sci-rag" new --help > /dev/null 2>&1; then
+            echo "::error::the published CLI has no 'new' command"
+            "$PIPX_BIN_DIR/sci-rag" --help || true
+            exit 1
+          fi
           mkdir -p "$RUNNER_TEMP/onboarding"
           cd "$RUNNER_TEMP/onboarding"
           "$PIPX_BIN_DIR/sci-rag" new --defaults
