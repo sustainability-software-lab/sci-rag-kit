@@ -227,7 +227,7 @@ async def test_a_model_that_rejects_the_budget_gets_a_thinking_level(monkeypatch
     assert client.configs[0].thinking_budget == 0, "first attempt asks for no thinking at all"
     second = client.configs[1]
     assert second is not None, "thinking control was dropped rather than stepped down"
-    assert second.thinking_level == "LOW"
+    assert second.thinking_level == "MINIMAL", "ask for the least reasoning first"
 
 
 class RejectsEveryThinkingKnob(StubGenerateClient):

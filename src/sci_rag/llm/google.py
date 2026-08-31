@@ -76,8 +76,8 @@ class GoogleLLM(LLMClient):
         # against max_output_tokens. On high-volume structured calls
         # (extraction, judging) that turns into minutes of latency and
         # sometimes an empty response once the budget is spent on thought.
-        # JSON-mode calls therefore disable thinking; if a model rejects the
-        # knob we retry once without it.
+        # JSON-mode calls therefore ask for as little thinking as possible. A
+        # model that rejects this spelling gets the step-down below.
         thinking_config = types.ThinkingConfig(thinking_budget=0) if json_mode else None
         config = types.GenerateContentConfig(
             system_instruction=system,
@@ -93,7 +93,8 @@ class GoogleLLM(LLMClient):
         # tokens come out of `max_output_tokens`, and at the 512-token budgets
         # retrieval and the judge use that truncates the reply mid-value.
         step_down = [
-            types.ThinkingConfig(thinking_level="LOW"),
+            types.ThinkingConfig(thinking_level=types.ThinkingLevel.MINIMAL),
+            types.ThinkingConfig(thinking_level=types.ThinkingLevel.LOW),
             None,
         ]
         state = {"thinking": thinking_config is not None}
