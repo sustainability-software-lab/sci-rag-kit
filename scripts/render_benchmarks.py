@@ -58,6 +58,23 @@ SHARED_REPORT_FIELDS = ("git_commit", "snapshot", "provenance")
 #: tighter bound would report weather.
 TOLERANCES = {"metric": 0.10, "count": 0.10}
 
+#: The counterexample to the tolerance promise above, published next to it.
+#: Two reruns from identical recorded inputs moved the entity count 13.3% down
+#: and 12% up, both outside the 10% count tolerance. A reader who runs the
+#: command and gets a different entity count has reproduced the documented
+#: behavior, and telling them so is cheaper than letting them hunt for a
+#: mistake they did not make. A test holds the published page to this string,
+#: so a later re-render cannot keep the numbers and drop the caveat.
+GRAPH_COUNT_CAVEAT = (
+    "The graph counts are the known exception to that promise. Two reruns from "
+    "identical recorded inputs, the same corpus, the same models, and the same "
+    "ontology, moved the entity count 13% down and 12% up. Decoding at "
+    "`temperature: 0.0` does not make the extractor deterministic, and these "
+    "numbers are the evidence. Read `entities` and `relationships` as one draw "
+    "from a distribution. A different count on your machine is the documented "
+    "behavior, not a sign that you have broken something."
+)
+
 
 @dataclass(frozen=True)
 class PageChange:
@@ -332,6 +349,8 @@ def render_benchmarks(
         "not a refresh: publishing it needs a reviewed source report and an "
         "explanation of which recorded input changed.",
         "",
+        GRAPH_COUNT_CAVEAT,
+        "",
         "## Retrieval ablations",
         "",
         "Cells are mean [95% bootstrap CI], resampled per question. The",
@@ -505,11 +524,10 @@ def _compression_section(answers: dict[str, Any], compressed: dict[str, Any]) ->
         "token saving on its own is not evidence; it is half of a trade.",
         "",
         f"Measured at `relevance_floor: {floor}`, which is the load-bearing",
-        "setting rather than a detail. The floor decides whether a source is",
-        "dropped instead of summarized, and dropping evidence is what an",
-        "answer cannot recover from. Raising it trades groundedness for",
-        "tokens; that is a different trade from summarizing, and it needs its",
-        "own paired run.",
+        "setting, not a detail. The floor decides whether a source is dropped",
+        "or summarized, and dropping evidence is what an answer cannot recover",
+        "from. Raising it trades groundedness for tokens; that is a different",
+        "trade from summarizing, and it needs its own paired run.",
         "",
         "| Dimension | Uncompressed | Compressed |",
         "|-----------|-------------:|-----------:|",
@@ -553,7 +571,7 @@ def _compression_section(answers: dict[str, Any], compressed: dict[str, Any]) ->
             " for evidence that quality holds, and overlapping intervals are"
             " not that evidence.",
             "",
-            "The mechanism is the relevance floor rather than the summarizer,"
+            "The mechanism is the relevance floor, not the summarizer,"
             " which the counters above separate: sources were dropped, none"
             " failed to compress. A lower floor may pass the gate. Re-run it"
             " before turning compression on for any corpus.",
