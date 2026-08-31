@@ -3755,7 +3755,7 @@ torch = [
 
 [[package]]
 name = "sci-rag-kit"
-version = "0.4.0"
+version = "0.4.1"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
