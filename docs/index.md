@@ -224,7 +224,7 @@ The recommended Quick session above, in full. `scripts/render_cast.py` builds it
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  domain/domain.yaml     8 entity types, 6 relation types, 4 query classes</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  data/demo/eval_seed_questions.jsonl   ground truth for the demo corpus</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  domain/eval_seed_questions.jsonl   guided blank</span></span>
-<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  .env                   google_ai_studio, gemini-2.5-flash, gemini-embedding-001</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  .env                   google_ai_studio, gemini-3.6-flash, gemini-embedding-001</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  pyproject.toml         name, description, extras: none</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Makefile               commands prefixed with `uv run`</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  docs/                  kit onboarding, player, and cast removed</span></span>
@@ -294,7 +294,7 @@ The recommended Quick session above, in full. `scripts/render_cast.py` builds it
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">google</span></span>
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">local-hash</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"></span></span>
-<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">llm_model</span><span class="srag-term__default"> (gemini-2.5-flash):</span><span class="srag-term__value"></span></span>
+<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">llm_model</span><span class="srag-term__default"> (gemini-3.6-flash):</span><span class="srag-term__value"></span></span>
 <span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">embedding_model</span><span class="srag-term__default"> (gemini-embedding-001):</span><span class="srag-term__value"></span></span>
 <span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">embedding_dim</span><span class="srag-term__default"> (1536):</span><span class="srag-term__value"></span></span>
 <span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select ontology</span></span>
@@ -363,7 +363,7 @@ The recommended Quick session above, in full. `scripts/render_cast.py` builds it
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  removed                docs/planning/, infra/terraform/, scripts/cloud_postgres.py, infra/terraform/dev-database/, data/demo/, examples/</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  domain/domain.yaml     8 entity types, 6 relation types, 4 query classes</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  domain/eval_seed_questions.jsonl   guided blank</span></span>
-<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  .env                   google_ai_studio, gemini-2.5-flash, gemini-embedding-001</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  .env                   google_ai_studio, gemini-3.6-flash, gemini-embedding-001</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  pyproject.toml         name, description, extras: docling</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Makefile               commands prefixed with `pixi run`, database defaults to conda-forge, no Docker needed</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  docs/                  kit onboarding, player, and cast removed</span></span>

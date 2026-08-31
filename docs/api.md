@@ -123,7 +123,7 @@ A grounded, cited answer. Two modes in one endpoint:
 event: retrieval_started   data: {"profile": "deep"}
 event: retrieval_done      data: {"item_count": 8, "degraded_stages": [], "traces": [...]}
 event: compression_done    data: {"enabled": true, "prompt_tokens_before": 1408, "prompt_tokens_after": 462, ...}
-event: generation_started  data: {"model": "gemini-2.5-flash"}
+event: generation_started  data: {"model": "gemini-3.6-flash"}
 event: delta               data: {"text": "Given its ash content, ..."}   (repeats)
 event: citations           data: {"citations": [{"index": 1, "title": "...", "cited": true, ...}]}
 event: done                data: {"finish_reason": "stop"}

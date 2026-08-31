@@ -19,6 +19,8 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
+from sci_rag.config import DEFAULT_LLM_MODEL
+
 # Copies for a dry run skip anything large or regenerable. None of it is read
 # by an applier, and data/raw can hold a whole corpus.
 _SCRATCH_IGNORE = shutil.ignore_patterns(
@@ -117,7 +119,7 @@ def init(
                 build_explicit_google_llm(
                     api_key=api_key,
                     gcp_project=gcp_project,
-                    model=raw.get("llm_model", "gemini-2.5-flash"),
+                    model=raw.get("llm_model", DEFAULT_LLM_MODEL),
                 )
                 if api_key or gcp_project
                 else None

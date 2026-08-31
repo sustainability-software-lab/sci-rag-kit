@@ -18,6 +18,33 @@ from sci_rag.llm.client import LLMClient, retry_async
 logging.getLogger("google_genai.models").setLevel(logging.ERROR)
 
 
+#: Markers for "you sent an argument I will not accept". Captured from real
+#: responses rather than paraphrased: Gemini 3.x answers a `thinking_budget`
+#: it dislikes with a generic invalid-argument error that never names the
+#: field, which is why matching the field name alone missed it entirely.
+_REJECTED_ARGUMENT_MARKERS = (
+    "thinking",
+    "invalid argument",
+    "invalid_argument",
+    "400",
+)
+
+
+def _looks_like_a_rejected_knob(exc: Exception) -> bool:
+    """Did the provider refuse the request itself, rather than fail to serve it?
+
+    Deliberately narrow. This is only ever consulted on a call that carried a
+    thinking budget, so the question is whether to retry that same call once
+    without it. A rate limit or a server error is not a rejected argument and
+    must keep propagating, or the real cause disappears behind a second
+    failure.
+    """
+    message = str(exc).lower()
+    if any(code in message for code in ("429", "resource_exhausted", "503", "500", "unavailable")):
+        return False
+    return any(marker in message for marker in _REJECTED_ARGUMENT_MARKERS)
+
+
 class GoogleLLM(LLMClient):
     def __init__(
         self,
@@ -69,7 +96,17 @@ class GoogleLLM(LLMClient):
             except Exception as exc:
                 # Some models reject the thinking knob outright; drop it and
                 # try again rather than failing the whole call.
-                if state["thinking"] and "thinking" in str(exc).lower():
+                #
+                # Matching on the word "thinking" was not enough. Gemini 3.x
+                # rejects `thinking_budget=0` with a bare "Request contains an
+                # invalid argument", never naming the knob, so this fallback
+                # existed and silently never fired for those models. An
+                # unfired fallback is worse than none: it reads as covered.
+                # A rejected argument on a request we know carried an unusual
+                # one is the signal, not the provider's choice of words. Rate
+                # limits and server errors still propagate, because retrying
+                # those without the knob would hide their cause.
+                if state["thinking"] and _looks_like_a_rejected_knob(exc):
                     config.thinking_config = None
                     state["thinking"] = False
                     response = await self._client.aio.models.generate_content(

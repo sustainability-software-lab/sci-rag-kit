@@ -105,8 +105,9 @@ def test_make_genai_client_requires_credentials() -> None:
 class StubGenerateClient:
     """Scripted generate_content: can reject the thinking knob or rate-limit."""
 
-    def __init__(self, *, reject_thinking=False, failures=0, text="hello"):  # type: ignore[no-untyped-def]
+    def __init__(self, *, reject_thinking=False, failures=0, text="hello", reject_message=None):  # type: ignore[no-untyped-def]
         self.reject_thinking = reject_thinking
+        self.reject_message = reject_message or "thinking is not supported for this model"
         self.failures = failures
         self.text = text
         self.configs: list[object] = []
@@ -117,7 +118,7 @@ class StubGenerateClient:
         # config object, so storing the reference would alias the history.
         self.configs.append(config.thinking_config)
         if self.reject_thinking and config.thinking_config is not None:
-            raise RuntimeError("thinking is not supported for this model")
+            raise RuntimeError(self.reject_message)
         if self.failures:
             self.failures -= 1
             raise RuntimeError("503 UNAVAILABLE")
@@ -156,3 +157,51 @@ async def test_generate_retries_unavailable(monkeypatch) -> None:  # type: ignor
     llm = _llm_with(monkeypatch, client)
     assert await llm.generate("q") == "recovered"
     assert len(client.configs) == 2
+
+
+# Captured from Vertex and AI Studio on 2026-08-31, calling gemini-3.6-flash
+# with ThinkingConfig(thinking_budget=0). Quoted rather than paraphrased,
+# because the previous fallback matched on the word "thinking" and this
+# message does not contain it.
+GEMINI_3_REJECTION = (
+    "400 INVALID_ARGUMENT. {'error': {'code': 400, "
+    "'message': 'Request contains an invalid argument.', 'status': 'INVALID_ARGUMENT'}}"
+)
+
+
+async def test_the_fallback_fires_on_the_rejection_gemini_3_actually_sends(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """The fallback existed and did not fire, which is worse than not having it.
+
+    `gemini-3.x` rejects `thinking_budget=0` with a generic invalid-argument
+    error that never names the knob. Matching on the word "thinking" meant
+    every JSON-mode call against those models failed outright: graph
+    extraction, HyDE, community summaries, and the judge together.
+
+    The message below is captured from the provider, not written to match the
+    code. That distinction is the whole point of this test.
+    """
+    client = StubGenerateClient(
+        reject_thinking=True, text='{"ok": 1}', reject_message=GEMINI_3_REJECTION
+    )
+    llm = _llm_with(monkeypatch, client)
+
+    payload = await llm.generate_json("json please")
+
+    assert payload == {"ok": 1}
+    assert client.configs[0] is not None, "first attempt should carry the knob"
+    assert client.configs[1] is None, "the retry should drop it"
+
+
+async def test_a_failure_unrelated_to_the_knob_is_not_retried_as_one(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """Broadening the match must not swallow real failures.
+
+    A rate limit is not a rejected knob, and retrying it without the knob
+    would hide the cause and spend another call.
+    """
+    client = StubGenerateClient(
+        reject_thinking=True, text="{}", reject_message="429 RESOURCE_EXHAUSTED"
+    )
+    llm = _llm_with(monkeypatch, client)
+
+    with pytest.raises(Exception, match="RESOURCE_EXHAUSTED"):
+        await llm.generate_json("json please")

@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 from google.auth.exceptions import DefaultCredentialsError
 
-from sci_rag.config import Settings
+from sci_rag.config import DEFAULT_LLM_MODEL, Settings
 
 if TYPE_CHECKING:
     from sci_rag.llm import LLMClient
@@ -31,7 +31,7 @@ def explicit_google_settings(
     api_key: str = "",
     gcp_project: str = "",
     location: str = "us-central1",
-    model: str = "gemini-2.5-flash",
+    model: str = DEFAULT_LLM_MODEL,
 ) -> Settings:
     """Build settings without reading a parent project's ``.env`` file."""
     return Settings.model_validate(
@@ -51,7 +51,7 @@ def build_explicit_google_llm(
     api_key: str = "",
     gcp_project: str = "",
     location: str = "us-central1",
-    model: str = "gemini-2.5-flash",
+    model: str = DEFAULT_LLM_MODEL,
 ) -> LLMClient:
     """Build a client from captured values without consulting ambient settings."""
     from sci_rag.llm import get_llm
@@ -70,7 +70,7 @@ def probe_google_credentials(
     api_key: str = "",
     gcp_project: str = "",
     location: str = "us-central1",
-    model: str = "gemini-2.5-flash",
+    model: str = DEFAULT_LLM_MODEL,
     timeout_s: float = 15.0,
 ) -> CredentialProbe:
     """Make one bounded generation call with an explicit Google credential."""

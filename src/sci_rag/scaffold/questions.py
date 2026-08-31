@@ -15,6 +15,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 
+from sci_rag.config import DEFAULT_LLM_MODEL
 from sci_rag.scaffold.naming import slugify
 from sci_rag.scaffold.runners import runner_keys
 
@@ -196,7 +197,7 @@ QUESTIONS: tuple[Question, ...] = (
         # Offline projects have no provider to choose; answers.py forces it.
         asked_when=lambda a: a.get("credentials") != "offline",
     ),
-    Question("llm_model", "llm_model", "gemini-2.5-flash", label="Generation model"),
+    Question("llm_model", "llm_model", DEFAULT_LLM_MODEL, label="Generation model"),
     Question(
         "embedding_model",
         "embedding_model",

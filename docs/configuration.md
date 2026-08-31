@@ -33,7 +33,7 @@ renderer, including commented optional values.
 | `SCI_RAG_EMBEDDING_MODEL` | str | gemini-embedding-001 | Provider model identifier stamped into stored embedding versions. |
 | `SCI_RAG_EMBEDDING_DIM` | int | 1536 | Fixed vector width. Changing it on a populated schema requires migration and re-embedding. |
 | `SCI_RAG_LLM_PROVIDER` | 'google' \| 'anthropic' \| 'openai-compatible' | google | Backend a bare model id belongs to. Any model setting may override it inline as `provider:model`. |
-| `SCI_RAG_LLM_MODEL` | str | gemini-2.5-flash | Generation model for answers, HyDE, communities, reranking, and judging. |
+| `SCI_RAG_LLM_MODEL` | str | gemini-3.6-flash | Generation model for answers, HyDE, communities, reranking, and judging. |
 | `SCI_RAG_EXTRACTION_MODEL` | str \| NoneType | unset | Optional high-volume extraction model; unset inherits the generation model. |
 | `SCI_RAG_JUDGE_MODEL` | str \| NoneType | unset | Optional evaluation judge model; unset inherits the generation model. Naming a different provider avoids self-graded answers. |
 | `SCI_RAG_INTERACTIVE_STAGE_TIMEOUT_S` | float | 8.0 | Per-stage timeout for the low-latency interactive profile. |

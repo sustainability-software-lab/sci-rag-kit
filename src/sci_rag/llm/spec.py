@@ -2,7 +2,7 @@
 
 A spec names both halves of the choice in one value::
 
-    gemini-2.5-flash                       # the default provider
+    gemini-3.6-flash                       # the default provider
     anthropic:claude-opus-5                # Claude, on Vertex or the direct API
     openai-compatible:xai/grok-4.1-fast-reasoning
 
