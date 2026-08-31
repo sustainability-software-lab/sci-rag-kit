@@ -6,6 +6,74 @@ Notable changes to sci-rag-kit. The format follows
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-08-31
+
+A fix release, driven by qualifying the documented routes against real
+credentials for the first time. The headline is that a reader creating a new
+Google AI Studio key could not get an answer out of v0.4.0 at all.
+
+### Fixed
+
+- **The default generation model was refused for every newly issued AI Studio
+  key.** `gemini-2.5-flash` shipped as the default and returns `404 ... no
+  longer available to new users`, along with the rest of the 2.5 family.
+  Because `extraction_model` and `judge_model` inherit `llm_model` when unset,
+  one dead default took out generation, graph extraction, HyDE, community
+  summaries, and the judge together. Embedding was unaffected. The default is
+  now `gemini-3.6-flash`, verified live on both the AI Studio and Vertex
+  credential paths.
+
+  **Who this affected.** Only new credentials. An established Google Cloud
+  project still answers `gemini-2.5-flash` through Vertex, which is why the
+  default survived this long: the people who set it were not new users.
+
+  **If you pinned the old model,** nothing changes. `SCI_RAG_LLM_MODEL` in your
+  `.env` still wins. If you relied on the default and compare metrics across
+  this release, rerun your evaluation rather than comparing numbers produced by
+  two different models. Closes #248.
+
+- **JSON-mode calls failed outright against Gemini 3.x models.** Structured
+  output disables thinking with `thinking_budget=0`, which those models reject
+  with a bare "Request contains an invalid argument". A fallback for exactly
+  this case existed but matched on the word "thinking", which that message
+  never contains, so it never fired. It now keys on the request being refused
+  rather than on the provider's wording, while rate limits and server errors
+  still propagate.
+
+- **`X-Request-ID` was missing from error responses.** The header is added on
+  the way out, so any problem response built after an unhandled exception had
+  already unwound past that layer carried none, including every
+  `internal_error`. The body quoted a `request_id` the caller could not read
+  off the response, on exactly the response whose `detail` sends the reader to
+  the logs to quote it. Every problem response now carries the header,
+  whichever layer built it, and `docs/api.md` states the contract. Closes #192.
+
+### Added
+
+- **`sci-rag eval html RUN_DIR`** renders an evaluation run as one
+  self-contained HTML page, for sharing with a collaborator who will never open
+  a terminal. Inline styles and nothing fetched when the page opens, so it
+  renders the same for the recipient as for you. It leads with the provenance
+  receipt, carries the small-sample and drafted-ground-truth warnings next to
+  the metrics, picks up `calibration.json` when it sits beside the report, and
+  shades ablation cells whose confidence intervals overlap the baseline. Closes
+  #36.
+
+### Changed
+
+- **The published benchmark numbers were republished, and the claim above them
+  corrected.** The page promised reproduction within 0.1 on a metric and 10% on
+  a count. Two reruns from identical recorded inputs moved the entity count 13%
+  down and 12% up, so `temperature: 0.0` does not make graph extraction
+  deterministic. The numbers are refreshed from their source reports and the
+  page now names the graph counts as the known exception, to be read as one
+  draw from a distribution. Closes #240.
+
+- `sci-rag corpus snapshot` writes a trailing newline, so a fresh snapshot is
+  committable as produced rather than failing the repository's own
+  end-of-file hook.
+
+
 ## [0.4.0] - 2026-08-30
 
 Everything below was unreleased until this version. The headline is that
