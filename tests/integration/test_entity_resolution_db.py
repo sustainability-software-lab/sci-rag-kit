@@ -668,3 +668,39 @@ async def test_graph_gc_preserves_empty_survivor_referenced_by_tombstone(clean_t
     assert outcome.entities_deleted == 0
     assert winner is not None and loser is not None
     assert loser.canonical_entity_id == winner.id
+
+
+async def test_resolution_changes_what_a_survivor_query_retrieves(clean_tables) -> None:  # type: ignore[no-untyped-def]
+    """One corpus, one query, run either side of the merge.
+
+    Before resolution the survivor "rice straw" holds no chunk evidence and
+    no edge: the duplicate "Paddy Straw" holds both. A reader who asks by the
+    survivor's name therefore reaches nothing. After the merge the duplicate's
+    evidence and its edge belong to the survivor, so the identical query
+    reaches the chunk.
+
+    Both halves are asserted because only the pair proves resolution changed
+    the retrieval result. A single post-merge assertion cannot tell a working
+    resolver apart from a corpus that would have answered anyway.
+    """
+    ids = await seed_duplicates()
+    domain = load_domain(Path(__file__).parents[2] / "domain")
+
+    async def ask_by_survivor_name() -> list:  # type: ignore[type-arg]
+        return await graph_stage(
+            get_session_factory(),
+            NamedQueryLLM("rice straw"),  # type: ignore[arg-type]
+            domain,
+            "What converts rice straw?",
+            RetrievalScope(),
+            limit=5,
+        )
+
+    before = await ask_by_survivor_name()
+    report = await resolve_entities(get_session_factory(), dry_run=False, no_llm=True)
+    after = await ask_by_survivor_name()
+
+    assert report.planned_merges == 1
+    assert ("chunk", ids["chunk"]) not in before
+    assert ("chunk", ids["chunk"]) in after
+    assert before != after

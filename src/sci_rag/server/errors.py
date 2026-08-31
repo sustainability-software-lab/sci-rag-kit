@@ -41,17 +41,27 @@ class ApiError(Exception):
 def problem_response(
     status: int, code: str, title: str, detail: str = "", headers: dict[str, str] | None = None
 ) -> JSONResponse:
+    request_id = request_id_var.get()
+    # Stamp the header here rather than relying on RequestIdMiddleware. That
+    # middleware adds the header on the way back out, so a response built
+    # after an unhandled exception unwound past it never got one: the body
+    # quoted an id the caller could not read off the response. A 500 is the
+    # response that most needs the id, since its detail sends the reader to
+    # the server logs to look it up.
+    response_headers = dict(headers or {})
+    if request_id:
+        response_headers["X-Request-ID"] = request_id
     return JSONResponse(
         status_code=status,
         media_type=PROBLEM_CONTENT_TYPE,
-        headers=headers,
+        headers=response_headers,
         content={
             "type": f"https://github.com/sustainability-software-lab/sci-rag-kit/blob/main/docs/api.md#{code}",
             "title": title,
             "status": status,
             "code": code,
             "detail": detail,
-            "request_id": request_id_var.get(),
+            "request_id": request_id,
         },
     )
 
