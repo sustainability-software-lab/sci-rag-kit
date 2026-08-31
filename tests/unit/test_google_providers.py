@@ -188,8 +188,8 @@ async def test_the_fallback_fires_on_the_rejection_gemini_3_actually_sends(monke
     payload = await llm.generate_json("json please")
 
     assert payload == {"ok": 1}
-    assert client.configs[0] is not None, "first attempt should carry the knob"
-    assert client.configs[1] is None, "the retry should drop it"
+    assert client.configs[0].thinking_budget == 0, "first attempt asks for no thinking"
+    assert client.configs[1] != client.configs[0], "the retry must not resend the rejected knob"
 
 
 async def test_a_failure_unrelated_to_the_knob_is_not_retried_as_one(monkeypatch) -> None:  # type: ignore[no-untyped-def]
@@ -205,3 +205,46 @@ async def test_a_failure_unrelated_to_the_knob_is_not_retried_as_one(monkeypatch
 
     with pytest.raises(Exception, match="RESOURCE_EXHAUSTED"):
         await llm.generate_json("json please")
+
+
+async def test_a_model_that_rejects_the_budget_gets_a_thinking_level(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """Step down, do not give up.
+
+    #248 made the fallback fire for Gemini 3.x, but it dropped thinking
+    control entirely, so reasoning tokens came out of `max_output_tokens` and
+    structured replies truncated mid-value at the 512-token budgets retrieval
+    and the judge use. `thinking_level` is the knob those models do accept,
+    so the fallback steps to it rather than to nothing.
+    """
+    client = StubGenerateClient(
+        reject_thinking=True, text='{"ok": 1}', reject_message=GEMINI_3_REJECTION
+    )
+    llm = _llm_with(monkeypatch, client)
+
+    payload = await llm.generate_json("json please")
+
+    assert payload == {"ok": 1}
+    assert client.configs[0].thinking_budget == 0, "first attempt asks for no thinking at all"
+    second = client.configs[1]
+    assert second is not None, "thinking control was dropped rather than stepped down"
+    assert second.thinking_level == "MINIMAL", "ask for the least reasoning first"
+
+
+class RejectsEveryThinkingKnob(StubGenerateClient):
+    """A model that accepts neither spelling, which must still complete."""
+
+    async def _generate(self, *, model, contents, config):  # type: ignore[no-untyped-def]
+        self.configs.append(config.thinking_config)
+        if config.thinking_config is not None:
+            raise RuntimeError(GEMINI_3_REJECTION)
+        return SimpleNamespace(text=self.text)
+
+
+async def test_a_model_that_rejects_both_knobs_still_completes(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    client = RejectsEveryThinkingKnob(text='{"ok": 2}')
+    llm = _llm_with(monkeypatch, client)
+
+    payload = await llm.generate_json("json please")
+
+    assert payload == {"ok": 2}
+    assert client.configs[-1] is None, "the last attempt drops thinking control entirely"
