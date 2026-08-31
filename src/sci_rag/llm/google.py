@@ -86,6 +86,16 @@ class GoogleLLM(LLMClient):
             response_mime_type="application/json" if json_mode else None,
             thinking_config=thinking_config,
         )
+        # How to ask for as little reasoning as possible, most preferred first.
+        # `thinking_budget=0` is the 2.5 spelling and 3.x rejects it outright;
+        # `thinking_level` is the 3.x spelling. Dropping the knob entirely is
+        # the last resort rather than the first fallback, because reasoning
+        # tokens come out of `max_output_tokens`, and at the 512-token budgets
+        # retrieval and the judge use that truncates the reply mid-value.
+        step_down = [
+            types.ThinkingConfig(thinking_level="LOW"),
+            None,
+        ]
         state = {"thinking": thinking_config is not None}
 
         async def call() -> str:
@@ -106,12 +116,22 @@ class GoogleLLM(LLMClient):
                 # one is the signal, not the provider's choice of words. Rate
                 # limits and server errors still propagate, because retrying
                 # those without the knob would hide their cause.
-                if state["thinking"] and _looks_like_a_rejected_knob(exc):
-                    config.thinking_config = None
-                    state["thinking"] = False
-                    response = await self._client.aio.models.generate_content(
-                        model=self.model, contents=prompt, config=config
-                    )
+                if not (state["thinking"] and _looks_like_a_rejected_knob(exc)):
+                    raise
+                # Walk down the spellings until one is accepted. Each rejection
+                # has to look like a refused argument, so a rate limit part way
+                # through still surfaces as itself.
+                while step_down:
+                    config.thinking_config = step_down.pop(0)
+                    state["thinking"] = config.thinking_config is not None
+                    try:
+                        response = await self._client.aio.models.generate_content(
+                            model=self.model, contents=prompt, config=config
+                        )
+                        break
+                    except Exception as retry_exc:
+                        if not (state["thinking"] and _looks_like_a_rejected_knob(retry_exc)):
+                            raise
                 else:
                     raise
             return response.text or ""
