@@ -40,6 +40,12 @@ and the request id:
  "status": 401, "code": "invalid_key", "detail": "", "request_id": "9f2c..."}
 ```
 
+The same id comes back in the `X-Request-ID` response header on every
+response, error or not. Send your own in the request header to have it
+echoed, and quote it when you ask an operator to find the call in the
+logs. A `500` never carries the underlying exception message, the query,
+or any chunk text: it names the exception type and points at the logs.
+
 Codes you can branch on:
 
 | Code | Status | Meaning |
