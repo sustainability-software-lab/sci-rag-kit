@@ -282,6 +282,34 @@ the format, nothing more. Domain-expert labels supersede it for any real
 claim about judge reliability, and the BioCirV collaboration supplies
 those for the flagship deployment.
 
+## Sharing a run with someone who has no terminal
+
+A domain expert asked to sanity-check ten judged answers should not have
+to be talked through cloning anything. `sci-rag eval html` renders a run
+as a single file you can attach to an email:
+
+```bash
+uv run sci-rag eval html eval_results/<run>
+```
+
+It writes `report.html` next to the report, or wherever `--output`
+points. The page is self-contained: inline styles, no fonts, no scripts,
+nothing fetched when it opens. That is deliberate. A page that fetches
+anything renders differently for the recipient than for you, and
+eventually renders as nothing behind a corporate firewall.
+
+It leads with the provenance receipt, because a reader who cannot run the
+command has no other way to find out which model produced what they are
+reading. The small-sample and drafted-ground-truth warnings sit next to
+the metrics, in the same place `report.md` puts them. `calibration.json`
+is picked up automatically when it sits beside the report.
+
+In an ablation table, a cell whose confidence interval overlaps the
+baseline config is shaded, and one that clears it is bold. Overlapping
+intervals are the most common way these tables get misread, and on a
+single-digit corpus most cells will be shaded. That is the honest
+reading, not a rendering failure.
+
 ## Honesty probes
 
 Include at least one question your corpus cannot answer, tagged

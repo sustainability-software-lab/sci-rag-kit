@@ -1003,6 +1003,45 @@ def eval_diff(
         console.print(f"Diff written to [bold]{output}[/bold].")
 
 
+@eval_app.command("html")
+def eval_html(
+    run: Path = typer.Argument(..., help="Run directory, or the report.json inside one."),
+    output: Path | None = typer.Option(
+        None, "--output", help="Where to write the page (default: report.html beside the report)."
+    ),
+) -> None:
+    """Render an eval run as one self-contained HTML page.
+
+    For sharing with a collaborator who will never open a terminal. Inline
+    styles, nothing fetched when the page is opened, and the small-sample
+    and drafted-ground-truth warnings travel with the numbers. Picks up
+    `calibration.json` automatically when it sits beside the report.
+    """
+    from sci_rag.evals.diff import DiffError, load_report
+    from sci_rag.evals.html import render_html
+
+    try:
+        payload = load_report(run)
+    except DiffError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+
+    run_dir = run if run.is_dir() else run.parent
+    calibration_path = run_dir / "calibration.json"
+    calibration = None
+    if calibration_path.exists():
+        try:
+            calibration = json.loads(calibration_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            console.print(f"[red]{calibration_path} is not valid JSON: {exc}[/red]")
+            raise typer.Exit(1) from exc
+
+    destination = output or run_dir / "report.html"
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(render_html(payload, calibration=calibration), encoding="utf-8")
+    console.print(f"Wrote [bold]{destination}[/bold].")
+
+
 @eval_app.command("calibrate")
 def eval_calibrate(
     labels: Path = typer.Option(..., "--labels", help="Human labels (labels.jsonl)."),
