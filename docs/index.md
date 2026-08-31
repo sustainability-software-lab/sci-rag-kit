@@ -402,6 +402,6 @@ The recommended Quick session above, in full. `scripts/render_cast.py` builds it
 
 <section class="srag-home-section srag-home-footer" markdown>
 
-<p class="srag-home-footer__meta">v0.4.0, alpha. Install with pipx.</p>
+<p class="srag-home-footer__meta">v0.4.1, alpha. Install with pipx.</p>
 
 </section>
