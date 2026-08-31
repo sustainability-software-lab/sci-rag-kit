@@ -38,6 +38,7 @@ migrations, `domain/`, and data paths resolve predictably.
 | `sci-rag eval retrieval` | Score retrieval against your seed questions (and per-layer ablations). |
 | `sci-rag eval answers` | Generate answers for every seed question and grade them with the blind judge. |
 | `sci-rag eval diff` | Compare two eval runs: per-question rank moves and paired metric deltas. |
+| `sci-rag eval html` | Render an eval run as one self-contained HTML page. |
 | `sci-rag eval calibrate` | Compare human labels against the judge's scores: Cohen's kappa per dimension. |
 | `sci-rag embed` | Embedding maintenance: find and re-embed rows left behind by a model upgrade. |
 | `sci-rag embed reindex` | Re-embed chunks and community summaries stamped with a retired embedder version. |
@@ -411,6 +412,26 @@ $ sci-rag eval diff [OPTIONS] REPORT_A REPORT_B
 |---|---|---|---|
 | `--config` | text | unset | Diff only this ablation config (default: every common config). |
 | `--output` | path | unset | Also write the markdown diff to this path. |
+
+## `sci-rag eval html`
+
+Render an eval run as one self-contained HTML page. For sharing with a collaborator who will never open a terminal. Inline styles, nothing fetched when the page is opened, and the small-sample and drafted-ground-truth warnings travel with the numbers. Picks up `calibration.json` automatically when it sits beside the report.
+
+```console
+$ sci-rag eval html [OPTIONS] RUN
+```
+
+### Arguments
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `RUN` | path | required | Run directory, or the report.json inside one. |
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--output` | path | unset | Where to write the page (default: report.html beside the report). |
 
 ## `sci-rag eval calibrate`
 
