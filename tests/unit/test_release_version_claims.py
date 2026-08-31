@@ -97,3 +97,11 @@ def test_release_validation_runs_the_public_two_command_route() -> None:
     assert "pipx install" in scripts, "the public route starts at pipx, not at uv pip"
     assert "PIPX_HOME" in scripts, "a clean pipx home, so a local install cannot mask a failure"
     assert "sci-rag new --defaults" in scripts, "the wizard has to actually run"
+    # The existence probe asks the CLI, and does not read the rendered help
+    # table. The first attempt grepped that table for " new " and failed on a
+    # runner even though the command was there: Rich decides the layout from
+    # terminal detection, so the check was testing the renderer. Typer exits 2
+    # with "No such command" when a subcommand is missing, which is F-002's
+    # own symptom and does not depend on how anything is drawn.
+    assert "sci-rag new --help" in scripts, "probe the command, not its help table"
+    assert "grep -q  new " not in scripts
