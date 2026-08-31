@@ -19,6 +19,8 @@ from typing import TYPE_CHECKING
 import typer
 from rich.console import Console
 
+from sci_rag.config import DEFAULT_LLM_MODEL
+
 if TYPE_CHECKING:
     from sci_rag.llm import LLMClient
     from sci_rag.scaffold.preflight import CredentialProbe
@@ -231,7 +233,7 @@ def _preflight_credentials(
         result = probe_fn(
             api_key=raw.get("google_api_key", ""),
             gcp_project=raw.get("gcp_project", ""),
-            model=raw.get("llm_model", "gemini-2.5-flash"),
+            model=raw.get("llm_model", DEFAULT_LLM_MODEL),
         )
         if result.ok:
             prompter.note(result.detail)
@@ -266,7 +268,7 @@ def _build_explicit_llm(raw: dict[str, str]) -> LLMClient:
     return build_explicit_google_llm(
         api_key=raw.get("google_api_key", ""),
         gcp_project=raw.get("gcp_project", ""),
-        model=raw.get("llm_model", "gemini-2.5-flash"),
+        model=raw.get("llm_model", DEFAULT_LLM_MODEL),
     )
 
 

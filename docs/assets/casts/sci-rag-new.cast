@@ -135,7 +135,7 @@
 [27.584,"o","\u001b[2m  domain/domain.yaml     8 entity types, 6 relation types, 4 query classes\u001b[0m\r\n"]
 [27.764,"o","\u001b[2m  data/demo/eval_seed_questions.jsonl   ground truth for the demo corpus\u001b[0m\r\n"]
 [27.944,"o","\u001b[2m  domain/eval_seed_questions.jsonl   guided blank\u001b[0m\r\n"]
-[28.124,"o","\u001b[2m  .env                   google_ai_studio, gemini-2.5-flash, gemini-embedding-001\u001b[0m\r\n"]
+[28.124,"o","\u001b[2m  .env                   google_ai_studio, gemini-3.6-flash, gemini-embedding-001\u001b[0m\r\n"]
 [28.304,"o","\u001b[2m  pyproject.toml         name, description, extras: none\u001b[0m\r\n"]
 [28.484,"o","\u001b[2m  Makefile               commands prefixed with `uv run`\u001b[0m\r\n"]
 [28.664,"o","\u001b[2m  docs/                  kit onboarding, player, and cast removed\u001b[0m\r\n"]

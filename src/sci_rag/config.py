@@ -35,6 +35,26 @@ LLMRole = Literal["answer", "extraction", "judge"]
 _GENERATION_MODEL_FIELDS = ("llm_provider", "llm_model", "extraction_model", "judge_model")
 
 
+#: The generation model a fresh install uses, named once so the wizard, the
+#: scaffolder, the preflight, and the settings cannot drift apart.
+#:
+#: Pick one a *newly issued* credential can call. Google retires a model for
+#: new users well before removing it, so an id that answers on a long-lived
+#: key can already be dead for the reader following the quickstart. That is
+#: what happened to `gemini-2.5-flash`, which shipped as this default through
+#: v0.4.0 and returns `404 ... no longer available to new users`.
+#:
+#: `tests/cloud/test_default_model_live.py` is what checks this against a real
+#: endpoint. Nothing offline can.
+#:
+#: One property to preserve when changing it: `gemini-3.x` spends output
+#: tokens on reasoning before emitting anything, so a budget under roughly 64
+#: returns an empty string rather than an error. Every call site here passes
+#: 512 or more, and a future default should be checked against the smallest
+#: of those rather than against a one-word prompt.
+DEFAULT_LLM_MODEL = "gemini-3.6-flash"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="SCI_RAG_",
@@ -76,7 +96,7 @@ class Settings(BaseSettings):
     # The provider a bare model id belongs to. Any model setting below may
     # override it inline as "provider:model".
     llm_provider: LLMProviderName = "google"
-    llm_model: str = "gemini-2.5-flash"
+    llm_model: str = DEFAULT_LLM_MODEL
     # Cheap-and-fast model for high-volume extraction calls. Defaults to
     # ``llm_model`` when unset.
     extraction_model: str | None = None

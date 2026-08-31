@@ -4,7 +4,7 @@ With ``stream: true`` (the default) the response is Server-Sent Events:
 
     event: retrieval_started   {"profile": "deep"}
     event: retrieval_done      {"item_count": 8, "degraded_stages": [], "traces": [...]}
-    event: generation_started  {"model": "gemini-2.5-flash"}
+    event: generation_started  {"model": "gemini-3.6-flash"}
     event: delta               {"text": "..."}          (repeats)
     event: citations           {"citations": [...]}
     event: done                {"finish_reason": "stop"}

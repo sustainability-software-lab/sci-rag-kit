@@ -19,6 +19,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from sci_rag.config import DEFAULT_LLM_MODEL
 from sci_rag.domain import DomainConfig, RerankerTuning
 from sci_rag.scaffold.naming import slugify
 from sci_rag.scaffold.runners import RunnerProfile, get_runner, runner_keys
@@ -56,7 +57,7 @@ class ProjectAnswers(BaseModel):
     google_api_key: str = Field(default="", repr=False, exclude=True)
     gcp_project: str = ""
     embedding_provider: Literal["google", "local-hash"] = "google"
-    llm_model: str = "gemini-2.5-flash"
+    llm_model: str = DEFAULT_LLM_MODEL
     embedding_model: str = "gemini-embedding-001"
     embedding_dim: int = 1536
     ontology: OntologyChoice = "keep_demo_example"

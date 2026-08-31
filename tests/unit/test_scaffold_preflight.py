@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import pytest
 from google.auth.exceptions import DefaultCredentialsError
 
-from sci_rag.config import Settings
+from sci_rag.config import DEFAULT_LLM_MODEL, Settings
 from sci_rag.scaffold.preflight import (
     CredentialProbe,
     explicit_google_settings,
@@ -45,7 +45,7 @@ def test_ai_studio_key_can_complete_a_tiny_generation_probe(monkeypatch) -> None
     result = probe_google_credentials(api_key="test-secret-key", timeout_s=1)
 
     assert result.ok is True
-    assert "gemini-2.5-flash" in result.detail
+    assert DEFAULT_LLM_MODEL in result.detail
     assert calls == [{"api_key": "test-secret-key"}]
     assert "test-secret-key" not in repr(result)
 
