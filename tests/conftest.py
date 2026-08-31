@@ -25,6 +25,18 @@ os.environ["SCI_RAG_DATABASE_URL"] = os.environ.get(
 os.environ.setdefault("SCI_RAG_GOOGLE_API_KEY", "")
 os.environ.setdefault("SCI_RAG_GCP_PROJECT", "")
 
+# The generation model is part of that leak, and it was missed. `.env.example`
+# ships `SCI_RAG_LLM_MODEL`, so most working copies have it set, and
+# `Settings.is_offline()` asks whether every generation setting still equals
+# its shipped default. A developer whose `.env` named the previous default
+# therefore passed the offline diagnostics tests for the wrong reason, and one
+# whose `.env` was merely stale failed them on a diff that never touched the
+# feature. Pinning these here is what makes those tests about the code.
+from sci_rag.config import DEFAULT_LLM_MODEL
+
+os.environ.setdefault("SCI_RAG_LLM_PROVIDER", "google")
+os.environ.setdefault("SCI_RAG_LLM_MODEL", DEFAULT_LLM_MODEL)
+
 import pytest
 import pytest_asyncio
 from sqlalchemy import text
