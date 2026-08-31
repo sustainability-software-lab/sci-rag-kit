@@ -16,13 +16,19 @@ hide:
 
 # Retrieval-augmented generation, built around your scientific domain.
 
-<p class="srag-home-masthead__lede">A template repository that ingests your literature, keeps provenance and rights attached, retrieves through five fused layers, generates cited answers, and evaluates the whole path.</p>
+<div class="srag-home-masthead__lede" markdown>
 
-<p class="srag-home-masthead__meta">v0.4.0, alpha, BSD-3-Clause. Install with pipx.</p>
+Sci RAG Kit provides a blueprint for custom RAG development,
+from document ingestion
+to retrieval, and evaluation. Fully
+extensible and ready to scale. Shipped with API and MCP endpoints included
+for serving locally or in production.
+
+</div>
 
 </section>
 
-<section class="srag-home-section srag-home-section--figure" markdown>
+<section class="srag-home-section" markdown>
 
 <figure class="srag-home-figure">
   <img
@@ -31,7 +37,7 @@ hide:
     width="1360"
     height="600"
   >
-  <figcaption>One path from source document to evaluated answer.</figcaption>
+  <figcaption>End-to-end RAG architecture that ships with every new Sci RAG Kit project.</figcaption>
 </figure>
 
 </section>
@@ -42,24 +48,31 @@ hide:
 
 ## Start a project
 
-Two lines, run from wherever you keep projects. Quick asks for six setup decisions,
-plus the credential value required by the selected mode, and supplies defaults for
-everything else. Choose Offline when you do not want a model credential. Advanced
-exposes every applicable option. Both write a configured, git-initialized project
-directory.
+Get up and running with two terminal commands
 
 ```console title="Terminal"
 $ pipx install sci-rag-kit
 $ sci-rag new
 ```
 
-<div id="srag-cast" class="srag-cast" data-cast="assets/casts/sci-rag-new.cast" data-autoplay="true" aria-label="Recorded sci-rag new session"></div>
+The setup wizard will guide you through a series of
+questions to initialize your project and automatically populate configuration
+files for you
 
-The same session is written out under [Example](#example), so you can read and copy it without JavaScript.
+Quick mode asks for six setup decisions, plus the credential value required by
+the selected mode, and supplies defaults for everything else. Choose Offline if
+you do not want a model credential, or Advanced to reach every applicable option.
+
+<div id="srag-cast" class="srag-cast" data-cast="assets/casts/sci-rag-new.cast" data-autoplay="true" aria-label="Recorded sci-rag new session"></div>
+<small> (A full trace of this terminal session can be found [below](#example))</small>
 
 Want to look first? [Other ways in](quickstart.md#other-ways-in) covers a clone, the GitHub template, `sci-rag init`, and the dev container.
 
-[Quickstart](quickstart.md)
+Want to follow a step-by-step tutorial to get started? Follow our
+[Quickstart](quickstart.md) guide.
+It will take you from installation and setup through document ingestion,
+retrieval, and
+benchmarking, all on your local machine.
 
 <!-- END KIT ONBOARDING -->
 
@@ -67,27 +80,31 @@ Want to look first? [Other ways in](quickstart.md#other-ways-in) covers a clone,
 
 <section class="srag-home-section" id="components" markdown>
 
-## Components
+## What's in the kit?
 
 <div class="srag-defs" markdown>
 
-Structure-aware ingestion
-:   PDF, Markdown, and text become chunks that retain section paths and intact tables. [Follow ingestion into storage](architecture.md#data-model).
+Structure-aware ingestion: PDF, Markdown, and text become chunks that retain
+section paths and intact tables. [Follow ingestion into
+storage](architecture.md#data-model).
 
-Five-layer retrieval
-:   Vector, keyword, graph, community, and HyDE candidates meet in one weighted fusion. [See the retrieval design](methodology.md).
+Five-layer retrieval: Vector, keyword, graph, community, and HyDE candidates
+meet in one weighted fusion. [See the retrieval design](methodology.md).
 
-Postgres-native graph
-:   Vectors, full-text search, concepts, relationships, and source records live together. [Read the decision record](adr/0001-graph-in-postgres.md).
+Postgres-native graph: Vectors, full-text search, concepts, relationships,
+and source records live together. [Read the decision
+record](adr/0001-graph-in-postgres.md).
 
-Rights-aware scope
-:   License and metadata filters are enforced inside every eligible layer before ranking. [Trace the rights contract](evidence-and-rights.md).
+Rights-aware scope: License and metadata filters are enforced inside every
+eligible layer before ranking. [Trace the rights
+contract](evidence-and-rights.md).
 
-Cited answers
-:   Every answer is assembled from numbered evidence, with a refusal when nothing is in scope. [Use REST or MCP](api.md).
+Cited answers: Every answer is assembled from numbered evidence, with a
+refusal when nothing is in scope. [Use REST or MCP](api.md).
 
-Evaluation
-:   Ablations, confidence intervals, blind judging, calibration, and corpus fingerprints turn quality claims into artifacts. [Evaluate your pipeline](evaluation.md).
+Evaluation: Ablations, confidence intervals, blind judging, calibration, and
+corpus fingerprints turn quality claims into artifacts. [Evaluate your
+pipeline](evaluation.md).
 
 </div>
 
@@ -95,15 +112,19 @@ Evaluation
 
 <section class="srag-home-section" id="repository" markdown>
 
-## One repository, configured
+## Config-first Customization
 
-The generator configures; it does not template. `sci-rag new` fetches this repository at a pinned tag and rewrites its configuration files in place. There are no placeholders to render, and nothing that only becomes real code after generation. The repository you can read is the application you run, before and after.
+Sci RAG Kit handles customization primarily through configuration files.
 
 <!-- BEGIN KIT ONBOARDING -->
-`pipx install sci-rag-kit` followed by `sci-rag new` gives you a configured copy of this same tree. The GitHub template and clone routes remain available when you need to inspect the kit first.
+First, install the kit on the command line with: `pipx install sci-rag-kit`.
+Then running `sci-rag new` will update the config files in
+place based on your responses to the setup questions.
 <!-- END KIT ONBOARDING -->
 
-`domain/` is where your field lives: ontology, prompts, retrieval tuning, and evaluation questions. The rest of the tree stays ordinary Python that you can inspect, test, and change.
+`domain/` is where your domain-definition files live:
+ontology, prompts, retrieval tuning, and
+evaluation questions.
 
 <pre class="srag-home-tree" aria-label="Annotated repository tree"><code>your-sci-rag/
 ├── domain/           ontology, prompts, eval questions
@@ -134,7 +155,7 @@ The generator configures; it does not template. `sci-rag new` fetches this repos
 
 [<span class="srag-row__title">Evaluate your pipeline</span><span class="srag-row__copy">Run layer ablations, compare reports, calibrate the judge, and keep the corpus fingerprint attached.</span>](evaluation.md){ .srag-row }
 
-[<span class="srag-row__title">FAQ</span><span class="srag-row__copy">Answer what this is, who it is for, and why each design decision went the way it did, in five minutes.</span>](faq.md){ .srag-row }
+[<span class="srag-row__title">FAQ</span><span class="srag-row__copy">Our most commonly asked questions and answers.</span>](faq.md){ .srag-row }
 
 [<span class="srag-row__title">Choosing Sci RAG Kit</span><span class="srag-row__copy">Compare the kit with LightRAG, PaperQA2, LlamaIndex, and Microsoft GraphRAG before you commit to it.</span>](choosing-sci-rag-kit.md){ .srag-row }
 
@@ -142,35 +163,11 @@ The generator configures; it does not template. `sci-rag new` fetches this repos
 
 </section>
 
-<section class="srag-home-section" id="principles" markdown>
-
-## Design principles
-
-<div class="srag-defs" markdown>
-
-Preserve provenance
-:   Source identity and section context survive ingestion, ranking, and citation.
-
-Fail closed on rights
-:   An empty license allowlist returns nothing. Unknown never means safe.
-
-Make degradation visible
-:   A timed-out layer becomes a trace, not a quietly weaker answer.
-
-Earn complexity with evidence
-:   Retrieval changes ship behind an ablation and stay only when measured.
-
-</div>
-
-No cache fleet, plug-in framework, graph sidecar, or hidden agent loop sits behind the quickstart. The defaults stay small enough to describe in a methods section. [Read the methodology](methodology.md) · [See the extension seams](extend.md)
-
-</section>
-
 <!-- BEGIN KIT ONBOARDING -->
 
 <section class="srag-home-section" id="example" markdown>
 
-## Example
+## Example CLI Setup Wizard Session
 
 The recommended Quick session above, in full. `scripts/render_cast.py` builds it by driving the real wizard, so it cannot drift from what `sci-rag new` actually asks. Regenerate with `make cast`. `make docs` fails if you forget.
 
@@ -402,3 +399,9 @@ The recommended Quick session above, in full. `scripts/render_cast.py` builds it
 </section>
 
 <!-- END KIT ONBOARDING -->
+
+<section class="srag-home-section srag-home-footer" markdown>
+
+<p class="srag-home-footer__meta">v0.4.0, alpha. Install with pipx.</p>
+
+</section>

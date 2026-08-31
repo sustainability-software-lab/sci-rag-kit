@@ -58,7 +58,8 @@ def test_every_tested_version_claim_matches_what_this_tree_packages() -> None:
     )
 
 
-def test_the_home_page_masthead_names_the_same_version() -> None:
+def test_the_home_page_names_the_same_version() -> None:
+    """The claim sits in the page footer rather than the masthead."""
     home = (ROOT / "docs" / "index.md").read_text(encoding="utf-8")
 
     assert f"v{_packaged_version()}," in home
