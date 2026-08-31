@@ -28,12 +28,6 @@
   border-top: 1px solid var(--srag-border);
 }
 
-/* The figure carries detail that rewards width, so it runs wider than the
-   prose sections rather than being held to a reading measure. */
-.srag-home-section--figure {
-  max-width: 64rem;
-}
-
 .srag-home-section > :first-child {
   margin-top: 0;
 }
@@ -94,8 +88,14 @@
   line-height: 1.6;
 }
 
-.md-typeset .srag-home-masthead__meta {
-  margin: 1.4rem 0 0;
+.md-typeset .srag-home-masthead__lede p {
+  margin: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.md-typeset .srag-home-footer__meta {
+  margin: 0;
   color: var(--srag-muted-600);
   font-size: 0.74rem;
 }
@@ -169,6 +169,17 @@
   color: var(--srag-muted-700);
   font-size: 0.78rem;
   line-height: 1.55;
+}
+
+.md-typeset .srag-defs p {
+  margin: 1.1rem 0 0;
+  color: var(--srag-muted-700);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.md-typeset .srag-defs p:first-child {
+  margin-top: 0;
 }
 
 @media screen and (max-width: 44.984375em) {

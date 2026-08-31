@@ -79,7 +79,7 @@ def test_generated_projects_strip_the_kit_onboarding_and_both_casts() -> None:
     assert "pipx install sci-rag-kit" not in stripped
     assert "sci-rag-new.cast" not in stripped
     assert "sci-rag-new-advanced.cast" not in stripped
-    assert "## Components" in stripped
+    assert "## What's in the kit?" in stripped
 
 
 def test_current_guides_name_the_main_project_command() -> None:
