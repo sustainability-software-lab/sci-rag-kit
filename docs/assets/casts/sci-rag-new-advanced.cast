@@ -222,7 +222,7 @@
 [57.998,"o","\u001b[2m2 - \u001b[0m\u001b[2mNo\u001b[0m\r\n"]
 [58.088,"o","\u001b[2mChoose from [1/2] (1):\u001b[0m\u001b[1m\u001b[0m\r\n"]
 [59.238,"o","Checking the credential with one small model request...\r\n"]
-[59.488,"o","gemini-2.5-flash answered in 90 ms.\r\n"]
+[59.488,"o","gemini-3.6-flash answered in 90 ms.\r\n"]
 [59.738,"o","\r\n"]
 [59.958,"o","\u001b[2m  Drafting an ontology for \"Membrane chemistry and performance for water treatment\"...\u001b[0m\r\n"]
 [60.138,"o","\r\n"]

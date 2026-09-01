@@ -171,6 +171,8 @@ extra_css:
 
 extra:
   generator: false
+  # Pinned to pyproject by tests/unit/test_release_version_claims.py.
+  package_version: "0.4.1"
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/sustainability-software-lab/sci-rag-kit

@@ -117,7 +117,7 @@
 [21.744,"o","\u001b[2m4 - \u001b[0m\u001b[2mdemo_only\u001b[0m\r\n"]
 [21.834,"o","\u001b[2mChoose from [1/2/3/4] (1):\u001b[0m\u001b[1m 1\u001b[0m\r\n"]
 [23.284,"o","Checking the credential with one small model request...\r\n"]
-[23.534,"o","gemini-2.5-flash answered in 90 ms.\r\n"]
+[23.534,"o","gemini-3.6-flash answered in 90 ms.\r\n"]
 [23.784,"o","\r\n"]
 [24.004,"o","\u001b[2m  Drafting an ontology for \"Membrane chemistry and performance for water treatment\"...\u001b[0m\r\n"]
 [24.184,"o","\r\n"]

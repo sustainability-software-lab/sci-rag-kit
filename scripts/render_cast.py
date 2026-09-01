@@ -32,6 +32,7 @@ from pathlib import Path
 from rich.console import Console
 
 from sci_rag.cli.new import _preflight_credentials
+from sci_rag.config import DEFAULT_LLM_MODEL
 from sci_rag.llm import MockLLM
 from sci_rag.scaffold.answers import ProjectAnswers
 from sci_rag.scaffold.apply import apply_all
@@ -161,7 +162,7 @@ def render_transcript(*, quick: bool = True) -> str:
     _preflight_credentials(
         raw,
         PlainPrompter(io.StringIO(), output),
-        probe=lambda **_kwargs: CredentialProbe(True, "gemini-2.5-flash answered in 90 ms."),
+        probe=lambda **_kwargs: CredentialProbe(True, f"{DEFAULT_LLM_MODEL} answered in 90 ms."),
     )
 
     drafted = confirm_ontology_draft(

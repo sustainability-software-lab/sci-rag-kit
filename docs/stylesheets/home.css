@@ -94,12 +94,6 @@
   line-height: inherit;
 }
 
-.md-typeset .srag-home-footer__meta {
-  margin: 0;
-  color: var(--srag-muted-600);
-  font-size: 0.74rem;
-}
-
 /* ── Pipeline figure ────────────────────────────────────────────────── */
 
 .md-typeset .srag-home-figure {

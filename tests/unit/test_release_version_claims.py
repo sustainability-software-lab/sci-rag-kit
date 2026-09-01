@@ -58,11 +58,25 @@ def test_every_tested_version_claim_matches_what_this_tree_packages() -> None:
     )
 
 
-def test_the_home_page_names_the_same_version() -> None:
-    """The claim sits in the page footer rather than the masthead."""
-    home = (ROOT / "docs" / "index.md").read_text(encoding="utf-8")
+def test_the_site_footer_names_the_same_version() -> None:
+    """The claim sits in the site footer, so it is on every page at once.
 
-    assert f"v{_packaged_version()}," in home
+    `mkdocs.yml` holds the string and `partials/copyright.html` renders it, so
+    this is the one place a release has to bump besides `pyproject.toml`.
+    """
+    config = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+    declared = re.search(r"^  package_version: \"(?P<version>[^\"]+)\"", config, re.MULTILINE)
+
+    assert declared is not None, "mkdocs.yml should set extra.package_version"
+    assert declared.group("version") == _packaged_version()
+
+    footer = (ROOT / "docs" / "overrides" / "partials" / "copyright.html").read_text(
+        encoding="utf-8"
+    )
+    assert "config.extra.package_version" in footer, "the footer should render that version"
+    assert "https://pypi.org/project/sci-rag-kit/" in footer, (
+        "the install route should link to the artefact it installs"
+    )
 
 
 def test_the_public_pages_and_the_generated_reference_agree_on_the_entry_point() -> None:
