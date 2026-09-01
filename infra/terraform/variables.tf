@@ -39,7 +39,7 @@ variable "allow_unauthenticated" {
 }
 
 variable "deletion_protection" {
-  description = "Protect the database from accidental terraform destroy."
+  description = "Protect the database and the Cloud Run service from accidental terraform destroy."
   type        = bool
   default     = true
 }
