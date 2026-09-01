@@ -60,7 +60,8 @@ architecture documentation.
 ```bash
 gcloud services enable run.googleapis.com sqladmin.googleapis.com \
   secretmanager.googleapis.com artifactregistry.googleapis.com \
-  aiplatform.googleapis.com --project=YOUR_PROJECT
+  aiplatform.googleapis.com cloudbuild.googleapis.com \
+  iam.googleapis.com --project=YOUR_PROJECT
 ```
 
 * Terraform 1.5+.
