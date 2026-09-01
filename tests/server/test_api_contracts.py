@@ -250,3 +250,64 @@ async def test_answer_accepts_metadata_filters(client) -> None:  # type: ignore[
 async def test_year_bounds_are_validated(client) -> None:  # type: ignore[no-untyped-def]
     response = await client.post("/v1/query", json={"query": "residue", "year_min": 99})
     assert response.status_code == 422
+
+
+async def test_an_api_key_is_accepted_from_a_header_cloud_run_does_not_eat(secured_client) -> None:  # type: ignore[no-untyped-def]
+    """`Authorization` is unusable on the platform this repo documents deploying to.
+
+    Google's Cloud Run frontend inspects `Authorization: Bearer` and rejects
+    anything that is not a Google identity token, before the request reaches
+    the container. On a real deploy that meant the kit's own API keys could
+    not be used at all: a request carrying one got an HTML 401 from Google,
+    while a request carrying nothing reached the app and got a correct
+    `missing_key`.
+
+    `docs/api.md` and `docs/deploy-gcp.md` were each right and jointly
+    impossible. So the key is also accepted from a header no platform claims.
+    """
+    response = await secured_client.post(
+        "/v1/query", json={"query": "rice straw"}, headers={"X-API-Key": "full-key"}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["items"]
+
+
+async def test_the_authorization_header_still_wins_when_both_are_sent(secured_client) -> None:  # type: ignore[no-untyped-def]
+    """Precedence is explicit so local behavior is unchanged.
+
+    A caller sending both should get the documented header honoured, not a
+    silent preference for the fallback.
+    """
+    response = await secured_client.post(
+        "/v1/query",
+        json={"query": "rice straw"},
+        headers={"Authorization": "Bearer query-key", "X-API-Key": "not-a-real-key"},
+    )
+
+    assert response.status_code == 200
+
+
+async def test_the_fallback_header_enforces_scopes_the_same_way(secured_client) -> None:  # type: ignore[no-untyped-def]
+    """A second door must not be a weaker door.
+
+    `query-key` holds `retrieval:query` and not `retrieval:answer`, so the
+    answer route must refuse it through either header identically.
+    """
+    response = await secured_client.post(
+        "/v1/answer", json={"query": "rice straw"}, headers={"X-API-Key": "query-key"}
+    )
+
+    assert response.status_code == 403
+    assert response.json()["code"] == "insufficient_scope"
+
+
+async def test_the_mcp_mount_accepts_the_fallback_header_too(secured_client) -> None:  # type: ignore[no-untyped-def]
+    """The MCP mount reads the header itself, so it can drift from REST.
+
+    It did: the two extract the token in different files. This pins that a
+    key working on one front door works on the other.
+    """
+    response = await secured_client.post("/mcp", headers={"X-API-Key": "full-key"})
+
+    assert response.status_code != 401

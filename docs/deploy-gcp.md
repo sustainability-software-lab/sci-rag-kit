@@ -122,6 +122,10 @@ What you get, and the security posture you get it with:
   service and job mount it as a unix socket); no open TCP.
 * The runtime service account holds exactly `cloudsql.client`,
   `aiplatform.user`, and read access to its two secrets.
+* Send API keys as `X-API-Key: <key>` against a deployed service.
+  Cloud Run's frontend consumes `Authorization: Bearer` for its own identity
+  tokens, so the kit's keys cannot travel in that header here even with
+  `allow_unauthenticated=true`.
 * The Cloud Run service is **not** public by default. Flip
   `-var allow_unauthenticated=true` when you want the app's own API keys
   to be the only gate.
