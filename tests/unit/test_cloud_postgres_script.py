@@ -51,6 +51,28 @@ _HELPER_VARS = (
 )
 
 
+# One flat 30 second budget covered every operation, and `start` spends its
+# share on four sequential helper invocations. On a loaded machine the last
+# one ran out and the test failed on wall clock alone, with no assertion
+# reached, on a diff that never went near `scripts/cloud_postgres.py`.
+#
+# Per operation instead, so the bound still means something. A `status` that
+# takes a minute is a real defect and should still fail; a `start` that takes
+# a minute on a busy laptop is Tuesday.
+_FAST_OPERATIONS = frozenset({"config", "status", "stop"})
+_FAST_TIMEOUT_S = 30
+_PROVISIONING_TIMEOUT_S = 120
+
+
+def timeout_for(operation: str) -> int:
+    """How long an operation may take before it counts as hung.
+
+    Named and exported so the budget is a stated policy rather than a
+    magic number buried in a call.
+    """
+    return _FAST_TIMEOUT_S if operation in _FAST_OPERATIONS else _PROVISIONING_TIMEOUT_S
+
+
 def _run(
     *args: str, cwd: Path, env: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
@@ -63,8 +85,23 @@ def _run(
         capture_output=True,
         text=True,
         env=environment,
-        timeout=30,
+        timeout=timeout_for(args[0] if args else ""),
     )
+
+
+def test_a_read_only_operation_keeps_a_tighter_budget_than_a_provisioning_one() -> None:
+    """The point of splitting the budget is that one of them stays strict.
+
+    Raising every timeout would have stopped the flake and also stopped the
+    test noticing a genuinely hung `status`, which is the failure worth
+    catching.
+    """
+    assert timeout_for("status") < timeout_for("start")
+    assert timeout_for("config") == _FAST_TIMEOUT_S
+    assert timeout_for("resume") == _PROVISIONING_TIMEOUT_S
+    # An operation nobody listed is assumed to provision, because guessing
+    # "fast" for something unknown is how the original flake happened.
+    assert timeout_for("some-future-subcommand") == _PROVISIONING_TIMEOUT_S
 
 
 def _free_port() -> int:
