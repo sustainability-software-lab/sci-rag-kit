@@ -21,3 +21,11 @@ output "run_ingest_example" {
   description = "Example: execute the ops job with an ingest command instead of migrations."
   value       = "gcloud run jobs execute ${google_cloud_run_v2_job.ops.name} --region=${var.region} --project=${var.project_id} --args='ingest,--manifest,data/demo/manifest.jsonl' --wait"
 }
+
+# Where to read the generated first API key. Deliberately not the key itself:
+# a Terraform output lands in state, and state is already a credential we tell
+# operators not to circulate. This prints the command instead.
+output "read_first_api_key" {
+  description = "How to read the API key the deploy generated."
+  value       = "gcloud secrets versions access latest --secret=${google_secret_manager_secret.api_keys.secret_id} --project=${var.project_id}"
+}

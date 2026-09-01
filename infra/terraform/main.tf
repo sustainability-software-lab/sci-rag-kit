@@ -32,7 +32,16 @@ resource "google_sql_database_instance" "db" {
   region           = var.region
 
   settings {
-    tier = var.db_tier
+    # Pinned, not inherited. Cloud SQL's default edition for new instances
+    # moved to ENTERPRISE_PLUS, which rejects the shared-core tiers this
+    # module deliberately picks, so `terraform apply` failed on exactly the
+    # empty project the deploy guide is written for:
+    #   Invalid Tier (db-g1-small) for (ENTERPRISE_PLUS) Edition.
+    # ENTERPRISE is also the cheaper of the two, so inheriting the default
+    # would have quietly raised the bill for a reader following a dev guide.
+    # The dev-database module already learned this; this is the same fix.
+    edition = "ENTERPRISE"
+    tier    = var.db_tier
     ip_configuration {
       ipv4_enabled = true # access is via the Cloud SQL connector, not open TCP
     }
@@ -86,12 +95,27 @@ resource "google_secret_manager_secret" "api_keys" {
   }
 }
 
-# Seed with an empty JSON object; set real keys with:
-#   echo '{"my-key": {"scopes": ["retrieval:query"]}}' | \
-#     gcloud secrets versions add <name>-api-keys --data-file=-
+# A generated first key, not an empty object. Seeding "{}" created every
+# resource and then failed the startup probe, because the server refuses an
+# empty allowlist rather than serving open:
+#   RuntimeError: SCI_RAG_API_KEYS must be a non-empty JSON object
+# That refusal is correct, so the seed is what changes. Generating one key
+# the way the database password is generated means the documented deploy
+# comes up secured by default, which is the posture docs/deploy-gcp.md
+# already advertises. `ignore_changes` still lets an operator replace this
+# with their own keys without Terraform reverting them.
+resource "random_password" "api_key" {
+  length  = 32
+  special = false
+}
+
 resource "google_secret_manager_secret_version" "api_keys_seed" {
-  secret      = google_secret_manager_secret.api_keys.id
-  secret_data = "{}"
+  secret = google_secret_manager_secret.api_keys.id
+  secret_data = jsonencode({
+    (random_password.api_key.result) = {
+      scopes = ["retrieval:query", "retrieval:answer", "corpus:read"]
+    }
+  })
   lifecycle {
     ignore_changes = [secret_data]
   }
@@ -150,6 +174,13 @@ resource "google_storage_bucket_iam_member" "corpus_access" {
 resource "google_cloud_run_v2_service" "api" {
   name     = var.name
   location = var.region
+
+  # The provider protects this by default, independently of the database.
+  # Without opting in, `terraform destroy -var deletion_protection=false`
+  # removed the database and then refused the service, leaving an operator
+  # who followed the teardown instructions with a service still running and
+  # no documented way to remove it.
+  deletion_protection = var.deletion_protection
 
   template {
     service_account = google_service_account.runtime.email
@@ -235,8 +266,13 @@ resource "google_cloud_run_v2_service_iam_member" "public" {
 # --- Cloud Run job (migrations and ingestion, same image) -------------------
 
 resource "google_cloud_run_v2_job" "ops" {
-  name     = "${var.name}-ops"
-  location = var.region
+
+  # Same reason as the service above: the provider protects this by default,
+  # so a documented `terraform destroy -var deletion_protection=false` left
+  # the job behind.
+  deletion_protection = var.deletion_protection
+  name                = "${var.name}-ops"
+  location            = var.region
 
   template {
     template {
