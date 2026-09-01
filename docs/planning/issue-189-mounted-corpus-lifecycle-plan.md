@@ -594,3 +594,333 @@ outside #189.
 - The implementation pull request carries non-secret execution and absence
   receipts, merges through the repository's actual landing path, and resolves
   issue #189 only after every residual acceptance criterion is proven.
+
+## Amendment: quarantine and differential zero-residue qualification
+
+> Approved 2026-09-01 after read-only preflight recovered the original API
+> names and proved that three old Cloud Storage bucket generations cannot be
+> purged before their fixed hard-delete times.
+
+This amendment permits PR #270 to land before the old generations expire only
+after a new, separately named lifecycle proves it created no new measured
+residue. Issue #189 stays open until the old generations disappear naturally
+and a later read-only inventory proves complete absence.
+
+### Authority and exact supersession
+
+This section supersedes only these parts of the earlier plan:
+
+- The Workstream 3 assumption that preflight must contain no pre-existing
+  soft-deleted bucket generation before any recovery or new lifecycle work.
+- The old `sci-rag-route-20260831` live qualification identity. That string
+  remains part of the frozen project-label baseline, but no new resource may
+  reuse it.
+- The requirement that all pre-existing soft-deleted generations disappear
+  before PR #270 may merge.
+- The delivery and definition-of-done language that closes #189 when PR #270
+  lands.
+- The old assertion that the root provider lock is untracked and must not be
+  committed, plus the live qualification instruction to run
+  `terraform init -upgrade`. The root provider lock is tracked. The new run
+  uses ordinary `terraform init -input=false` and must leave the lock
+  unchanged.
+
+The CREATE, SEED, DELETE, scientific evidence, Terraform-state preservation,
+credential handling, least-privilege, and shared Cloud SQL safeguards remain
+in force. Planning approval still authorizes no persistent cloud mutation.
+
+### Preserved original evidence and API correction
+
+The original read-only baseline was captured on `2026-08-31T19:46:28Z`.
+Private mode-0600 copies live under the ignored mode-0700
+`.context/issue-189-live/original-baseline/` directory. The complete inventory
+contains billing metadata and must not be committed.
+
+| Private source | Raw file SHA-256 |
+|---|---|
+| `189-baseline-apis.txt` | `a3d3c580bacc5847a5b1d50001b39aaeb52d580b472faf63c59fc3dcba831a90` |
+| `189-baseline-inventory.txt` | `2af38373d25ccad37e1c8f6e00af21d68b468bd338c63d66f8295f2bf67b8ea3` |
+
+The raw API-file digest includes its trailing newline. The canonical API-set
+encoding sorts unique service names, joins them with `\n`, and adds no trailing
+newline. The exact original set has 39 names and canonical SHA-256
+`0f72c7ecc3b3f28c01007cf8bc1fc9b338b00f62b003312eddf86456d960547f`:
+
+```text
+aiplatform.googleapis.com
+analyticshub.googleapis.com
+appengine.googleapis.com
+bigquery.googleapis.com
+bigqueryconnection.googleapis.com
+bigquerydatapolicy.googleapis.com
+bigquerymigration.googleapis.com
+bigqueryreservation.googleapis.com
+bigquerystorage.googleapis.com
+cloudapis.googleapis.com
+cloudresourcemanager.googleapis.com
+cloudtrace.googleapis.com
+containeranalysis.googleapis.com
+containerthreatdetection.googleapis.com
+dataform.googleapis.com
+dataplex.googleapis.com
+datastore.googleapis.com
+fcm.googleapis.com
+firebase.googleapis.com
+firebasedynamiclinks.googleapis.com
+firebasehosting.googleapis.com
+firebaseinstallations.googleapis.com
+firebaseremoteconfig.googleapis.com
+firebaseremoteconfigrealtime.googleapis.com
+firebaserules.googleapis.com
+identitytoolkit.googleapis.com
+logging.googleapis.com
+monitoring.googleapis.com
+pubsub.googleapis.com
+runtimeconfig.googleapis.com
+securetoken.googleapis.com
+servicemanagement.googleapis.com
+serviceusage.googleapis.com
+sql-component.googleapis.com
+storage-api.googleapis.com
+storage-component.googleapis.com
+storage.googleapis.com
+testing.googleapis.com
+websecurityscanner.googleapis.com
+```
+
+The current 42-name set has canonical SHA-256
+`34229fe02826501ded24024d0f3116165c3bb86b27863307008b735cc17774f4`.
+The exact post-baseline additions are:
+
+```text
+containerregistry.googleapis.com
+iamcredentials.googleapis.com
+telemetry.googleapis.com
+```
+
+Earlier comments that called `aiplatform.googleapis.com` baseline-off and said
+the other two names were unknowable are inaccurate. AI Platform and Container
+Analysis were both enabled at baseline and must not be disabled.
+
+### Exact IAM recovery contract
+
+The current project policy has 13 bindings and 13 members, with canonical
+SHA-256 `e65c96ed603ecf66a1ca12b7d2d66b75a646ea8a96a0744d21fc2ef5997cf874`.
+The original policy has 6 bindings and 6 members, with canonical SHA-256
+`80424fc5a092552e9ffdfda1c16a34f971395746298187387b3d8188ddf708bc`.
+
+RECOVER removes only these exact unconditional role/member tuples, one at a
+time. Before each removal, refresh the policy and require the named role to
+contain exactly the listed member and no condition.
+
+| Role | Exact member |
+|---|---|
+| `roles/artifactregistry.serviceAgent` | `serviceAccount:service-821876108670@gcp-sa-artifactregistry.iam.gserviceaccount.com` |
+| `roles/cloudbuild.builds.builder` | `serviceAccount:821876108670@cloudbuild.gserviceaccount.com` |
+| `roles/cloudbuild.serviceAgent` | `serviceAccount:service-821876108670@gcp-sa-cloudbuild.iam.gserviceaccount.com` |
+| `roles/containeranalysis.ServiceAgent` | `serviceAccount:service-821876108670@container-analysis.iam.gserviceaccount.com` |
+| `roles/containerregistry.ServiceAgent` | `serviceAccount:service-821876108670@containerregistry.iam.gserviceaccount.com` |
+| `roles/editor` | `serviceAccount:821876108670-compute@developer.gserviceaccount.com` |
+| `roles/run.serviceAgent` | `deleted:serviceAccount:service-821876108670@serverless-robot-prod.iam.gserviceaccount.com?uid=112420989253772675825` |
+
+The deleted Cloud Run member must remain shell-quoted because it contains `?`.
+Never replace the complete project policy. Verify these checkpoints in order:
+
+| Removed through | Bindings | Expected SHA-256 |
+|---|---:|---|
+| Artifact Registry service agent | 12 | `e77419dd9c4da56a561186cc64dfb0e30d69f793b3171de3b22309e89582443b` |
+| Cloud Build builder | 11 | `be88582e83cef0a648bb7dd3b1b1f79eac9a9251d2d88541b9e997cfe3696690` |
+| Cloud Build service agent | 10 | `2a257baba7af9bc5bdeb33d49372ac20506291bfed9a517d7cad804e133f66db` |
+| Container Analysis service agent | 9 | `e27e48dde806a47b09e8960e0c19e279aad0a778211e0ee7c40f8656b20218ce` |
+| Container Registry service agent | 8 | `dd20d798dbb281e1c69268b7c67002601bdba9c8b69d7182867812ac4cdcf855` |
+| Editor | 7 | `a4c25f428f76e8aa9a1252daca15a38bcd1f59a3d206d886ad645a64cf597096` |
+| Cloud Run service agent | 6 | `80424fc5a092552e9ffdfda1c16a34f971395746298187387b3d8188ddf708bc` |
+
+The old run also created the default Compute service account
+`821876108670-compute@developer.gserviceaccount.com`, unique ID
+`102378264801580668474`. Leave it live and unchanged but unprivileged. Deleting
+it would create a separate 30-day IAM recovery tombstone. Snapshot every active
+user-managed service-account email, unique ID, and disabled state in `S0`, then
+require exact equality in `S1`.
+
+### Quarantine set `Q0`
+
+There were zero live buckets and exactly these three retained generations at
+handoff:
+
+| Bucket | Generation | Soft-delete time | Hard-delete time | Location |
+|---|---:|---|---|---|
+| `biositing-docs-pub_cloudbuild` | `1788217352799183635` | `2026-08-31T23:32:55.826Z` | `2026-09-07T23:33:54.939Z` | `US` |
+| `biositing-docs-pub-sci-rag-corpus` | `1788221353373424394` | `2026-09-01T00:29:20.376Z` | `2026-09-08T00:30:20.052Z` | `US-CENTRAL1` |
+| `biositing-docs-pub-sci-rag-corpus` | `1788222626371449890` | `2026-09-01T00:31:20.110Z` | `2026-09-08T00:32:19.821Z` | `US-CENTRAL1` |
+
+The source receipt records metadata digest
+`c566657722fecf936fd5d987025d8c3ee12b515c6e12b849d499f243a8c13cb9`.
+The historical receipt did not preserve its byte serialization, so exact tuple
+comparison is authoritative and the digest alone is not absence evidence.
+
+Use the paginated Storage JSON `Buckets:list` request with
+`softDeleted=true` and the default projection. `projection=full` returns HTTP
+404 for the current identity. A 403, 404, malformed response, repeated page
+token, or incomplete page is an error, not proof of absence.
+
+The quarantine invariants are:
+
+```text
+Qpre-create must be a subset of Q0.
+Qfinal must be a subset of Qpre-create.
+Every observed tuple must belong to Q0.
+No same-name, new-generation substitution is permitted.
+```
+
+A missing tuple is acceptable only after its recorded hard-delete time. Never
+restore, rename, reuse, or mutate either old bucket name.
+
+### RECOVER gate and `S0`
+
+Before any recovery, create the mode-0700 run directory
+`.context/issue-189-live/sci-rag-q189-zr1/` and capture private, non-secret
+snapshots of exact APIs, canonical IAM including conditions, active
+service-account identities and disabled states, project labels, live and
+soft-deleted buckets, qualification-related resources, relevant audit changes,
+and the shared development instance plus observed proxy identifiers.
+
+Present this exact action-time gate:
+
+```text
+AUTHORIZE RECOVER biositing-docs-pub:
+disable containerregistry.googleapis.com,
+iamcredentials.googleapis.com, and telemetry.googleapis.com;
+remove the seven enumerated IAM role/member bindings;
+do not use --force;
+do not touch any bucket, project label, shared Cloud SQL resource, or proxy.
+```
+
+Planning approval does not satisfy RECOVER. RECOVER does not authorize CREATE,
+SEED, or DELETE. Disable each API separately without `--force` and stop on a
+dependency warning, collateral disablement, re-enablement, or unexpected set:
+
+| Step | Count | Canonical SHA-256 |
+|---|---:|---|
+| Container Registry disabled | 41 | `a8b9fa5c8fcc64fe063258b2541f3e31ced3ba8d4c53da1449193dd7ba53984a` |
+| IAM Credentials disabled | 40 | `afcfa4ed25bd705b03b659fa21f09960a1fe431af2700d42f14c7299dafe887e` |
+| Telemetry disabled | 39 | `0f72c7ecc3b3f28c01007cf8bc1fc9b338b00f62b003312eddf86456d960547f` |
+
+Recovery is complete only when APIs equal the exact 39-name set, IAM equals the
+6/6 policy, no live bucket or qualification resource exists, the soft-deleted
+set satisfies `Q0`, the default Compute account remains present without a
+project binding, project labels are unchanged, and the shared development
+backend is unchanged. That verified state is `S0`. Do not request CREATE if any
+surface fails.
+
+### Locked new lifecycle and phase gates
+
+The new identity is fixed:
+
+| Surface | Name |
+|---|---|
+| Terraform name | `sci-rag-q189-zr1` |
+| Artifact Registry repository | `sci-rag-q189-zr1` |
+| Cloud Run service | `sci-rag-q189-zr1` |
+| Cloud Run ops job | `sci-rag-q189-zr1-ops` |
+| Cloud SQL instance | `sci-rag-q189-zr1-db` |
+| Runtime service account | `sci-rag-q189-zr1-runtime@biositing-docs-pub.iam.gserviceaccount.com` |
+| Corpus bucket | `biositing-docs-pub-sci-rag-q189-zr1-corpus` |
+| Region | `us-central1` |
+
+If `zr1` creates anything and fails, recover it to verified absence before
+amending the contract for `zr2`. Never reuse a partially created identity as a
+supposedly clean run.
+
+CREATE, SEED, and DELETE each retain their separate fresh action-time gate. The
+CREATE request names these exact five direct API enables:
+
+```text
+run.googleapis.com
+sqladmin.googleapis.com
+secretmanager.googleapis.com
+artifactregistry.googleapis.com
+iam.googleapis.com
+```
+
+It also names every resource and variable, saved state and plan paths, local
+`linux/amd64` image build, final tag and digest, expected 18 creates, billing
+estimate, and `S0` hash. Do not use Cloud Build. Keep deletion protection
+enabled, force destroy false, versioning enabled, and bucket soft delete at `0`
+before the first upload.
+
+The immutable source inputs for that gate are:
+
+```text
+data/demo tree: a257c73bd0b4f2b0092302cd28df7e11696a2427
+data/demo/manifest.jsonl SHA-256:
+151e6d6b4e903eac49171f657f9211919d06ca7bd387f8798414fa9b9315e7f9
+build context: 146 files
+build-context path-list SHA-256:
+304c4e35c3010f08943be841f41867b8088c0c566d972838c06b13c23805b2ef
+forbidden build-context paths: 0
+```
+
+SEED names the exact bucket and database, six tracked synthetic files, demo tree
+and manifest hashes, additive upload, one explicit manifest overwrite, model
+calls and cost boundary, and every migration, ingest, graph, stats, and REST
+smoke. Require seven object generations, five documents, positive chunk,
+entity, and relationship counts, zero failed batches, successful execution IDs,
+citations, RFC 9457 errors, and preserved `X-Request-ID`. Never write either
+authentication token to disk or logs.
+
+DELETE enumerates all 18 Terraform addresses, seven object generations,
+registry and image digest, actual API/IAM deltas, exact plans, state, backups,
+variable files, Docker configuration, and temporary credential-bearing files.
+Apply a reviewed protection-update plan, then a separate reviewed destroy plan.
+No direct Cloud SQL deletion counts as success. Keep state while any resource
+survives. Restore only proven run-attributable API and IAM deltas, without
+`--force` or a broad policy replacement.
+
+### `S1`, zero new measured residue, and cleanup
+
+Collect `S1` with the same commands and canonicalization used for `S0`. The
+claim `S1 == S0` means:
+
+- Exact enabled API names and canonical digest equal `S0`.
+- Canonical IAM role, member, and condition tuples equal `S0`.
+- Active service-account email, unique ID, and disabled-state tuples equal
+  `S0`; the default Compute account remains live, unchanged, and unprivileged.
+- No new live or listable Cloud Run, Cloud SQL, Secret Manager, Artifact
+  Registry, service-account, bucket, or object resource remains.
+- The `zr1` bucket is absent from both live and soft-deleted listings.
+- `Qfinal` is a subset of `Qpre-create`, and every surviving tuple belongs to
+  `Q0`.
+- Project labels, the shared Cloud SQL development instance, and observed
+  workspace proxies are unchanged.
+- Terraform state lists zero resources.
+
+This does not claim physical erasure of audit logs or provider-managed IAM
+deletion-recovery metadata. The runtime account's deletion tombstone can remain
+for its provider-defined recovery window because it is neither live nor
+billable. The final receipt must say explicitly that the three `Q0` generations
+were neither restored nor purged.
+
+Only after every cloud proof passes may the operator remove the exact saved
+state, backups, plans, temporary variables, token/config files, and other
+credential-bearing artifacts named in DELETE approval. Never clean a broad
+directory target.
+
+### Split delivery and final natural-expiry closure
+
+PR #270 may merge only after the new lifecycle proves `S1 == S0` on every
+measured surface, the `zr1` bucket is absent, and no new soft-deleted tuple
+exists. The PR must contain no `Closes #189`, `Fixes #189`, `Resolves #189`, or
+equivalent closing keyword.
+
+Issue #189 remains open after the PR merges. At or after
+`2026-09-08T00:32:19.821Z`, rerun the default-projection, paginated
+soft-deleted-bucket inventory. Time passing is not evidence. Require HTTP 200
+with an empty result plus unchanged API, IAM, active-service-account, label,
+normal-resource, shared-instance, and proxy baselines before posting the final
+absence receipt and closing #189.
+
+Parent epic #185 retains ownership of this final cleanup and must be reevaluated
+rather than closed automatically. A generation that persists materially beyond
+its recorded hard-delete time requires an exact metadata receipt and a Google
+Cloud support case.
