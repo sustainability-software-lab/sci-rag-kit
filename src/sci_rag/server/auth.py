@@ -218,13 +218,37 @@ def build_auth_backend(api_keys_json: str | None, *, cors_origins: str = "*") ->
     return OpenBackend()
 
 
+#: A header no platform claims. Google's Cloud Run frontend inspects
+#: `Authorization: Bearer` and rejects anything that is not one of its own
+#: identity tokens before the request reaches the container, so on the
+#: platform this repository documents deploying to, the documented header
+#: cannot carry the kit's own keys. This is the way in that survives.
+API_KEY_HEADER = "X-API-Key"
+
+
+def api_key_from_headers(authorization: str, api_key_header: str | None) -> str | None:
+    """The caller's API key, from whichever header carried it.
+
+    `Authorization` wins when both are present, so nothing about local
+    behavior changes and the documented header stays the primary one. Shared
+    rather than duplicated because the REST routes and the MCP mount extract
+    this in different files, and two copies of an auth rule is one too many.
+    """
+    scheme, token = get_authorization_scheme_param(authorization or "")
+    if scheme.lower() == "bearer" and token:
+        return token
+    return api_key_header or None
+
+
 def require_scopes(*scopes: str):  # type: ignore[no-untyped-def]
     """FastAPI dependency: authenticate the bearer token and check scopes."""
 
     async def dependency(request: Request) -> AuthContext:
         backend: AuthBackend = request.app.state.auth_backend
-        scheme, token = get_authorization_scheme_param(request.headers.get("Authorization", ""))
-        context = backend.authenticate(token if scheme.lower() == "bearer" else None)
+        token = api_key_from_headers(
+            request.headers.get("Authorization", ""), request.headers.get(API_KEY_HEADER)
+        )
+        context = backend.authenticate(token)
         for scope in scopes:
             if not context.has_scope(scope):
                 raise ApiError(

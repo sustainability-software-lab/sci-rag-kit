@@ -10,8 +10,14 @@ One server, two front doors, one service behind both. Start it with
 
 ## Authentication
 
-Send `Authorization: Bearer <key>`. Keys are configured by the operator
-as a JSON map in `SCI_RAG_API_KEYS`:
+Send `Authorization: Bearer <key>`, or `X-API-Key: <key>` where something
+upstream has already claimed the first one. Cloud Run is the case that
+matters: its frontend inspects `Authorization: Bearer` and rejects anything
+that is not one of its own identity tokens, before your container sees the
+request, so on a deployed service the second header is the one that works.
+`Authorization` wins when both are sent.
+
+Keys are configured by the operator as a JSON map in `SCI_RAG_API_KEYS`:
 
 ```json
 {"team-key":  {"scopes": ["retrieval:query", "retrieval:answer", "corpus:read"],

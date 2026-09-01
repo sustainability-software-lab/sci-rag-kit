@@ -23,7 +23,12 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 import sci_rag
 from sci_rag.config import Settings, get_settings
-from sci_rag.server.auth import AuthBackend, build_auth_backend
+from sci_rag.server.auth import (
+    API_KEY_HEADER,
+    AuthBackend,
+    api_key_from_headers,
+    build_auth_backend,
+)
 from sci_rag.server.errors import (
     ApiError,
     RequestIdMiddleware,
@@ -73,8 +78,9 @@ class _BearerAuthASGI:
         headers = {
             k.decode("latin-1").lower(): v.decode("latin-1") for k, v in scope.get("headers", [])
         }
-        authorization = headers.get("authorization", "")
-        token = authorization[7:] if authorization.lower().startswith("bearer ") else None
+        token = api_key_from_headers(
+            headers.get("authorization", ""), headers.get(API_KEY_HEADER.lower())
+        )
         try:
             context = self.backend.authenticate(token)
             if not context.has_scope(self.required_scope):
