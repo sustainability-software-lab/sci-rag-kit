@@ -82,6 +82,25 @@ class _VertexToken:
         return str(self._credentials.token)
 
 
+def _text_or_raise(response: object) -> str:
+    """The completion, or an exception naming why there is not one.
+
+    Same reasoning as the Google adapter: an empty string reads as a real
+    answer, and for a grounded-answer system that is indistinguishable from
+    the legitimate "the corpus does not cover this". Both adapters raise so
+    the answer route's existing `generation_failed` path can report it.
+    """
+    choices = getattr(response, "choices", None) or []
+    if choices:
+        content = getattr(getattr(choices[0], "message", None), "content", None)
+        if content:
+            return str(content)
+        reason = getattr(choices[0], "finish_reason", None)
+        if reason is not None:
+            raise RuntimeError(f"the model returned no text (finish_reason={reason})")
+    raise RuntimeError("the model returned an empty completion and gave no reason")
+
+
 class OpenAICompatLLM(LLMClient):
     def __init__(
         self,
@@ -171,7 +190,7 @@ class OpenAICompatLLM(LLMClient):
                     response = await self._client.chat.completions.create(**request(False))
                 else:
                     raise
-            return response.choices[0].message.content or ""
+            return _text_or_raise(response)
 
         return await retry_async(call, is_retryable=_is_retryable)
 

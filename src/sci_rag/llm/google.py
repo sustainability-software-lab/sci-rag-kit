@@ -45,6 +45,32 @@ def _looks_like_a_rejected_knob(exc: Exception) -> bool:
     return any(marker in message for marker in _REJECTED_ARGUMENT_MARKERS)
 
 
+def _text_or_raise(response: object) -> str:
+    """The completion, or an exception naming why there is not one.
+
+    `response.text or ""` made an empty completion indistinguishable from a
+    real answer. For a grounded-answer system that is the worst possible
+    silence: returning nothing looks exactly like "the corpus does not cover
+    this", which the kit deliberately supports and reports as a legitimate
+    outcome. A safety block and a genuine refusal rendered identically.
+
+    Raising puts it on the path that already exists. `answer/generator.py`
+    catches provider exceptions and emits a `generation_failed` event, so the
+    failure becomes visible without a new mechanism.
+    """
+    text = getattr(response, "text", None)
+    if text:
+        return str(text)
+
+    reason = None
+    candidates = getattr(response, "candidates", None) or []
+    if candidates:
+        reason = getattr(candidates[0], "finish_reason", None)
+    if reason is not None:
+        raise RuntimeError(f"the model returned no text (finish_reason={reason})")
+    raise RuntimeError("the model returned an empty completion and gave no reason")
+
+
 class GoogleLLM(LLMClient):
     def __init__(
         self,
@@ -135,7 +161,7 @@ class GoogleLLM(LLMClient):
                             raise
                 else:
                     raise
-            return response.text or ""
+            return _text_or_raise(response)
 
         return await retry_async(call)
 
