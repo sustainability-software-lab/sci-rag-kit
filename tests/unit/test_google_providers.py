@@ -284,5 +284,5 @@ async def test_an_empty_completion_says_so_even_without_a_reason(monkeypatch) ->
     """Some providers give no finish reason. Silence is still not an answer."""
     llm = _llm_with(monkeypatch, EmptyCompletionClient(finish_reason=None))
 
-    with pytest.raises(RuntimeError, match="(?i)empty"):
+    with pytest.raises(RuntimeError, match=r"(?i)empty"):
         await llm.generate("anything")
