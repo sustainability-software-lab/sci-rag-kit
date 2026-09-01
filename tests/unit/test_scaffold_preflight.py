@@ -289,5 +289,69 @@ def test_failures_that_are_not_about_location_keep_their_own_diagnosis(  # type:
 
     result = probe_google_credentials(gcp_project="a-project", location="us-central1", timeout_s=1)
 
-    assert result.detail == detail
+    # `startswith`, not equality: the generic branch now appends the
+    # provider's own redacted text, which is the point of that branch. What
+    # this test guards is the classification in front of it.
+    assert result.detail.startswith(detail)
     assert "SCI_RAG_GCP_LOCATION" not in result.fix
+
+
+# Captured from the Generative Language API on 2026-08-31, calling a model a
+# freshly issued key may no longer use. Quoted rather than paraphrased: #181
+# shipped two phrasings taken from a guide, Vertex sent a third, and #232 had
+# to fix it. This is the fourth, from a different surface again.
+RETIREMENT_MESSAGE = (
+    "404 NOT_FOUND. This model models/gemini-2.5-flash is no longer available "
+    "to new users. Please update your code to use models/gemini-3.6-flash for "
+    "the latest features and improvements."
+)
+
+
+def test_a_retired_model_is_diagnosed_as_a_model_problem(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """The old answer sent a reader to check three things that were all fine.
+
+    Before this, the retirement phrasing matched no marker and fell through
+    to "Credential check failed (ClientError)" with "Check the AI Studio key,
+    model, and quota". The key was valid, the quota was fine, and the model
+    name was spelled correctly.
+    """
+    _install_client(monkeypatch, failure=RuntimeError(RETIREMENT_MESSAGE))
+
+    result = probe_google_credentials(api_key="never-print-this", timeout_s=1)
+
+    assert result.ok is False
+    assert "no longer available" in result.detail.lower()
+    assert "never-print-this" not in repr(result)
+
+
+def test_an_unrecognised_failure_keeps_the_provider_message(monkeypatch) -> None:
+    """The generic branch used to throw away the one useful thing it had.
+
+    Every gap in the marker list has cost a round trip, because the text that
+    would have diagnosed it was in hand and discarded. A message nobody
+    anticipated is exactly when the provider's own words are worth most.
+    """
+    _install_client(monkeypatch, failure=RuntimeError("418 TEAPOT: the carafe is not attached"))
+
+    result = probe_google_credentials(api_key="never-print-this", timeout_s=1)
+
+    assert result.ok is False
+    assert "carafe is not attached" in result.detail
+    assert "never-print-this" not in repr(result)
+
+
+def test_a_kept_message_still_redacts_a_credential(monkeypatch) -> None:
+    """Keeping the text must not become a way to print a key.
+
+    A provider that echoes the key back in an error is the case this has to
+    survive, because it is the one where forwarding is most tempting and most
+    dangerous.
+    """
+    leaky = RuntimeError("400 BAD: key AIzaSyEXAMPLEEXAMPLEEXAMPLEEXAMPLE123 rejected by policy")
+    _install_client(monkeypatch, failure=leaky)
+
+    result = probe_google_credentials(api_key="AIzaSyEXAMPLEEXAMPLEEXAMPLEEXAMPLE123", timeout_s=1)
+
+    assert result.ok is False
+    assert "AIzaSyEXAMPLE" not in repr(result)
+    assert "rejected by policy" in result.detail
