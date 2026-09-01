@@ -134,3 +134,64 @@ def test_every_protectable_resource_honours_the_deletion_protection_input() -> N
         f"these must honour var.deletion_protection or terraform destroy cannot "
         f"remove them: {missing}"
     )
+
+
+# APIs the documented deploy steps call, beyond the ones the module declares.
+# `gcloud builds submit` needs both, and neither was listed, so Step 1 failed
+# on a project where they were genuinely off:
+#   PERMISSION_DENIED: Identity and Access Management (IAM) API has not been
+#   used in project <project> before or it is disabled.
+REQUIRED_DEPLOY_APIS = (
+    "run.googleapis.com",
+    "sqladmin.googleapis.com",
+    "secretmanager.googleapis.com",
+    "artifactregistry.googleapis.com",
+    "aiplatform.googleapis.com",
+    "cloudbuild.googleapis.com",
+    "iam.googleapis.com",
+)
+
+
+def test_the_deploy_guide_enables_every_api_its_own_steps_need() -> None:
+    """The prerequisite list has to cover the commands that follow it.
+
+    This is only reachable on a project where the APIs start disabled. Most
+    projects have `iam` and `cloudbuild` on incidentally, so the documented
+    list worked nearly everywhere and failed for exactly the reader the page
+    is written for: someone starting from an empty project.
+    """
+    guide = (REPO_ROOT / "docs" / "deploy-gcp.md").read_text(encoding="utf-8")
+
+    missing = [api for api in REQUIRED_DEPLOY_APIS if api not in guide]
+
+    assert missing == [], (
+        f"docs/deploy-gcp.md must enable every API its steps call; missing: {missing}"
+    )
+
+
+def test_the_ops_job_example_names_a_path_the_image_contains() -> None:
+    """An example that always fails is worse than no example.
+
+    `run_ingest_example` printed
+    `--args='ingest,--manifest,data/demo/manifest.jsonl'`, and `data/` is
+    deliberately excluded from the build context so a private corpus cannot
+    be uploaded into an image. Running it verbatim gave:
+
+        FileNotFoundError: 'data/demo/manifest.jsonl'
+
+    `load_manifest` takes a `Path` and calls `read_text`, so pointing the
+    example at the corpus bucket is not available either without teaching
+    ingest to read `gs://`, which is a feature rather than a fix.
+
+    So the example has to be a command the shipped image can actually run,
+    and the corpus precondition has to be stated rather than implied.
+    """
+    raw = (REPO_ROOT / "infra" / "terraform" / "outputs.tf").read_text(encoding="utf-8")
+    # Comments may name the bad path while explaining it. What Terraform
+    # actually prints is what a reader copies, so judge only that.
+    emitted = "\n".join(line for line in raw.splitlines() if not line.lstrip().startswith("#"))
+
+    assert "data/demo/manifest.jsonl" not in emitted, (
+        "the image has no data/ directory; an example naming it always fails"
+    )
+    assert "corpus" in emitted.lower(), "the corpus bucket's purpose must be documented somewhere"
