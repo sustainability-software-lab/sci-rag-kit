@@ -23,10 +23,14 @@ def test_readme_and_homepage_lead_with_pipx_and_the_main_cli() -> None:
     assert "`sci-rag new`" in readme_lead
     assert "`sci-rag-new`" not in readme_lead
 
-    assert "Install with pipx." in homepage
     assert "$ pipx install sci-rag-kit\n$ sci-rag new" in start
     assert "quickstart.md#other-ways-in" in start
     assert "Install with pipx, the GitHub template, or a clone." not in homepage
+
+    # The install route names pipx from the site footer now, so it states the
+    # same thing on every page rather than only on the home page.
+    footer = _read("docs/overrides/partials/copyright.html")
+    assert "Install with pipx" in footer
 
 
 def test_quickstart_puts_the_wizard_before_all_other_routes() -> None:

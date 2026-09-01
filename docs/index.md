@@ -201,7 +201,7 @@ The recommended Quick session above, in full. `scripts/render_cast.py` builds it
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">4 - </span><span class="srag-term__choice">demo_only</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3/4] (1):</span><span class="srag-term__value"> 1</span></span>
 <span class="srag-term__line srag-term__line--output">Checking the credential with one small model request...</span>
-<span class="srag-term__line srag-term__line--output">gemini-2.5-flash answered in 90 ms.</span>
+<span class="srag-term__line srag-term__line--output">gemini-3.6-flash answered in 90 ms.</span>
 <span class="srag-term__line srag-term__line--empty"></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Drafting an ontology for &quot;Membrane chemistry and performance for water treatment&quot;...</span></span>
 <span class="srag-term__line srag-term__line--empty"></span>
@@ -341,7 +341,7 @@ The recommended Quick session above, in full. `scripts/render_cast.py` builds it
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">No</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"></span></span>
 <span class="srag-term__line srag-term__line--output">Checking the credential with one small model request...</span>
-<span class="srag-term__line srag-term__line--output">gemini-2.5-flash answered in 90 ms.</span>
+<span class="srag-term__line srag-term__line--output">gemini-3.6-flash answered in 90 ms.</span>
 <span class="srag-term__line srag-term__line--empty"></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Drafting an ontology for &quot;Membrane chemistry and performance for water treatment&quot;...</span></span>
 <span class="srag-term__line srag-term__line--empty"></span>
@@ -397,9 +397,3 @@ The recommended Quick session above, in full. `scripts/render_cast.py` builds it
 </section>
 
 <!-- END KIT ONBOARDING -->
-
-<section class="srag-home-section srag-home-footer" markdown>
-
-<p class="srag-home-footer__meta">v0.4.1, alpha. Install with pipx.</p>
-
-</section>
