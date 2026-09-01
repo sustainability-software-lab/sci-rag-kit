@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -163,7 +164,33 @@ _NOT_SERVABLE_MARKERS = (
     "only available via the global endpoint",
 )
 _NOT_FOUND_MARKERS = ("not found in location", "not found in region")
+#: A model the account may no longer use. Distinct from "not found": the id is
+#: real and the credential is valid, so pointing at either wastes the reader's
+#: time. Captured from the provider on 2026-08-31.
+_RETIRED_MODEL_MARKERS = ("no longer available", "is not available to new users")
 _WRONG_PLACE_STATUS = "failed_precondition"
+
+
+#: Anything shaped like a credential, removed before a provider message is
+#: shown. Keeping the text is only safe if this runs first.
+_SECRET_SHAPED = re.compile(r"AIza[0-9A-Za-z_\-]{10,}|\b[A-Za-z0-9_\-]{40,}\b")
+#: Internal resource paths name projects and locations the reader did not ask
+#: about, which is what the original "build your own sentence" rule protected.
+_RESOURCE_PATH = re.compile(r"\bprojects/[^\s,;]+")
+
+
+def _safe_provider_text(exc: Exception, limit: int = 300) -> str:
+    """The provider's own words, with credentials and resource paths removed.
+
+    Discarding this entirely is what made #181, #232, and the model
+    retirement each cost a round trip: the sentence that would have explained
+    the failure was in hand and thrown away. Redaction keeps the explanation
+    without keeping the secret.
+    """
+    text = " ".join(str(exc).split())
+    text = _SECRET_SHAPED.sub("<redacted>", text)
+    text = _RESOURCE_PATH.sub("<resource>", text)
+    return text[:limit].rstrip()
 
 
 def _failure_result(exc: Exception, *, vertex: bool, location: str = "") -> CredentialProbe:
@@ -219,6 +246,13 @@ def _failure_result(exc: Exception, *, vertex: bool, location: str = "") -> Cred
             "Partner models such as Claude and Grok are served from the global "
             "location. Set SCI_RAG_GCP_LOCATION=global and try again.",
         )
+    if any(marker in message for marker in _RETIRED_MODEL_MARKERS):
+        return CredentialProbe(
+            False,
+            f"The model is no longer available to this account. {_safe_provider_text(exc)}",
+            "Pick a current model. The provider names a replacement in the message above; "
+            "set it as SCI_RAG_LLM_MODEL, then try again.",
+        )
     if any(marker in message for marker in _NOT_FOUND_MARKERS):
         return CredentialProbe(
             False,
@@ -243,4 +277,11 @@ def _failure_result(exc: Exception, *, vertex: bool, location: str = "") -> Cred
         if vertex
         else "Check the AI Studio key, model, and quota, then try again."
     )
-    return CredentialProbe(False, f"Credential check failed ({type(exc).__name__}).", fix)
+    # Carry the provider's own text. Naming only the exception class sent
+    # readers to check things that were already fine, and every marker gap
+    # below is discovered exactly once, by someone who had this string.
+    return CredentialProbe(
+        False,
+        f"Credential check failed ({type(exc).__name__}). {_safe_provider_text(exc)}",
+        fix,
+    )
