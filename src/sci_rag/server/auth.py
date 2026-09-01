@@ -62,6 +62,17 @@ def limiter_identity(token: str) -> str:
     Distinct tokens get distinct identities and the same token always gets
     the same one, without the raw credential being stored anywhere.
     """
+    # codeql[py/weak-sensitive-data-hashing]
+    # CodeQL reads this as password hashing and asks for a slow KDF. The rule's
+    # premise is an attacker with a stolen digest store, brute-forcing offline.
+    # There is no store: `_LIMITER_SALT` is a 32-byte secret generated per
+    # process and never written down, the digests live in process memory, and
+    # they die on restart. This is a PRF for a rate-limit bucket, not a
+    # credential at rest.
+    #
+    # A deliberately expensive KDF would also be the wrong answer: this runs on
+    # every authenticated request, so making it costly would turn the rate
+    # limiter into the cheapest way to exhaust the server.
     digest = hmac.new(_LIMITER_SALT, token.encode("utf-8"), hashlib.blake2s).hexdigest()
     return f"key:{digest}"
 
