@@ -18,11 +18,9 @@ hide:
 
 <div class="srag-home-masthead__lede" markdown>
 
-Sci RAG Kit provides a blueprint for custom RAG development,
-from document ingestion
-to retrieval, and evaluation. Fully
-extensible and ready to scale. Shipped with API and MCP endpoints included
-for serving locally or in production.
+Sci RAG Kit provides the blueprint for custom RAG
+development grounded in scientific documents.
+Fully extensible, scalable and ready to serve over API and MCP.
 
 </div>
 
