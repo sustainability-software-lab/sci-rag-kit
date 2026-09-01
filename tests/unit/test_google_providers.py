@@ -248,3 +248,41 @@ async def test_a_model_that_rejects_both_knobs_still_completes(monkeypatch) -> N
 
     assert payload == {"ok": 2}
     assert client.configs[-1] is None, "the last attempt drops thinking control entirely"
+
+
+class EmptyCompletionClient(StubGenerateClient):
+    """A response that carries no text, with a reason attached."""
+
+    def __init__(self, finish_reason=None, **kwargs):  # type: ignore[no-untyped-def]
+        super().__init__(**kwargs)
+        self.finish_reason = finish_reason
+
+    async def _generate(self, *, model, contents, config):  # type: ignore[no-untyped-def]
+        self.configs.append(config.thinking_config)
+        candidate = SimpleNamespace(finish_reason=self.finish_reason)
+        return SimpleNamespace(text=None, candidates=[candidate])
+
+
+async def test_an_empty_completion_raises_rather_than_reading_as_an_answer(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """`response.text or ""` made a failure indistinguishable from a refusal.
+
+    A grounded-answer system returning nothing looks exactly like "the corpus
+    does not cover this", which the kit deliberately supports. A safety block,
+    a length cutoff, and a real answer of "" all rendered the same. AGENTS.md
+    is direct about this: new failure modes must be visible.
+
+    Raising puts it on the path that already exists, where the answer route
+    turns it into a `generation_failed` event.
+    """
+    llm = _llm_with(monkeypatch, EmptyCompletionClient(finish_reason="SAFETY"))
+
+    with pytest.raises(RuntimeError, match="SAFETY"):
+        await llm.generate("anything")
+
+
+async def test_an_empty_completion_says_so_even_without_a_reason(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """Some providers give no finish reason. Silence is still not an answer."""
+    llm = _llm_with(monkeypatch, EmptyCompletionClient(finish_reason=None))
+
+    with pytest.raises(RuntimeError, match="(?i)empty"):
+        await llm.generate("anything")
