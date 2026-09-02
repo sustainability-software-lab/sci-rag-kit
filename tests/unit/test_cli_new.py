@@ -88,9 +88,11 @@ def test_defaults_create_a_project_directory(tmp_path: Path) -> None:
     assert load_domain(project / "domain").name == "My Scientific KB"
     assert (project / ".env").exists()
     output = _ANSI.sub("", result.output)
+    assert "make setup" in output
+    assert "sci-rag build data/raw" in output
     assert "sci-rag draft ontology --from-corpus" in output
     assert "sci-rag draft questions --count 10" in output
-    assert "docs/llm-assisted-setup.md" in output
+    assert "docs/bring-your-own-domain.md" in output
 
 
 def test_the_directory_is_named_from_the_answers(tmp_path: Path) -> None:

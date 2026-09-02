@@ -188,6 +188,21 @@ For agents over stdio (Claude Code and friends), `sci-rag mcp` runs the
 same tool set with logs forced to stderr, because stdout belongs to the
 protocol.
 
+## Where a change belongs
+
+| You want to change | Start here | Keep invariant |
+|---|---|---|
+| Scientific concepts and relations | `domain/domain.yaml` | Valid entity and relation names |
+| How the model extracts or answers | `domain/prompts/` | Required `$SLOTS` and the citation contract |
+| Which documents enter the corpus | `data/corpus.jsonl`, or a `CorpusEntry` collector | Source, rights, and identity metadata |
+| Which works to review and download | `sci-rag campaign discover` and `build` | Resumable state, explicit rights, verified direct PDFs |
+| A file format | `src/sci_rag/ingest/parsers.py` | The shared `ParsedDocument` block model |
+| Model provider | `EmbeddingProvider` or `LLMClient` | Dimensions, version stamps, async behavior |
+| Ranking behavior | `src/sci_rag/retrieve/` | Scope before ranking, traces, and ablation evidence |
+| External interface | `RagService` first, then the REST or MCP adapter | One behavior behind both front doors |
+
+The first four rows are configuration and data. Most projects never leave them.
+
 ## Extension points, in order of likely need
 
 1. **A new document parser**: add a branch in
@@ -208,4 +223,6 @@ protocol.
 No task queue, no cache service, no vector-store sidecar, no graph
 database, no plugin framework. We considered each and declined it for v1.
 The [decision records](adr/0001-graph-in-postgres.md) hold the arguments,
-including the conditions under which we would reverse them.
+including the conditions under which we would reverse them. [Extend the
+kit](extend.md) walks through each of the five seams above with the tests
+and evidence a change owes.

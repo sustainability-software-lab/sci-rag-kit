@@ -16,44 +16,31 @@ migrations, `domain/`, and data paths resolve predictably.
 
 | Command | Purpose |
 |---|---|
-| `sci-rag ingest` | Ingest documents: parse, chunk, embed, and store them. |
-| `sci-rag retrieve` | Inspect retrieval: see what each layer contributed and what won. |
-| `sci-rag answer` | Generate a grounded answer with numbered citations. |
-| `sci-rag profile` | Where retrieval time goes: p50/p95 per stage, for each profile. |
-| `sci-rag stats` | What is in the knowledge base right now. |
-| `sci-rag serve` | Serve the REST API (/v1, docs at /docs) and the MCP server (/mcp). |
-| `sci-rag mcp` | Run the MCP server over stdio (for local agents like Claude Code). |
-| `sci-rag doctor` | Diagnose the environment: config, domain, database, corpus, credentials. |
-| `sci-rag init` | Configure this checkout for your own field. |
 | `sci-rag new` | Answer a short questionnaire, get a configured project directory. |
-| `sci-rag db` | Database schema management. |
+| `sci-rag init` | Configure this checkout for your own field. |
+| `sci-rag doctor` | Diagnose the environment: config, domain, database, corpus, credentials. |
+| `sci-rag ingest` | Ingest documents: parse, chunk, embed, and store them. |
+| `sci-rag build` | Build the knowledge base in one go: ingest, then extract the graph and its summaries. |
+| `sci-rag retrieve` | Search the corpus and show the evidence: which layer found each result, and why it ranked. |
+| `sci-rag answer` | Answer a question from your documents, with numbered citations. |
+| `sci-rag stats` | Show what is in the knowledge base: documents, chunks, graph size, licenses. |
+| `sci-rag profile` | Time each retrieval stage (median and 95th percentile) under each profile. |
+| `sci-rag serve` | Start the web service: REST API under /v1 (docs at /docs) and MCP tools at /mcp. |
+| `sci-rag mcp` | Let a local agent such as Claude Code use the corpus as tools (MCP over stdio). |
+| `sci-rag db` | Create or upgrade the database tables. |
 | `sci-rag db upgrade` | Create or upgrade the database schema (runs the Alembic migrations). |
-| `sci-rag graph` | Build the knowledge graph: extract entities, then detect communities. |
-| `sci-rag graph extract` | Extract entities and relationships from ingested chunks (needs an LLM). |
-| `sci-rag graph communities` | Cluster the graph and write LLM summaries (rebuilds all communities). |
-| `sci-rag graph citations` | Build corpus-local citation pointers from cached Crossref metadata. |
+| `sci-rag graph` | Build the knowledge graph: extract concepts and relationships from your documents, then summarize the clusters they form. |
+| `sci-rag graph extract` | Extract concepts and relationships from ingested chunks. |
+| `sci-rag graph communities` | Group related entities into clusters and write a summary of each (rebuilds all). |
+| `sci-rag graph citations` | Link corpus documents that cite each other, from the reference lists `corpus enrich` fetched. |
 | `sci-rag graph resolve-entities` | Resolve duplicate graph entities conservatively and audit every merge. |
-| `sci-rag graph gc` | Garbage-collect the graph: evidence-less entities, dangling relationships, communities whose members no longer resolve. |
-| `sci-rag eval` | Measure your RAG honestly: retrieval metrics, layer ablations, judged answers. |
-| `sci-rag eval retrieval` | Score retrieval against your seed questions (and per-layer ablations). |
-| `sci-rag eval answers` | Generate answers for every seed question and grade them with the blind judge. |
-| `sci-rag eval diff` | Compare two eval runs: per-question rank moves and paired metric deltas. |
-| `sci-rag eval html` | Render an eval run as one self-contained HTML page. |
-| `sci-rag eval calibrate` | Compare human labels against the judge's scores: Cohen's kappa per dimension. |
-| `sci-rag embed` | Embedding maintenance: find and re-embed rows left behind by a model upgrade. |
-| `sci-rag embed reindex` | Re-embed chunks and community summaries stamped with a retired embedder version. |
-| `sci-rag corpus` | Corpus lifecycle: delete documents cleanly, snapshot what you have. |
-| `sci-rag corpus enrich` | Add Crossref citation, journal, and retraction metadata to the corpus. |
-| `sci-rag corpus delete` | Delete documents and every graph trace of their evidence. |
-| `sci-rag corpus snapshot` | Write a named corpus fingerprint manifest under data/snapshots/. |
-| `sci-rag corpus license-report` | The corpus's rights posture: what is declared, and what is not. |
-| `sci-rag corpus export` | Export documents, chunks, entities, and relationships to files. |
-| `sci-rag campaign` | Discover, build, and screen legal, resumable scientific-document campaigns. |
+| `sci-rag graph gc` | Remove graph leftovers: entities with no evidence, relationships with a missing end, and communities whose members are gone. |
+| `sci-rag campaign` | Find papers to add: search by topic or DOI list, check each one's rights, and download the open-access PDFs into a manifest you can ingest. |
 | `sci-rag campaign discover` | Discover a deduplicated DOI list and save resumable state. |
-| `sci-rag campaign build` | Resolve rights, download direct OA PDFs, and write an ingest manifest. |
+| `sci-rag campaign build` | Check each candidate's rights, download the open-access PDFs, and write a manifest to ingest. |
 | `sci-rag campaign screen` | Screen discovered abstracts and queue uncertain rows for human review. |
 | `sci-rag campaign review` | Walk pending screening rows and append explicit human decisions. |
-| `sci-rag manifest` | Corpus manifests: check one before you ingest it. |
+| `sci-rag manifest` | Check a corpus manifest (data/corpus.jsonl) before you ingest it. |
 | `sci-rag manifest lint` | Check a corpus manifest before ingesting it. |
 | `sci-rag draft` | Draft the domain files you would otherwise hand-write. |
 | `sci-rag draft questions` | Draft seed questions grounded in your own documents, and verify them. |
@@ -61,170 +48,20 @@ migrations, `domain/`, and data paths resolve predictably.
 | `sci-rag draft manifest` | Read title, authors, year, and source off your documents. |
 | `sci-rag draft ontology` | Redraft or refine the ontology against what your documents actually say. |
 | `sci-rag draft prompts` | Reword a prompt for your field. |
-
-## `sci-rag ingest`
-
-Ingest documents: parse, chunk, embed, and store them.
-
-```console
-$ sci-rag ingest [OPTIONS] [PATH]
-```
-
-### Arguments
-
-| Name | Type | Default | Description |
-|---|---|---|---|
-| `PATH` | path | unset | Folder of documents to ingest (PDF, Markdown, or plain text). |
-
-### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `--manifest, -m` | path | unset | A JSONL corpus manifest with per-document metadata. |
-| `--source` | text | local | Source label recorded on documents ingested from a folder. |
-| `--no-docling` | boolean | false | Skip Docling even if installed (use the pypdf fallback). |
-| `--chunk-tokens` | integer | 800 | Target tokens per chunk. |
-| `--overlap-tokens` | integer | 150 | Overlap tokens between chunks. |
-
-## `sci-rag retrieve`
-
-Inspect retrieval: see what each layer contributed and what won.
-
-```console
-$ sci-rag retrieve [OPTIONS] QUERY
-```
-
-### Arguments
-
-| Name | Type | Default | Description |
-|---|---|---|---|
-| `QUERY` | text | required | The question to search for. |
-
-### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `--profile` | text | deep | Retrieval profile: interactive, deep, or auto (router decides). |
-| `--limit` | integer | 8 | How many fused results to return. |
-| `--license` | text | unset | Comma-separated license allowlist (e.g. public,open_commercial). |
-| `--source` | text | unset | Comma-separated source allowlist. |
-| `--year-min` | integer | unset | Earliest publication year to include. |
-| `--year-max` | integer | unset | Latest publication year to include. |
-| `--author` | text | unset | Comma-separated author allowlist (exact strings). |
-| `--journal` | text | unset | Comma-separated journal allowlist. |
-| `--exclude-doi` | text | unset | Comma-separated DOIs to drop. |
-| `--explain-routing` | boolean | false | Print what the auto router decides for this query (and why) before retrieving. |
-
-## `sci-rag answer`
-
-Generate a grounded answer with numbered citations.
-
-```console
-$ sci-rag answer [OPTIONS] QUERY
-```
-
-### Arguments
-
-| Name | Type | Default | Description |
-|---|---|---|---|
-| `QUERY` | text | required | The question to answer. |
-
-### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `--profile` | text | deep | Retrieval profile: interactive or deep. |
-| `--limit` | integer | 8 | How many sources to give the model. |
-| `--license` | text | unset | - |
-| `--source` | text | unset | - |
-| `--year-min` | integer | unset | Earliest publication year to include. |
-| `--year-max` | integer | unset | Latest publication year to include. |
-| `--author` | text | unset | Comma-separated author allowlist (exact strings). |
-| `--journal` | text | unset | Comma-separated journal allowlist. |
-| `--exclude-doi` | text | unset | Comma-separated DOIs to drop. |
-| `--include-retracted` | boolean | false | Deliberately allow known retracted papers as answer evidence. |
-| `--compression, --no-compression` | boolean | unset | Override contextual source compression (domain default when omitted). |
-
-## `sci-rag profile`
-
-Where retrieval time goes: p50/p95 per stage, for each profile. Replays the seed questions against interactive, deep, and auto, and aggregates the per-stage timings every request already records. Stages run concurrently, so their durations do not sum to the request; wall-clock is measured separately and reported beside them.
-
-```console
-$ sci-rag profile [OPTIONS]
-```
-
-### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `--questions` | path | unset | Seed questions JSONL. Defaults to the domain's. |
-| `--runs` | integer | 3 | Replays per question, per profile. |
-| `--limit` | integer | 8 | Results per request. |
-| `--json` | boolean | false | Machine-readable output. |
-
-## `sci-rag stats`
-
-What is in the knowledge base right now.
-
-```console
-$ sci-rag stats [OPTIONS]
-```
-
-## `sci-rag serve`
-
-Serve the REST API (/v1, docs at /docs) and the MCP server (/mcp).
-
-```console
-$ sci-rag serve [OPTIONS]
-```
-
-### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `--host` | text | unset | Bind address (default from settings). |
-| `--port` | integer | unset | Port (default from settings; Cloud Run sets PORT). |
-
-## `sci-rag mcp`
-
-Run the MCP server over stdio (for local agents like Claude Code). Add it to an agent with, for example: claude mcp add sci-rag -- uv run --directory /path/to/your/repo sci-rag mcp
-
-```console
-$ sci-rag mcp [OPTIONS]
-```
-
-## `sci-rag doctor`
-
-Diagnose the environment: config, domain, database, corpus, credentials.
-
-```console
-$ sci-rag doctor [OPTIONS]
-```
-
-### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `--probe` | boolean | false | Also make one tiny live embedding and generation call. |
-
-## `sci-rag init`
-
-Configure this checkout for your own field. Asks about your project, credentials, ontology, corpus, and stack, then rewrites the configuration files in place. Everything it writes is a file you are meant to keep editing afterwards; nothing is generated code.
-
-```console
-$ sci-rag init [OPTIONS]
-```
-
-### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `--target` | path | . | The checkout to configure. Defaults to the current directory. |
-| `--defaults` | boolean | false | Take every default without asking. Useful in CI. |
-| `--answers-file` | path | unset | A YAML file of answers, for reproducible generation. Unanswered questions take their default. Answers that need a person, such as accepting a drafted ontology, are refused rather than replaced. |
-| `--quick, --advanced` | boolean | unset | Ask six setup questions, or expose every option. |
-| `--no-tty` | boolean | false | Use plain numbered prompts even in a supported terminal. |
-| `--dry-run` | boolean | false | Show what would change without writing anything. |
+| `sci-rag eval` | Measure quality against your seed questions: retrieval scores, what each retrieval layer contributes, and graded answers. |
+| `sci-rag eval retrieval` | Score retrieval against your seed questions: did the right documents come back? |
+| `sci-rag eval answers` | Answer every seed question and grade each answer for grounding, citations, and correctness. |
+| `sci-rag eval diff` | Compare two eval runs: per-question rank moves and paired metric deltas. |
+| `sci-rag eval html` | Render an eval run as one self-contained HTML page. |
+| `sci-rag eval calibrate` | Compare a person's scores with the grader's, per dimension (reported as Cohen's kappa). |
+| `sci-rag embed` | Re-embed rows left behind after an embedding model change. |
+| `sci-rag embed reindex` | Re-embed chunks and community summaries that an older embedding model produced. |
+| `sci-rag corpus` | Look after the corpus: rights report, publication metadata, snapshots, export, and deletion. |
+| `sci-rag corpus enrich` | Add Crossref citation, journal, and retraction metadata to the corpus. |
+| `sci-rag corpus delete` | Delete documents, their chunks, and every graph entry that relied on them. |
+| `sci-rag corpus snapshot` | Record exactly which documents the corpus holds right now, under data/snapshots/. |
+| `sci-rag corpus license-report` | Count documents and chunks by license class, and name the ones still `unknown`. |
+| `sci-rag corpus export` | Export documents, chunks, entities, and relationships to files. |
 
 ## `sci-rag new`
 
@@ -247,9 +84,197 @@ $ sci-rag new [OPTIONS]
 | `--ref` | text | unset | Fetch the template at this tag or branch instead of the tag matching this generator's version. |
 | `--template-path` | path | unset | Generate from a local checkout instead of downloading. No network needed. Copies what the checkout tracks, so local state stays local. |
 
+## `sci-rag init`
+
+Configure this checkout for your own field. Asks about your project, credentials, ontology, corpus, and stack, then rewrites the configuration files in place. Everything it writes is a file you are meant to keep editing afterwards; nothing is generated code.
+
+```console
+$ sci-rag init [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--target` | path | . | The checkout to configure. Defaults to the current directory. |
+| `--defaults` | boolean | false | Take every default without asking. Useful in CI. |
+| `--answers-file` | path | unset | A YAML file of answers, for reproducible generation. Unanswered questions take their default. Answers that need a person, such as accepting a drafted ontology, are refused rather than replaced. |
+| `--quick, --advanced` | boolean | unset | Ask six setup questions, or expose every option. |
+| `--no-tty` | boolean | false | Use plain numbered prompts even in a supported terminal. |
+| `--dry-run` | boolean | false | Show what would change without writing anything. |
+
+## `sci-rag doctor`
+
+Diagnose the environment: config, domain, database, corpus, credentials.
+
+```console
+$ sci-rag doctor [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--probe` | boolean | false | Also make one tiny live embedding and generation call. |
+
+## `sci-rag ingest`
+
+Ingest documents: parse, chunk, embed, and store them. Pass a folder for a first run (every document is recorded with license_class "unknown"), or a manifest once you have declared each document's rights. `sci-rag build` runs this and the graph steps together.
+
+```console
+$ sci-rag ingest [OPTIONS] [PATH]
+```
+
+### Arguments
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `PATH` | path | unset | Folder of documents to ingest (PDF, HTML, Markdown, or plain text). |
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--manifest, -m` | path | unset | A JSONL corpus manifest: one line per document with title, authors, and rights. |
+| `--source` | text | local | Source label recorded on documents ingested from a folder. |
+| `--no-docling` | boolean | false | Skip Docling even if installed (use the pypdf fallback). |
+| `--chunk-tokens` | integer | 800 | Target tokens per chunk. |
+| `--overlap-tokens` | integer | 150 | Overlap tokens between chunks. |
+
+## `sci-rag build`
+
+Build the knowledge base in one go: ingest, then extract the graph and its summaries. Ingestion works with any embedding setup, including offline. The graph steps need a model credential; without one, or with --no-graph, they are skipped and the command says so. Re-running only processes new chunks.
+
+```console
+$ sci-rag build [OPTIONS] [PATH]
+```
+
+### Arguments
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `PATH` | path | unset | Folder of documents to ingest (PDF, HTML, Markdown, or plain text). |
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--manifest, -m` | path | unset | A JSONL corpus manifest: one line per document with title, authors, and rights. |
+| `--source` | text | local | Source label recorded on documents ingested from a folder. |
+| `--no-docling` | boolean | false | Skip Docling even if installed (use the pypdf fallback). |
+| `--no-graph` | boolean | false | Stop after ingestion; skip the knowledge graph. |
+| `--batch-size` | integer | 10 | Chunks per graph-extraction model call. |
+
+## `sci-rag retrieve`
+
+Search the corpus and show the evidence: which layer found each result, and why it ranked.
+
+```console
+$ sci-rag retrieve [OPTIONS] QUERY
+```
+
+### Arguments
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `QUERY` | text | required | The question to search for. |
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--profile` | text | deep | Which retrieval layers run: interactive (vector and keyword, fast), deep (all five), or auto (a router picks per question). |
+| `--limit` | integer | 8 | How many results to return after the layers are combined. |
+| `--license` | text | unset | Comma-separated license allowlist (e.g. public,open_commercial). |
+| `--source` | text | unset | Comma-separated source allowlist. |
+| `--year-min` | integer | unset | Earliest publication year to include. |
+| `--year-max` | integer | unset | Latest publication year to include. |
+| `--author` | text | unset | Comma-separated author allowlist (exact strings). |
+| `--journal` | text | unset | Comma-separated journal allowlist. |
+| `--exclude-doi` | text | unset | Comma-separated DOIs to drop. |
+| `--explain-routing` | boolean | false | Print what the auto router decides for this query (and why) before retrieving. |
+
+## `sci-rag answer`
+
+Answer a question from your documents, with numbered citations. Needs a model credential.
+
+```console
+$ sci-rag answer [OPTIONS] QUERY
+```
+
+### Arguments
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `QUERY` | text | required | The question to answer. |
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--profile` | text | deep | Which retrieval layers run: interactive (vector and keyword, fast), deep (all five), or auto (a router picks per question). |
+| `--limit` | integer | 8 | How many sources to give the model. |
+| `--license` | text | unset | Comma-separated license allowlist (e.g. public,open_commercial). |
+| `--source` | text | unset | Comma-separated source allowlist. |
+| `--year-min` | integer | unset | Earliest publication year to include. |
+| `--year-max` | integer | unset | Latest publication year to include. |
+| `--author` | text | unset | Comma-separated author allowlist (exact strings). |
+| `--journal` | text | unset | Comma-separated journal allowlist. |
+| `--exclude-doi` | text | unset | Comma-separated DOIs to drop. |
+| `--include-retracted` | boolean | false | Deliberately allow known retracted papers as answer evidence. |
+| `--compression, --no-compression` | boolean | unset | Summarize each retrieved source before answering, or send the full text. Omit to use the domain profile's setting. |
+
+## `sci-rag stats`
+
+Show what is in the knowledge base: documents, chunks, graph size, licenses.
+
+```console
+$ sci-rag stats [OPTIONS]
+```
+
+## `sci-rag profile`
+
+Time each retrieval stage (median and 95th percentile) under each profile. Replays the seed questions against interactive, deep, and auto, and aggregates the per-stage timings every request already records. Stages run concurrently, so their durations do not sum to the request; wall-clock is measured separately and reported beside them.
+
+```console
+$ sci-rag profile [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--questions` | path | unset | Seed questions JSONL. Defaults to the domain's. |
+| `--runs` | integer | 3 | Replays per question, per profile. |
+| `--limit` | integer | 8 | Results per request. |
+| `--json` | boolean | false | Machine-readable output. |
+
+## `sci-rag serve`
+
+Start the web service: REST API under /v1 (docs at /docs) and MCP tools at /mcp.
+
+```console
+$ sci-rag serve [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--host` | text | unset | Bind address (default from settings). |
+| `--port` | integer | unset | Port (default from settings; Cloud Run sets PORT). |
+
+## `sci-rag mcp`
+
+Let a local agent such as Claude Code use the corpus as tools (MCP over stdio). Add it to an agent with, for example: claude mcp add sci-rag -- uv run --directory /path/to/your/repo sci-rag mcp
+
+```console
+$ sci-rag mcp [OPTIONS]
+```
+
 ## `sci-rag db`
 
-Database schema management.
+Create or upgrade the database tables.
 
 ```console
 $ sci-rag db [OPTIONS] COMMAND [ARGS]...
@@ -265,7 +290,7 @@ $ sci-rag db upgrade [OPTIONS]
 
 ## `sci-rag graph`
 
-Build the knowledge graph: extract entities, then detect communities.
+Build the knowledge graph: extract concepts and relationships from your documents, then summarize the clusters they form.
 
 ```console
 $ sci-rag graph [OPTIONS] COMMAND [ARGS]...
@@ -273,7 +298,7 @@ $ sci-rag graph [OPTIONS] COMMAND [ARGS]...
 
 ## `sci-rag graph extract`
 
-Extract entities and relationships from ingested chunks (needs an LLM).
+Extract concepts and relationships from ingested chunks. Needs a model credential. Only chunks the extractor has not seen are processed, so re-running after a new ingest picks up just the new documents.
 
 ```console
 $ sci-rag graph extract [OPTIONS]
@@ -289,7 +314,7 @@ $ sci-rag graph extract [OPTIONS]
 
 ## `sci-rag graph communities`
 
-Cluster the graph and write LLM summaries (rebuilds all communities).
+Group related entities into clusters and write a summary of each (rebuilds all). Summaries answer big-picture questions no single passage covers. Needs a model credential.
 
 ```console
 $ sci-rag graph communities [OPTIONS]
@@ -303,7 +328,7 @@ $ sci-rag graph communities [OPTIONS]
 
 ## `sci-rag graph citations`
 
-Build corpus-local citation pointers from cached Crossref metadata.
+Link corpus documents that cite each other, from the reference lists `corpus enrich` fetched.
 
 ```console
 $ sci-rag graph citations [OPTIONS]
@@ -327,14 +352,14 @@ $ sci-rag graph resolve-entities [OPTIONS]
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `--dry-run, --apply` | boolean | true | Preview merges by default; --apply writes tombstones and audit receipts. |
+| `--dry-run, --apply` | boolean | true | Preview merges by default; --apply merges duplicates and records each merge in an audit table. |
 | `--no-llm` | boolean | false | Skip borderline pairs. Nothing is sent to a model. |
 | `--threshold` | float range | 0.92 | Minimum same-type similarity for an automatic fuzzy merge. |
 | `--llm-threshold` | float range | 0.8 | Minimum similarity for a borderline pair to be reviewed by the LLM. |
 
 ## `sci-rag graph gc`
 
-Garbage-collect the graph: evidence-less entities, dangling relationships, communities whose members no longer resolve.
+Remove graph leftovers: entities with no evidence, relationships with a missing end, and communities whose members are gone.
 
 ```console
 $ sci-rag graph gc [OPTIONS]
@@ -346,230 +371,9 @@ $ sci-rag graph gc [OPTIONS]
 |---|---|---|---|
 | `--dry-run, --apply` | boolean | true | --dry-run (default) reports what would go; --apply removes it. |
 
-## `sci-rag eval`
-
-Measure your RAG honestly: retrieval metrics, layer ablations, judged answers.
-
-```console
-$ sci-rag eval [OPTIONS] COMMAND [ARGS]...
-```
-
-## `sci-rag eval retrieval`
-
-Score retrieval against your seed questions (and per-layer ablations).
-
-```console
-$ sci-rag eval retrieval [OPTIONS]
-```
-
-### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `--questions` | path | unset | Seed questions JSONL. |
-| `--limit` | integer | 10 | Results retrieved per question. |
-| `--ablation` | boolean | false | Run every layer-ablation config, not just full_deep. |
-| `--condition` | text | unset | Label an established corpus condition (currently: resolved_entities). |
-| `--snapshot` | text | unset | Record this corpus snapshot name in the report. |
-
-## `sci-rag eval answers`
-
-Generate answers for every seed question and grade them with the blind judge.
-
-```console
-$ sci-rag eval answers [OPTIONS]
-```
-
-### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `--questions` | path | unset | Seed questions JSONL. |
-| `--profile` | text | deep | Retrieval profile for answer generation. |
-| `--limit` | integer | 8 | Sources per answer. |
-| `--judge-model` | text | unset | Judge model spec, 'model' or 'provider:model'. Overrides SCI_RAG_JUDGE_MODEL. |
-| `--snapshot` | text | unset | Record this corpus snapshot name in the report. |
-| `--compressed` | boolean | false | Enable contextual source compression for this answers-eval condition. |
-
-## `sci-rag eval diff`
-
-Compare two eval runs: per-question rank moves and paired metric deltas. Deltas are B minus A. Run it after any retrieval-affecting change to see whether the improvement is real or inside the noise.
-
-```console
-$ sci-rag eval diff [OPTIONS] REPORT_A REPORT_B
-```
-
-### Arguments
-
-| Name | Type | Default | Description |
-|---|---|---|---|
-| `REPORT_A` | path | required | Baseline report.json (or its run directory). |
-| `REPORT_B` | path | required | Comparison report.json (or its run directory). |
-
-### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `--config` | text | unset | Diff only this ablation config (default: every common config). |
-| `--output` | path | unset | Also write the markdown diff to this path. |
-
-## `sci-rag eval html`
-
-Render an eval run as one self-contained HTML page. For sharing with a collaborator who will never open a terminal. Inline styles, nothing fetched when the page is opened, and the small-sample and drafted-ground-truth warnings travel with the numbers. Picks up `calibration.json` automatically when it sits beside the report.
-
-```console
-$ sci-rag eval html [OPTIONS] RUN
-```
-
-### Arguments
-
-| Name | Type | Default | Description |
-|---|---|---|---|
-| `RUN` | path | required | Run directory, or the report.json inside one. |
-
-### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `--output` | path | unset | Where to write the page (default: report.html beside the report). |
-
-## `sci-rag eval calibrate`
-
-Compare human labels against the judge's scores: Cohen's kappa per dimension. Appends a calibration section to the report's markdown (report.md) and writes calibration.json next to it, so the kappa travels with the eval numbers it qualifies.
-
-```console
-$ sci-rag eval calibrate [OPTIONS]
-```
-
-### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `--labels` | path | required | Human labels (labels.jsonl). |
-| `--report` | path | unset | Answers report.json (or its run directory) to calibrate against. Defaults to the newest answers run under eval_results/. |
-| `--output` | path | unset | Also write the calibration markdown to this path. |
-
-## `sci-rag embed`
-
-Embedding maintenance: find and re-embed rows left behind by a model upgrade.
-
-```console
-$ sci-rag embed [OPTIONS] COMMAND [ARGS]...
-```
-
-## `sci-rag embed reindex`
-
-Re-embed chunks and community summaries stamped with a retired embedder version. A dimension change is refused outright: that is a schema migration plus a full re-ingest, never a reindex.
-
-```console
-$ sci-rag embed reindex [OPTIONS]
-```
-
-### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `--dry-run, --apply` | boolean | true | --dry-run (default) reports what is stale; --apply re-embeds it. |
-| `--batch-size` | integer | 32 | Rows re-embedded per batch (one commit per batch). |
-
-## `sci-rag corpus`
-
-Corpus lifecycle: delete documents cleanly, snapshot what you have.
-
-```console
-$ sci-rag corpus [OPTIONS] COMMAND [ARGS]...
-```
-
-## `sci-rag corpus enrich`
-
-Add Crossref citation, journal, and retraction metadata to the corpus.
-
-```console
-$ sci-rag corpus enrich [OPTIONS]
-```
-
-### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `--mailto` | text | required | Contact email sent to Crossref's polite API pool. |
-| `--dry-run` | boolean | false | List eligible DOI records without network calls or writes. |
-| `--limit` | integer range | unset | Process at most this many documents. |
-
-## `sci-rag corpus delete`
-
-Delete documents and every graph trace of their evidence. Chunks cascade, entity evidence arrays are scrubbed, relationships evidenced by the documents go, and communities that aggregated that evidence are dropped (rebuild them with `sci-rag graph communities`). Run `sci-rag graph gc` afterwards to sweep entities left with no evidence at all.
-
-```console
-$ sci-rag corpus delete [OPTIONS] DOCUMENT_IDS...
-```
-
-### Arguments
-
-| Name | Type | Default | Description |
-|---|---|---|---|
-| `DOCUMENT_IDS` | text, repeatable | required | Document id(s) to delete. |
-
-### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `--yes, -y` | boolean | false | Skip the confirmation prompt. |
-
-## `sci-rag corpus snapshot`
-
-Write a named corpus fingerprint manifest under data/snapshots/. Records counts, per-document content hashes, embedding versions, the git commit, and a single corpus digest. Reference it from eval runs with --snapshot NAME so reported numbers stay tied to exactly the corpus that produced them.
-
-```console
-$ sci-rag corpus snapshot [OPTIONS] [NAME]
-```
-
-### Arguments
-
-| Name | Type | Default | Description |
-|---|---|---|---|
-| `NAME` | text | unset | Snapshot name (default: UTC timestamp). |
-
-## `sci-rag corpus license-report`
-
-The corpus's rights posture: what is declared, and what is not. License classes gate retrieval, but nothing summarized them. This counts the corpus by class, by document and by chunk, and names every document nobody has recorded rights for.
-
-```console
-$ sci-rag corpus license-report [OPTIONS]
-```
-
-### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `--json` | boolean | false | Machine-readable output. |
-| `--strict` | boolean | false | Exit 1 when any document is still 'unknown'. For CI; the report itself never fails. |
-
-## `sci-rag corpus export`
-
-Export documents, chunks, entities, and relationships to files. Scoping is fail-closed and applies to the graph too: an entity is exported only when every document it was extracted from is in scope, because its description is written from all of them. Communities are never exported; they aggregate with no per-document attribution to check.
-
-```console
-$ sci-rag corpus export [OPTIONS] OUTDIR
-```
-
-### Arguments
-
-| Name | Type | Default | Description |
-|---|---|---|---|
-| `OUTDIR` | path | required | Directory to write the export files into. |
-
-### Options
-
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `--format` | text | jsonl | jsonl (no extra dependency) or parquet (needs --extra export). |
-| `--license` | text | empty | Export only these license classes (repeatable). Omit for everything. An export is a redistribution, so a scope excludes 'unknown' unless you name it. |
-| `--include-embeddings` | boolean | false | Include chunk vectors (large, rarely wanted). |
-
 ## `sci-rag campaign`
 
-Discover, build, and screen legal, resumable scientific-document campaigns.
+Find papers to add: search by topic or DOI list, check each one's rights, and download the open-access PDFs into a manifest you can ingest.
 
 ```console
 $ sci-rag campaign [OPTIONS] COMMAND [ARGS]...
@@ -596,7 +400,7 @@ $ sci-rag campaign discover [OPTIONS]
 
 ## `sci-rag campaign build`
 
-Resolve rights, download direct OA PDFs, and write an ingest manifest.
+Check each candidate's rights, download the open-access PDFs, and write a manifest to ingest.
 
 ```console
 $ sci-rag campaign build [OPTIONS]
@@ -651,7 +455,7 @@ $ sci-rag campaign review [OPTIONS]
 
 ## `sci-rag manifest`
 
-Corpus manifests: check one before you ingest it.
+Check a corpus manifest (data/corpus.jsonl) before you ingest it.
 
 ```console
 $ sci-rag manifest [OPTIONS] COMMAND [ARGS]...
@@ -757,7 +561,7 @@ $ sci-rag draft ontology [OPTIONS]
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `--from-corpus` | boolean | false | Redraft the ontology from real passages. The default when documents exist. |
+| `--from-corpus` | boolean | false | Draft from passages in your ingested corpus (or data/raw before ingestion). This is the default; the flag names it explicitly. |
 | `--refine` | boolean | false | Show the model your ontology and ask only what it would add and remove. |
 | `--cold` | boolean | false | Draft from the description alone, without reading any document. |
 | `--folder` | path | unset | Draft from documents in this folder, before anything is ingested. |
@@ -790,6 +594,227 @@ $ sci-rag draft prompts [OPTIONS] NAME
 | `--output` | path | unset | Where to write the proposal. Defaults to <prompt>.md.proposed. |
 | `--apply` | boolean | false | Write the prompt file directly, with no .proposed file to review. |
 | `--dry-run` | boolean | false | Show the rewrite without writing anything. |
+
+## `sci-rag eval`
+
+Measure quality against your seed questions: retrieval scores, what each retrieval layer contributes, and graded answers.
+
+```console
+$ sci-rag eval [OPTIONS] COMMAND [ARGS]...
+```
+
+## `sci-rag eval retrieval`
+
+Score retrieval against your seed questions: did the right documents come back?
+
+```console
+$ sci-rag eval retrieval [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--questions` | path | unset | Seed questions JSONL. |
+| `--limit` | integer | 10 | Results retrieved per question. |
+| `--ablation` | boolean | false | Also score each retrieval layer switched off in turn, to see what each contributes. |
+| `--condition` | text | unset | Label an established corpus condition (currently: resolved_entities). |
+| `--snapshot` | text | unset | Record this corpus snapshot name in the report. |
+
+## `sci-rag eval answers`
+
+Answer every seed question and grade each answer for grounding, citations, and correctness. Needs a model credential. The grader scores grounding without seeing the reference answer, then scores correctness against it in a separate pass.
+
+```console
+$ sci-rag eval answers [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--questions` | path | unset | Seed questions JSONL. |
+| `--profile` | text | deep | Retrieval profile for answer generation. |
+| `--limit` | integer | 8 | Sources per answer. |
+| `--judge-model` | text | unset | Judge model spec, 'model' or 'provider:model'. Overrides SCI_RAG_JUDGE_MODEL. |
+| `--snapshot` | text | unset | Record this corpus snapshot name in the report. |
+| `--compressed` | boolean | false | Summarize each retrieved source before answering, as a separate condition to compare. |
+
+## `sci-rag eval diff`
+
+Compare two eval runs: per-question rank moves and paired metric deltas. Deltas are B minus A. Run it after any retrieval-affecting change to see whether the improvement is real or inside the noise.
+
+```console
+$ sci-rag eval diff [OPTIONS] REPORT_A REPORT_B
+```
+
+### Arguments
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `REPORT_A` | path | required | Baseline report.json (or its run directory). |
+| `REPORT_B` | path | required | Comparison report.json (or its run directory). |
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--config` | text | unset | Diff only this ablation config (default: every common config). |
+| `--output` | path | unset | Also write the markdown diff to this path. |
+
+## `sci-rag eval html`
+
+Render an eval run as one self-contained HTML page. For sharing with a collaborator who will never open a terminal. Inline styles, nothing fetched when the page is opened, and the small-sample and drafted-ground-truth warnings travel with the numbers. Picks up `calibration.json` automatically when it sits beside the report.
+
+```console
+$ sci-rag eval html [OPTIONS] RUN
+```
+
+### Arguments
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `RUN` | path | required | Run directory, or the report.json inside one. |
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--output` | path | unset | Where to write the page (default: report.html beside the report). |
+
+## `sci-rag eval calibrate`
+
+Compare a person's scores with the grader's, per dimension (reported as Cohen's kappa). Appends a calibration section to the report's markdown (report.md) and writes calibration.json next to it, so the kappa travels with the eval numbers it qualifies.
+
+```console
+$ sci-rag eval calibrate [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--labels` | path | required | Human labels (labels.jsonl). |
+| `--report` | path | unset | Answers report.json (or its run directory) to calibrate against. Defaults to the newest answers run under eval_results/. |
+| `--output` | path | unset | Also write the calibration markdown to this path. |
+
+## `sci-rag embed`
+
+Re-embed rows left behind after an embedding model change.
+
+```console
+$ sci-rag embed [OPTIONS] COMMAND [ARGS]...
+```
+
+## `sci-rag embed reindex`
+
+Re-embed chunks and community summaries that an older embedding model produced. A dimension change is refused outright: that is a schema migration plus a full re-ingest, never a reindex.
+
+```console
+$ sci-rag embed reindex [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--dry-run, --apply` | boolean | true | --dry-run (default) reports what is stale; --apply re-embeds it. |
+| `--batch-size` | integer | 32 | Rows re-embedded per batch (one commit per batch). |
+
+## `sci-rag corpus`
+
+Look after the corpus: rights report, publication metadata, snapshots, export, and deletion.
+
+```console
+$ sci-rag corpus [OPTIONS] COMMAND [ARGS]...
+```
+
+## `sci-rag corpus enrich`
+
+Add Crossref citation, journal, and retraction metadata to the corpus.
+
+```console
+$ sci-rag corpus enrich [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--mailto` | text | required | Contact email sent with each Crossref request; identified callers get faster service. |
+| `--dry-run` | boolean | false | List eligible DOI records without network calls or writes. |
+| `--limit` | integer range | unset | Process at most this many documents. |
+
+## `sci-rag corpus delete`
+
+Delete documents, their chunks, and every graph entry that relied on them. Communities built from that evidence are dropped too; rebuild them with `sci-rag graph communities`. Run `sci-rag graph gc` afterwards to remove entities left with no evidence at all.
+
+```console
+$ sci-rag corpus delete [OPTIONS] DOCUMENT_IDS...
+```
+
+### Arguments
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `DOCUMENT_IDS` | text, repeatable | required | Document id(s) to delete. |
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--yes, -y` | boolean | false | Skip the confirmation prompt. |
+
+## `sci-rag corpus snapshot`
+
+Record exactly which documents the corpus holds right now, under data/snapshots/. Records counts, per-document content hashes, embedding versions, the git commit, and a single corpus digest. Reference it from eval runs with --snapshot NAME so reported numbers stay tied to exactly the corpus that produced them.
+
+```console
+$ sci-rag corpus snapshot [OPTIONS] [NAME]
+```
+
+### Arguments
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `NAME` | text | unset | Snapshot name (default: UTC timestamp). |
+
+## `sci-rag corpus license-report`
+
+Count documents and chunks by license class, and name the ones still `unknown`. License classes decide what a scoped request may see, so this is the report to read before you share the service.
+
+```console
+$ sci-rag corpus license-report [OPTIONS]
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--json` | boolean | false | Machine-readable output. |
+| `--strict` | boolean | false | Exit 1 when any document is still 'unknown'. For CI; the report itself never fails. |
+
+## `sci-rag corpus export`
+
+Export documents, chunks, entities, and relationships to files. A scope leaves out anything it cannot vouch for, and applies to the graph too: an entity is exported only when every document it was extracted from is in scope, because its description is written from all of them. Communities are never exported; they aggregate with no per-document attribution to check.
+
+```console
+$ sci-rag corpus export [OPTIONS] OUTDIR
+```
+
+### Arguments
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `OUTDIR` | path | required | Directory to write the export files into. |
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--format` | text | jsonl | jsonl (no extra dependency) or parquet (needs --extra export). |
+| `--license` | text | empty | Export only these license classes (repeatable). Omit for everything. An export is a redistribution, so a scope excludes 'unknown' unless you name it. |
+| `--include-embeddings` | boolean | false | Include chunk vectors (large, rarely wanted). |
 
 ## Shell help is authoritative too
 

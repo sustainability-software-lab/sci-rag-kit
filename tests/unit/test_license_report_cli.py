@@ -156,7 +156,7 @@ def test_the_output_explains_that_unknown_is_fail_closed(stub) -> None:  # type:
 
     result = runner.invoke(app, ["corpus", "license-report"])
 
-    assert "fail-closed" in result.output
+    assert "never assumed safe" in result.output
     assert "excluded unless the scope names `unknown` explicitly" in result.output
 
 

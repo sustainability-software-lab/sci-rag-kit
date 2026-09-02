@@ -6,6 +6,42 @@ Notable changes to sci-rag-kit. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **`sci-rag build`** takes a folder or a manifest to a queryable knowledge
+  base in one command: ingest, then graph extraction and community summaries.
+  Without a model credential, or with `--no-graph`, it stops after ingestion
+  and says so; vector and keyword retrieval already work at that point.
+  Re-running only processes new chunks.
+
+### Changed
+
+- **`sci-rag --help` groups commands by stage** (start here, build your
+  knowledge base, ask questions, measure quality, serve, maintain) so the six
+  commands a new project needs are not lost among the maintenance ones. Help
+  strings were rewritten in plain words: no undefined "HyDE", "fused",
+  "ablation", "tombstone", or "fail-closed" in a one-line summary.
+- **The wizard's completion report now prints a path that works**: `make
+  setup` before `sci-rag doctor`, where to put your documents, `sci-rag build`,
+  and `sci-rag answer`. It used to skip the database step and never reached an
+  answer.
+- **`sci-rag ingest`, `graph extract`, and `graph communities` report a
+  missing credential in one line** instead of a traceback, and `stats` checks
+  the database connection before querying.
+- **`sci-rag corpus enrich --mailto`** reads `SCI_RAG_CAMPAIGN_MAILTO` like
+  the campaign commands do, so the address the wizard wrote is used.
+- **Documentation restructured for people new to retrieval systems.** The
+  README opens with what the kit does and a seven-command recipe. The site's
+  Get started section is now Quickstart, Bring your own domain, and
+  Troubleshooting, in that order; the Learn section became How it works and
+  opens with a plain-language walkthrough of what happens to a document and
+  to a question. Bring your own domain absorbed the LLM-assisted setup guide
+  and leads with the recipe; the repository tour folded into Get started and
+  Architecture; the typed-client guide became a section of the API reference.
+  Three pages fewer, and every remaining page explains a term where it is
+  first used.
+
+
 ## [0.4.1] - 2026-08-31
 
 A fix release, driven by qualifying the documented routes against real

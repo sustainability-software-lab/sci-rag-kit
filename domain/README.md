@@ -24,8 +24,8 @@ and fails mid-run.
 
 As shipped, this folder is configured for the demo domain, agricultural
 residues, so everything works before you change anything. To make it yours,
-run `uv run sci-rag init` and then follow
-[Bring your own domain](../docs/bring-your-own-domain.md).
+follow [Bring your own domain](../docs/bring-your-own-domain.md); it is a
+seven-command recipe, and this folder is where three of the commands write.
 
 ## Start with a draft, not a blank file
 
@@ -58,4 +58,5 @@ tag is your sign-off. `eval_calibration_labels.jsonl` is not drafted at all: it
 exists to calibrate the judge against human judgment, so generating it with a
 model would destroy the only measurement it provides.
 
-See [LLM-assisted setup](../docs/llm-assisted-setup.md) for the full workflow.
+[Bring your own domain](../docs/bring-your-own-domain.md#drafting-with-a-model)
+explains the three drafting routes in full.

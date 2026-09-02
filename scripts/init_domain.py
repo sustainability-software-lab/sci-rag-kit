@@ -89,7 +89,7 @@ def main() -> int:
 
     print(
         f"""
-Done. {args.name} is yours. Next, in order:
+Done. {args.name} is set up. Next, in order:
 
   1. Put documents in data/raw/.
   2. uv run sci-rag draft manifest --folder data/raw
@@ -100,7 +100,7 @@ Done. {args.name} is yours. Next, in order:
 Steps 2 to 4 each propose a file for you to review rather than writing one,
 and each also prints its prompt (--print-prompt) if you would rather paste it
 into an assistant you already have, no API key needed. Guide:
-docs/llm-assisted-setup.md
+docs/bring-your-own-domain.md
 
 Prefer to type them yourself? The full schema for every file is in
 docs/bring-your-own-domain.md, and nothing here requires the drafters.
