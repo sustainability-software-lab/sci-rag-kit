@@ -117,6 +117,12 @@ plugins:
   - search:
       lang: en
 
+# Retired pages keep answering at their old address. The map is applied by
+# scripts/docs_redirects.py after the build; a target that does not exist
+# fails `make docs`.
+hooks:
+  - scripts/docs_redirects.py
+
 markdown_extensions:
   - abbr
   - admonition
@@ -168,6 +174,10 @@ extra_css:
 
 extra:
   generator: false
+  redirects:
+    tour.md: get-started.md#where-things-live
+    llm-assisted-setup.md: bring-your-own-domain.md#drafting-with-a-model
+    api-clients.md: api.md#generated-clients
   # Pinned to pyproject by tests/unit/test_release_version_claims.py.
   package_version: "0.4.1"
   social:

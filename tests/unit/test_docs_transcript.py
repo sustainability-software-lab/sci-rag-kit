@@ -57,6 +57,22 @@ def test_every_question_appears_in_the_transcript() -> None:
             assert question.name in transcript, question.name
 
 
+def test_the_transcript_asks_each_question_in_words() -> None:
+    """A reader of the homepage sees the question, not only the field name."""
+    from sci_rag.scaffold.questions import QUESTIONS
+
+    transcript = _quick_transcript()
+    labels = {q.name: q.label for q in QUESTIONS if q.label}
+    for name in ("project_name", "credentials", "corpus_source"):
+        assert labels[name] in transcript, name
+
+    parsed = _MODULE["_parse_transcript"](transcript)
+    kinds = [kind for _line, kind, _parts in parsed]
+    assert "label" in kinds
+    label_index = kinds.index("label")
+    assert kinds[label_index + 1] in {"prompt", "select"}
+
+
 def test_the_transcript_shows_the_result_not_just_the_questions() -> None:
     transcript = _quick_transcript()
     assert "Writing membrane-materials-kb/" in transcript

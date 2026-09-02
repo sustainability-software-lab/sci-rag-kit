@@ -260,7 +260,12 @@ def test_every_built_page_keeps_the_breadcrumb_row(built_site: Path) -> None:
         relative = page.relative_to(built_site).as_posix()
         if relative == "index.html" or relative.startswith(NOT_PAGES):
             continue
-        if 'class="md-path"' not in page.read_text():
+        html = page.read_text()
+        if 'http-equiv="refresh"' in html:
+            # A retired address forwarding to its new home; see
+            # scripts/docs_redirects.py. Not a documentation page.
+            continue
+        if 'class="md-path"' not in html:
             missing.append(relative)
 
     assert missing == [], f"these built pages have no breadcrumb row: {missing}"

@@ -177,26 +177,30 @@ The recommended Quick session above, in full. `scripts/render_cast.py` builds it
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Quick - Six questions, sensible defaults for the rest</span></span>
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">Advanced - Every option, for when you know what you want</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"> 1</span></span>
+<span class="srag-term__line srag-term__line--label srag-term__break"><span class="srag-term__status">What is your project called?</span></span>
 <span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">project_name</span><span class="srag-term__default"> (My Scientific KB):</span><span class="srag-term__value"> Membrane Materials KB</span></span>
+<span class="srag-term__line srag-term__line--label srag-term__break"><span class="srag-term__status">One line about your field</span></span>
 <span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">description</span><span class="srag-term__default"> (A short description of your domain.):</span><span class="srag-term__value"> Membrane chemistry and performance for water treatment</span></span>
-<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">contact_email</span><span class="srag-term__default"> (Sent to OpenAlex, Crossref, and Unpaywall):</span><span class="srag-term__value"> you@lbl.gov</span></span>
-<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select environment_manager</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">uv</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">pixi</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">conda</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">4 - </span><span class="srag-term__choice">venv+pip</span></span>
+<span class="srag-term__line srag-term__line--label srag-term__break"><span class="srag-term__status">Contact email. Sent with each request to OpenAlex, Crossref, and Unpaywall, which serve identified callers faster. Blank is allowed.</span></span>
+<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">contact_email</span><span class="srag-term__default"> ():</span><span class="srag-term__value"> you@lbl.gov</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select environment_manager: Environment manager</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">uv: Fast Python environments and locking with uv</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">pixi: Conda packages and Python dependencies in one project</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">conda: A conventional conda environment plus pip dependencies</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">4 - </span><span class="srag-term__choice">venv+pip: Standard-library virtual environment and pip</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3/4] (1):</span><span class="srag-term__value"> 1</span></span>
-<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select credentials</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">google_ai_studio</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">vertex_ai</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">offline</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select credentials: How will you reach a model?</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">google_ai_studio: One free key, no cloud project</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">vertex_ai: Billed through a Google Cloud project you already have</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">offline: No model calls, graph extraction, or generated answers</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3] (1):</span><span class="srag-term__value"> 1</span></span>
+<span class="srag-term__line srag-term__line--label srag-term__break"><span class="srag-term__status">Google AI Studio API key. Get one at https://aistudio.google.com/apikey. Blank to add it later.</span></span>
 <span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">google_api_key</span><span class="srag-term__default"> ():</span><span class="srag-term__value"></span></span>
-<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select corpus_source</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">local_files</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">openalex_topic</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">doi_list</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">4 - </span><span class="srag-term__choice">demo_only</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select corpus_source: Where will the first documents come from?</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">local_files: Add PDFs, HTML, Markdown, or text files from disk</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">openalex_topic: Discover a legal corpus from an OpenAlex topic</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">doi_list: Resolve a list of known DOI records</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">4 - </span><span class="srag-term__choice">demo_only: Keep the bundled synthetic corpus for evaluation</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3/4] (1):</span><span class="srag-term__value"> 1</span></span>
 <span class="srag-term__line srag-term__line--output">Checking the credential with one small model request...</span>
 <span class="srag-term__line srag-term__line--output">gemini-3.6-flash answered in 90 ms.</span>
@@ -263,82 +267,94 @@ The recommended Quick session above, in full. `scripts/render_cast.py` builds it
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Quick - Six questions, sensible defaults for the rest</span></span>
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">Advanced - Every option, for when you know what you want</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"> 2</span></span>
+<span class="srag-term__line srag-term__line--label srag-term__break"><span class="srag-term__status">What is your project called?</span></span>
 <span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">project_name</span><span class="srag-term__default"> (My Scientific KB):</span><span class="srag-term__value"> Membrane Materials KB</span></span>
+<span class="srag-term__line srag-term__line--label srag-term__break"><span class="srag-term__status">Repository directory name</span></span>
 <span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">repo_name</span><span class="srag-term__default"> (membrane-materials-kb):</span><span class="srag-term__value"></span></span>
+<span class="srag-term__line srag-term__line--label srag-term__break"><span class="srag-term__status">One line about your field</span></span>
 <span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">description</span><span class="srag-term__default"> (A short description of your domain.):</span><span class="srag-term__value"> Membrane chemistry and performance for water treatment</span></span>
+<span class="srag-term__line srag-term__line--label srag-term__break"><span class="srag-term__status">Who should the project credit?</span></span>
 <span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">author_name</span><span class="srag-term__default"> (Your name, lab, or organization):</span><span class="srag-term__value"> Berkeley Lab</span></span>
-<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">contact_email</span><span class="srag-term__default"> (Sent to OpenAlex, Crossref, and Unpaywall):</span><span class="srag-term__value"> you@lbl.gov</span></span>
+<span class="srag-term__line srag-term__line--label srag-term__break"><span class="srag-term__status">Contact email. Sent with each request to OpenAlex, Crossref, and Unpaywall, which serve identified callers faster. Blank is allowed.</span></span>
+<span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">contact_email</span><span class="srag-term__default"> ():</span><span class="srag-term__value"> you@lbl.gov</span></span>
+<span class="srag-term__line srag-term__line--label srag-term__break"><span class="srag-term__status">Python version</span></span>
 <span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">python_version</span><span class="srag-term__default"> (3.12):</span><span class="srag-term__value"></span></span>
-<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select environment_manager</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">uv</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">pixi</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">conda</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">4 - </span><span class="srag-term__choice">venv+pip</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select environment_manager: Environment manager</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">uv: Fast Python environments and locking with uv</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">pixi: Conda packages and Python dependencies in one project</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">conda: A conventional conda environment plus pip dependencies</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">4 - </span><span class="srag-term__choice">venv+pip: Standard-library virtual environment and pip</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3/4] (1):</span><span class="srag-term__value"> 2</span></span>
-<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select dependency_file</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">pyproject.toml</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">pixi.toml</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select dependency_file: Where should pixi dependencies live?</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">pyproject.toml: Keep project and pixi dependencies together</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">pixi.toml: Keep pixi configuration in its own file</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"></span></span>
-<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select credentials</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">google_ai_studio</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">vertex_ai</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">offline</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select credentials: How will you reach a model?</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">google_ai_studio: One free key, no cloud project</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">vertex_ai: Billed through a Google Cloud project you already have</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">offline: No model calls, graph extraction, or generated answers</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3] (1):</span><span class="srag-term__value"> 1</span></span>
+<span class="srag-term__line srag-term__line--label srag-term__break"><span class="srag-term__status">Google AI Studio API key. Get one at https://aistudio.google.com/apikey. Blank to add it later.</span></span>
 <span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">google_api_key</span><span class="srag-term__default"> ():</span><span class="srag-term__value"></span></span>
-<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select embedding_provider</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">google</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">local-hash</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select embedding_provider: Embedding provider</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">google: Semantic embeddings from the configured Google model</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">local-hash: Deterministic offline vectors for development and tests</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"></span></span>
+<span class="srag-term__line srag-term__line--label srag-term__break"><span class="srag-term__status">Generation model</span></span>
 <span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">llm_model</span><span class="srag-term__default"> (gemini-3.6-flash):</span><span class="srag-term__value"></span></span>
+<span class="srag-term__line srag-term__line--label srag-term__break"><span class="srag-term__status">Embedding model</span></span>
 <span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">embedding_model</span><span class="srag-term__default"> (gemini-embedding-001):</span><span class="srag-term__value"></span></span>
+<span class="srag-term__line srag-term__line--label srag-term__break"><span class="srag-term__status">Embedding dimensions</span></span>
 <span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">embedding_dim</span><span class="srag-term__default"> (1536):</span><span class="srag-term__value"></span></span>
-<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select ontology</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">draft_with_llm</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">keep_demo_example</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">blank</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select ontology: Starting ontology</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">draft_with_llm: Draft field-specific types from your description</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">keep_demo_example: Keep the worked agricultural-residue ontology for now</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">blank: Start with an intentionally empty ontology</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3] (1):</span><span class="srag-term__value"> 1</span></span>
-<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select corpus_source</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">local_files</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">openalex_topic</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">doi_list</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">4 - </span><span class="srag-term__choice">demo_only</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select corpus_source: Where will the first documents come from?</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">local_files: Add PDFs, HTML, Markdown, or text files from disk</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">openalex_topic: Discover a legal corpus from an OpenAlex topic</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">doi_list: Resolve a list of known DOI records</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">4 - </span><span class="srag-term__choice">demo_only: Keep the bundled synthetic corpus for evaluation</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3/4] (1):</span><span class="srag-term__value"> 2</span></span>
+<span class="srag-term__line srag-term__line--label srag-term__break"><span class="srag-term__status">OpenAlex topic</span></span>
 <span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">openalex_topic</span><span class="srag-term__default"> (your topic):</span><span class="srag-term__value"> polyamide membrane fouling</span></span>
+<span class="srag-term__line srag-term__line--label srag-term__break"><span class="srag-term__status">Maximum OpenAlex results</span></span>
 <span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">max_results</span><span class="srag-term__default"> (100):</span><span class="srag-term__value"> 250</span></span>
-<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select pdf_parser</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">pypdf</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">docling</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select pdf_parser: PDF parser</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">pypdf: Lightweight text extraction with no machine-learning stack</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">docling: Structure-aware parsing with stronger table extraction</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"> 2</span></span>
-<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select reranker</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">none</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">llm</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">local_cross_encoder</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select reranker: Result reranker</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">none: Return the fused ranking as-is</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">llm: Ask the configured model to reorder retrieved passages</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">local_cross_encoder: Run a local cross-encoder model</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3] (1):</span><span class="srag-term__value"></span></span>
-<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select include_terraform</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Yes</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">No</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select include_terraform: Keep production Terraform?</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Yes: Keep the optional Cloud Run and Cloud SQL deployment module</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">No: Remove production infrastructure files and their CI job</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"> 2</span></span>
-<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select include_cloud_database</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Yes</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">No</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select include_cloud_database: Include the Cloud SQL development helper? Include the opt-in Cloud SQL development helper and Terraform module.</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Yes: Keep the opt-in shared development database helper</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">No: Use Docker, conda-forge, or another PostgreSQL server</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (2):</span><span class="srag-term__value"></span></span>
-<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select include_demo_corpus</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Yes</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">No</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select include_demo_corpus: Keep the demo corpus?</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Yes: Keep five synthetic documents for a known-good first run</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">No: Remove the demo and examples from the generated project</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"> 2</span></span>
-<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select open_source_license</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">BSD-3-Clause</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">MIT</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">Apache-2.0</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">4 - </span><span class="srag-term__choice">No license file</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select open_source_license: Open-source license</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">BSD-3-Clause: Permissive license with non-endorsement protection</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">MIT: Short permissive license</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">Apache-2.0: Permissive license with an explicit patent grant</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">4 - </span><span class="srag-term__choice">No license file: Do not grant redistribution rights yet</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3/4] (1):</span><span class="srag-term__value"></span></span>
-<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select initialize_git</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Yes</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">No</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select initialize_git: Initialize a Git repository?</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Yes: Create a repository and make the generated baseline commit</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">No: Leave version-control setup to you</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"></span></span>
-<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select draft_domain_files</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Yes</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">No</span></span>
+<span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select draft_domain_files: Draft the remaining domain files next?</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Yes: Put the corpus-grounded drafting commands in next steps</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">No: Point next steps at the hand-written route</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"></span></span>
 <span class="srag-term__line srag-term__line--output">Checking the credential with one small model request...</span>
 <span class="srag-term__line srag-term__line--output">gemini-3.6-flash answered in 90 ms.</span>

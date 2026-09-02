@@ -82,6 +82,48 @@ def test_plain_choice_prompt_preserves_numbered_menu_and_retry_output() -> None:
     )
 
 
+def test_plain_text_prompt_states_the_question_in_words_above_the_field() -> None:
+    output = io.StringIO()
+    question = Question(
+        "google_api_key",
+        "google_api_key",
+        "",
+        label="Google AI Studio API key",
+        help="Get one at https://aistudio.google.com/apikey. Blank to add it later.",
+    )
+
+    answer = PlainPrompter(io.StringIO("\n"), output).text(question, "")
+
+    assert answer == ""
+    assert output.getvalue() == (
+        "Google AI Studio API key. Get one at https://aistudio.google.com/apikey. "
+        "Blank to add it later.\n"
+        "google_api_key (): \n"
+    )
+
+
+def test_plain_choice_menu_explains_each_option() -> None:
+    output = io.StringIO()
+    question = Question(
+        "credentials",
+        "credentials",
+        "offline",
+        choices=("google_ai_studio", "offline"),
+        label="How will you reach a model?",
+        choice_help={"google_ai_studio": "One free key, no cloud project"},
+    )
+
+    answer = PlainPrompter(io.StringIO("1\n"), output).choice(question, "offline")
+
+    assert answer == "google_ai_studio"
+    assert output.getvalue() == (
+        "Select credentials: How will you reach a model?\n"
+        "1 - google_ai_studio: One free key, no cloud project\n"
+        "2 - offline\n"
+        "Choose from [1/2] (2): 1\n"
+    )
+
+
 def test_plain_validated_choice_keeps_the_legacy_text_bytes() -> None:
     output = io.StringIO()
     question = Question(
