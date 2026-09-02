@@ -254,7 +254,7 @@ def _manifest_check(manifest_path: Path) -> Check | None:
             "warn",
             f"{len(entries)} row(s), {unknown} with unknown rights",
             "Unknown rights are excluded from scoped retrieval, which is the safe "
-            "default. Decide them: see docs/methodology.md, section 7.",
+            'default. Decide them: see "Scope precedes ranking" in docs/methodology.md.',
         )
     return Check("manifest", "ok", f"{len(entries)} row(s), every path present, rights declared")
 

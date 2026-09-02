@@ -5,8 +5,8 @@ description: Short answers to what Sci RAG Kit is, who it is for, and why each d
 
 # Frequently asked questions
 
-Sci RAG Kit fits teams that want an owned, self-hosted scientific knowledge base with rights and
-evaluation built into its retrieval workflow.
+Sci RAG Kit is for teams building a self-hosted knowledge base from scientific documents. Rights
+controls and evaluation are built into the retrieval workflow.
 
 ## What this is
 
@@ -32,8 +32,8 @@ A group building a bespoke retrieval application and wanting to make every archi
 
 A template: a GitHub template repository that is also a working application. Adapt it through
 `domain/`, the corpus manifest, and `.env`. The tree contains no template placeholders, and generated
-projects keep the `sci_rag` import path. [Why a template repository and not a
-cookiecutter](#why-a-template-repository-and-not-a-cookiecutter) explains the choice.
+projects keep the `sci_rag` import path. [Why use a template
+repository?](#why-a-template-repository-and-not-a-cookiecutter) explains the choice.
 
 ### What does "scientific" buy me over a general RAG framework?
 
@@ -61,7 +61,7 @@ Not for the demo's offline retrieval path. With `SCI_RAG_EMBEDDING_PROVIDER=loca
 chunking, storage, retrieval, and retrieval scoring work without Google credentials. Graph
 extraction, HyDE, community summaries, generated answers, and graded answers need a configured
 model. Generation can use Gemini, Claude, or an OpenAI-compatible endpoint. Embeddings are
-Google-only; [changing the embedder is a data
+Google-only; [changing the embedder requires a data
 migration](#why-can-i-change-the-llm-but-not-the-embedding-provider).
 
 ### Do I need Docker?
@@ -91,7 +91,7 @@ then reports that no model is configured.
 
 The linked decision records contain the full context, consequences, and reversal conditions.
 
-### Why is the knowledge graph in Postgres and not Neo4j?
+### Why use Postgres for the knowledge graph? {#why-is-the-knowledge-graph-in-postgres-and-not-neo4j}
 
 The graph traversal is a two-hop walk from seed entities to evidence chunks, which PostgreSQL can
 run over indexed foreign keys. Keeping the graph with the corpus also preserves one transaction,
@@ -112,10 +112,10 @@ structure-aware PDF parsing is needed. The base installation falls back to pypdf
 parser handled the document. [ADR 0003](adr/0003-docling-with-pypdf-fallback.md) explains the
 tradeoff.
 
-### Why a template repository and not a cookiecutter?
+### Why use a template repository? {#why-a-template-repository-and-not-a-cookiecutter}
 
 This repository remains runnable and testable before anyone generates a project. The generator
-changes configuration in that working tree instead of rendering placeholders. The tradeoff is less
+changes configuration in that working tree, which contains no placeholders. The tradeoff is less
 parameterization at generation time. [ADR 0004](adr/0004-template-repo-not-cookiecutter.md) records
 the alternatives.
 
@@ -132,7 +132,7 @@ The shared `LLMClient` contract leaves provider-specific request construction in
 Three generation adapters ship: `google`, `anthropic`, and `openai-compatible`. [ADR
 0006](adr/0006-multi-provider-llms.md) explains why the project owns those translations.
 
-### Why can I change the LLM but not the embedding provider?
+### Why does changing the embedding provider require a migration? {#why-can-i-change-the-llm-but-not-the-embedding-provider}
 
 Generation is request-time work, but embeddings are persisted data with a fixed database dimension
 and model stamp. Changing the embedding model can require a schema migration, full re-embedding,
@@ -171,8 +171,8 @@ Full argument and reversal conditions: [ADR 0011](adr/0011-committed-benchmark-g
 
 Use Docker for the template default, local PostgreSQL when a supported server is already available,
 or the Cloud SQL helper when workspaces need isolated databases on a shared managed development
-instance. The Cloud route uses the Cloud SQL Auth Proxy and has higher round-trip latency. It is not
-a production deployment path. [ADR 0009](adr/0009-cloud-dev-database.md) defines the safety
+instance. The Cloud route uses the Cloud SQL Auth Proxy and has higher round-trip latency. Use it
+only for development. [ADR 0009](adr/0009-cloud-dev-database.md) defines the safety
 boundary.
 
 ### Why support three PostgreSQL majors?
@@ -183,23 +183,23 @@ The supported range is PostgreSQL 16 through 18. [ADR
 
 ## Retrieval and answers
 
-### Why five retrieval layers? Is vector search not enough?
+### Why five retrieval layers? {#why-five-retrieval-layers-is-vector-search-not-enough}
 
 The layers cover different retrieval signals. Vector search handles semantic similarity, keyword
 search retains exact terms, graph traversal follows concepts up to two hops, community summaries
 provide corpus-level context, and hypothetical-answer search bridges question and document wording.
 The `interactive` profile uses vector and keyword retrieval; `deep` enables all five.
 
-### Why merge by rank and not by score?
+### Why merge by rank? {#why-merge-by-rank-and-not-by-score}
 
-The layers' native scores are not comparable, but their ranks are. Each layer contributes
+Each layer scores results on a different scale, while rank gives them a shared ordering. Each layer contributes
 `weight / (60 + rank)` per passage. The shipped starting weights are vector 1.5, keyword 1.0, graph
-0.8, community 0.6, and hypothetical answer 1.2. These values are not findings about another
-corpus; use the [evaluation workflow](evaluation.md) before changing them.
+0.8, community 0.6, and hypothetical answer 1.2. Treat these values as starting points and use the
+[evaluation workflow](evaluation.md) before changing them for another corpus.
 
 ### What is HyDE, and why is it never cited?
 
-HyDE (hypothetical document embeddings) has a model write a short passage describing what a real document would say if it answered a question. The kit then searches near that passage. It is never cited because it is not evidence; it is a guess used only to aim the search. The domain profile can steer its style per question class.
+HyDE (hypothetical document embeddings) has a model write a short passage describing what a real document would say if it answered a question. The kit then searches near that passage. This search probe never appears in citations. The domain profile can steer its style per question class.
 
 ### Why is the reranker off by default?
 
@@ -224,8 +224,8 @@ the retrieved evidence does not answer the question. Real evaluation sets keep a
 ### Can I use this on papers I hold but may not redistribute?
 
 The kit can classify a document as `restricted` and expose it only to callers whose scope allows
-that class. You remain responsible for having the right to ingest and use the document; the
-manifest taxonomy is not legal advice. The available classes are `public`, `open_commercial`,
+that class. You remain responsible for having the right to ingest and use the document. The
+manifest taxonomy supports runtime filtering; consult counsel for legal guidance. The available classes are `public`, `open_commercial`,
 `open_noncommercial`, `restricted`, and `unknown`. Every retrieval layer applies scope before
 ranking. [Scope precedes ranking](methodology.md#7-scope-precedes-ranking) defines the contract.
 
@@ -256,8 +256,8 @@ shape. [ADR 0001](adr/0001-graph-in-postgres.md) records that threshold.
 ### What does it cost to run?
 
 Cost depends on the database, corpus size, selected models, and retrieval profile. Offline mode avoids
-model calls. The Terraform development helper currently configures `db-g1-small`, but it is not a
-production sizing recommendation. The `interactive` profile uses one query embedding; `deep` can
+model calls. The Terraform development helper currently configures `db-g1-small` for development.
+The `interactive` profile uses one query embedding; `deep` can
 add generation calls for graph extraction and hypothetical-answer retrieval. Consult current
 provider pricing and destroy temporary infrastructure with `terraform destroy`.
 
@@ -309,7 +309,7 @@ documented Python exports, CLI, REST and MCP surfaces, `domain/` format, and rep
 
 ### How do I cite it?
 
-Cite the software title, the version or exact Git commit, the repository URL, and the access date. There is no archival DOI yet. A software citation alone does not identify a retrieval experiment, so also report the corpus snapshot and digest, the license scope, the model identifiers, the domain profile, the enabled layers, and the question set. [How to cite](citation.md) has the BibTeX.
+Cite the software title, the version or exact Git commit, the repository URL, and the access date. There is no archival DOI yet. A software citation alone does not identify a retrieval experiment, so also report the corpus snapshot and digest, the license scope, the model identifiers, the domain profile, the enabled layers, and the question set. [How to cite](project.md#how-to-cite) has the BibTeX.
 
 ### Who maintains it, and how are decisions made?
 

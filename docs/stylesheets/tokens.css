@@ -316,6 +316,56 @@
   border-top: 1px solid var(--srag-border);
 }
 
+.md-footer-meta__inner {
+  --srag-footer-gap: 1rem;
+
+  align-items: center;
+  padding-inline: 1rem;
+  padding-block: 0.45rem;
+}
+
+.md-copyright {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--srag-footer-gap);
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.md-copyright__highlight {
+  margin: 0;
+}
+
+.md-social {
+  align-items: center;
+  margin: 0 0 0 var(--srag-footer-gap);
+  padding: 0;
+}
+
+.md-social__link {
+  display: grid;
+  width: 1.4rem;
+  height: 1.4rem;
+  place-items: center;
+}
+
+@media screen and (max-width: 44.984375em) {
+  .md-copyright {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.15rem 1rem;
+    white-space: normal;
+  }
+
+  .md-copyright__highlight {
+    grid-column: 1 / -1;
+  }
+}
+
 /* Prev and next are navigation, so they take the size of the header's section
    tabs rather than the brand wordmark. Material sets the title at 0.9rem, which
    is the wordmark's size, and that makes the footer read as content.

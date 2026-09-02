@@ -1,4 +1,4 @@
-"""Bounded model credential checks shared by setup and ``sci-rag doctor``."""
+"""Bounded LLM provider credential checks shared by setup and ``sci-rag doctor``."""
 
 from __future__ import annotations
 

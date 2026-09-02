@@ -28,7 +28,7 @@ Postgres-native, no graph engine, for three reasons:
    their keep on deep, unbounded traversals we never issue.
 2. **Operational surface is the real cost.** A second database means a
    second backup story, second migration story, second access-control
-   model, and a consistency seam between the graph and the chunks it
+   model, and a consistency boundary between the graph and the chunks it
    references. For a template meant to be run by small scientific
    groups, one database is a feature.
 3. **Transactionality.** A chunk and its graph entries commit together.
@@ -38,7 +38,7 @@ Postgres-native, no graph engine, for three reasons:
 * Deep multi-hop analytics, meaning path queries and centrality, are out
   of scope. A project that needs them should export the two tables to a
   graph tool for analysis rather than move the operational store.
-* The seam is clean: the graph layer is one stage behind the retrieval
+* The replacement boundary is narrow: the graph layer is one stage behind the retrieval
   facade. Swapping in a graph engine later means reimplementing one
   stage, not the kit.
 

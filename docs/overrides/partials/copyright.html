@@ -11,12 +11,12 @@
 -#}
 <div class="md-copyright">
   {% if config.copyright %}
-    <div class="md-copyright__highlight">
+    <span class="md-copyright__highlight srag-footer__item">
       {{ config.copyright }}
-    </div>
+    </span>
   {% endif %}
   {% if config.extra.package_version %}
-    v{{ config.extra.package_version }} ·
-    <a href="https://pypi.org/project/sci-rag-kit/">Install with pipx</a>
+    <span class="srag-footer__item">v{{ config.extra.package_version }}</span>
+    <a class="srag-footer__item" href="https://pypi.org/project/sci-rag-kit/">Install with pipx</a>
   {% endif %}
 </div>

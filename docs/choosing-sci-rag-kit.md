@@ -5,10 +5,9 @@ description: Compare Sci RAG Kit against LightRAG, PaperQA2, LlamaIndex, and Mic
 
 # Choosing Sci RAG Kit
 
-Choose Sci RAG Kit when you want to own a complete scientific RAG application without selecting
-every storage, retrieval, evaluation, and serving component yourself. Choose a framework or
-purpose-built research agent when you need to assemble those parts differently. The [FAQ](faq.md)
-answers the shorter questions about fit and design choices.
+Choose Sci RAG Kit for a complete, self-hosted scientific RAG application. Use a framework or
+purpose-built research agent when you need a different storage, retrieval, evaluation, or serving
+stack. The [FAQ](faq.md) answers shorter questions about fit and design choices.
 
 Cross-system benchmark scores do not appear here because results measured on different corpora are
 not comparable. The kit's [benchmarks](benchmarks.md) cover its synthetic demo corpus and state the
@@ -30,8 +29,8 @@ The external project descriptions below were checked against their primary repos
 Microsoft states that GraphRAG is [largely in maintenance
 mode](https://github.com/microsoft/graphrag/blob/f40e9a26ce62ba0b3fef8837d24aafdcc6e6c704/README.md#L3-L4):
 bug and dependency fixes continue, but the project does not plan new features or accept new pull
-requests. The repository also describes the code as a research demonstration, not an officially
-supported Microsoft product. A team that expects new upstream capabilities should choose an active
+requests. The repository describes the code as a research demonstration, and Microsoft support
+channels do not cover it. A team that expects new upstream capabilities should choose an active
 project or plan to maintain its own fork.
 
 ## What Sci RAG Kit decides for you

@@ -92,7 +92,7 @@ curl -s -X POST localhost:8000/v1/query \
        "exclude_dois": ["10.1016/j.biombioe.2019.00000"]}'
 ```
 
-Every layer enforces these filters in SQL before ranking, as it does license scope. An out-of-range document cannot displace an eligible one from a bounded pool. `authors` and `journals` match whole strings, not substrings.
+Every layer enforces these filters in SQL before ranking, as it does license scope. An out-of-range document cannot displace an eligible one from a bounded pool. `authors` and `journals` require an exact whole-string match.
 
 Any filter disables the community layer. A stored community summary aggregates evidence across documents before your scope is known, so nothing can filter it after the fact. The `community` trace reads `skipped` when this happens. `journal` comes directly from your manifest or refreshed from Crossref metadata with `sci-rag corpus enrich`.
 
@@ -114,7 +114,7 @@ event: citations           data: {"citations": [{"index": 1, "title": "...", "ci
 event: done                data: {"finish_reason": "stop"}
 ```
 
-`finish_reason` is `stop` for a generated answer, `no_sources` when the allowed scope holds no matching material, `no_relevant_sources` when what was retrieved does not support an answer, and `retrieval_timeout` when evidence stages ran out of budget. The last carries `timed_out_stages` and is distinct from `no_sources`: a corpus nobody could reach is not an empty corpus.
+`finish_reason` is `stop` for a generated answer, `no_sources` when the allowed scope holds no matching material, `no_relevant_sources` when what was retrieved does not support an answer, and `retrieval_timeout` when evidence stages ran out of budget. The last carries `timed_out_stages`, which distinguishes an unreachable corpus from an empty one.
 
 An `error` event (`code`, `message`) replaces the tail on failure.
 

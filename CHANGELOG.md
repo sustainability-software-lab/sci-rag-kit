@@ -10,7 +10,7 @@ Notable changes to sci-rag-kit. The format follows
 
 - **`sci-rag build`** takes a folder or a manifest to a queryable knowledge
   base in one command: ingest, then graph extraction and community summaries.
-  Without a model credential, or with `--no-graph`, it stops after ingestion
+  Without LLM provider credentials, or with `--no-graph`, it stops after ingestion
   and says so; vector and keyword retrieval already work at that point.
   Re-running only processes new chunks.
 
@@ -689,7 +689,7 @@ package (roadmap, governance, comparison, benchmarks) is in place.
 - `docs/operations.md`: backup/restore runbook (pg_dump, Cloud SQL,
   restore drill, Parquet export note).
 - Launch package: `docs/ROADMAP.md` (waves 2-3, UW SSEC collaboration
-  seams, BioCirV flagship, launch-gated decisions),
+  points, BioCirV flagship, launch-gated decisions),
   `docs/VERSIONING.md` (0.x rules, 1.0 criteria),
   `docs/GOVERNANCE.md`, `docs/choosing-sci-rag-kit.md` (honest
   comparison), `ADOPTERS.md`, and a runnable

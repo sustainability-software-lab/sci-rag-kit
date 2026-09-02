@@ -5,7 +5,7 @@ description: Diagnose Sci RAG Kit setup, database, credential, parsing, retrieva
 
 # Troubleshooting
 
-Start with the visible symptom. Run `doctor`, then use the symptom map to
+Start with the visible symptom. Run `doctor`, then use the Troubleshooting Guide to
 choose the next check or recovery command.
 
 <div class="srag-meta-strip">
@@ -32,16 +32,16 @@ round trip.
 **Checkpoint: identify the failing layer**
 
 `doctor` names the setup checks it can evaluate. Take any failure to the
-symptom map below. If none explains the symptom, continue with the failing
+Troubleshooting Guide below. If none explains the symptom, continue with the failing
 command's trace or the closest symptom. A healthy report does not exercise a
 complete ingest, retrieval, answer, REST, or MCP route.
 </div>
 
-## Fast symptom map
+## Troubleshooting Guide
 
 | Symptom | Most likely check | First action |
 |---|---|---|
-| Setup shows numbered prompts instead of arrow-key menus | Terminal capability check selected the plain prompt layer | Continue, or pass `--no-tty` when you want that behavior explicitly |
+| Setup shows numbered prompts | Terminal capability check selected the plain prompt layer | Continue, or pass `--no-tty` when you want that behavior explicitly |
 | New-project credential check fails | The key, project, ADC session, or provider request was rejected | Use the recovery menu before the template download |
 | Connection refused on port 5433 | Selected backend is down or the URL differs | `SCI_RAG_DB_BACKEND=<docker|local|cloud> make db-up` |
 | Relation or table does not exist | Migrations have not run | `uv run sci-rag db upgrade` |
@@ -59,7 +59,7 @@ complete ingest, retrieval, answer, REST, or MCP route.
 
 The setup flow uses arrow-key menus when the terminal supports them. It falls back to numbered prompts when input or output is not a TTY, `NO_COLOR` is set, `TERM` is blank or `TERM=dumb`, or the prompt library fails to load. The questions, defaults, validation, and files are identical both ways.
 
-Pass `--no-tty` to `sci-rag new` or `sci-rag init` to force the numbered form even in a supported terminal. Ctrl-C cancels setup instead of being treated as an answer.
+Pass `--no-tty` to `sci-rag new` or `sci-rag init` to force the numbered form even in a supported terminal. Ctrl-C always cancels setup.
 
 ## Postgres is unreachable
 
@@ -139,7 +139,7 @@ Database schema is up to date.
 
 If the selected backend is healthy but `doctor` cannot connect, compare `.env` with the helper's current configuration. A copied port, a different workspace database, or stale proxy state indicate common mismatches.
 
-## A command needs model credentials
+## A command needs LLM provider credentials
 
 Three modes are supported:
 
@@ -147,7 +147,7 @@ Three modes are supported:
 - `SCI_RAG_GCP_PROJECT` plus Application Default Credentials: Vertex AI.
 - `SCI_RAG_EMBEDDING_PROVIDER=local-hash`: offline, deterministic retrieval only.
 
-The offline embedder is lexical, not semantic. It does not enable graph extraction, HyDE, community summarization, answer generation, or LLM reranking. A refusal at that boundary is correct.
+The offline embedder uses lexical word matching. Graph extraction, HyDE, community summarization, answer generation, and LLM reranking remain unavailable. A refusal at that boundary is correct.
 
 Run `uv run sci-rag doctor --probe` after configuring a credential. The probe spends one small request and tells whether the provider accepts it.
 
@@ -179,10 +179,10 @@ unavailable generation features as warnings and exits `0`. A passing run
 means its offline setup checks are healthy; it does not execute the full
 pipeline.
 
-Retrieval in an offline project reports model-only layers as `disabled`, not
-`error`. Graph and HyDE ask a model about every query, so a project with no
-credential cannot run them. `disabled` means the project does not have that
-layer; `error` means an enabled layer failed. Vector, keyword, and community
+Retrieval in an offline project reports model-only layers as `disabled`.
+Graph and HyDE ask a model about every query, so a project with no credential
+cannot run them. The `error` status is reserved for an enabled layer that
+failed. Vector, keyword, and community
 retrieval run normally.
 
 Reaching for a model with no credential is still a failure. `doctor` reports `FAIL` when the Google embedding provider is selected without credentials, or when a generation model is named explicitly (such as `SCI_RAG_LLM_MODEL=anthropic:claude-opus-5`) with no key or project. Writing a model id signals intent to generate. The diagnosis follows the configuration.
@@ -200,15 +200,15 @@ If a single chunk keeps failing, look at the chunk itself. An unusually long pas
 Check in this order:
 
 1. Run `uv run sci-rag stats`. It confirms documents and chunks exist.
-2. Look at the result `traces` to see which stages were `success`, `empty`, `skipped`, `timeout`, or `error`. Timeout is not about the corpus. Raise `SCI_RAG_PROVIDER_CALL_TIMEOUT_S` when an embedding or generation call is slow rather than a database query.
+2. Look at the result `traces` to see which stages were `success`, `empty`, `skipped`, `timeout`, or `error`. A `timeout` points to a slow embedding or generation call. Raise `SCI_RAG_PROVIDER_CALL_TIMEOUT_S` for that provider call.
 3. Remove filters one family at a time: year, author/journal/DOI, source, then license.
 4. Check that you did not send an explicit empty `license_classes` list. Empty means deny all.
 5. Run `--profile interactive` to isolate vector and keyword from model-dependent stages.
 
 Rights and metadata filters run inside each eligible layer before ranking. They can turn a broad question into no result. The community stage becomes `skipped` for a scoped request because stored community summaries combine multiple documents before request-time scope exists.
 
-!!! scientific "Do not repair an empty result by widening rights silently"
-    If the requested license scope contains no supporting document, return no evidence or ask for an explicitly wider scope. Treating `unknown` as public is a rights failure, not a recall win.
+!!! scientific "Keep rights changes explicit"
+    If the requested license scope contains no supporting document, return no evidence or ask for an explicitly wider scope. Treating `unknown` as public violates the corpus rights boundary.
 
 ## A PDF parses badly
 
@@ -233,7 +233,7 @@ Same-dimension model changes can be re-embedded in place. Cross-dimension change
 
 ## The server rejects a request
 
-REST errors use `application/problem+json` with a stable `code` and `X-Request-ID`. Branch on `code`, not the English `detail`. Common authorization codes are `missing_key`, `invalid_key`, and `insufficient_scope`. Throttling is `rate_limited` and includes `Retry-After`.
+REST errors use `application/problem+json` with a stable `code` and `X-Request-ID`. Branch on `code`; the English `detail` may change. Common authorization codes are `missing_key`, `invalid_key`, and `insufficient_scope`. Throttling is `rate_limited` and includes `Retry-After`.
 
 With no `SCI_RAG_API_KEYS`, the server runs open and logs a warning. That mode is suitable for localhost only. See the [API authentication contract](api.md#authentication) before exposing a service.
 
@@ -252,5 +252,5 @@ Include the doctor table, stage traces, package version, operating system, and w
 ## Next steps
 
 - Nothing here matched: [open an issue](https://github.com/sustainability-software-lab/sci-rag-kit/issues) with the output above
-- The database is the problem: [Run Postgres your way](run-postgres.md)
+- The database is the problem: [Configure Postgres backend](run-postgres.md)
 - Retrieval works but the answers are wrong: [Evaluate your pipeline](evaluation.md)

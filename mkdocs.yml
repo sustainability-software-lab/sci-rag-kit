@@ -14,8 +14,15 @@ exclude_docs: |
   assets/vendor/asciinema-player/README.md
   assets/vendor/asciinema-player/LICENSE
 not_in_nav: |
-  index.md
   examples/demo-eval/*.md
+  ROADMAP.md
+  VERSIONING.md
+  GOVERNANCE.md
+  adopters.md
+  adr/*.md
+  contributing.md
+  STYLE.md
+  changelog.md
 
 theme:
   name: material
@@ -64,7 +71,9 @@ theme:
     - content.code.annotate
 
 nav:
-  - Get started:
+  - Home:
+      - index.md
+  - Getting started:
       - get-started.md
       - Quickstart: quickstart.md
       - Bring your own domain: bring-your-own-domain.md
@@ -79,7 +88,7 @@ nav:
       - guides.md
       - Evaluate your pipeline: evaluation.md
       - Run a corpus campaign: campaigns.md
-      - Run Postgres your way: run-postgres.md
+      - Configure Postgres backend: run-postgres.md
       - Operate a live corpus: operations.md
       - Deploy on Google Cloud: deploy-gcp.md
       - Extend the kit: extend.md
@@ -90,28 +99,8 @@ nav:
       - REST, MCP, and Python API: api.md
       - Benchmarks: benchmarks.md
       - Glossary: glossary.md
-  - Project:
+  - About:
       - project.md
-      - Roadmap: ROADMAP.md
-      - Versioning: VERSIONING.md
-      - Governance: GOVERNANCE.md
-      - Adopters: adopters.md
-      - Decision records:
-          - "ADR 0001: The graph lives in Postgres": adr/0001-graph-in-postgres.md
-          - "ADR 0002: 1536-dimensional embeddings": adr/0002-embeddings-1536-hnsw.md
-          - "ADR 0003: Docling for PDFs, with a pypdf fallback": adr/0003-docling-with-pypdf-fallback.md
-          - "ADR 0004: A runnable template, not a cookiecutter": adr/0004-template-repo-not-cookiecutter.md
-          - "ADR 0005: Citation edges in their own table": adr/0005-citation-edges-as-a-document-table.md
-          - "ADR 0006: Hand-written provider adapters": adr/0006-multi-provider-llms.md
-          - "ADR 0007: A generator that configures": adr/0007-interactive-project-generator.md
-          - "ADR 0008: PostgreSQL 16 through 18": adr/0008-supported-postgresql-versions.md
-          - "ADR 0009: A shared Cloud SQL instance with workspace databases": adr/0009-cloud-dev-database.md
-          - "ADR 0010: The local template boundary is tracked content": adr/0010-template-copy-boundary.md
-          - "ADR 0011: Commit benchmark graph replay evidence": adr/0011-committed-benchmark-graph-replay.md
-      - Contributing: contributing.md
-      - Documentation style: STYLE.md
-      - Changelog: changelog.md
-      - How to cite: citation.md
 
 plugins:
   - search:
@@ -175,9 +164,10 @@ extra_css:
 extra:
   generator: false
   redirects:
-    tour.md: get-started.md#where-things-live
+    tour.md: get-started.md#full-project-structure
     llm-assisted-setup.md: bring-your-own-domain.md#drafting-with-a-model
     api-clients.md: api.md#generated-clients
+    citation.md: project.md#how-to-cite
     evidence-and-rights.md: methodology.md#7-scope-precedes-ranking
   # Pinned to pyproject by tests/unit/test_release_version_claims.py.
   package_version: "0.4.1"

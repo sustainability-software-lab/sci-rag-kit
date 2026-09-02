@@ -21,9 +21,11 @@ breakpoint is where the defect hid last time.
 from __future__ import annotations
 
 from collections import defaultdict
+from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 
 pytestmark = pytest.mark.docs_render
 
@@ -34,6 +36,7 @@ WIDTHS = (1200, 1440)
 # The landing page draws its own masthead, and the theme's error page and the
 # copied override templates are not documentation pages.
 NOT_PAGES = ("index.html", "404.html", "overrides/")
+ROOT = Path(__file__).resolve().parents[2]
 
 MEASURE_JS = """
 () => {
@@ -72,7 +75,28 @@ def test_the_measured_pages_are_not_silently_empty(
     for width, pages in head_measurements.items():
         assert len(pages) > 30, f"at {width}px, measured only {len(pages)} pages"
         with_crumbs = sum(1 for _, head in pages if head["crumbs"])
-        assert with_crumbs > 25, f"at {width}px, only {with_crumbs} pages rendered any crumb"
+        expected = _expected_crumbed_page_count()
+        assert with_crumbs == expected, (
+            f"at {width}px, {with_crumbs} pages rendered crumbs; expected {expected} from nav"
+        )
+
+
+def _expected_crumbed_page_count() -> int:
+    """Count non-hub pages in public sections directly from the configured nav."""
+    config = yaml.load((ROOT / "mkdocs.yml").read_text(), Loader=yaml.BaseLoader)
+    sections = config["nav"]
+
+    def pages(node: object) -> list[str]:
+        if isinstance(node, str):
+            return [node]
+        if isinstance(node, list):
+            return [page for child in node for page in pages(child)]
+        if isinstance(node, dict):
+            return [page for child in node.values() for page in pages(child)]
+        return []
+
+    # Home has no page head. Every other section's first page is its crumb-free hub.
+    return sum(max(0, len(pages(section)) - 1) for section in sections[1:])
 
 
 def test_every_page_has_a_breadcrumb_row_and_a_title(

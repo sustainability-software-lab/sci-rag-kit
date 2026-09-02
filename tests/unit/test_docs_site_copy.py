@@ -23,7 +23,7 @@ MKDOCS = ROOT / "mkdocs.yml"
 INDEX = ROOT / "docs" / "index.md"
 README = ROOT / "README.md"
 PYPROJECT = ROOT / "pyproject.toml"
-CITATION = ROOT / "docs" / "citation.md"
+CITATION = ROOT / "docs" / "project.md"
 
 RETIRED_CLASSES = (
     "srag-card",
@@ -116,7 +116,7 @@ def test_the_product_description_is_the_same_sentence_wherever_it_ships() -> Non
 
     description = _normalize(_site_description())
     bibtex_title = _bibtex_field("title")
-    assert bibtex_title is not None, "docs/citation.md should suggest a BibTeX title"
+    assert bibtex_title is not None, "the About page should suggest a BibTeX title"
 
     surfaces = {
         "pyproject.toml, which PyPI renders": tomllib.loads(PYPROJECT.read_text())["project"][
@@ -149,7 +149,7 @@ def test_the_suggested_citation_pins_a_version_that_exists() -> None:
     released = tomllib.loads(PYPROJECT.read_text())["project"]["version"]
 
     assert cited.strip() == released, (
-        f"docs/citation.md suggests version {cited.strip()}; pyproject.toml is {released}"
+        f"the About page suggests version {cited.strip()}; pyproject.toml is {released}"
     )
 
 
@@ -243,3 +243,61 @@ def test_display_name_is_unhyphenated_in_every_reader_facing_surface() -> None:
     assert not offenders, (
         f"the display name is 'Sci RAG Kit', without a hyphen; still hyphenated in: {offenders}"
     )
+
+
+def test_reader_facing_docs_name_the_actual_extension_point() -> None:
+    """The word "seam" hides whether text means an interface, boundary, or extension point."""
+    offenders = []
+    surfaces = [
+        *sorted(
+            path
+            for path in (ROOT / "docs").rglob("*.md")
+            if "planning" not in path.relative_to(ROOT).parts
+        ),
+        ROOT / "README.md",
+        ROOT / "CONTRIBUTING.md",
+        ROOT / "CHANGELOG.md",
+    ]
+    for path in surfaces:
+        for number, line in enumerate(path.read_text().splitlines(), start=1):
+            if re.search(r"\bseams?\b", line, re.IGNORECASE):
+                offenders.append(f"{path.relative_to(ROOT)}:{number}")
+
+    assert offenders == [], f"replace 'seam' with the concrete technical term: {offenders}"
+
+
+def test_about_replaces_the_project_section_and_keeps_internal_pages_unlisted() -> None:
+    config = yaml.load(MKDOCS.read_text(), Loader=yaml.BaseLoader)
+    navigation = str(config["nav"])
+    unlisted = str(config["not_in_nav"])
+    project = (ROOT / "docs" / "project.md").read_text()
+
+    assert "{'Home': ['index.md']}" in navigation
+    assert "Getting started" in navigation
+    assert "Get started" not in navigation
+    assert "Project" not in navigation
+    assert "About" in navigation
+    assert "Decision records" not in navigation
+    assert "adr/*.md" in unlisted, "ADRs should remain linkable without occupying public navigation"
+    for page in (
+        "ROADMAP.md",
+        "VERSIONING.md",
+        "GOVERNANCE.md",
+        "adopters.md",
+        "contributing.md",
+        "STYLE.md",
+        "changelog.md",
+    ):
+        assert page in unlisted, f"{page} should remain available without appearing in navigation"
+
+    assert "# About" in project
+    assert "Lawrence Berkeley National Laboratory" in project
+    assert "## How to cite" in project
+    for removed_section in ("Design principles", "Roadmap", "Governance", "Decision records"):
+        assert removed_section not in project
+
+
+def test_reference_hub_does_not_label_prose_as_generated() -> None:
+    reference = (ROOT / "docs" / "reference.md").read_text()
+
+    assert "Generated.</span>" not in reference

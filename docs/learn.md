@@ -1,18 +1,17 @@
 ---
 title: How it works
-description: What happens between a document and a cited answer, with links to the full reasoning behind each part.
+description: Follow the pipeline from scientific documents to searchable evidence, cited answers, and evaluation.
 ---
 
 # How it works
 
-Sci RAG Kit turns source documents into evidence passages, searches those passages in several
-ways, and asks a model to answer from numbered sources. Following one fact through that path shows
-where the kit preserves context, enforces rights, and measures the result.
+Sci RAG Kit connects scientific documents to cited answers through an end-to-end RAG pipeline.
+See how ingestion, rights-aware retrieval, answer generation, and evaluation work together.
 
 ## The idea
 
-A language model can answer from what it learned during training, but that is not evidence from your
-corpus. Retrieval-augmented generation (RAG) finds relevant passages first. The answer model sees
+A language model can answer from what it learned during training. Evidence for this workflow must
+come from your corpus. Retrieval-augmented generation (RAG) finds relevant passages first. The answer model sees
 those numbered passages and must cite them. If the retrieved sources do not contain an answer, the
 kit says so.
 
@@ -30,7 +29,7 @@ wordings without losing the numbers or the section that explains them.
    when the question and source use different words.
 4. **Store.** Postgres holds the chunks, vectors, full-text index, document metadata, and license
    class. A document and its chunks commit in one transaction.
-5. **Build the graph.** When model credentials are available, the kit extracts the entity and
+5. **Build the graph.** When LLM provider credentials are available, the kit extracts the entity and
    relationship types declared in the domain ontology. It retains evidence for each relationship
    and summarizes clusters of related entities. This optional layer can bring evidence from several
    documents into the candidate pool.
@@ -47,10 +46,10 @@ The enabled retrieval layers look for candidate passages in different ways.
 | Community | matching against the cluster summaries | big-picture questions no single passage covers |
 | Hypothetical answer | generating a search probe and finding passages near it | bridging question wording and document wording |
 
-The hypothetical passage is a search probe, never evidence. The kit does not show or cite it.
+The hypothetical passage is a search probe. The kit keeps it out of answers and citations.
 
 Each layer returns a ranked list. Weighted reciprocal rank fusion combines positions because a
-cosine distance, a full-text rank, and a graph hop count are not comparable scores. Agreement across
+cosine distance, a full-text rank, and a graph hop count use different scales. Agreement across
 layers can move a passage higher in the final list.
 
 The `interactive` profile enables vector and keyword retrieval. The `deep` profile can use all five
@@ -73,7 +72,7 @@ separate model passes: grounding and citation accuracy are judged against retrie
 correctness is judged against the reference answer.
 
 Reports record the corpus fingerprint, model identities, and git commit. That provenance identifies
-what produced a run; it does not make model-backed scores deterministic. Use the [evaluation
+what produced a run. Model-backed scores remain nondeterministic. Use the [evaluation
 workflow](evaluation.md) to compare matched runs and the [benchmarks](benchmarks.md) to inspect the
 current demo evidence.
 

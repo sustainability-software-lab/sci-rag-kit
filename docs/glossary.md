@@ -5,7 +5,7 @@ description: What each term means in this project.
 
 # Glossary
 
-These are the terms used by Sci RAG Kit. Definitions follow their specific meaning in this codebase, which may be narrower than their use in the literature.
+Terms below use their Sci RAG Kit meanings, which may be narrower than their use in the literature.
 
 ## Retrieval and answers
 
@@ -83,7 +83,7 @@ These are the terms used by Sci RAG Kit. Definitions follow their specific meani
 : The `drafted` tag on a seed question a model wrote and nobody has reviewed. Reports say how many questions still carry it.
 
 **Honesty probe**
-: A seed question tagged `unanswerable` because the corpus does not answer it. It checks that the system says so rather than inventing an answer.
+: A seed question tagged `unanswerable` because the corpus does not answer it. It checks whether the system reports the gap accurately.
 
 **Ablation**
 : Scoring retrieval with one layer switched off at a time, to measure what each layer contributes on the corpus.

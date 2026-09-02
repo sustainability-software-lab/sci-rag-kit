@@ -1,30 +1,28 @@
 ---
-title: Project
-description: Status, principles, roadmap, governance, decision records, releases, and how to contribute.
+title: About
+description: Learn who developed Sci RAG Kit and how to cite the software.
 ---
 
-# Project
+# About
 
-Sci RAG Kit is alpha software. Its versioning policy states the current compatibility promise, the roadmap separates shipped work from plans, and decision records explain the architecture.
+Sci RAG Kit was developed by researchers at Lawrence Berkeley National Laboratory. It is an open-source project for building cited question-answering systems over scientific documents.
 
-<div class="srag-rows" markdown>
+## How to cite
 
-[<span class="srag-row__title">Roadmap</span><span class="srag-row__copy">What shipped, what comes next, and which decisions stay with a maintainer.</span>](ROADMAP.md){ .srag-row }
+Sci RAG Kit does not currently publish an archival DOI or a `CITATION.cff`. Cite the software title, version or exact Git commit, repository URL, and access date. Pin the commit during 0.x because minor releases may break public interfaces.
 
-[<span class="srag-row__title">Versioning</span><span class="srag-row__copy">Which five public surfaces hold within 0.x, and what a 1.0 promise waits for.</span>](VERSIONING.md){ .srag-row }
+### Suggested BibTeX
 
-[<span class="srag-row__title">Decision records</span><span class="srag-row__copy">Why the graph lives in Postgres, embeddings are 1536-dimensional, and the repository is a live template.</span>](adr/0001-graph-in-postgres.md){ .srag-row }
+```bibtex
+@software{sci_rag_kit_2026,
+  author  = {{Sci RAG Kit contributors}},
+  title   = {Sci RAG Kit: Retrieval-augmented generation, built around your
+             scientific domain},
+  year    = {2026},
+  version = {0.4.1},
+  url     = {https://github.com/sustainability-software-lab/sci-rag-kit},
+  license = {BSD-3-Clause}
+}
+```
 
-[<span class="srag-row__title">Governance and contributing</span><span class="srag-row__copy">How proposals become evidence, decisions, tests, documentation, and releases.</span>](GOVERNANCE.md){ .srag-row }
-
-</div>
-
-## Design principles
-
-- **Prefer explicit, inspectable designs.** A small system is easier to understand and defend.
-- **Require evidence for quality claims.** Retrieval changes bring a before-and-after evaluation, and reports name their corpus and models.
-- **Show uncertainty and failure.** Missing evidence produces a refusal, failed layers appear in traces, and planned features stay labeled planned.
-- **Keep operational state in Postgres.** Text, vectors, full-text search, and graph rows share one data system.
-- **Extend through named seams.** Five supported boundaries cover the places where projects vary without introducing a plug-in framework.
-
-Read [Roadmap](ROADMAP.md) for planned work, [Versioning](VERSIONING.md) for the compatibility promise, and the [decision records](adr/0001-graph-in-postgres.md) for architectural reasoning. To contribute, start with [Contributing](contributing.md) and [Documentation style](STYLE.md).
+Add `note = {Git commit ...; accessed YYYY-MM-DD}` when the exact code state matters. If the template was substantially modified, cite both Sci RAG Kit and the derived repository or archived release.

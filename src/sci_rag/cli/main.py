@@ -181,7 +181,7 @@ def run_async(coro):  # type: ignore[no-untyped-def]
             )
         elif (
             "no google credentials configured" in lowered
-            or "no model credentials configured" in lowered
+            or "no llm provider credentials configured" in lowered
         ):
             console.print(f"[red]{exc}[/red]")
         else:
@@ -441,7 +441,7 @@ def build(
     """Build the knowledge base in one go: ingest, then extract the graph and its summaries.
 
     Ingestion works with any embedding setup, including offline. The graph
-    steps need a model credential; without one, or with --no-graph, they are
+    steps need LLM provider credentials; without them, or with --no-graph, they are
     skipped and the command says so. Re-running only processes new chunks.
     """
     from sci_rag.config import get_settings
@@ -461,7 +461,7 @@ def build(
         console.print("[dim]Skipping the knowledge graph (--no-graph).[/dim]")
     elif not _has_model_credential(settings):
         console.print(
-            "[yellow]Skipping the knowledge graph: no model credential is configured.[/yellow] "
+            "[yellow]Skipping the knowledge graph: no LLM provider credentials are configured.[/yellow] "
             "Vector and keyword retrieval already work. To add the graph later, set "
             "SCI_RAG_GOOGLE_API_KEY (or SCI_RAG_GCP_PROJECT) in .env and run "
             "[bold]sci-rag graph extract[/bold] then [bold]sci-rag graph communities[/bold]."
@@ -693,7 +693,7 @@ def answer(
         ),
     ),
 ) -> None:
-    """Answer a question from your documents, with numbered citations. Needs a model credential."""
+    """Answer a question from your documents, with numbered citations. Needs LLM provider credentials."""
     from sci_rag.answer import AnswerEngine
 
     async def run() -> None:
@@ -793,11 +793,11 @@ def _run_graph_extract(*, batch_size: int, reprocess_all: bool, max_chunks: int 
 def graph_extract(
     batch_size: int = typer.Option(10, help="Chunks per extraction call."),
     reprocess_all: bool = typer.Option(
-        False, "--all", help="Re-read every chunk, not just unprocessed ones."
+        False, "--all", help="Re-read every chunk, including previously processed chunks."
     ),
     max_chunks: int | None = typer.Option(None, help="Stop after this many chunks (for trials)."),
 ) -> None:
-    """Extract concepts and relationships from ingested chunks. Needs a model credential.
+    """Extract concepts and relationships from ingested chunks. Needs LLM provider credentials.
 
     Only chunks the extractor has not seen are processed, so re-running after
     a new ingest picks up just the new documents.
@@ -850,7 +850,7 @@ def graph_communities(
     """Group related entities into clusters and write a summary of each (rebuilds all).
 
     Summaries answer big-picture questions no single passage covers. Needs a
-    model credential.
+    LLM provider credentials.
     """
     _run_graph_communities(min_size=min_size)
 
@@ -941,7 +941,7 @@ def graph_resolve_entities(
         if "llm is required" not in str(exc):
             raise
         console.print(
-            "[red]Borderline entity pairs need configured model credentials.[/red] "
+            "[red]Borderline entity pairs need configured LLM provider credentials.[/red] "
             "Configure Google credentials or rerun with [bold]--no-llm[/bold] "
             "to leave those pairs separate."
         )
@@ -1113,7 +1113,7 @@ def eval_answers(
 ) -> None:
     """Answer every seed question and grade each answer for grounding, citations, and correctness.
 
-    Needs a model credential. The grader scores grounding without seeing the
+    Needs LLM provider credentials. The grader scores grounding without seeing the
     reference answer, then scores correctness against it in a separate pass.
     """
     from sci_rag.answer import AnswerEngine

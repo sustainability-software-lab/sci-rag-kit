@@ -49,8 +49,8 @@ RIGHTS_HEADER = """\
 # document: this kit never lets a model decide redistribution rights. Where a
 # license sentence was found in the text it is quoted in license_source as
 # evidence only. Read it, decide the class yourself, and edit it in. Until you
-# do, these documents are excluded from any scoped retrieval, which is the
-# safe default and not a bug. See docs/methodology.md, section 7.
+# do, these documents are excluded from scoped retrieval. This keeps undecided
+# rights out of results. See "Scope precedes ranking" in docs/methodology.md.
 """
 
 #: Fields a model may fill. `license_class` is deliberately absent.
