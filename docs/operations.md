@@ -5,7 +5,7 @@ description: Back up, restore, snapshot, delete, garbage-collect, and re-embed a
 
 # Operate a live corpus
 
-Everything the kit knows lives in one Postgres database, which keeps operational discipline short. Snapshot what the corpus **is**, back up what the database **holds**, and rehearse the restore before it is needed.
+Everything the kit knows lives in one Postgres database, which keeps operational discipline simple. Snapshot what the corpus **is**, back up what the database **holds**, and rehearse restore before the moment you need it.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A backup, a restore drill, and a snapshot habit</div>
@@ -25,31 +25,26 @@ Everything the kit knows lives in one Postgres database, which keeps operational
 
 ## Crossref enrichment and retraction review
 
-After ingesting DOI-bearing papers, preview the Crossref enrichment set:
+After ingesting DOI-bearing papers, preview Crossref enrichment:
 
 ```bash
 uv run sci-rag corpus enrich --mailto you@example.org --dry-run
 ```
 
-The dry run makes no network calls and writes nothing. Apply it by removing
-`--dry-run`; `--limit N` bounds a trial. The client identifies your contact
-address to Crossref's polite pool, rate limits requests, retries 429 and 5xx
-responses, and records failures per document. A later run skips metadata
-refreshed in the last 30 days.
+The dry run makes no network calls and writes nothing. Remove `--dry-run` to apply it; use `--limit N` for a trial. The client sends your contact address to Crossref's polite pool, rate-limits requests, retries 429 and 5xx responses, and records failures per document. Later runs skip metadata refreshed in the last 30 days.
 
-The command records citation count, journal, normalized reference DOIs,
-enrichment time, and explicit Crossref retraction assertions in `documents.extra`, while promoting journal to its indexed column. Both current `updated-by` responses and the `update-to` shape used by Retraction Watch records are recognized. The kit does not infer retraction from titles or missing fields.
+The command adds citation count, journal, normalized reference DOIs, enrichment time, and explicit Crossref retraction assertions to `documents.extra`. It also promotes journal to its indexed column. Both current `updated-by` responses and Retraction Watch's `update-to` format are recognized. The kit never infers retraction from titles or missing fields.
 
-Preview the corpus-local citation reconciliation, then apply it:
+Preview citation reconciliation, then apply it:
 
 ```bash
 uv run sci-rag graph citations --dry-run
 uv run sci-rag graph citations --apply
 ```
 
-Resolved rows connect two present corpus documents. References whose DOI is not yet in the corpus stay as null-target pointers and resolve on a later run after that document is ingested. Self-references and duplicate DOI references do not become edges. `corpus delete` cascades affected pointers, while `sci-rag graph gc` reports and removes any dangling rows defensively.
+Resolved rows connect two corpus documents that exist. References to DOIs not yet in the corpus stay as null-target pointers and resolve later when you ingest them. Self-references and duplicate DOI references skip edge creation. `corpus delete` cascades affected pointers. Later, `sci-rag graph gc` reports and removes any dangling rows.
 
-After completing citation reconciliation, run `uv run sci-rag doctor`. A retraction warning gives the known count. Answering excludes those documents by default, while raw retrieval does not change. Review flagged records and use `sci-rag corpus delete` when they should leave the corpus.
+After citation reconciliation, run `uv run sci-rag doctor`. It reports known retractions. Answer generation excludes retracted documents by default; raw retrieval does not change. Review flagged records and use `sci-rag corpus delete` when they should go.
 
 ## Corpus snapshots (identity, not backup)
 
@@ -57,82 +52,61 @@ After completing citation reconciliation, run `uv run sci-rag doctor`. A retract
 uv run sci-rag corpus snapshot v0.2-demo
 ```
 
-writes `data/snapshots/v0.2-demo.json`: document counts, per-document
-content hashes, embedding versions, the git commit, and a single
-`corpus_digest` (SHA-256 over the sorted content hashes). Two corpora
-with the same digest hold the same documents, whatever their ids or
-ingestion order.
+This writes `data/snapshots/v0.2-demo.json`: document counts, per-document content hashes, embedding versions, the git commit, and a single `corpus_digest` (SHA-256 over sorted content hashes). Two corpora with the same digest hold identical documents, regardless of IDs or ingestion order.
 
-Snapshots are small, immutable (a name refuses to be overwritten), and
-safe to commit next to eval evidence. Reference them from eval runs:
+Snapshots are small, immutable (naming something twice fails), and safe to commit next to eval evidence. Reference them from eval runs:
 
 ```bash
 uv run sci-rag eval retrieval --ablation --snapshot v0.2-demo
 ```
 
-and the report JSON carries the snapshot name, so a reader can check
-later that the numbers were measured on exactly that corpus. A snapshot
-records identity; it does not contain the data. Backup does.
+The report JSON carries the snapshot name, so later you can verify the numbers came from exactly that corpus. A snapshot records identity; it contains no data. Backup does.
 
 ## Backup
 
 ### Local or self-hosted Postgres
 
-`.env` is not exported into your shell, and `pg_dump` speaks libpq rather
-than the application's async driver. Derive one connection string from the
-other before you run anything:
+`.env` is not exported to your shell, and `pg_dump` uses libpq instead of the application's async driver. Derive one connection string from the other:
 
 ```bash
-# libpq does not understand the +asyncpg driver marker, so drop it.
+# libpq does not understand +asyncpg, so strip it.
 SCI_RAG_DATABASE_URL_SYNC="$(
   grep -m1 '^SCI_RAG_DATABASE_URL=' .env |
     cut -d= -f2- |
     sed 's/^postgresql+asyncpg:/postgresql:/'
 )"
 
-# Custom-format archive of the whole knowledge base (schema + data).
+# Custom-format archive: schema and data, compressed.
 pg_dump "$SCI_RAG_DATABASE_URL_SYNC" --format=custom \
   --file "backups/sci-rag-$(date +%Y%m%d).dump"
 ```
 
-`backups/` is ignored by Git, and it ships with a `.gitkeep` so it is there
-before you need it. That matters more than it looks: a dump holds every
-source and every chunk you have ingested, so for a private corpus the file is
-the corpus. Writing it into the repository root, as this page used to, left it
-one `git add .` away from being published.
+`backups/` is ignored by Git and ships with `.gitkeep` so it exists before you need it. This matters because a dump holds everything you ingested. For a private corpus, the file **is** the corpus. Writing it to the repository root, as this page used to recommend, left it one `git add .` away from being published.
 
-Keep only working copies there. Valuable data belongs encrypted, on a destination the repository cannot reach, under whatever retention the corpus licenses require. Credentials and Terraform state are a separate problem with a separate answer; a database dump does not contain them.
+Keep only working copies there. Valuable data belongs encrypted, on a separate destination, under whatever retention your licenses require. Credentials and Terraform state are separate concerns. A database dump contains neither.
 
-Reading the URL from the file keeps the password out of the shell history. If the URL carries `?passfile=`, as the Cloud SQL helper writes it, the password stays off the command line as well.
+Reading the URL from the file keeps the password out of shell history. If the URL carries `?passfile=`, as the Cloud SQL helper does, the password stays off the command line too.
 
-If the database is not configured through `.env`, set the connection URL and let libpq find the password in `~/.pgpass` instead:
+If `.env` does not hold the URL, set it and let libpq read the password from `~/.pgpass`:
 
 ```bash
 SCI_RAG_DATABASE_URL_SYNC='postgresql://sci_rag@localhost:5433/sci_rag'
 ```
 
-`--format=custom` is why the restore drill below reaches for `pg_restore`
-rather than `psql`. A custom-format archive is compressed and supports
-restoring one table at a time; plain output would be SQL you replay, and the
-two are not interchangeable.
+`--format=custom` is why restore uses `pg_restore` not `psql`. A custom-format archive is compressed and lets you restore one table at a time. Plain output is SQL to replay, and they are not interchangeable.
 
-The pgvector extension types are included in the archive; the restore
-target needs the extension available (`CREATE EXTENSION vector` runs in
-migration 0001, and `pg_restore` recreates it from the archive).
+The pgvector extension types are included in the archive. The restore target needs the extension available; migration 0001 runs `CREATE EXTENSION vector`, and `pg_restore` recreates it from the archive.
 
 ### Cloud SQL (the deploy-gcp.md path)
 
-Prefer managed backups over hand-run dumps:
+Prefer managed backups:
 
 ```bash
 gcloud sql backups create --instance=YOUR_INSTANCE --project=YOUR_PROJECT
 gcloud sql backups list --instance=YOUR_INSTANCE --project=YOUR_PROJECT
 ```
 
-Enable automated daily backups plus point-in-time recovery on the
-instance; the Terraform module in `infra/` exposes both flags. Take a
-manual backup before every schema migration and every bulk operation
-(delete campaigns, re-embed runs).
+Enable automated daily backups and point-in-time recovery on the instance. The Terraform module in `infra/` exposes both flags. Take a manual backup before every schema migration and every bulk operation (delete campaigns, re-embed).
 
 <!-- BEGIN GENERATED PROJECT FEATURE: cloud-helper -->
 The optional development Cloud SQL helper is a different path. Its instance
@@ -155,63 +129,42 @@ SCI_RAG_DATABASE_URL="postgresql+asyncpg://sci_rag:sci_rag@localhost:5433/sci_ra
   uv run sci-rag doctor
 ```
 
-`doctor` checks schema revision, pgvector, corpus counts, and embedding
-versions in one pass. Then compare identity against the snapshot you
-took at backup time:
+`doctor` checks schema, pgvector, corpus counts, and embedding versions. Then compare identity against the snapshot you took before the dump:
 
 ```bash
 SCI_RAG_DATABASE_URL=... uv run sci-rag corpus snapshot restore-check
-# corpus_digest in data/snapshots/restore-check.json must equal the
-# digest in the snapshot taken when the backup was made.
+# corpus_digest in data/snapshots/restore-check.json must match the
+# digest from the snapshot taken when the backup was made.
 ```
 
-Cloud SQL restores follow the console or `gcloud sql backups restore`; run the same doctor + snapshot-digest verification afterwards.
+Cloud SQL restores use the console or `gcloud sql backups restore`. Run the same doctor + snapshot-digest verification afterward.
 
 ## Analytical export
 
-For sharing data outside Postgres, or for belt-and-suspenders archival:
+For sharing data outside Postgres or archival:
 
 ```bash
 sci-rag corpus export export/                      # JSONL, no extra dependency
 sci-rag corpus export export/ --format parquet     # needs `uv sync --extra export`
 ```
 
-One file per table: `documents`, `chunks`, `entities`, `relationships`.
-Chunk embeddings are omitted by default because they dominate the output
-size and are rarely what a downstream consumer wants; `--include-embeddings`
-keeps them.
+One file per table: `documents`, `chunks`, `entities`, `relationships`. Chunk embeddings are omitted by default because they dominate the output size and few downstream consumers want them. Use `--include-embeddings` to keep them.
 
-### An export is a redistribution
+### An export is redistribution
 
-Reading rows out of Postgres by hand, with DuckDB or anything else, loses
-the rights information every other path in the kit enforces, and the copy
-that leaves the database is the copy nobody re-checks. So the command takes
-the same kind of license allowlist retrieval does, and applies it
-fail-closed:
+Reading rows out of Postgres by hand, with DuckDB or anything else, loses the rights enforcement the kit applies elsewhere. The copy that leaves the database is the copy nobody re-checks. So export applies the same license allowlist retrieval does, fail-closed:
 
 ```bash
 sci-rag corpus export export/ --license public --license open_commercial
 ```
 
-`unknown` is excluded unless you name it, exactly as in retrieval. The graph
-needs a stricter rule than the rows, because it aggregates: an entity's
-description is written from evidence across every document it was extracted
-from, so **an entity survives a scope only when every one of those documents
-did**, and a relationship survives only when its own document did and both
-its endpoints survived. An entity carrying no document attribution cannot be
-checked, so a scoped export drops it.
+`unknown` is excluded unless you name it, like in retrieval. The graph uses a stricter rule: an entity's description aggregates evidence from every document it was extracted from, so **an entity survives scope only when every source document did**. A relationship survives only when its own document did and both endpoints survived. Entities with no document attribution cannot be scoped, so a scoped export drops them.
 
-Communities are never exported. A community summary aggregates across
-documents with no per-document attribution to filter on, which is the same
-reason the community retrieval layer disables itself under any scope.
+Communities are never exported. A community summary aggregates across documents with no per-document attribution to filter on, the same reason the community retrieval layer disables under any scope.
 
-### It is not a restore path
+### Export is not a restore
 
-Vectors round-trip as arrays and the full-text columns get rebuilt on
-ingest, so restores always go through `pg_restore` or Cloud SQL backups.
-In Parquet, `documents.extra` is written as a JSON string rather than a
-struct, because its keys vary per document and an inferred struct schema
-would change with the corpus.
+Vectors round-trip as arrays and full-text columns rebuild on ingest, so restores always use `pg_restore` or Cloud SQL backups. In Parquet, `documents.extra` is a JSON string, not a struct, because its keys vary per document and an inferred schema would change with the corpus.
 
 ## Retrieval latency
 
@@ -221,40 +174,23 @@ sci-rag profile --runs 10             # more replays, tighter percentiles
 sci-rag profile --json                # machine-readable, for tracking over time
 ```
 
-Nothing new is instrumented: every request already records a duration per
-stage, and this replays the seed questions and aggregates those traces into
-p50/p95 per stage, per profile, plus a one-line verdict naming the slowest
-stage and what `auto` routed to.
+Nothing new is instrumented: each request already records per-stage duration. The profiler replays seed questions and aggregates those traces into p50/p95 per stage, per profile, plus a verdict naming the slowest stage and what `auto` chose.
 
-Two aspects of the numbers are easy to misread, so the command states both explicitly:
+Two aspects are easy to misread, so the command names both:
 
-* **The stage column does not sum to the request time.** Candidate generators
-  run concurrently, so a request is roughly as slow as its slowest stage, not
-  as slow as their total. Wall-clock is measured separately and shown in each
-  table's title.
-* **The query-embedding cache is off while profiling.** Interactive requests
-  normally cache query embeddings in process memory, so replaying one question
-  ten times would measure the cache on runs 2 through 10 and report a p50 no
-  real user ever sees. Every run is cold, which makes the profiles comparable
-  and slightly pessimistic about a warm interactive path.
+* **Stages do not sum to request time.** Candidate generators run concurrently, so a request is about as slow as its slowest stage, not their sum. Wall-clock time is measured separately and shown in each table's title.
+* **The query-embedding cache is off while profiling.** Production requests cache query embeddings in memory, so replaying one question ten times would measure cache hits on runs 2–10 and report a p50 no real user sees. Every profile run is cold, which makes profiles comparable and slightly pessimistic about warm performance.
 
-A stage that was switched off is not a failure. `interactive` disables graph,
-community, and HyDE by definition, and an unconfigured reranker is a choice, so
-those show in the status column but never as a degradation. The warning line is
-reserved for stages that ran and did not succeed, because a stage that timed
-out is fast for the wrong reason.
+A switched-off stage is not a failure. `interactive` disables graph, community, and HyDE by design. An unconfigured reranker is a choice. Both appear in status but never as degradation. The warning line is reserved for stages that ran and failed; a timeout is fast for the wrong reason.
 
-This measures speed, not quality. `docs/benchmarks.md` is where a layer earns
-its place; the profiler only tells you what it costs.
+This measures speed, not correctness. `docs/benchmarks.md` is where a layer earns its place. The profiler tells you what speed costs.
 
 ## The habits that matter
 
-1. Snapshot before and after every bulk change (ingest campaign,
-   delete, reindex); the digest diff is your receipt.
+1. Snapshot before and after every bulk change (ingest campaign, delete, reindex). The digest diff is your receipt.
 2. Back up before schema migrations.
-3. Run the restore drill when you set the project up, not during the
-   incident.
-4. `sci-rag doctor` after every restore.
+3. Run the restore drill now, not when you need it.
+4. Run `sci-rag doctor` after every restore.
 
 <div class="srag-checkpoint" markdown>
 **Checkpoint: the restore actually works**

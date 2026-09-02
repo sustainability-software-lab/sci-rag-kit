@@ -12,13 +12,15 @@
 Retrieval-augmented generation, built around your scientific domain.
 
 Sci RAG Kit is a project template for question answering over scientific
-documents. It stores papers and reports in a Postgres database and answers
-questions about them with citations back to the passages it used. It is a
-template repository for retrieval-augmented generation with the pipeline
-assembled: parsing, chunking, embeddings, a concept graph, five kinds of
-search, an evaluation harness, and a REST and MCP server. A project supplies
-the documents, names the concepts its field cares about, and writes a few
-questions with known answers.
+documents. Give it a folder of papers and reports and it builds a knowledge
+base from them, one that answers questions in plain language and quotes the
+exact passages each answer rests on. It is a template repository for
+retrieval-augmented generation with the whole pipeline assembled and
+measured: parsing, chunking, embeddings, a concept graph, five kinds of
+search, an evaluation harness, and a REST and MCP server. What a project
+brings is the documents, the vocabulary of its field, and a handful of
+questions with known answers so the result can be scored rather than
+admired.
 
 Start a project with two commands. `sci-rag new` asks a few questions and
 writes a configured, git-initialized project directory:
@@ -36,38 +38,50 @@ minutes.
 
 ## Components
 
-- **Ingestion.** PDF, HTML, Markdown, and plain-text files are split into
-  passages that keep their section headings and whole tables. Each document
-  records its authors, its source, and whether its text may be redistributed.
+- **Ingestion.** PDF, HTML, Markdown, and plain-text files become passages
+  that keep their section headings and their tables whole, so a value pulled
+  from a results table still carries the heading that says what it measured.
+  Each document also records its authors, its source, and whether its text
+  may be redistributed, and a file ingested twice is recognized and skipped.
 - **One database.** Passages, vectors, a full-text index, and the concept
-  graph live in PostgreSQL with the pgvector extension. There is nothing else
-  to run or back up.
+  graph all live in PostgreSQL with the pgvector extension. That is a
+  deliberate choice over a separate vector store or graph database: it
+  leaves one thing to run, one thing to back up, and one place where a
+  passage and its graph entries commit together.
 - **A concept graph.** With a model credential, the kit reads every passage
   and extracts the concepts and relationships declared in
-  `domain/domain.yaml`. Related concepts are clustered and summarized. This is
-  what answers questions that span several documents.
+  `domain/domain.yaml`, then clusters related concepts and writes a summary
+  of each cluster. This is what lets a question whose answer is spread across
+  several documents come back with all of them.
 - **Five kinds of search.** By meaning, by exact words, through the concept
   graph, through the cluster summaries, and through a model-written
-  hypothetical answer. The five result lists merge into one ranking, and
-  every result names the layer that found it.
+  hypothetical answer. Each finds evidence the others miss: keyword search
+  catches an identifier that embeddings blur, and the graph reaches a passage
+  whose words never appear in the question. The five result lists merge into
+  one ranking, and every result names the layer that found it.
 - **Cited answers.** The model answers from the retrieved passages only and
-  cites each one by number. When the documents do not contain an answer, it
-  says so.
+  cites each one by number, so a reader can check any claim against its
+  source. When the documents do not contain an answer, the kit says so
+  instead of filling the gap from memory.
 - **Rights.** Every document carries a license class. A request that
-  restricts rights never sees passages outside its scope, so a shared
-  endpoint cannot leak a paywalled PDF held internally.
-- **Measurement.** The kit scores retrieval and grades answers against
-  questions with known answers, and reports what each search layer
-  contributes on a given corpus. Every report records the documents and
-  models that produced it.
+  restricts rights never sees passages outside its scope, because the filter
+  runs inside each search before ranking, so a shared endpoint cannot leak a
+  paywalled PDF held internally.
+- **Measurement.** A file of questions with known answers lets the kit score
+  retrieval, grade generated answers, and report what each search layer
+  contributes on the corpus at hand. Every report records the documents and
+  models that produced it, so a number can be traced back to what it
+  measured.
 - **Serving.** One process answers the command line, a REST API with
-  interactive docs at `/docs`, and agents over MCP (the protocol Claude Code
-  and similar tools use to call external systems). API keys carry scopes and
-  rate limits.
+  interactive docs at `/docs`, and agents over MCP, the protocol Claude Code
+  and similar tools use to call external systems. All three go through the
+  same service, so they cannot drift apart. API keys carry scopes and rate
+  limits.
 - **Models.** Gemini by default, through a free Google AI Studio key or a
   Vertex AI project. Claude and any OpenAI-compatible endpoint are one
-  setting away for generation. An offline mode runs everything except the
-  graph and generated answers, without a credential.
+  setting away for generation, and the model that grades answers can differ
+  from the one that writes them. An offline mode runs everything except the
+  graph and generated answers, with no credential at all.
 
 ## Set up
 

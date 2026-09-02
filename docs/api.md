@@ -5,13 +5,13 @@ description: Look up authentication scopes, endpoint shapes, streaming events, a
 
 # REST, MCP, and Python API
 
-One server, two front doors, one service behind both. Start it with `sci-rag serve`. Interactive OpenAPI docs live at `/docs`.
+One server, two front doors, one service behind both. Start with `sci-rag serve`. Interactive OpenAPI docs live at `/docs`.
 
 ## Authentication
 
-Send `Authorization: Bearer <key>`, or `X-API-Key: <key>` when something upstream has already claimed the first header. Cloud Run is the case that matters: its frontend inspects `Authorization: Bearer` and rejects anything that is not its own identity token, before the container sees the request. On a deployed service, use the second header. `Authorization` wins when both are sent.
+Send `Authorization: Bearer <key>`, or `X-API-Key: <key>` when something upstream claims the first header. Cloud Run is the case that matters: its frontend inspects `Authorization: Bearer` for its own identity tokens, before the container sees the request. On a deployed service, use the second header. `Authorization` wins when both are sent.
 
-Keys are configured by the operator as a JSON map in `SCI_RAG_API_KEYS`:
+The operator configures keys as a JSON map in `SCI_RAG_API_KEYS`:
 
 ```json
 {"team-key":  {"scopes": ["retrieval:query", "retrieval:answer", "corpus:read"],
@@ -30,14 +30,14 @@ With no keys configured, the server runs **open** and warns loudly at startup; t
 
 ## Errors
 
-Every error is RFC 9457 `application/problem+json` with a stable `code` and request id:
+Every error is RFC 9457 `application/problem+json` with a stable `code` and request ID:
 
 ```json
 {"type": ".../docs/api.md#invalid_key", "title": "Unknown API key",
  "status": 401, "code": "invalid_key", "detail": "", "request_id": "9f2c..."}
 ```
 
-The same id comes back in the `X-Request-ID` response header on every response. Send one in the request header to have it echoed, and quote it when asking an operator to find the call in logs. A `500` never carries the underlying exception message, query, or chunk text. It names the exception type and points to the logs.
+The same ID comes back in the `X-Request-ID` response header on every response. Send one in the request header to have it echoed. Quote it when asking an operator to find the call in logs. A `500` never carries the exception message, query, or chunk text. It names the exception type and points to the logs.
 
 Codes you can branch on:
 
@@ -90,7 +90,7 @@ curl -s -X POST localhost:8000/v1/query \
        "exclude_dois": ["10.1016/j.biombioe.2019.00000"]}'
 ```
 
-They are enforced inside every layer's SQL, before ranking, exactly like the license scope. An out-of-range document can never crowd an eligible one out of a bounded candidate pool. `authors` and `journals` match whole stored strings, not substrings.
+They are enforced inside every layer's SQL, before ranking, like the license scope. An out-of-range document can never crowd an eligible one out of a bounded pool. `authors` and `journals` match whole strings, not substrings.
 
 Any filter disables the community layer. A stored community summary aggregates evidence across documents before your scope is known, so nothing can filter it after the fact. The `community` trace reads `skipped` when this happens. `journal` comes directly from your manifest or refreshed from Crossref metadata with `sci-rag corpus enrich`.
 
@@ -121,11 +121,11 @@ An `error` event (`code`, `message`) replaces the tail on failure.
 `degraded_stages`, measured `prompt_tokens_before` and
 `prompt_tokens_after`, plus compression failure and dropped-source counts.
 
-Set `include_compression` to `true` or `false` to override the domain's `compression.enabled` setting. Compression scores chunks by relevance and summarizes them before prompt assembly. The shipped demo enables it after the judged-answer gate documented in [Evaluate your pipeline](evaluation.md). A new domain should run the same gate before enabling its default.
+Set `include_compression` to `true` or `false` to override the domain's `compression.enabled` setting. Compression scores chunks by relevance and summarizes them before prompt assembly. The shipped demo enables it after the judged-answer gate in [Evaluate your pipeline](evaluation.md). A new domain should run that gate before enabling it.
 
-Failed, malformed, empty, duplicate, or over-budget model output falls back to the complete chunk and increments `compression_failure_count`. Evidence is never silently removed. Citations always retain the original document and chunk identity.
+Failed, malformed, empty, duplicate, or over-budget model output falls back to the complete chunk and increments `compression_failure_count`. Evidence is never silently removed. Citations always keep the original document and chunk identity.
 
-Known retracted documents are excluded from answers by default. The flag comes from explicit Crossref metadata written by `sci-rag corpus enrich`. Missing enrichment is not guessed to mean retracted. Raw `/v1/query` retrieval keeps its previous behavior. The CLI has `sci-rag answer --include-retracted` for the rare case where an operator needs retracted evidence in an answer.
+Known retracted documents are excluded from answers by default. The flag comes from explicit Crossref metadata written by `sci-rag corpus enrich`. Missing enrichment does not imply retracted. Raw `/v1/query` retrieval keeps its previous behavior. The CLI has `sci-rag answer --include-retracted` for the rare case where an operator needs retracted evidence in an answer.
 
 **Bring your own key.** A request may include `llm_api_key` (an AI Studio key) if the API key holds the `byo_llm` scope. Operators can also bind an LLM key to an API key server-side. Either way, the credential is used for that call only and never stored or logged.
 
@@ -161,23 +161,23 @@ Plus two resources: `corpus://manifest` (same payload as REST manifest) and `cor
 
 ## Generated clients
 
-The running server publishes its schema at `/openapi.json`. A typed client in any language is one generator call away. Two examples that work with the shipped schema:
+The running server publishes its schema at `/openapi.json`. A typed client in any language is one generator call away. Two examples:
 
 ```console title="Terminal"
 $ uvx openapi-python-client generate --url http://127.0.0.1:8000/openapi.json
 $ npx openapi-typescript http://127.0.0.1:8000/openapi.json -o sci-rag.d.ts
 ```
 
-The first writes an installable Python package; the second writes a TypeScript type file. Pass the key as `Authorization: Bearer <key>` (or `X-API-Key` behind Cloud Run) exactly as with `curl`. Generated clients add nothing to the authentication contract above.
+The first writes an installable Python package. The second writes a TypeScript type file. Pass the key as `Authorization: Bearer <key>` (or `X-API-Key` behind Cloud Run), exactly as with `curl`. Generated clients add nothing to the authentication contract above.
 
 ## Python API
 
-The CLI and server wrap importable pieces. The same capabilities work in notebooks and your own applications. The package ships type information (`py.typed`).
+The CLI and server wrap importable pieces. The same capabilities work in notebooks and custom applications. The package ships type information (`py.typed`).
 
 ```python
 from sci_rag import Retriever, AnswerEngine, RetrievalScope
 
-retriever = Retriever()  # settings from the environment, domain from domain/
+retriever = Retriever()  # settings from environment, domain from domain/
 result = await retriever.retrieve(
     "rice straw availability",
     profile="deep",

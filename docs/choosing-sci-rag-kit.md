@@ -5,25 +5,25 @@ description: Compare Sci RAG Kit against LightRAG, PaperQA2, LlamaIndex, and Mic
 
 # Choosing Sci RAG Kit
 
-Sci RAG Kit is an opinionated, evaluated template that configures into a field's knowledge base. For a library to compose, a managed product, or an agent that reasons over the literature per question, the systems below fit better, and this page says which one.
+Sci RAG Kit is an opinionated, evaluated template that configures into a field's knowledge base. For a library to compose, a managed product, or an agent that reasons over the literature per question, the systems below fit better. This page says which.
 
-There are no cross-system benchmark scores here. Numbers measured on different corpora are not comparable. Our own numbers are on the [benchmarks page](benchmarks.md), measured on our demo corpus with confidence intervals and a reproduction command.
+No cross-system benchmark scores appear here. Numbers measured on different corpora are not comparable. Our own numbers are on the [benchmarks page](benchmarks.md), measured on our demo corpus with confidence intervals and a reproduction command.
 
 ## The landscape
 
 These readings were last checked as of 2026-08-28. Another project's status is the claim on this page most likely to go stale, so it carries a date.
 
-**Microsoft GraphRAG** established the pattern this space builds on: entity extraction, communities, global/local search. Its papers remain the reference reading. The project is in maintenance mode per the README; bug fixes and CVE updates continue, but not new features. The releases match: v3.1.2 in August 2026, with earlier releases consisting of dependency updates. It is good for study, and a considered choice for a new deployment that expects the feature set to grow.
+**Microsoft GraphRAG** established the pattern this space builds on: entity extraction, communities, global/local search. Its papers remain the reference reading. The project is in maintenance mode per the README. Bug fixes and CVE updates continue, but not new features. The releases match: v3.1.2 in August 2026, with earlier releases consisting of dependency updates. It is good for study and a considered choice for a new deployment that expects the feature set to grow.
 
-**LightRAG** is the most active general-purpose GraphRAG library: incremental insert/delete, dual-level retrieval, multiple storage backends including Postgres, and a large community. It is a **library** to build an application around. For writing application code and making architectural calls, LightRAG is the strongest general choice. Some of its ideas, such as per-document extraction caching, are on our roadmap, credited.
+**LightRAG** is the most active general-purpose GraphRAG library. It offers incremental insert/delete, dual-level retrieval, multiple storage backends including Postgres, and a large community. It is a **library** to build an application around, not a ready-made application. For writing application code and making architectural calls, LightRAG is the strongest general choice. Some of its ideas, such as per-document extraction caching, are on our roadmap, credited.
 
-**PaperQA2** owns agentic scientific literature QA: multi-step retrieve-summarize-answer loops over papers, with strong published results on literature tasks. It is an agent with per-query LLM loops (costs and latency to match), not an infrastructure template. For "answer this hard question from the literature, take your time," pick PaperQA2. Its evidence-summarization pattern shipped here in v0.3 as contextual snippet compression, and it cleared the paired judged-answer gate at a relevance floor of 0.0.
+**PaperQA2** owns agentic scientific literature QA: multi-step retrieve-summarize-answer loops over papers, with strong published results on literature tasks. It is an agent with per-query LLM loops (costs and latency to match), not an infrastructure template. For "answer this hard question from the literature, take your time," pick PaperQA2. Its evidence-summarization pattern shipped here in v0.3 as contextual snippet compression and cleared the paired judged-answer gate at a relevance floor of 0.0.
 
-**LlamaIndex (+ Neo4j)** offers every RAG pattern and every store. The tradeoff is that the builder becomes the architect: chunking, graph store, evaluation, and serving are decisions the team makes and owns. Teams with strong LLM-engineering capacity build good systems this way. Teams whose job is the science usually want those decisions made once, well, and defensibly.
+**LlamaIndex (+ Neo4j)** offers every RAG pattern and every store. The tradeoff is that the builder becomes the architect. Chunking, graph store, evaluation, and serving are decisions the team makes and owns. Teams with strong LLM-engineering capacity build good systems this way. Teams whose job is the science usually want those decisions made once, well, and defensibly.
 
 ## What sci-rag-kit is
 
-A GitHub template repository. `pipx install sci-rag-kit` then `sci-rag new` writes a configured project; `sci-rag init` configures a checkout you already have. What you get is a running, served, evaluated knowledge base. The [quickstart](quickstart.md) is the walkthrough, the [FAQ](faq.md) covers who it is for and why each decision went the way it did, and the [decision records](adr/0001-graph-in-postgres.md) hold the full arguments.
+A GitHub template repository. Run `pipx install sci-rag-kit` then `sci-rag new` writes a configured project; `sci-rag init` configures a checkout you already have. What you get is a running, served, evaluated knowledge base. The [quickstart](quickstart.md) is the walkthrough. The [FAQ](faq.md) covers who it is for and why each decision went the way it did. The [decision records](adr/0001-graph-in-postgres.md) hold the full arguments.
 
 The bets it makes for you, and when to choose differently:
 
@@ -43,14 +43,14 @@ The bets it makes for you, and when to choose differently:
 
 - **No agent loop.** Cost per question is predictable because the kit does one retrieval and one generation per question. For multi-step reasoning, use PaperQA2 or add an agent on top of the kit's API.
 - **Postgres only.** One database is the point. The kit will not grow a storage abstraction layer.
-- **Embeddings are Google-only.** Generation is not: the `google`, `anthropic`, and `openai-compatible` adapters cover Claude, Grok, Llama, Mistral, DeepSeek, OpenAI, and self-hosted vLLM or Ollama servers, selected per role with a `provider:model` setting. Changing the embedder requires a migration, a full re-embed, and an index rebuild (a data migration rather than a setting). See [ADR 0006](adr/0006-multi-provider-llms.md).
+- **Embeddings are Google-only.** Generation is not: the `google`, `anthropic`, and `openai-compatible` adapters cover Claude, Grok, Llama, Mistral, DeepSeek, OpenAI, and self-hosted vLLM or Ollama servers, selected per role. Changing the embedder requires a migration, a full re-embed, and an index rebuild (a data migration rather than a setting). See [ADR 0006](adr/0006-multi-provider-llms.md).
 - **Features stay off until a measurement on the corpus turns them on.** Answer compression is on for the demo because its paired evaluation held at a relevance floor of 0.0 and failed at 0.15 and 0.3; [benchmarks.md](benchmarks.md) publishes those runs. Reranking is off until an evaluation justifies it.
 - **Early stage.** 0.x, a small community, and no external deployments yet. [VERSIONING.md](VERSIONING.md) states exactly what 0.x promises.
 - **English-centric defaults.** The keyword layer's full-text configuration and the demo prompts assume English scientific text.
 
 ## The decision rule
 
-- Building a knowledge base for a scientific field with evaluation and license discipline built in, and able to run a small Postgres service: use the template.
+- Building a knowledge base for a scientific field with evaluation and license discipline built in, able to run a small Postgres service: use the template.
 - Building a bespoke application with full architectural control: LightRAG or LlamaIndex.
 - Building an assistant that answers hard literature questions with multi-step effort per question: PaperQA2.
 - Studying how GraphRAG works: read Microsoft GraphRAG's papers, then the [methodology](methodology.md) for where this kit differs.

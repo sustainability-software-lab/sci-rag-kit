@@ -44,8 +44,11 @@ Notable changes to sci-rag-kit. The format follows
 - **Documentation rewritten for readability and trimmed to essentials.** Every
   reader-facing page was line-edited or rewritten in a plain, direct register:
   shorter sentences, terms defined where they are used, no aphorisms, each
-  rule stated once on its home page, and prose centered on what the kit does
-  rather than on the reader, with the imperative kept for the steps. The rights page folded into the
+  rule stated once on its home page, prose centered on what the kit does
+  rather than on the reader, with the imperative kept for the steps, and a
+  final pass that elaborates each concept with what it means for a project
+  and varies sentence rhythm, in the register of Stripe's and
+  cookiecutter-data-science's documentation. The rights page folded into the
   methodology (section 7) with a redirect; the FAQ answers at decision-plus-
   reason length; the domain tutorial leads with the recipe and moved its field
   semantics to the generated configuration reference, which now documents the
