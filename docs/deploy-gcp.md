@@ -5,9 +5,9 @@ description: Provision Cloud SQL and Cloud Run from the included Terraform, then
 
 # Deploy on Google Cloud
 
-By the end of this guide the same service you have been running locally is on
-Cloud Run, backed by Cloud SQL with pgvector, reachable by REST and MCP
-clients, and removable through reviewed protection-update and destroy plans.
+By the end of this guide, the service runs on Cloud Run, backed by Cloud SQL
+with pgvector, reachable by REST and MCP clients, and removable through
+reviewed protection-update and destroy plans.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>One Cloud Run service and one Cloud SQL instance</div>
@@ -68,17 +68,17 @@ gcloud builds submit --project=YOUR_PROJECT \
   --tag us-central1-docker.pkg.dev/YOUR_PROJECT/sci-rag/sci-rag:v1 .
 ```
 
-The Dockerfile packages the kit, your `domain/` folder, and the
-migrations, so the same image serves the API and runs schema upgrades.
+The Dockerfile packages the kit, the `domain/` folder, and migrations, so the
+same image serves the API and runs schema upgrades.
 Rebuild and repush when package code, migrations, or your domain profile
 changes. Upload corpus changes to the bucket after deployment; they do not
 require a new image.
 
-!!! warning "The trailing dot uploads your directory"
+!!! warning "The trailing dot uploads the directory"
 
-    `gcloud builds submit ... .` uploads the current directory to Cloud Build. `.gcloudignore` and `.dockerignore` control what is uploaded. Both exclude everything except: `pyproject.toml`, `uv.lock`, `README.md`, `alembic.ini`, `src/`, `domain/`, `migrations/`, and `Dockerfile`.
+    `gcloud builds submit ... .` uploads the current directory to Cloud Build. `.gcloudignore` and `.dockerignore` control what is included. Both exclude everything except: `pyproject.toml`, `uv.lock`, `README.md`, `alembic.ini`, `src/`, `domain/`, `migrations/`, and `Dockerfile`.
 
-    Credentials, `.env` files, Terraform state, and restricted papers stay safe by default. Your corpus in `data/raw/` is excluded. If you add a `COPY` to the Dockerfile, add its source to both manifests; `tests/unit/test_build_context.py` enforces this.
+    Credentials, `.env` files, Terraform state, and restricted papers stay safe by default. The corpus in `data/raw/` is excluded. If adding a `COPY` to the Dockerfile, add its source to both manifests; `tests/unit/test_build_context.py` enforces this.
 
     Do not delete `.gcloudignore` to upload everything. Without it, gcloud falls back to `.gitignore`, which misses entries in `.git/info/exclude`.
 
@@ -101,8 +101,8 @@ What you get, and the security posture you get it with:
 
 * The database is reachable only through the Cloud SQL connector (mounted as a unix socket); no open TCP.
 * The runtime service account holds exactly `cloudsql.client`, `aiplatform.user`, and read access to its two secrets.
-* Send API keys as `X-API-Key: <key>` to the deployed service. Cloud Run's frontend inspects `Authorization: Bearer` for its own identity tokens, so use the key header.
-* The Cloud Run service is private by default. Set `-var allow_unauthenticated=true` to make your API keys the only gate.
+* Send API keys as `X-API-Key: <key>` to the deployed service. Cloud Run's frontend inspects `Authorization: Bearer` for its own identity tokens, so the key header avoids collision.
+* The Cloud Run service is private by default. Set `-var allow_unauthenticated=true` to make API keys the only gate.
 
 ## Step 3: stage the corpus and populate the database
 
@@ -221,15 +221,14 @@ save a new reviewed plan, and resume from the recorded survivors.
 
 ## Operating notes
 
-* **Scale to zero** is on (`min_instance_count = 0`); the first request
-  after idle pays a cold start. Set it to 1 for an always-warm instance.
-* **Schema changes**: rebuild the image, `terraform apply` (new
-  revision), run the ops job once. Migrations are additive Alembic
-  revisions; write them the way `migrations/versions/0001_initial.py`
-  models.
-* **External license posture**: if the service is public-facing, make
-  your clients pin `license_classes` to `["public", "open_commercial"]`,
-  and consider keys whose scope list omits `corpus:read` for outsiders.
+* **Scale to zero** is on (`min_instance_count = 0`). The first request after
+  idle pays a cold start. Set it to 1 for an always-warm instance.
+* **Schema changes**: rebuild the image, run `terraform apply` for the new
+  revision, then run the ops job once. Migrations are additive Alembic
+  revisions; follow the pattern in `migrations/versions/0001_initial.py`.
+* **External license posture**: if the service is public-facing, require
+  clients to pin `license_classes` to `["public", "open_commercial"]`. Create
+  keys whose scope omits `corpus:read` for outsiders.
 * **Teardown**: use the two reviewed saved plans in Step 5. A bare
   `terraform destroy` cannot show whether every protection change was reviewed.
 

@@ -6,9 +6,9 @@ description: Read the specification behind chunking, graph extraction, fusion, a
 # Methodology
 
 This document is the kit's specification. It describes every design
-decision that matters, in plain language. You should be able to judge
-whether the approach fits your field, explain it in a paper, or
-re-implement it in another stack. The code follows this document, not the
+decision that matters, in plain language. The approach is intended to be
+judged on whether it fits a field, explained in a paper, or
+re-implemented in another stack. The code follows this document, not the
 other way around.
 
 In one sentence: hybrid retrieval over a single Postgres database, a
@@ -29,7 +29,7 @@ Every choice below traces back to one of those three.
 
 Text, chunks, embeddings, full-text indexes, the knowledge graph, and licensing metadata all live in a single PostgreSQL database with the pgvector extension. There is no separate vector store and no graph database.
 
-A dedicated graph database is faster at deep traversals. This methodology never traverses deeper than two hops (section 6.3), and one database means one backup, one migration story, one access-control surface, and transactional consistency between a chunk and its graph entries. The seams are visible if a corpus outgrows this architecture (millions of chunks), but do not pay the operational cost before you need it.
+A dedicated graph database is faster at deep traversals. This methodology never traverses deeper than two hops (section 6.3), and one database means one backup, one migration story, one access-control surface, and transactional consistency between a chunk and its graph entries. The seams are visible if a corpus outgrows this architecture (millions of chunks), but the operational cost scales only when needed.
 
 ## 3 Ingestion
 
@@ -131,7 +131,7 @@ rules run on every query that reaches the stage.
 
 #### 6.3.1 Extraction
 
-At ingestion time, an LLM extracts entities and typed relationships from each chunk. A **domain ontology you declare** constrains it: entity types and relation types with one-line descriptions, in a YAML file. The extractor drops unknown types and dangling endpoints rather than guessing. Entities are canonical by name. They accumulate evidence pointers (the chunks they came from) and retain surface-form aliases as they appear in the source.
+At ingestion time, an LLM extracts entities and typed relationships from each chunk. The **domain ontology** constrains extraction: entity types and relation types with one-line descriptions, in a YAML file. The extractor drops unknown types and dangling endpoints rather than guessing. Entities are canonical by name. They accumulate evidence pointers (the chunks they came from) and retain surface-form aliases as they appear in the source.
 
 Relationships keep the quoted phrase that stated them and a confidence score: 1.0 for direct statements, 0.7 for strong implications, and 0.4 for cross-sentence inferences. Re-extraction merges aliases and preserves the highest confidence for a typed edge from the same evidence surface. Edges with different document or chunk provenance stay separate; retrieval scope cannot erase otherwise eligible relationship evidence.
 
@@ -143,7 +143,7 @@ Extraction can still fragment one concept across several names. Run `sci-rag gra
 
 At query time, a fast LLM call extracts entity names from the question. The walk follows matching graph entities up to **two hops** in either direction, and the chunks those entities point to re-enter the candidate pool. By default, candidates retain the hop-distance ordering.
 
-The domain profile can set a minimum relationship confidence and rank by the strongest minimum-edge confidence along each path before using hop distance as a tie-breaker. Both are off by default; they must earn their place through the `confidence_weighted` versus `full_deep` ablation (a test that measures their contribution). The graph stage can also expand the represented documents by one resolved citation hop in either direction; this is off by default. It uses only `document_citations` rows whose target resolves to a corpus document and applies the request scope to the neighboring document before chunk ranking. The `with_citations` ablation measures its effect. Unresolved DOI pointers remain visible provenance and never enter retrieval.
+The domain profile can set a minimum relationship confidence and rank by the strongest minimum-edge confidence along each path before using hop distance as a tie-breaker. Both are off by default; they must earn their place through the `confidence_weighted` versus `full_deep` ablation (a test that measures their contribution). The graph stage can also expand the represented documents by one resolved citation hop in either direction; this is off by default. It uses only `document_citations` rows whose target resolves to a corpus document and applies the request scope to the neighboring document before chunk ranking. The `with_citations` ablation measures this effect. Unresolved DOI pointers remain visible provenance and never enter retrieval.
 
 This architecture makes multi-hop questions work. The connecting entity brings its evidence with it even when the question's words do not appear in that text.
 
@@ -181,9 +181,9 @@ candidate several layers agree on beats a candidate one layer loved.
 | community | 0.6 |
 | HyDE | 1.2 |
 
-These defaults have held up in production use. To tune them for your own
+These defaults have held up in production use. To tune them for a specific
 corpus, use the evaluation harness's ablation mode: it reports what each
-layer actually contributes to hit rate before you touch a weight.
+layer actually contributes to hit rate before touching a weight.
 
 ### 6.7 Profiles and degradation
 
@@ -211,7 +211,7 @@ allowed sources, excluded documents. Three rules make it trustworthy:
 2. **An explicitly empty license allowlist means "return nothing".** Fail
    closed, before any embedding call or database query.
 3. **`unknown` is never external-safe.** Only `public` and
-   `open_commercial` belong on surfaces you do not fully control.
+   `open_commercial` belong on publicly accessible surfaces.
 
 Excluded document IDs use the same mechanism, which is also what makes
 evaluation holdouts real (section 9). An excluded document is unreachable
@@ -254,14 +254,14 @@ license class, source bucket, and the retrieval layers that found it. It
 does not prove that the source's method is sound or that the model read it
 correctly; that judgment stays with the reader.
 
-Between retrieval and prompt assembly, sources may be compressed: question-aware summarization of each chunk, dropping any whose relevance falls below a floor. This shortens the prompt without changing which documents are cited. Compression is off in the model default and on for the shipped demo domain. Compression only earns a default where a paired judged-answer evaluation holds every quality dimension while measured prompt tokens fall.
+Between retrieval and prompt assembly, sources may be compressed: question-aware summarization of each chunk, dropping any whose relevance falls below a floor. This shortens the prompt without changing which documents are cited. Compression is off in the model default and on for the shipped demo. Compression only earns a default where a paired judged-answer evaluation holds every quality dimension while measured prompt tokens fall.
 
-The relevance floor decides whether a source is summarized or discarded. A v0.3 floor sweep tested both. At 0.15 and above, groundedness and citation accuracy fall below ceiling: the answer loses evidence it needed. At 0.0, where every source is summarized and none dropped, three paired runs held every dimension while median prompt tokens fell by a quarter. The demo ships at 0.0, and the model default floor matches it. The numbers are on the [benchmarks page](benchmarks.md). To use compression on your own corpus, run that gate there; do not inherit the demo's result. Raising the floor requires running the gate again.
+The relevance floor decides whether a source is summarized or discarded. A v0.3 floor sweep tested both. At 0.15 and above, groundedness and citation accuracy fall below ceiling: the answer loses evidence it needed. At 0.0, where every source is summarized and none dropped, three paired runs held every dimension while median prompt tokens fell by a quarter. The demo ships at 0.0, and the model default floor matches it. The numbers are on the [benchmarks page](benchmarks.md). To use compression on a specific corpus, run that gate; do not inherit the demo's result. Raising the floor requires running the gate again.
 
 ## 9 Evaluation design
 
 * **Ground truth is expert-authored.** A seed question holds the question, what a correct answer must say, which documents contain it, and a few distinctive evidence phrases. Ten questions an expert vouches for outweigh a hundred vague ones.
-* **Retrieval metrics are mechanical and transparent.** A retrieved item is relevant if it comes from a reference document or contains an evidence phrase (whitespace and case normalized). The harness computes hit@5, hit@10, and MRR per layer-ablation config, so every layer must earn its fusion weight on your corpus.
+* **Retrieval metrics are mechanical and transparent.** A retrieved item is relevant if it comes from a reference document or contains an evidence phrase (whitespace and case normalized). The harness computes hit@5, hit@10, and MRR per layer-ablation config, so every layer must earn its fusion weight on the specific corpus.
 * **The judge is blind.** Grading happens in two independent passes. The grounding pass sees the question, the answer, and exactly the sources the assistant retrieved. It scores groundedness, citation accuracy, and completeness against those sources only, and it never sees the reference answer. A judge that does see the reference will reward reference-matching answers the sources do not support. The correctness pass compares the answer to the expert reference in a separate call, without the sources. Both run at temperature 0. Scores clamp to a 0-to-2 rubric, and a malformed judge response is a failure, never a coerced score.
 * **Numbers carry their context.** Every report carries a corpus fingerprint (document, chunk, and graph counts, embedding versions, latest ingestion time) and the git commit. A fingerprint documents what corpus state produced that result.
 * **Honesty probes.** Questions tagged `unanswerable` sit outside the retrieval metrics. They check that the system admits gaps instead of inventing answers.
@@ -274,11 +274,11 @@ Kept out deliberately, with the seams left visible:
   `src/sci_rag/retrieve/rerank.py` ships a `Reranker` protocol with an
   LLM adapter (default, zero new dependencies) and a local
   cross-encoder adapter behind the `rerank` extra. It stays **off** until
-  the `with_rerank` versus `no_rerank` ablation justifies it on your
+  the `with_rerank` versus `no_rerank` ablation justifies it on the
   corpus. GCP users can implement the same protocol against the Vertex
   AI Ranking API, meaning the `discoveryengine.googleapis.com` rank
   endpoint. Score the pool, return the reordered items, and point
-  `retrieval.reranker` in `domain.yaml` at your adapter, through a small
+  `retrieval.reranker` in `domain.yaml` at the adapter, through a small
   subclass of the retriever or a fork of `build_reranker`.
 * **Hierarchical communities** (communities of communities) for very
   large graphs.

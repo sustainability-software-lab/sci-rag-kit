@@ -5,9 +5,7 @@ description: Back up, restore, snapshot, delete, garbage-collect, and re-embed a
 
 # Operate a live corpus
 
-Everything the kit knows lives in one Postgres database, which keeps the
-operational discipline short. Snapshot what the corpus **is**, back up what
-the database **holds**, and rehearse the restore before you need it.
+Everything the kit knows lives in one Postgres database, which keeps operational discipline short. Snapshot what the corpus **is**, back up what the database **holds**, and rehearse the restore before it is needed.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A backup, a restore drill, and a snapshot habit</div>
@@ -39,12 +37,8 @@ address to Crossref's polite pool, rate limits requests, retries 429 and 5xx
 responses, and records failures per document. A later run skips metadata
 refreshed in the last 30 days.
 
-The command stores citation count, journal, normalized reference DOIs,
-enrichment time, and explicit
-Crossref retraction assertions in `documents.extra`, while also promoting
-journal to its indexed column. Both current `updated-by` responses and the
-`update-to` shape used by Retraction Watch records are recognized. The kit
-does not infer retraction from titles or missing fields.
+The command records citation count, journal, normalized reference DOIs,
+enrichment time, and explicit Crossref retraction assertions in `documents.extra`, while promoting journal to its indexed column. Both current `updated-by` responses and the `update-to` shape used by Retraction Watch records are recognized. The kit does not infer retraction from titles or missing fields.
 
 Preview the corpus-local citation reconciliation, then apply it:
 
@@ -53,16 +47,9 @@ uv run sci-rag graph citations --dry-run
 uv run sci-rag graph citations --apply
 ```
 
-Resolved rows connect two present corpus documents. References whose DOI is
-not yet in the corpus stay as null-target pointers and resolve on a later run
-after that document is ingested. Self-references and duplicate DOI references
-do not become edges. `corpus delete` cascades affected pointers, while
-`sci-rag graph gc` reports and removes any dangling rows found defensively.
+Resolved rows connect two present corpus documents. References whose DOI is not yet in the corpus stay as null-target pointers and resolve on a later run after that document is ingested. Self-references and duplicate DOI references do not become edges. `corpus delete` cascades affected pointers, while `sci-rag graph gc` reports and removes any dangling rows defensively.
 
-Run `uv run sci-rag doctor` afterwards. A retraction warning gives the known
-count. Answering excludes those documents by default, while raw retrieval
-does not change. Review the flagged records and use `sci-rag corpus delete`
-when they should leave the corpus.
+After completing citation reconciliation, run `uv run sci-rag doctor`. A retraction warning gives the known count. Answering excludes those documents by default, while raw retrieval does not change. Review flagged records and use `sci-rag corpus delete` when they should leave the corpus.
 
 ## Corpus snapshots (identity, not backup)
 
@@ -114,19 +101,11 @@ source and every chunk you have ingested, so for a private corpus the file is
 the corpus. Writing it into the repository root, as this page used to, left it
 one `git add .` away from being published.
 
-Keep only working copies there. Anything you intend to retain belongs
-encrypted, on a destination the repository cannot reach, under whatever
-retention your corpus licenses require. Credentials and Terraform state are a
-separate problem with a separate answer; a database dump does not contain
-them.
+Keep only working copies there. Valuable data belongs encrypted, on a destination the repository cannot reach, under whatever retention the corpus licenses require. Credentials and Terraform state are a separate problem with a separate answer; a database dump does not contain them.
 
-Reading the URL out of the file keeps the password out of your shell history,
-which typing it would not. If the URL carries `?passfile=`, as the Cloud SQL
-helper writes it, the password stays out of the command line as well.
+Reading the URL from the file keeps the password out of the shell history. If the URL carries `?passfile=`, as the Cloud SQL helper writes it, the password stays off the command line as well.
 
-If your database is not configured through `.env`, set the same name by hand
-and let libpq find the password in `~/.pgpass` instead of putting it in the
-URL:
+If the database is not configured through `.env`, set the connection URL and let libpq find the password in `~/.pgpass` instead:
 
 ```bash
 SCI_RAG_DATABASE_URL_SYNC='postgresql://sci_rag@localhost:5433/sci_rag'
@@ -186,9 +165,7 @@ SCI_RAG_DATABASE_URL=... uv run sci-rag corpus snapshot restore-check
 # digest in the snapshot taken when the backup was made.
 ```
 
-Cloud SQL restores follow the console or
-`gcloud sql backups restore`; run the same doctor + snapshot-digest
-verification afterwards.
+Cloud SQL restores follow the console or `gcloud sql backups restore`; run the same doctor + snapshot-digest verification afterwards.
 
 ## Analytical export
 
@@ -249,8 +226,7 @@ stage, and this replays the seed questions and aggregates those traces into
 p50/p95 per stage, per profile, plus a one-line verdict naming the slowest
 stage and what `auto` routed to.
 
-Two things about the numbers are easy to misread, so the command says both out
-loud rather than leaving them to you:
+Two aspects of the numbers are easy to misread, so the command states both explicitly:
 
 * **The stage column does not sum to the request time.** Candidate generators
   run concurrently, so a request is roughly as slow as its slowest stage, not
@@ -283,9 +259,7 @@ its place; the profiler only tells you what it costs.
 <div class="srag-checkpoint" markdown>
 **Checkpoint: the restore actually works**
 
-You have run the drill at least once: dump, restore into a scratch database,
-`sci-rag doctor` clean, and a corpus digest that matches the snapshot you took
-before the dump. Know whether your restore procedure works before you need it.
+The drill has been run at least once: dump, restore into a scratch database, `sci-rag doctor` clean, and a corpus digest that matches the snapshot taken before the dump. The restore procedure must be verified before it is needed.
 </div>
 
 ## Next steps

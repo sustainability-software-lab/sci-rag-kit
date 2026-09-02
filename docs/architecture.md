@@ -58,7 +58,7 @@ Package by package (`src/sci_rag/`):
 | `retrieve` | five stages, RRF fusion, scope, the orchestrator | `Retriever.retrieve()` |
 | `answer` | optional snippet compression, prompt assembly, citations, streaming events | `AnswerEngine.answer_stream()` |
 | `evals` | seed questions, metrics, ablations, blind judge, reports | `run_retrieval_eval()`, `run_answer_eval()` |
-| `draft` | model-drafted domain files, grounded in your own documents and verified in Python before anything is written | `draft_questions()`, `sample_corpus()` |
+| `draft` | model-drafted domain files, grounded in the corpus and verified in Python before anything is written | `draft_questions()`, `sample_corpus()` |
 | `server` | FastAPI app, auth, schemas, MCP server | `create_app()`, `build_mcp_server()` |
 | `cli` | Typer commands wiring it all together | `sci-rag ...` |
 
@@ -106,7 +106,7 @@ Five tables, one database:
 
 * `documents`: source identity, citation metadata, license class, content hash (unique; the dedup backstop), and sparse Crossref enrichment including explicit retraction status.
 * `chunks`: the retrieval unit. Text, token count, section path, `is_table`, a pgvector embedding (HNSW indexed) with its `embedding_version`, a generated `search_tsv` full-text column (GIN indexed), and `graph_extracted_at`. NULL means the graph builder has not seen it yet; this is how incremental extraction finds work.
-* `kg_entities`: canonical by name; type from your ontology; retained source aliases; evidence pointers (`chunk_ids`, `document_ids`).
+* `kg_entities`: canonical by name; type from the ontology; retained source aliases; evidence pointers (`chunk_ids`, `document_ids`).
 * `kg_relationships`: directed typed edges with the quoted evidence phrase, its chunk, and calibrated confidence (1.0 for direct statements, 0.7 for strong implications, 0.4 for cross-sentence inferences). Repeated extraction preserves the highest observed confidence for the typed edge on each document and chunk evidence surface.
 * `kg_communities`: cluster membership, an LLM summary, and the summary's embedding.
 
@@ -157,7 +157,7 @@ The first four rows are configuration and data. Most projects never leave them.
 2. **A new corpus collector** (S3, an API): produce `CorpusEntry` rows; nothing downstream changes.
 3. **A reranker**: implement the `Reranker` protocol and add an ablation config so the adapter must prove itself.
 4. **A different embedding or LLM provider**: implement the two-method `EmbeddingProvider` / `LLMClient` interfaces. Stamp a distinct `version` so re-embedding stays findable.
-5. **A different auth backend**: implement `AuthBackend` (authenticate + rate check) and wire it into your application factory. The shipped `create_app()` selects open or static-key mode from settings.
+5. **A different auth backend**: implement `AuthBackend` (authenticate + rate check) and wire it into the application factory. The shipped `create_app()` selects open or static-key mode from settings.
 
 ## What is deliberately absent
 

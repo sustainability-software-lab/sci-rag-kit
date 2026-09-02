@@ -34,7 +34,7 @@ These definitions describe how this project uses each term. Each is narrower tha
 : The limits a caller puts on a request before ranking: license classes, source labels, publication years, authors, journals, excluded DOIs, and retracted papers. Every layer applies the scope inside its own query.
 
 **Reranker**
-: An optional second pass that reads the question and the candidate passages and reorders them. Off by default until an evaluation on your corpus shows it helps.
+: An optional second pass that reads the question and the candidate passages and reorders them. Off by default until an evaluation on the corpus shows it helps.
 
 **Stage trace**
 : What each layer reported for a request: its status (success, empty, disabled, skipped, timeout, or error), its duration, and how many candidates it returned. Traces carry no query or passage text, so they are safe to log.
@@ -42,10 +42,10 @@ These definitions describe how this project uses each term. Each is narrower tha
 ## Graph and corpus
 
 **Ontology**
-: The kinds of things in your field (entity types) and how they relate (relation types), declared in `domain/domain.yaml`. The graph builder extracts only what the ontology declares.
+: The kinds of things in a field (entity types) and how they relate (relation types), declared in `domain/domain.yaml`. The graph builder extracts only what the ontology declares.
 
 **Entity**
-: A named concept the builder found in your documents, of one of your entity types, with the surface forms it appeared under and pointers to the chunks that mention it.
+: A named concept the builder found in the documents, of one of the entity types declared in the ontology, with the surface forms it appeared under and pointers to the chunks that mention it.
 
 **Knowledge graph**
 : Entities and the typed, directed relationships between them, stored as ordinary Postgres rows. Each relationship keeps the quoted phrase that stated it and a confidence score.
@@ -86,7 +86,7 @@ These definitions describe how this project uses each term. Each is narrower tha
 : A seed question tagged `unanswerable` because the corpus does not answer it. It checks that the system says so rather than inventing an answer.
 
 **Ablation**
-: Scoring retrieval with one layer switched off at a time, to measure what each layer contributes on your corpus.
+: Scoring retrieval with one layer switched off at a time, to measure what each layer contributes on the corpus.
 
 **hit@k and MRR**
 : hit@k is the share of questions with at least one relevant passage in the top k results. MRR (mean reciprocal rank) averages 1 divided by the rank of the first relevant passage.

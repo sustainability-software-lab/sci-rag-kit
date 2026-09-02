@@ -93,8 +93,8 @@ generate projects from the wrong commit.
 ### One-time setup, by a maintainer
 
 The workflow uses [Trusted Publishing](https://docs.pypi.org/trusted-publishers/)
-(OIDC), so the repository stores no API token to leak or rotate. You
-establish that trust once per index, by hand. CI cannot do it for you:
+(OIDC), so the repository stores no API token to leak or rotate. Trust is
+established once per index, by hand. CI cannot do this automatically:
 
 1. Reserve `sci-rag-kit` on [PyPI](https://pypi.org/) and on
    [TestPyPI](https://test.pypi.org/). They are separate accounts and
@@ -106,8 +106,8 @@ establish that trust once per index, by hand. CI cannot do it for you:
    - Environment: `pypi` on PyPI, `testpypi` on TestPyPI
 3. Create the matching GitHub environments (`pypi`, `testpypi`) in the
    repository settings. Put a required reviewer on `pypi` for the first
-   release; that turns the final publish into a decision you make rather
-   than one a tag push makes for you.
+   release; that turns the final publish into a maintainer decision rather
+   than an automatic one triggered by a tag push.
 4. Verify end to end before approving the PyPI publish, from a clean
    directory. Install the TestPyPI **artifact by URL** and let dependencies
    resolve from real PyPI:
@@ -124,12 +124,12 @@ establish that trust once per index, by hand. CI cannot do it for you:
    placeholder and name-squatted packages, and any resolver told to consider
    both may prefer a fake `fastapi 1.0` from TestPyPI over the real
    one. Installing the single artifact by URL sidesteps that entirely: it
-   tests the thing you built, with the dependencies your users will get.
+   tests the built artifact, with the dependencies end users will get.
 
    What to check before approving: both entry points run,
    `sci_rag.__version__` matches the tag, and `sci-rag new --defaults` produces
    a project. The generation command is the only check that exercises the
-   GitHub tag fetch, which is the part a PyPI upload cannot tell you about. The
+   GitHub tag fetch, which is what a PyPI upload cannot verify. The
    separate help command confirms the legacy executable remains available as a
    compatibility alias.
 
