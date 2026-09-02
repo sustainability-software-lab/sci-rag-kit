@@ -5,7 +5,7 @@ description: Back up, restore, snapshot, delete, garbage-collect, and re-embed a
 
 # Operate a live corpus
 
-Everything the kit knows lives in one Postgres database, which keeps operational discipline simple. Snapshot what the corpus **is**, back up what the database **holds**, and rehearse restore before the moment you need it.
+Everything the kit knows lives in one Postgres database. Snapshot what the corpus **is**, back up what the database **holds**, and rehearse restore before the moment you need it.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A backup, a restore drill, and a snapshot habit</div>

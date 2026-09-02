@@ -24,7 +24,7 @@ A campaign turns a research topic or a seed DOI file into a reproducible list of
 | A topic phrase or a file of DOIs | The two ways to start a campaign | |
 | Network access | Every step here talks to an external index | |
 
-Campaigns never make rights decisions for you. Discovery produces candidates and an explicit open-access signal from Unpaywall. Anything unestablished stays `unknown`, and retrieval treats unknown as unsafe, which is correct.
+Campaigns never make rights decisions for you. Discovery produces candidates and an explicit open-access signal from Unpaywall. Anything unestablished stays `unknown`, and retrieval treats unknown as unsafe.
 
 ## Discover from a topic
 
@@ -67,7 +67,7 @@ malformed upstream records, so none of them disappears silently.
 
 Campaign state lives in `data/campaigns/<name>/state.jsonl`. The run appends each completed DOI step to disk. Repeat the command and it skips records already present, so you can resume. If the process dies mid-write, the next run ignores only the truncated tail and continues appending safely.
 
-OpenAlex and Crossref calls are rate-limited. The client sends your contact address in both the query and User-Agent, retries 429 and 5xx with bounded backoff, and fails visibly when retries exhaust. An empty success report never happens.
+OpenAlex and Crossref calls are rate-limited. The client sends your contact address in both the query and User-Agent, retries 429 and 5xx with bounded backoff, and fails when retries exhaust. An empty success report never happens.
 
 Discovery metadata tells you the document exists, not whether you can redistribute it. Resolve rights before you download:
 
@@ -95,7 +95,7 @@ Availability and redistribution rights are different signals. Unpaywall marking 
 | CC BY-NC family | `open_noncommercial` |
 | Missing, `implied-oa`, publisher-specific, or unrecognized | `unknown` |
 
-The mapping never infers a license from `oa_status`, a working URL, or a PDF response. `unknown` is the intentional safe default when rights are unclear.
+The mapping never infers a license from `oa_status`, a working URL, or a PDF response. `unknown` is the safe default when rights are unclear.
 
 ## Download and ingest
 

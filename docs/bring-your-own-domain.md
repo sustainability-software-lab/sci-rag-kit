@@ -174,7 +174,7 @@ relation_types:
 Three rules for choosing well:
 
 - Use 6 to 15 entity types. With fewer, the graph blurs distinct concepts together; with more, extraction becomes inconsistent. Ask what column headings an expert would use to organize a spreadsheet of the field's facts.
-- Write each description as a prompt. The extraction model sees it verbatim, and concrete examples in parentheses do more than abstract phrasing.
+- Write each description as a prompt; the extraction model sees it verbatim. Concrete examples in parentheses guide better than abstract phrasing.
 - Make each relation read as a sentence: "polyamide SUFFERS_FROM chlorine degradation".
 
 Update `query_classes` in the same file: 3 to 5 kinds of question users ask, each with a few trigger keywords and a one-line instruction for how an answering passage would read. These steer the retrieval layer that writes a hypothetical answer and searches for text that resembles it.

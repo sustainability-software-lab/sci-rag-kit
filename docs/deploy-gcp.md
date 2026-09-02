@@ -88,7 +88,7 @@ What you get:
 
 * The database is reachable only through the Cloud SQL connector (mounted as a Unix socket), never via open TCP.
 * The runtime service account holds `cloudsql.client`, `aiplatform.user`, and read access to two secrets.
-* Send API keys as `X-API-Key: <key>`. Cloud Run's frontend claims `Authorization: Bearer` for its own identity tokens, so use the alternate header.
+* Send API keys as `X-API-Key: <key>`. Cloud Run reserves `Authorization: Bearer` for its own identity tokens, so use the alternate header.
 * The Cloud Run service is private by default. Pass `-var allow_unauthenticated=true` to make API keys the only gate.
 
 ## Step 3: migrate, then ingest

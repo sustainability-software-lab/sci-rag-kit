@@ -77,7 +77,7 @@ class Reranker(Protocol):
     ) -> list[RetrievedItem]: ...
 ```
 
-The orchestrator passes a wider fused pool and expects a reordered, truncated list. Any exception must leave a visible rerank trace and fall back to the fused order. Add the adapter selection to the domain tuning model only if users need to configure it.
+The orchestrator passes a wider fused pool and expects a reordered, truncated list. Any exception must record the failure in the trace and revert to the fused order. Add the adapter selection to the domain tuning model only if users need to configure it.
 
 Do not enable a new reranker by default. Run `sci-rag eval retrieval --ablation` with and without it on your corpus, including latency and confidence intervals.
 
@@ -95,7 +95,7 @@ class EmbeddingProvider(ABC):
     ) -> list[list[float]]: ...
 ```
 
-Stamp a provider-specific version that changes when stored vectors become incompatible. Assert every returned dimension. Distinguish document and query tasks where the model supports asymmetric embeddings. Normalize vectors if the provider's reduced dimensions require it.
+Assign a provider-specific version that changes when stored vectors become incompatible. Assert every returned dimension. Distinguish document and query tasks where the model supports asymmetric embeddings. Normalize vectors if the provider's reduced dimensions require it.
 
 An LLM client implements full generation and streaming. JSON consumers call the shared `generate_json()` helper, which requests deterministic JSON mode and strips a surrounding code fence.
 

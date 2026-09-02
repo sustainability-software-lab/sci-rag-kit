@@ -18,12 +18,10 @@ hide:
 
 <div class="srag-home-masthead__lede" markdown>
 
-A project template for question answering over scientific documents. Give
-the kit a folder of papers and reports and it builds a knowledge base from
-them: every passage indexed three ways, a graph of the concepts they mention,
-and answers that quote the exact passages they rest on. The pipeline comes
-assembled and measured. What a project brings is the documents, the
-vocabulary of its field, and a handful of questions with known answers.
+A project template for scientific question answering. Give it papers and
+reports and it builds a knowledge base: passages indexed three ways, a
+concept graph, and answers that cite the exact passages they rest on.
+Bring the documents, the field vocabulary, and test questions.
 
 </div>
 
@@ -121,12 +119,11 @@ than by impression. [Evaluate your pipeline](evaluation.md).
 
 <section class="srag-home-section" id="repository" markdown>
 
-## Configure, do not code
+## Repository layout
 
-Pointing the kit at a new field means editing configuration files, never
-Python. The concepts of the field, the wording of the prompts, and the
-questions used for scoring all live in plain text, and the pipeline reads
-them at run time.
+Pointing the kit at a new field means editing configuration files, not
+Python. The field's concepts, prompt wording, and test questions all live
+in plain text; the pipeline reads them at run time.
 
 <!-- BEGIN KIT ONBOARDING -->
 `pipx install sci-rag-kit` installs the kit. `sci-rag new` then fills in the
