@@ -139,7 +139,7 @@ is the pipeline, and most projects never open it.
 ├── infra/terraform/  optional Google Cloud deployment
 └── docs/             this site</code></pre>
 
-[Full Project Structure](get-started.md#full-project-structure) · [Bring your own domain](bring-your-own-domain.md)
+[Project structure](get-started.md#project-structure) · [Bring your own domain](bring-your-own-domain.md)
 
 </section>
 

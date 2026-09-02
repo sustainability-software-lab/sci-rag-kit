@@ -149,7 +149,7 @@ def test_homepage_uses_the_requested_plain_language() -> None:
     assert "provides a blueprint for scientific RAG development" in homepage
     assert "Fully\nextensible and ready to serve over API and MCP." in homepage
     assert "## Configure around your domain" in homepage
-    assert "[Full Project Structure](get-started.md#full-project-structure)" in homepage
+    assert "[Project structure](get-started.md#project-structure)" in homepage
     assert "## Configure, do not code" not in homepage
     assert (
         "<figcaption>End-to-end RAG architecture that ships with Sci RAG Kit.</figcaption>"
