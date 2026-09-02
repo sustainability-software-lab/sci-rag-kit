@@ -5,11 +5,11 @@ description: Look up authentication scopes, endpoint shapes, streaming events, a
 
 # REST, MCP, and Python API
 
-One server, two front doors, one service behind both. Start with `sci-rag serve`. Interactive OpenAPI docs live at `/docs`.
+Run `sci-rag serve` to expose the REST and MCP interfaces backed by the shared service. Interactive OpenAPI documentation is available at `/docs`.
 
 ## Authentication
 
-Send `Authorization: Bearer <key>`, or `X-API-Key: <key>` when something upstream claims the first header. Cloud Run is the case that matters: its frontend inspects `Authorization: Bearer` for its own identity tokens, before the container sees the request. On a deployed service, use the second header. `Authorization` wins when both are sent.
+Send `Authorization: Bearer <key>`. If an upstream service claims that header, send `X-API-Key: <key>` instead. Cloud Run's frontend inspects `Authorization: Bearer` for its own identity tokens before the container receives the request, so deployed Cloud Run clients use `X-API-Key`. `Authorization` wins when both are sent.
 
 The operator configures keys as a JSON map in `SCI_RAG_API_KEYS`:
 
@@ -37,7 +37,9 @@ Every error is RFC 9457 `application/problem+json` with a stable `code` and requ
  "status": 401, "code": "invalid_key", "detail": "", "request_id": "9f2c..."}
 ```
 
-The same ID comes back in the `X-Request-ID` response header on every response. Send one in the request header to have it echoed. Quote it when asking an operator to find the call in logs. A `500` never carries the exception message, query, or chunk text. It names the exception type and points to the logs.
+The same ID appears in the `X-Request-ID` response header. Send an ID in the request header to have it echoed, and quote it when asking an operator to find the call in logs.
+
+A `500` never carries the exception message, query, or chunk text. It names the exception type and points to the logs.
 
 Codes you can branch on:
 
@@ -90,11 +92,11 @@ curl -s -X POST localhost:8000/v1/query \
        "exclude_dois": ["10.1016/j.biombioe.2019.00000"]}'
 ```
 
-They are enforced inside every layer's SQL, before ranking, like the license scope. An out-of-range document can never crowd an eligible one out of a bounded pool. `authors` and `journals` match whole strings, not substrings.
+Every layer enforces these filters in SQL before ranking, as it does license scope. An out-of-range document cannot displace an eligible one from a bounded pool. `authors` and `journals` match whole strings, not substrings.
 
 Any filter disables the community layer. A stored community summary aggregates evidence across documents before your scope is known, so nothing can filter it after the fact. The `community` trace reads `skipped` when this happens. `journal` comes directly from your manifest or refreshed from Crossref metadata with `sci-rag corpus enrich`.
 
-The response carries three things: `items`, `traces`, and `degraded_stages`. Each item has a title, section path, citation, license class, fused score, and a `layers` field. Each trace has a per-stage status and timing. If something times out, you will know exactly what.
+The response contains `items`, `traces`, and `degraded_stages`. Each item has a title, section path, citation, license class, fused score, and `layers`. Each trace records the stage status and timing, including visible timeout information.
 
 ### POST /v1/answer
 
@@ -125,7 +127,7 @@ Set `include_compression` to `true` or `false` to override the domain's `compres
 
 Failed, malformed, empty, duplicate, or over-budget model output falls back to the complete chunk and increments `compression_failure_count`. Evidence is never silently removed. Citations always keep the original document and chunk identity.
 
-Known retracted documents are excluded from answers by default. The flag comes from explicit Crossref metadata written by `sci-rag corpus enrich`. Missing enrichment does not imply retracted. Raw `/v1/query` retrieval keeps its previous behavior. The CLI has `sci-rag answer --include-retracted` for the rare case where an operator needs retracted evidence in an answer.
+Known retracted documents are excluded from answers by default. The flag comes from explicit Crossref metadata written by `sci-rag corpus enrich`; missing enrichment does not imply retraction. Raw `/v1/query` retrieval keeps its previous behavior. To include retracted evidence when needed, use `sci-rag answer --include-retracted`.
 
 **Bring your own key.** A request may include `llm_api_key` (an AI Studio key) if the API key holds the `byo_llm` scope. Operators can also bind an LLM key to an API key server-side. Either way, the credential is used for that call only and never stored or logged.
 
@@ -139,7 +141,7 @@ The corpus catalog (scope `corpus:read`): paginated summaries with title, source
 
 ## MCP
 
-Capabilities as tools for agents. Two transports:
+MCP exposes the corpus to agents through two transports:
 
 * **stdio** (local agents): `sci-rag mcp`, or register with `claude mcp add my-corpus -- uv run --directory /path/to/repo sci-rag mcp`
 * **HTTP** (remote agents): `POST /mcp/` on the running server, guarded by bearer keys (scope `retrieval:query`).
@@ -157,22 +159,22 @@ The eight tools:
 | `list_sources()` | learn the corpus's source buckets and license mix |
 | `corpus_stats()` | size and shape; a fast "is this corpus worth querying" check |
 
-Plus two resources: `corpus://manifest` (same payload as REST manifest) and `corpus://methodology` (how retrieval works). Tool descriptions are written for the agent reading them.
+The server also exposes two resources: `corpus://manifest`, with the same payload as the REST manifest, and `corpus://methodology`, which explains retrieval. Tool descriptions are written for the agent that calls them.
 
 ## Generated clients
 
-The running server publishes its schema at `/openapi.json`. A typed client in any language is one generator call away. Two examples:
+The running server publishes its schema at `/openapi.json`. Generate typed clients from that schema, for example:
 
 ```console title="Terminal"
 $ uvx openapi-python-client generate --url http://127.0.0.1:8000/openapi.json
 $ npx openapi-typescript http://127.0.0.1:8000/openapi.json -o sci-rag.d.ts
 ```
 
-The first writes an installable Python package. The second writes a TypeScript type file. Pass the key as `Authorization: Bearer <key>` (or `X-API-Key` behind Cloud Run), exactly as with `curl`. Generated clients add nothing to the authentication contract above.
+The first command writes an installable Python package; the second writes a TypeScript type file. Pass the key as `Authorization: Bearer <key>` or, behind Cloud Run, `X-API-Key`. Generated clients use the same authentication contract as `curl`.
 
 ## Python API
 
-The CLI and server wrap importable pieces. The same capabilities work in notebooks and custom applications. The package ships type information (`py.typed`).
+The CLI and server wrap importable components that also work in notebooks and custom applications. The package ships type information in `py.typed`.
 
 ```python
 from sci_rag import Retriever, AnswerEngine, RetrievalScope

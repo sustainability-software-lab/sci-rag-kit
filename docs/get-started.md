@@ -5,7 +5,10 @@ description: Install Sci RAG Kit, run the demo corpus, then bring in a corpus of
 
 # Get started
 
-The kit installs with `pipx install sci-rag-kit`, and `sci-rag new` creates a configured project. The three pages below take that project from an empty database to a knowledge base over a corpus of your own. The first reaches a working demo in about ten minutes, with the bundled corpus standing in for real documents. The second replaces the demo with your own documents, which is the point of the exercise. The third is the place to go when a step fails or shows something other than what its page describes.
+Install the kit with `pipx install sci-rag-kit`, then run `sci-rag new` to
+create a configured project. Start with the bundled demo, replace it with your
+own documents, and use the symptom map if a step does not produce the expected
+result.
 
 <div class="srag-rows" markdown>
 
@@ -19,13 +22,28 @@ The kit installs with `pipx install sci-rag-kit`, and `sci-rag new` creates a co
 
 ## What the kit sets up
 
-A knowledge base built with the kit is one Postgres database and one small service, and that is the whole operational footprint. Documents go in as passages, each carrying a vector for search by meaning, an entry in the full-text index for search by exact words, and links into a graph of the concepts it mentions. Questions come out with numbered citations to the passages the answer used, so any claim can be checked against its source. One service answers the command line, a REST API, and agents over MCP. MCP is the Model Context Protocol, the way tools such as Claude Code call external systems, which means an agent can search the corpus and cite it the same way a person at the terminal does.
+A knowledge base uses one Postgres database and one service. Documents become
+passages with vectors for semantic search, full-text entries for keyword
+search, and links to the concepts they mention. With a model credential,
+answers include numbered citations to those passages.
 
-The wizard asks for six setup decisions and the credential value that decision needs. It is fine to choose Offline: ingestion, retrieval, and retrieval scoring all work without a model credential, and the graph and generated answers switch on the moment a credential is added later. The generator configures the live template in place rather than rendering placeholders, so the resulting project is the same tree that is readable on GitHub, with the setup answers written into its configuration files and nothing left to fill in.
+The same service handles the command line, REST, and agents over MCP. MCP is
+the Model Context Protocol used by tools such as Claude Code to call external
+systems. An agent can therefore search and cite the corpus through the same
+service as a person at the terminal.
+
+The wizard asks for six setup decisions and any credential the chosen mode
+requires. For a credential-free first pass, choose Offline; ingestion,
+retrieval, and retrieval scoring still work. Add a credential later to build
+the graph and generate answers.
+
+The generator configures the live template and writes these answers into the
+project files instead of leaving placeholders to fill in.
 
 ## Where things live
 
-Everything specific to a field sits in two folders and one file, and pointing the kit at a new field never means editing Python. The layout below is what `sci-rag new` produces.
+Everything specific to a field sits in two folders and one file. The layout
+below is what `sci-rag new` produces.
 
 <div class="srag-tree">your-project/
 ├── domain/                  the field
@@ -43,15 +61,23 @@ Everything specific to a field sits in two folders and one file, and pointing th
 ├── infra/terraform/         optional Google Cloud deployment
 └── docs/                    this site</div>
 
-`domain/domain.yaml` is the file most projects edit most. It names the kinds of things in the field (entity types such as `Membrane` or `Contaminant`) and how they relate (`REMOVES`, `SUFFERS_FROM`), and the graph builder extracts only what this file declares, which is why a vague ontology produces a thin graph and a precise one produces a useful one. `data/corpus.jsonl` records, for each document, the metadata a citation needs and whether the text may be redistributed. `domain/eval_seed_questions.jsonl` holds the questions every score is computed against; ten good ones an expert will vouch for are worth more than a hundred vague ones.
+`domain/domain.yaml` names the entity types in the field, such as `Membrane`
+or `Contaminant`, and their relationships, such as `REMOVES` or
+`SUFFERS_FROM`. The graph builder extracts only what this file declares.
+`data/corpus.jsonl` records each document's citation metadata and
+redistribution rights. `domain/eval_seed_questions.jsonl` holds the questions
+used for scoring; each one needs expert review.
 
 [Architecture](architecture.md) explains what each package under `src/sci_rag/` owns, for projects that change the pipeline itself.
 
 ## Recommended path
 
-1. Run the [quickstart](quickstart.md). Offline mode gives a credential-free first pass; AI Studio gives the full result.
-2. Follow [Bring your own domain](bring-your-own-domain.md) with 20 to 50 well-understood documents. The drafting commands write the first version of every domain file.
+1. Run the [quickstart](quickstart.md). Offline mode gives a credential-free first pass. AI Studio enables the model-backed steps with the shortest local setup.
+2. Follow [Bring your own domain](bring-your-own-domain.md) with a corpus you can inspect and defend. The drafting commands write the first version of every domain file.
 3. Run [Evaluate your pipeline](evaluation.md) before changing any retrieval setting. Its table shows what each retrieval layer contributes on the corpus at hand.
 4. When the corpus should grow beyond what is on disk, [Run a corpus campaign](campaigns.md) finds papers by topic or DOI list and checks their rights.
 
-Still deciding whether this is the right tool? The [FAQ](faq.md) and [Choosing Sci RAG Kit](choosing-sci-rag-kit.md) answer that. When Postgres, credentials, or parsing get in the way, `uv run sci-rag doctor` names the layer that is missing; run it before guessing.
+Still deciding whether this is the right tool? Read the [FAQ](faq.md) and
+[Choosing Sci RAG Kit](choosing-sci-rag-kit.md). If Postgres, credentials, or
+parsing get in the way, run `uv run sci-rag doctor` before following the
+[symptom map](troubleshooting.md#fast-symptom-map).

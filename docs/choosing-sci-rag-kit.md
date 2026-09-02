@@ -5,52 +5,68 @@ description: Compare Sci RAG Kit against LightRAG, PaperQA2, LlamaIndex, and Mic
 
 # Choosing Sci RAG Kit
 
-Sci RAG Kit is an opinionated, evaluated template that configures into a field's knowledge base. For a library to compose, a managed product, or an agent that reasons over the literature per question, the systems below fit better. This page says which.
+Choose Sci RAG Kit when you want to own a complete scientific RAG application without selecting
+every storage, retrieval, evaluation, and serving component yourself. Choose a framework or
+purpose-built research agent when you need to assemble those parts differently. The [FAQ](faq.md)
+answers the shorter questions about fit and design choices.
 
-No cross-system benchmark scores appear here. Numbers measured on different corpora are not comparable. Our own numbers are on the [benchmarks page](benchmarks.md), measured on our demo corpus with confidence intervals and a reproduction command.
+Cross-system benchmark scores do not appear here because results measured on different corpora are
+not comparable. The kit's [benchmarks](benchmarks.md) cover its synthetic demo corpus and state the
+provenance and uncertainty of those runs.
 
 ## The landscape
 
-These readings were last checked as of 2026-08-28. Another project's status is the claim on this page most likely to go stale, so it carries a date.
+The external project descriptions below were checked against their primary repositories as of
+2026-09-02.
 
-**Microsoft GraphRAG** established the pattern this space builds on: entity extraction, communities, global/local search. Its papers remain the reference reading. The project is in maintenance mode per the README. Bug fixes and CVE updates continue, but not new features. The releases match: v3.1.2 in August 2026, with earlier releases consisting of dependency updates. It is good for study and a considered choice for a new deployment that expects the feature set to grow.
+| System | What it provides | Choose it when |
+|---|---|---|
+| **Sci RAG Kit** | A repository template with Postgres storage, scoped hybrid retrieval, evaluation, REST, and MCP already wired together | You want a scientific knowledge base with explicit rights and evaluation contracts, and you can operate Postgres |
+| [**Microsoft GraphRAG**](https://github.com/microsoft/graphrag/blob/f40e9a26ce62ba0b3fef8837d24aafdcc6e6c704/README.md) | A research implementation of graph-based indexing and local/global search | You are studying the GraphRAG methodology or its current feature set already fits |
+| [**LightRAG**](https://github.com/HKUDS/LightRAG/blob/c1248646e4eda4d89054926af2e094730daf23fe/README.md) | A graph-enhanced RAG package with several query modes and storage choices, including PostgreSQL | You want to configure the retrieval and storage stack around a general GraphRAG implementation |
+| [**PaperQA2**](https://github.com/Future-House/paper-qa/blob/57e89f7223b0960d5ee5ea048c69e3c47e088572/README.md) | A package focused on scientific literature, with an agent that can search, gather evidence, and refine a query before answering | You want iterative work per question and accept the model calls and latency that workflow requires |
+| [**LlamaIndex**](https://github.com/run-llama/llama_index/blob/857efcf7306d81814f790c76eaa079db25ca9523/README.md) | A framework for agentic applications with a core package and separate integrations for models, embeddings, data sources, and stores | You want to compose those components and own the resulting application architecture |
 
-**LightRAG** is the most active general-purpose GraphRAG library. It offers incremental insert/delete, dual-level retrieval, multiple storage backends including Postgres, and a large community. It is a **library** to build an application around, not a ready-made application. For writing application code and making architectural calls, LightRAG is the strongest general choice. Some of its ideas, such as per-document extraction caching, are on our roadmap, credited.
+Microsoft states that GraphRAG is [largely in maintenance
+mode](https://github.com/microsoft/graphrag/blob/f40e9a26ce62ba0b3fef8837d24aafdcc6e6c704/README.md#L3-L4):
+bug and dependency fixes continue, but the project does not plan new features or accept new pull
+requests. The repository also describes the code as a research demonstration, not an officially
+supported Microsoft product. A team that expects new upstream capabilities should choose an active
+project or plan to maintain its own fork.
 
-**PaperQA2** owns agentic scientific literature QA: multi-step retrieve-summarize-answer loops over papers, with strong published results on literature tasks. It is an agent with per-query LLM loops (costs and latency to match), not an infrastructure template. For "answer this hard question from the literature, take your time," pick PaperQA2. Its evidence-summarization pattern shipped here in v0.3 as contextual snippet compression and cleared the paired judged-answer gate at a relevance floor of 0.0.
+## What Sci RAG Kit decides for you
 
-**LlamaIndex (+ Neo4j)** offers every RAG pattern and every store. The tradeoff is that the builder becomes the architect. Chunking, graph store, evaluation, and serving are decisions the team makes and owns. Teams with strong LLM-engineering capacity build good systems this way. Teams whose job is the science usually want those decisions made once, well, and defensibly.
+`pipx install sci-rag-kit` followed by `sci-rag new` creates a configured project. `sci-rag init`
+configures an existing checkout. Both routes produce a repository you own and can modify.
 
-## What sci-rag-kit is
-
-A GitHub template repository. Run `pipx install sci-rag-kit` then `sci-rag new` writes a configured project; `sci-rag init` configures a checkout you already have. What you get is a running, served, evaluated knowledge base. The [quickstart](quickstart.md) is the walkthrough. The [FAQ](faq.md) covers who it is for and why each decision went the way it did. The [decision records](adr/0001-graph-in-postgres.md) hold the full arguments.
-
-The bets it makes for you, and when to choose differently:
+The kit fixes several architectural choices so a project can start with one coherent system. The
+same choices define when another shape fits better.
 
 | Axis | The kit's position | Choose differently if |
 |------|--------------------|----------------------|
-| Shape | Template repo you own and modify; one Python package, no plugin layer between you and it | You want a pip-installable framework with a plugin ecosystem (LlamaIndex, LightRAG) |
-| Storage | One Postgres database (pgvector + full-text + graph-as-rows); no second system to operate | Your graph needs >10M edges or dedicated graph algorithms (then a graph database earns its ops cost) |
+| Shape | Template repository you own and modify; one Python package and no plugin layer | You want to assemble an application from framework integrations |
+| Storage | One Postgres database for text, vectors, full-text search, and graph rows | You need deep graph traversal, centrality, or path analytics in the live query path |
 | Corpus building | Discovery from a topic or DOI list, open-access rights resolved per paper, verified PDF download, abstract screening with a human review queue | You already have the documents and their rights, and want nothing between you and ingestion |
 | Graph | Ontology-constrained extraction, reviewable entity resolution with an audit row per merge, and citation traversal over resolved DOI edges | You want an unconstrained graph and will do the disambiguation downstream |
-| Evaluation | Built in: test questions, per-layer scores, confidence intervals, a two-pass grader, calibration against human labels, report diffing; the harness is citable in a methods section | You will not run an evaluation; then any framework is fine |
+| Evaluation | Test questions, per-layer scores, confidence intervals, a two-pass grader, calibration against human labels, and report diffing | You already have an evaluation system and do not want the template's report contract |
 | License governance | License classes enforced inside every layer's query, before ranking; built for corpora with mixed rights | Everything you index is uniformly licensed and served to one audience |
-| Model wiring | Gemini, Claude, and any OpenAI-compatible endpoint, chosen per role, so the model that answers need not be the model that grades | You want an embedding provider you can swap too; here that is a data migration (see the concessions) |
-| Serving | REST + MCP from one FastAPI service; agents are first-class consumers | You need a hosted, managed product with an SLA (this is self-hosted infrastructure) |
-| Retrieval philosophy | Five merged layers and a router, with no per-question agent loop, so latency and cost are predictable | You want multi-step agentic answering per question (PaperQA2) |
+| Model wiring | Google embeddings; Gemini, Claude, or an OpenAI-compatible endpoint for each generation role | You need to switch embedding providers without a migration and full re-embed |
+| Serving | REST and MCP from one FastAPI service | You need a hosted service with a vendor-operated SLA |
+| Retrieval | Up to five fused layers, selected by a profile and router, with no per-question agent loop | You want an agent to search and refine evidence iteratively for each question |
 
 ## The concessions
 
-- **No agent loop.** Cost per question is predictable because the kit does one retrieval and one generation per question. For multi-step reasoning, use PaperQA2 or add an agent on top of the kit's API.
+- **No agent loop.** A question runs through one retrieval pipeline and answer generation. For
+  iterative searching and evidence gathering, use PaperQA2 or put an agent above the kit's API.
 - **Postgres only.** One database is the point. The kit will not grow a storage abstraction layer.
-- **Embeddings are Google-only.** Generation is not: the `google`, `anthropic`, and `openai-compatible` adapters cover Claude, Grok, Llama, Mistral, DeepSeek, OpenAI, and self-hosted vLLM or Ollama servers, selected per role. Changing the embedder requires a migration, a full re-embed, and an index rebuild (a data migration rather than a setting). See [ADR 0006](adr/0006-multi-provider-llms.md).
-- **Features stay off until a measurement on the corpus turns them on.** Answer compression is on for the demo because its paired evaluation held at a relevance floor of 0.0 and failed at 0.15 and 0.3; [benchmarks.md](benchmarks.md) publishes those runs. Reranking is off until an evaluation justifies it.
+- **Embeddings are Google-only.** Generation can use the `google`, `anthropic`, or
+  `openai-compatible` adapter. Changing the embedder requires a migration, full re-embed, and index
+  rebuild. [ADR 0006](adr/0006-multi-provider-llms.md) explains the boundary.
+- **Corpus-specific features need corpus-specific evidence.** The demo enables answer compression
+  at a relevance floor of 0.0 because its paired evaluation passed there and failed at 0.15 and 0.3.
+  Reranking remains off by default. The [benchmarks](benchmarks.md) publish those runs.
 - **Early stage.** 0.x, a small community, and no external deployments yet. [VERSIONING.md](VERSIONING.md) states exactly what 0.x promises.
 - **English-centric defaults.** The keyword layer's full-text configuration and the demo prompts assume English scientific text.
 
-## The decision rule
-
-- Building a knowledge base for a scientific field with evaluation and license discipline built in, able to run a small Postgres service: use the template.
-- Building a bespoke application with full architectural control: LightRAG or LlamaIndex.
-- Building an assistant that answers hard literature questions with multi-step effort per question: PaperQA2.
-- Studying how GraphRAG works: read Microsoft GraphRAG's papers, then the [methodology](methodology.md) for where this kit differs.
+Run the [quickstart](quickstart.md) to test the template's path. For the reasoning behind its
+choices, read the [methodology](methodology.md) and [decision records](adr/0001-graph-in-postgres.md).

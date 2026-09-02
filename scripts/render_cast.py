@@ -162,7 +162,10 @@ def render_transcript(*, quick: bool = True) -> str:
     _preflight_credentials(
         raw,
         PlainPrompter(io.StringIO(), output),
-        probe=lambda **_kwargs: CredentialProbe(True, f"{DEFAULT_LLM_MODEL} answered in 90 ms."),
+        probe=lambda **_kwargs: CredentialProbe(
+            True,
+            f"{DEFAULT_LLM_MODEL} check simulated for this recording; no model request sent.",
+        ),
     )
 
     drafted = confirm_ontology_draft(

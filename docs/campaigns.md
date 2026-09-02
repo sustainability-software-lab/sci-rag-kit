@@ -5,7 +5,9 @@ description: Discover a resumable DOI list, resolve explicit open-access rights,
 
 # Run a corpus campaign
 
-A campaign turns a research topic or a seed DOI file into a reproducible list of scientific works, with an explicit rights answer attached to each. Discovery stays separate from ingestion by design, which means you can inspect candidates, interrupt if needed, and resume network work without restarting ingestion.
+A campaign turns a research topic or DOI list into a reviewable corpus manifest. It
+records discovery and rights checks before ingestion, so you can inspect candidates and
+resume interrupted network work without starting over.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A screened, rights-resolved corpus manifest</div>
@@ -24,7 +26,9 @@ A campaign turns a research topic or a seed DOI file into a reproducible list of
 | A topic phrase or a file of DOIs | The two ways to start a campaign | |
 | Network access | Every step here talks to an external index | |
 
-Campaigns never make rights decisions for you. Discovery produces candidates and an explicit open-access signal from Unpaywall. Anything unestablished stays `unknown`, and retrieval treats unknown as unsafe, which is correct.
+Campaigns never make rights decisions for you. Discovery produces candidates and an
+explicit open-access signal from Unpaywall. Anything unestablished stays `unknown`,
+which retrieval treats as unsafe.
 
 ## Discover from a topic
 
@@ -65,7 +69,10 @@ malformed upstream records, so none of them disappears silently.
 
 ## Resume behavior
 
-Campaign state lives in `data/campaigns/<name>/state.jsonl`. The run appends each completed DOI step to disk. Repeat the command and it skips records already present, so you can resume. If the process dies mid-write, the next run ignores only the truncated tail and continues appending safely.
+Campaign state lives in `data/campaigns/<name>/state.jsonl`. Each completed DOI step is
+appended to disk, and a repeated command skips records already present. If a write is
+interrupted, the next run ignores the truncated tail and resumes from the last complete
+record.
 
 OpenAlex and Crossref calls are rate-limited. The client sends your contact address in both the query and User-Agent, retries 429 and 5xx with bounded backoff, and fails visibly when retries exhaust. An empty success report never happens.
 
@@ -82,7 +89,11 @@ uv run sci-rag campaign build \
 
 The dry run queries Unpaywall for each DOI, prints direct-PDF counts and the license-class breakdown, and writes only resumable state. It does not create `pdfs/` or `corpus.jsonl`.
 
-`--max-results` bounds this invocation, not only what discovery finds. If your campaign retained 100 candidates, then `--max-results 20` resolves the first 20 and leaves the rest untouched in both dry run and download mode. The report shows both `retained` and `candidates`, so a bounded trial cannot look like a full run. Campaign state is append-only, so the bound takes a prefix. Retry the command and it works on the same 20 rather than sampling a new set. Pass `--all-candidates` when you want every retained candidate regardless of the maximum.
+`--max-results` bounds this invocation, not just discovery. If the campaign retained 100
+candidates, `--max-results 20` resolves the first 20 and leaves the rest untouched in
+dry-run and download modes. Because campaign state is append-only, retrying works on
+the same prefix instead of sampling a new set. The report shows both `retained` and
+`candidates`; pass `--all-candidates` to process every retained candidate.
 
 ## Fail-closed rights mapping
 
@@ -174,6 +185,6 @@ included without a rights answer you can point at.
 
 ## Next steps
 
-- Ingest the manifest this produced: [Bring your own domain](bring-your-own-domain.md#step-5-ingest-and-build)
+- Ingest the manifest this produced: [Bring your own domain](bring-your-own-domain.md#step-4-build-the-knowledge-base)
 - Understand what a license class does to retrieval: [Scope precedes ranking](methodology.md#7-scope-precedes-ranking)
 - Enrich the DOIs and check for retractions: [Operate a live corpus](operations.md)

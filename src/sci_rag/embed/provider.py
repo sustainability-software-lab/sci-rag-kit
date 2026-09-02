@@ -3,7 +3,7 @@
 Two implementations ship with the kit:
 
 * :class:`~sci_rag.embed.google.GoogleEmbedder` produces real semantic
-  vectors with ``gemini-embedding-001`` through either a free AI Studio API
+  vectors with ``gemini-embedding-001`` through either an AI Studio API
   key or Vertex AI credentials.
 * :class:`~sci_rag.embed.local_hash.LocalHashEmbedder` is deterministic and
   fully offline. It exists so you can exercise the entire pipeline (and run

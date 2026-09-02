@@ -110,7 +110,7 @@ def test_plain_choice_menu_explains_each_option() -> None:
         "offline",
         choices=("google_ai_studio", "offline"),
         label="How will you reach a model?",
-        choice_help={"google_ai_studio": "One free key, no cloud project"},
+        choice_help={"google_ai_studio": "Shortest local setup; no manual Cloud setup"},
     )
 
     answer = PlainPrompter(io.StringIO("1\n"), output).choice(question, "offline")
@@ -118,7 +118,7 @@ def test_plain_choice_menu_explains_each_option() -> None:
     assert answer == "google_ai_studio"
     assert output.getvalue() == (
         "Select credentials: How will you reach a model?\n"
-        "1 - google_ai_studio: One free key, no cloud project\n"
+        "1 - google_ai_studio: Shortest local setup; no manual Cloud setup\n"
         "2 - offline\n"
         "Choose from [1/2] (2): 1\n"
     )
@@ -243,7 +243,7 @@ def test_interactive_choices_show_labels_help_and_recommendation(monkeypatch) ->
         choices=("google_ai_studio", "vertex_ai", "offline"),
         label="How will you reach a model?",
         choice_help={
-            "google_ai_studio": "One free key, no cloud project",
+            "google_ai_studio": "Shortest local setup; no manual Cloud setup",
             "vertex_ai": "Billed through a Google Cloud project",
             "offline": "No model calls",
         },
@@ -254,7 +254,7 @@ def test_interactive_choices_show_labels_help_and_recommendation(monkeypatch) ->
     assert shown["message"] == "How will you reach a model?"
     choices = shown["choices"]
     assert isinstance(choices, list)
-    assert "One free key, no cloud project" in choices[0].title
+    assert "Shortest local setup; no manual Cloud setup" in choices[0].title
     assert "(recommended)" in choices[0].title
     assert "(recommended)" not in choices[1].title
     assert shown["instruction"] == "Choose the access mode for this project."

@@ -18,12 +18,12 @@ hide:
 
 <div class="srag-home-masthead__lede" markdown>
 
-A project template for question answering over scientific documents. Give
-the kit a folder of papers and reports and it builds a knowledge base from
-them: every passage indexed three ways, a graph of the concepts they mention,
-and answers that quote the exact passages they rest on. The pipeline comes
-assembled and measured. What a project brings is the documents, the
-vocabulary of its field, and a handful of questions with known answers.
+A project template for question answering over scientific documents. The kit
+indexes every passage for vector and keyword retrieval. With a model
+credential, it also builds the concept graph, enables the model-dependent
+retrieval layers, and writes answers that quote their supporting passages.
+Your project supplies the documents, the vocabulary of its field, and the
+questions used to measure the result.
 
 </div>
 
@@ -49,22 +49,19 @@ vocabulary of its field, and a handful of questions with known answers.
 
 ## Start a project
 
-Two commands create a configured project, and a third ingests the
-documents. There is no boilerplate to fill in afterward, because the
-generator writes the setup answers straight into the project's
-configuration files.
+Two commands create a configured project. The generator writes your setup
+answers into the project's configuration files, ready for ingestion.
 
 ```console title="Terminal"
 $ pipx install sci-rag-kit
 $ sci-rag new
 ```
 
-The wizard asks about the project, the field, and how to reach a model,
-then writes the answers into place. Quick mode asks for six setup decisions,
-plus the credential value required by the selected mode, and uses sensible
-defaults for the rest. Offline mode needs no model credential at all, which
-makes it a good first pass on a laptop without one, and Advanced mode
-exposes every option for projects that already know what they want.
+The wizard asks about the project, the field, and how to reach a model. Quick
+mode asks for six setup decisions, plus the credential value required by the
+chosen mode, and uses the shipped defaults for the rest.
+Choose Offline for a credential-free first pass. Choose Advanced when you
+need to set models, parsing, reranking, infrastructure, or licensing yourself.
 
 <div id="srag-cast" class="srag-cast" data-cast="assets/casts/sci-rag-new.cast" data-autoplay="true" aria-label="Recorded sci-rag new session"></div>
 <small> (A full trace of this terminal session can be found [below](#example))</small>
@@ -92,9 +89,9 @@ retrieved from "Table 3" still knows which experiment it belongs to.
 
 Five kinds of search: by meaning, by exact words, through a graph of the
 field's concepts, through summaries of related concepts, and through a
-model-written hypothetical answer. Each one finds evidence the others miss,
-and their result lists merge into a single ranking that says which layer
-found what. [See how a question is answered](learn.md#what-happens-to-a-question).
+model-written hypothetical answer. The model-dependent layers require a
+credential. Their result lists merge into a single ranking that says which
+layer found what. [See how a question is answered](learn.md#what-happens-to-a-question).
 
 One database: passages, vectors, the full-text index, and the concept graph
 all live in Postgres. That leaves one thing to run, one thing to back up,
@@ -106,9 +103,9 @@ restricts rights never sees passages outside it, because the filter runs
 inside each search before anything is ranked. [Read the rights
 rules](methodology.md#7-scope-precedes-ranking).
 
-Cited answers: every claim points at a numbered passage, and when the
-documents do not contain an answer, the kit says so rather than filling the
-gap from a model's memory. [Use REST or MCP](api.md).
+Cited answers: with a model credential, every claim points at a numbered
+passage. When the documents do not contain an answer, the kit says so rather
+than filling the gap from a model's memory. [Use REST or MCP](api.md).
 
 Measurement: a file of questions with known answers lets the kit score
 retrieval, grade generated answers, and report what each search layer
@@ -123,10 +120,9 @@ than by impression. [Evaluate your pipeline](evaluation.md).
 
 ## Configure, do not code
 
-Pointing the kit at a new field means editing configuration files, never
-Python. The concepts of the field, the wording of the prompts, and the
-questions used for scoring all live in plain text, and the pipeline reads
-them at run time.
+Point the kit at a new field by editing plain-text configuration, not Python.
+The field's concepts, prompt wording, and scoring questions all load at run
+time.
 
 <!-- BEGIN KIT ONBOARDING -->
 `pipx install sci-rag-kit` installs the kit. `sci-rag new` then fills in the
@@ -207,7 +203,7 @@ The Quick session above, in full. `scripts/render_cast.py` builds it by driving 
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">4 - </span><span class="srag-term__choice">venv+pip: Standard-library virtual environment and pip</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3/4] (1):</span><span class="srag-term__value"> 1</span></span>
 <span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select credentials: How will you reach a model?</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">google_ai_studio: One free key, no cloud project</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">google_ai_studio: Shortest local setup; no manual Cloud setup</span></span>
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">vertex_ai: Billed through a Google Cloud project you already have</span></span>
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">offline: No model calls, graph extraction, or generated answers</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3] (1):</span><span class="srag-term__value"> 1</span></span>
@@ -220,7 +216,7 @@ The Quick session above, in full. `scripts/render_cast.py` builds it by driving 
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">4 - </span><span class="srag-term__choice">demo_only: Keep the bundled synthetic corpus for evaluation</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3/4] (1):</span><span class="srag-term__value"> 1</span></span>
 <span class="srag-term__line srag-term__line--output">Checking the credential with one small model request...</span>
-<span class="srag-term__line srag-term__line--output">gemini-3.6-flash answered in 90 ms.</span>
+<span class="srag-term__line srag-term__line--output">gemini-3.6-flash check simulated for this recording; no model request sent.</span>
 <span class="srag-term__line srag-term__line--empty"></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Drafting an ontology for &quot;Membrane chemistry and performance for water treatment&quot;...</span></span>
 <span class="srag-term__line srag-term__line--empty"></span>
@@ -307,7 +303,7 @@ The Quick session above, in full. `scripts/render_cast.py` builds it by driving 
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">pixi.toml: Keep pixi configuration in its own file</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"></span></span>
 <span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select credentials: How will you reach a model?</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">google_ai_studio: One free key, no cloud project</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">google_ai_studio: Shortest local setup; no manual Cloud setup</span></span>
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">vertex_ai: Billed through a Google Cloud project you already have</span></span>
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">3 - </span><span class="srag-term__choice">offline: No model calls, graph extraction, or generated answers</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2/3] (1):</span><span class="srag-term__value"> 1</span></span>
@@ -374,7 +370,7 @@ The Quick session above, in full. `scripts/render_cast.py` builds it by driving 
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">No: Point next steps at the hand-written route</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"></span></span>
 <span class="srag-term__line srag-term__line--output">Checking the credential with one small model request...</span>
-<span class="srag-term__line srag-term__line--output">gemini-3.6-flash answered in 90 ms.</span>
+<span class="srag-term__line srag-term__line--output">gemini-3.6-flash check simulated for this recording; no model request sent.</span>
 <span class="srag-term__line srag-term__line--empty"></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  Drafting an ontology for &quot;Membrane chemistry and performance for water treatment&quot;...</span></span>
 <span class="srag-term__line srag-term__line--empty"></span>

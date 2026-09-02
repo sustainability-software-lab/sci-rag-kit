@@ -282,9 +282,10 @@ recorded under the sections below.
   `eval_seed_questions.jsonl.proposed`; `--apply` appends to the seed file
   and never displaces a question a human wrote.
 - Two lanes on every drafter. `--print-prompt` writes the fully rendered,
-  corpus-grounded prompt to stdout for pasting into any assistant, and
-  `--from-file` reads the reply back through identical validation, so the
-  drafters work with no API key and no provider account.
+  corpus-grounded prompt to stdout for local use or an approved assistant,
+  and `--from-file` reads the reply back through identical validation, so the
+  drafters work with no API key and no provider account. Printed prompts can
+  contain sampled corpus passages, so rights and privacy rules still apply.
 - `domain/prompts/seed_questions.md`: the prompt behind that draft, with
   `$DOMAIN_NAME`, `$ENTITY_TYPES`, `$QUERY_CLASSES`, `$PASSAGES`, `$COUNT`,
   and `$REJECTED` slots.
