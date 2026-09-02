@@ -100,7 +100,9 @@ automatic part of this deployment procedure.
 What you get, and the security posture you get it with:
 
 * The database is reachable only through the Cloud SQL connector (mounted as a Unix socket), never via open TCP.
-* The runtime service account holds `cloudsql.client`, `aiplatform.user`, and read access to two secrets.
+* The runtime service account holds the project roles `roles/cloudsql.client` and
+  `roles/aiplatform.user`, read access to two secrets, and bucket-scoped
+  `roles/storage.objectViewer` for the corpus.
 * Send API keys as `X-API-Key: <key>`. Cloud Run's frontend claims `Authorization: Bearer` for its own identity tokens, so use the alternate header.
 * The Cloud Run service is private by default. Pass `-var allow_unauthenticated=true` to make API keys the only gate.
 

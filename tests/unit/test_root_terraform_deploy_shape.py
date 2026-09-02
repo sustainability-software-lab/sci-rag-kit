@@ -233,6 +233,9 @@ def test_the_ops_job_mounts_the_corpus_bucket_read_only() -> None:
     assert "terraform init -upgrade" in guide, (
         "operators with an older local lock must be told how to select the GA volume schema"
     )
+    assert "bucket-scoped\n  `roles/storage.objectViewer` for the corpus" in guide, (
+        "the guide must include the runtime identity's read-only bucket grant"
+    )
 
 
 def test_the_ingest_example_uses_the_mounted_manifest() -> None:

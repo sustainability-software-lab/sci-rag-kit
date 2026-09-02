@@ -1100,3 +1100,260 @@ The later lifecycle must return exact API names and digest to this 40-name
 soft-deleted tuple, and leave the `zr1` bucket absent from live and soft-deleted
 listings before PR #270 may merge. Issue #189 remains open through the existing
 post-expiry absence check, which must also prove the exact 40-name API set.
+
+## Amendment: phase-scoped lifecycle authorization
+
+> Approved 2026-09-02 UTC after IAM-only RECOVER designated `S0` and the
+> repeated pre-mutation stops showed that the earlier full-world snapshot mixed
+> mutation safety with unrelated repository and workspace observations.
+
+This amendment changes only how CREATE, SEED, and DELETE are prepared,
+authorized, and verified. It authorizes the append-only plan change, private
+fail-closed tooling, offline tests, read-only collection, review, commit, and
+push. It authorizes no lifecycle or other cloud mutation. CREATE remains paused
+until the production CREATE, SEED, DELETE, and survivor-cleanup catalogs and
+adapters pass offline review, bind into one exact source-bound preview, and a
+fresh CREATE authorization is received.
+
+### Authority and exact supersession
+
+This section has precedence only where it conflicts with the earlier lifecycle
+execution contract. It does not change the locked `zr1` names, `S0`, API or IAM
+digests, 18-address Terraform scope, six demo inputs, seven object generations,
+cost boundary, scientific acceptance checks, teardown requirements, PR landing
+gate, or post-expiry issue-closure gate.
+
+It supersedes these execution-gating rules:
+
+- Do not bind authorization to an exact copy of every field in a monolithic
+  action-time snapshot. Bind it to the stable mutation envelope below.
+- Do not invalidate unchanged authority because `origin/main` moved, the PR
+  base or merge state was recalculated, an unrelated check reran, audit logs
+  grew, or a sibling workspace proxy appeared, disappeared, or restarted.
+- Do not require exact equality of the complete
+  `shared_development_backend` object before every target-project mutation.
+  Replace that comparison with the shared-backend noninterference controls
+  below.
+- Do not require `Qcurrent == Qpre-create`. Keep the existing duplicate-free
+  monotonic rule: `Qcurrent` must remain a subset of `Qpre-create` and `Q0`,
+  with no new, altered, duplicate, or reappearing tuple.
+- Do not consume an authorization when it is parsed or when a read-only or
+  local readiness check fails. Consume it only after the last critical
+  precheck passes and the exclusive phase marker is created.
+- Do not regenerate `S0` or return to RECOVER. The designated `S0` at SHA-256
+  `10402e0f25165dd5632e7e05542077d25d2ced5c0bcb916a6bb1a069d6cf4504`
+  is the immutable predecessor of CREATE.
+- Do not require CREATE authorization to name a registry digest or Terraform
+  plan hash before the authorized workflow can produce them. Bind the local
+  image, deterministic tag, derivation rules, immutable validator, and private
+  output paths before authorization, then accept only the exact derived values
+  described below.
+- Supersede the earlier rule that every failed `zr1` CREATE must immediately
+  tear down and move to `zr2` only for a same-run continuation from a proven
+  checkpoint. A continuation may contain only actions proven not to have
+  started. It can never retry an action with a failed, warning, timeout,
+  no-op, or ambiguous result. After teardown, a new clean attempt uses `zr2`.
+- Supersede exact proxy-process equality in `S1` and post-expiry acceptance.
+  Both use the shared-backend noninterference proof below instead.
+
+Earlier RECOVER receipts remain historical evidence. This amendment does not
+reinterpret or modify them.
+
+### Stable mutation envelope and separate observations
+
+Each phase uses one canonical, content-addressed manifest. The manifest binds:
+
+- The phase, attempt, exact predecessor receipt, target project, region, and
+  locked `zr1` resource names.
+- The designated `S0` or prior phase checkpoint, exact 40-name API digest,
+  exact IAM digest, protected labels, active service-account identities and
+  states, and absence or exact inventory required at that phase boundary.
+- The reviewed PR head, scoped path and blob identities, tracked plan hash,
+  Terraform configuration and lock hashes, build-context hash, demo tree and
+  manifest hashes, and every lifecycle runner, collector, profile, and action
+  catalog hash.
+- A closed, typed, deterministically ordered operation plan, complete allowed
+  deltas, deadlines, timeouts, model-call and cost limits, exact evidence
+  directory, and predecessor journal hash.
+- The `Qpre-create` ceiling and its generation-aware subset rule.
+- An explicit denylist for the shared development project, instance, workspace
+  databases, Cloud SQL proxy operations, broad filesystem cleanup, `--force`,
+  broad IAM replacement, raw shell, automatic retry, and undeclared mutation
+  kinds.
+
+The manifest cannot contain raw commands, shell expressions, globs, unresolved
+environment variables, or executable validators. A closed action catalog owns
+argument construction and transition predicates. Any manifest, source, tool,
+profile, adapter, or action-catalog change creates a new digest and requires a
+new preview and fresh phase authorization.
+
+Store volatile facts in a separate observation receipt. They remain visible
+and hash-chained but do not change the manifest digest or consume unchanged
+authority:
+
+- `origin/main`, PR base, mergeability, check ordering, and unrelated reruns
+  after the bound head passed its preparation checks.
+- Lahore and sibling proxy PIDs, ports, liveness, membership, and restarts.
+- Read-only audit-log growth, request timing, generated execution IDs, IAM
+  etags when the canonical policy is unchanged, and natural disappearance of
+  an allowed `Q0` tuple.
+
+Preparation still requires the issue and PR to be open, the bound head's
+required checks to have passed, the reviewed inputs to be clean, and no merge
+conflict at that time. Revalidate current delivery state before landing, not
+around every cloud action. A PR-head or scoped-tree change, a new failing check
+known before phase preparation, target-project drift, an unexpected resource,
+a new quarantine tuple, or a shared-backend reference remains a hard stop.
+
+### Shared Cloud SQL noninterference
+
+The shared development backend is outside the qualification target. Protect it
+without freezing unrelated workspace processes:
+
+1. No compiled operation, child-process environment, Terraform input, state
+   reference, credential-bearing file, or cleanup target may name the shared
+   project, region, instance, Lahore or another workspace database, `.env`, or
+   any proxy command. Build every child environment from a minimal allowlist
+   that strips database, proxy, `PG*`, `SCI_RAG_DATABASE_URL`,
+   `SCI_RAG_TEST_DATABASE_URL`, and backend-selection variables. Their presence
+   in the parent Conductor environment is an observation, not a stop.
+2. Every Google Cloud action must name `biositing-docs-pub` explicitly. Every
+   Terraform action must use the root qualification module and its private
+   state, variable, plan, and backup paths.
+3. Record selected shared-instance identity and configuration before and after
+   each phase as an observation. Do not compare proxy process inventory for
+   equality.
+4. Before accepting a phase, require two receipts. The target-project receipt
+   must contain only authorized qualification actions and deltas. A separate
+   shared-project receipt must show no run-attributable Cloud SQL instance,
+   database, user, configuration, or proxy-management action by the phase
+   principal during the phase interval.
+
+An unrelated workspace changing its own proxy cannot invalidate authority. A
+compiled shared-backend reference or a run-attributable shared-backend action
+always fails closed.
+
+### One monotonic runner and three fresh gates
+
+The lifecycle runner exposes one operation:
+
+```python
+advance(
+    run_dir: Path,
+    *,
+    s0_receipt: Path | None = None,
+    authorization_file: Path | None = None,
+    recovery_decision: Path | None = None,
+) -> AwaitingAuthorization | PhaseCompleted | QualificationComplete | Halted
+```
+
+The append-only journal infers the only legal state transition:
+
+```text
+S0 -> AWAIT_CREATE -> CREATE_PASS -> AWAIT_SEED -> SEED_PASS
+   -> AWAIT_DELETE -> DELETE_PASS -> S1
+              |              |               |
+              v              v               v
+       STOPPED_CREATE  STOPPED_SEED   STOPPED_DELETE
+```
+
+There is no phase selector, skip, reset, resume, retry, compensation, or return
+to RECOVER. One call can execute at most one mutation phase. A call without an
+authorization is read-only and reports the exact next gate. CREATE, SEED, and
+DELETE require separate fresh authorizations bound to their own manifest and
+predecessor receipt.
+
+Complete all local readiness checks before consuming authorization. These
+include required binaries and versions, the local `linux/amd64` builder,
+available disk space, Google credential availability, the tracked Terraform
+lock, private evidence modes, and state readability. A read dependency or local
+readiness failure leaves the unchanged authorization reusable while the stable
+envelope remains identical.
+
+After the exact authorization and final critical precheck pass, create the
+exclusive phase marker, journal authorization consumption, and execute each
+typed action synchronously once. Capture complete phase-scoped state before and
+after every mutation. Any warning, timeout, nonzero exit, no-op, malformed
+result, unknown outcome, collateral delta, missing checkpoint, or receipt
+integrity failure requires one post-state capture followed by a permanent stop
+without retry.
+
+A pre-mutation stop remains at the same `AWAIT_*` state. A post-mutation stop
+preserves the exact survivors and consumed authorization. `advance` returns the
+same `Halted` result until a separately reviewed, content-addressed
+`RecoveryDecision` selects exactly one continuation or survivor-DELETE
+manifest. A continuation contains only actions proven not to have started; an
+ambiguous or failed action is never retried. The selected recovery manifest
+requires a fresh authorization. Never infer cleanup authority from an earlier
+gate.
+
+### CREATE derived outputs
+
+The CREATE authorization can bind values known before mutation and exact rules
+for values produced by authorized steps. It does not need to guess a registry
+digest or Terraform plan hash before those artifacts exist.
+
+Before the marker, bind and verify the deterministic image tag, source and
+build-context hashes, `linux/amd64` platform, registry name, Terraform inputs,
+provider lock, private output paths, expected 18 addresses, and exact action
+order. Use an isolated Terraform data directory to run ordinary
+`terraform init -input=false` and prove the tracked lock remains unchanged.
+Build and inspect the local `linux/amd64` image. Either local action may fail
+without consuming authorization while the stable envelope remains identical.
+
+After the final hard precheck, atomically create and fsync the exclusive marker
+as the authorization-consumption record. It contains the authorization,
+phase-manifest, predecessor, and previous-journal hashes. No cloud mutation
+begins until that one durable record exists. Then:
+
+1. Enable only the five direct CREATE APIs one at a time. The action catalog
+   must enumerate a closed set of permissible dependency-service names and
+   service-agent identity, role, and condition forms. Every derived delta needs
+   causal evidence with the phase interval, method, target, and initiating
+   action. No baseline API, IAM tuple, label, or account may disappear, and any
+   delta outside the closed catalog is a hard stop. The preview renders every
+   concrete command vector compiled from the typed manifest.
+2. Create only the exact registry, push the bound local image, resolve its
+   immutable registry digest, and journal that digest as a derived output.
+3. Save a create plan that proves exactly 18 creates, zero updates, zero
+   replacements, and zero destroys. Require the locked variables, names,
+   private service, read-only ops-job mount, soft delete `0`, force destroy
+   false, and deletion protection true.
+4. Run an immutable, separately implemented read-only plan validator whose
+   source hash is bound in the CREATE manifest. Journal its predicate
+   attestation and the saved-plan hash, then apply those exact saved-plan bytes.
+   The CREATE authorization permits this apply only when the validator proves
+   the exact 18/0/0 shape and locked variables, so no fourth human gate is
+   implied. A changed or nonconforming plan stops; it is never regenerated and
+   applied under the same authorization.
+
+The terminal CREATE checkpoint binds the resolved image digest, saved plan,
+state, actual API and IAM deltas, complete 18-resource inventory, empty bucket,
+and protected surfaces. Only that checkpoint can become SEED's predecessor.
+
+### Acceptance and implementation boundary
+
+`S1 == S0` now means equality of the documented target-project and source
+projections, plus the quarantine subset and shared-backend noninterference
+proof. It does not mean equality of proxy PIDs, sibling proxy membership,
+`origin/main`, PR-base metadata, audit-log length, execution IDs, or the active
+operator identity. The operator identity remains an exact action-time gate for
+each phase. Revalidate PR state and checks separately before landing.
+
+The first private tooling slice may prove the state machine, stable-versus-
+volatile classification, authorization-consumption timing, quarantine relation,
+and ambiguity stop semantics with a scripted adapter. It is not a production
+executor and must not emit or accept a live CREATE authorization. Before asking
+for CREATE, implement and review the closed CREATE, SEED, DELETE, and
+survivor-cleanup catalogs and adapters, including the live read-only collector
+and immutable Terraform-plan validator. Prove command, transition, redaction,
+receipt-integrity, crash, survivor, and ambiguity contracts for every phase
+offline. Bind every implementation hash into a fresh immutable CREATE preview
+and report `execution_supported: true` for all required normal and cleanup
+paths.
+
+PR #270 remains unlandable until the separately authorized lifecycle produces
+CREATE, SEED, DELETE, and `S1` receipts satisfying this amended contract. Issue
+#189 remains open after landing until the existing post-expiry absence check
+passes. That final check uses the same target projection and noninterference
+rule; unrelated proxy or base-branch movement cannot keep the issue open.
