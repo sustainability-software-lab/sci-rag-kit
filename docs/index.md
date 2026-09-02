@@ -18,9 +18,10 @@ hide:
 
 <div class="srag-home-masthead__lede" markdown>
 
-Put your papers and reports into one database, ask questions in plain
-language, and get answers that cite the passages they came from. Everything
-is set up for you; you supply the documents and the questions.
+A project template for question answering over scientific documents. Put
+papers and reports into one database and ask questions in plain language.
+Answers cite the passages they came from. You supply the documents and the
+questions; the pipeline is already assembled.
 
 </div>
 
@@ -46,17 +47,17 @@ is set up for you; you supply the documents and the questions.
 
 ## Start a project
 
-Two commands create a configured project; a third ingests your documents.
+Two commands create a configured project. One more ingests your documents.
 
 ```console title="Terminal"
 $ pipx install sci-rag-kit
 $ sci-rag new
 ```
 
-The setup wizard asks a few questions and writes the answers into the
-project's configuration files. Quick mode asks for six setup decisions, plus
-the credential value required by the selected mode, and supplies defaults for
-everything else. Choose Offline if you do not want a model credential yet, or
+The wizard asks a few questions and writes the answers into the project's
+configuration files. Quick mode asks for six setup decisions, plus the
+credential value required by the selected mode, and uses defaults for the
+rest. Choose Offline if you do not want a model credential yet. Choose
 Advanced to reach every applicable option.
 
 <div id="srag-cast" class="srag-cast" data-cast="assets/casts/sci-rag-new.cast" data-autoplay="true" aria-label="Recorded sci-rag new session"></div>
@@ -64,9 +65,9 @@ Advanced to reach every applicable option.
 
 Want to look first? [Other ways in](quickstart.md#other-ways-in) covers a clone, the GitHub template, `sci-rag init`, and the dev container.
 
-New to building retrieval systems? The [Quickstart](quickstart.md) takes
-you from installation to a served knowledge base in about ten minutes, and
-[How it works](learn.md) explains what happened in plain words.
+The [Quickstart](quickstart.md) takes you from installation to a served
+knowledge base in about ten minutes. [How it works](learn.md) explains what
+happened.
 
 <!-- END KIT ONBOARDING -->
 
@@ -82,24 +83,24 @@ Document ingestion: PDF, HTML, Markdown, and text files are split into
 passages that keep their section headings and whole tables. [Follow a
 document into storage](architecture.md#data-model).
 
-Five ways to search: by meaning, by exact words, through a graph of your
+Five kinds of search: by meaning, by exact words, through a graph of your
 field's concepts, through cluster summaries, and by a model's guess at what
 an answering passage would say. The five lists merge into one ranking.
 [See how a question is answered](learn.md#what-happens-to-a-question).
 
-One database: passages, vectors, full-text index, and the concept graph all
-live in Postgres. Nothing else to run or back up. [Read why](adr/0001-graph-in-postgres.md).
+One database: passages, vectors, the full-text index, and the concept graph
+live in Postgres. There is nothing else to run or back up. [Read why](adr/0001-graph-in-postgres.md).
 
 Rights built in: every document carries a license class, and a request that
-restricts rights never sees passages outside it. [Trace the rights
-contract](evidence-and-rights.md).
+restricts rights never sees passages outside it. [Read the rights
+rules](methodology.md#7-scope-precedes-ranking).
 
 Cited answers: each claim points at a numbered passage, and when the
 documents do not contain an answer the system says so. [Use REST or
 MCP](api.md).
 
 Measurement: score retrieval and grade answers against questions with known
-answers, and see what each search layer contributes on your corpus.
+answers. See what each search layer contributes on your corpus.
 [Evaluate your pipeline](evaluation.md).
 
 </div>
@@ -110,7 +111,7 @@ answers, and see what each search layer contributes on your corpus.
 
 ## Configure, do not code
 
-Pointing the kit at your field never means editing Python.
+Pointing the kit at your field means editing configuration files, never Python.
 
 <!-- BEGIN KIT ONBOARDING -->
 First, install the kit on the command line with: `pipx install sci-rag-kit`.
@@ -143,9 +144,9 @@ documents and the one-line-per-document manifest that records their rights.
 
 [<span class="srag-row__title">Quickstart</span><span class="srag-row__copy">Create a project, ingest the demo corpus, ask a question, and serve the result. About ten minutes.</span>](quickstart.md){ .srag-row }
 
-[<span class="srag-row__title">Bring your own domain</span><span class="srag-row__copy">Seven commands from a folder of PDFs to a knowledge base that answers questions about them.</span>](bring-your-own-domain.md){ .srag-row }
+[<span class="srag-row__title">Bring your own domain</span><span class="srag-row__copy">Seven commands from a folder of documents to a knowledge base that answers questions about them.</span>](bring-your-own-domain.md){ .srag-row }
 
-[<span class="srag-row__title">How it works</span><span class="srag-row__copy">What happens between a document and a cited answer, in plain words.</span>](learn.md){ .srag-row }
+[<span class="srag-row__title">How it works</span><span class="srag-row__copy">What happens between a document and a cited answer.</span>](learn.md){ .srag-row }
 
 [<span class="srag-row__title">Evaluate your pipeline</span><span class="srag-row__copy">Measure retrieval and answers against questions with known answers, and see what each search layer contributes.</span>](evaluation.md){ .srag-row }
 

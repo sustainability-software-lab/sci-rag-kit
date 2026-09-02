@@ -40,7 +40,7 @@ flowchart LR
   R --> API
 ```
 
-The domain profile shapes extraction, retrieval, answering, and evaluation without becoming a second application. Both network interfaces call the same service facade, and every evidence-bearing path returns to the same document and chunk rows.
+The domain profile shapes extraction, retrieval, answering, and evaluation. Both network interfaces call the same service facade, and every evidence-bearing path returns to the same document and chunk rows.
 
 Package by package (`src/sci_rag/`):
 
@@ -70,21 +70,13 @@ Two rules keep this navigable:
 2. **REST and MCP share one `RagService` instance.** The two front doors
    cannot drift apart because there is exactly one service behind both.
 
-The answer engine retains two evidence views when contextual compression is
-enabled. `retrieval` holds the complete retrieved chunks and their provenance;
-`prompt_retrieval` holds the exact summaries shown to the answer model and the
-blind grounding judge. Both views retain the same document and chunk IDs. A
-malformed or failed summary falls back to complete source text and increments a
-visible failure count. The shipped demo enables compression at
-`relevance_floor: 0.0`, which summarizes every source and drops none: that is the
-setting where its paired judged-answer gate holds, and the numbers are on the
-[benchmarks page](benchmarks.md). A higher floor discards sources and the gate
-stops holding, so your own domain profile runs that gate before changing either
-value. Compression has no authority to create citation targets.
+The answer engine retains two evidence views when contextual compression is enabled. `retrieval` holds the complete retrieved chunks and their provenance; `prompt_retrieval` holds the exact summaries shown to the answer model and the blind grounding judge. Both views retain the same document and chunk IDs. A malformed or failed summary falls back to complete source text and increments a visible failure count.
+
+The shipped demo enables compression at `relevance_floor: 0.0`, which summarizes every source and drops none. That is the setting where its paired judged-answer gate holds; the numbers are on the [benchmarks page](benchmarks.md). A higher floor discards sources and the gate stops holding. Your own domain profile must run that gate before changing either value. Compression cannot create citation targets.
 
 ## Retrieval flow
 
-The five candidate sources run concurrently where their dependencies allow, then fuse once. Scope conditions are part of each eligible layer's database query, not a cleanup step after ranking.
+The five candidate sources run concurrently where their dependencies allow, then fuse once. Scope conditions are part of each layer's database query, not a cleanup step after ranking.
 
 ```mermaid
 flowchart LR
@@ -106,87 +98,43 @@ flowchart LR
   B --> O
 ```
 
-Vector and community retrieval share one shielded query-embedding task. Graph and HyDE use the configured model when enabled. A stage owns its timeout and session; its failure becomes a trace while other candidates continue.
+Vector and community retrieval share one shielded query-embedding task. Graph and HyDE use the configured model when enabled. Each stage owns its timeout and session; failure becomes a trace while other candidates continue.
 
 ## Data model
 
 Five tables, one database:
 
-* `documents`: source identity, citation metadata, license class,
-  content hash (unique; the dedup backstop), and sparse Crossref
-  enrichment including explicit retraction status.
-* `chunks`: the retrieval unit. Text, token count, section path,
-  `is_table`, a pgvector embedding (HNSW indexed) with its
-  `embedding_version`, a generated `search_tsv` full-text column (GIN
-  indexed), and `graph_extracted_at` (NULL means the graph builder has
-  not seen it yet, which is how incremental extraction finds work).
-* `kg_entities`: canonical by name; type from your ontology; retained
-  source aliases; evidence pointers (`chunk_ids`, `document_ids`).
-* `kg_relationships`: directed typed edges with the quoted evidence
-  phrase, its chunk, and calibrated confidence (1.0 for direct
-  statements, 0.7 for strong implications, and 0.4 for cross-sentence
-  inferences). Repeated extraction preserves the highest observed
-  confidence for the typed edge on each document and chunk evidence surface.
-* `kg_communities`: cluster membership, an LLM summary, and the
-  summary's embedding.
+* `documents`: source identity, citation metadata, license class, content hash (unique; the dedup backstop), and sparse Crossref enrichment including explicit retraction status.
+* `chunks`: the retrieval unit. Text, token count, section path, `is_table`, a pgvector embedding (HNSW indexed) with its `embedding_version`, a generated `search_tsv` full-text column (GIN indexed), and `graph_extracted_at`. NULL means the graph builder has not seen it yet; this is how incremental extraction finds work.
+* `kg_entities`: canonical by name; type from your ontology; retained source aliases; evidence pointers (`chunk_ids`, `document_ids`).
+* `kg_relationships`: directed typed edges with the quoted evidence phrase, its chunk, and calibrated confidence (1.0 for direct statements, 0.7 for strong implications, 0.4 for cross-sentence inferences). Repeated extraction preserves the highest observed confidence for the typed edge on each document and chunk evidence surface.
+* `kg_communities`: cluster membership, an LLM summary, and the summary's embedding.
 
-A migration fixes the embedding dimension from `SCI_RAG_EMBEDDING_DIM`
-(default 1536). The provider asserts it on every call; the column enforces
-it on every insert. Changing it is a deliberate migration plus re-embed,
-never a drift.
+A migration fixes the embedding dimension from `SCI_RAG_EMBEDDING_DIM` (default 1536). The provider asserts it on every call; the column enforces it on every insert. Changing the dimension requires a migration plus full re-embed, never an implicit drift.
 
 ## Concurrency model
 
-Everything is asyncio end to end (SQLAlchemy async + asyncpg). The
-retrieval orchestrator runs each enabled stage as its own task with its
-own database session (asyncpg cannot multiplex one session) under its
-own `asyncio.wait_for` timeout. A shared task computes the query embedding
-once, and vector and community both await it. That task is shielded, so one
-stage's timeout cannot cancel it out from under the other. A failing stage
-records `error` in its trace and contributes nothing; the request
-survives.
+Everything is asyncio end to end (SQLAlchemy async + asyncpg). The retrieval orchestrator runs each enabled stage as its own task with its own database session (asyncpg cannot multiplex one session) under its own `asyncio.wait_for` timeout. A shared task computes the query embedding once; vector and community both await it. That task is shielded, so one stage's timeout cannot cancel it out from under the other. A failing stage records `error` in its trace and contributes nothing; the request survives.
 
 ## Error and degradation philosophy
 
-* Layers degrade, requests survive, and the degradation is always
-  visible (`traces`, `degraded_stages`) rather than silent.
-* Ingestion fails per document, never per corpus; every failure is a row
-  in the report with a reason.
-* Fail-closed beats fail-open everywhere rights matter: empty license
-  scope returns nothing; `unknown` license is unsafe; the community layer
-  refuses scoped requests outright.
-* Every layer applies its license, source, year, author, journal,
-  document, and DOI conditions before it orders or limits candidates.
-* The kit validates anything a model returns (ontology types, judge
-  scores, JSON shapes) before it touches the database, and drops
-  malformed output rather than repairing it.
-* Campaign screening is stricter than ordinary retrieval degradation. A
-  malformed response, missing abstract, or low-confidence decision becomes a
-  human-review row. It can never become an exclusion implicitly.
+* Layers degrade, requests survive, and the degradation is always visible (`traces`, `degraded_stages`), not silent.
+* Ingestion fails per document, never per corpus; every failure is a row in the report with a reason.
+* Fail-closed beats fail-open where rights matter: empty license scope returns nothing; `unknown` license is unsafe; the community layer refuses scoped requests.
+* Every layer applies its license, source, year, author, journal, document, and DOI conditions before it orders or limits candidates.
+* The kit validates anything a model returns (ontology types, judge scores, JSON shapes) before touching the database. Malformed output is dropped, not repaired.
+* Campaign screening is stricter than ordinary retrieval degradation. A malformed response, missing abstract, or low-confidence decision becomes a human-review row. It can never become an exclusion implicitly.
 
 ## The server
 
-`create_app()` builds one FastAPI process serving REST under `/v1`
-(OpenAPI at `/docs`), the MCP server mounted at `/mcp` over streamable
-HTTP, and health/manifest endpoints. Cross-cutting pieces:
+`create_app()` builds one FastAPI process serving REST under `/v1` (OpenAPI at `/docs`), the MCP server mounted at `/mcp` over streamable HTTP, and health/manifest endpoints. Cross-cutting pieces:
 
-* **Auth** is a backend interface. The shipped `StaticKeyBackend` reads
-  a JSON key map (scopes + per-key rate limits) from `SCI_RAG_API_KEYS`;
-  no keys means open mode with a loud startup warning. Swapping in OAuth
-  is one constructor call in `create_app`, and the same backend guards
-  `/mcp` through a small ASGI wrapper.
-* **Errors** are RFC 9457 `application/problem+json` with stable `code`
-  values and an `X-Request-ID` on everything.
-* **Streaming** uses Server-Sent Events (sse-starlette) with typed
-  events; the non-streaming JSON mode aggregates the same event stream,
-  so the two can never disagree.
-* **BYO keys**: the server threads a request-supplied LLM key (gated by
-  the `byo_llm` scope), or a per-key binding, into a per-request client.
-  It stores neither and logs neither.
+* **Auth** is a backend interface. The shipped `StaticKeyBackend` reads a JSON key map (scopes + per-key rate limits) from `SCI_RAG_API_KEYS`. No keys means open mode with a loud startup warning. Swapping in OAuth is one constructor call in `create_app`. The same backend guards `/mcp` through a small ASGI wrapper.
+* **Errors** are RFC 9457 `application/problem+json` with stable `code` values and an `X-Request-ID` on everything.
+* **Streaming** uses Server-Sent Events (sse-starlette) with typed events. The non-streaming JSON mode aggregates the same event stream, so the two modes never disagree.
+* **BYO keys**: the server threads a request-supplied LLM key (gated by the `byo_llm` scope) or a per-key binding into a per-request client. It stores neither and logs neither.
 
-For agents over stdio (Claude Code and friends), `sci-rag mcp` runs the
-same tool set with logs forced to stderr, because stdout belongs to the
-protocol.
+For agents over stdio (Claude Code and friends), `sci-rag mcp` runs the same tool set with logs forced to stderr, because stdout is reserved for the protocol.
 
 ## Where a change belongs
 
@@ -205,24 +153,12 @@ The first four rows are configuration and data. Most projects never leave them.
 
 ## Extension points, in order of likely need
 
-1. **A new document parser**: add a branch in
-   `ingest/parsers.py::parse_file` producing the shared block model.
-2. **A new corpus collector** (S3, an API): produce `CorpusEntry` rows,
-   and nothing downstream changes.
-3. **A reranker**: implement the `Reranker` protocol and add an ablation
-   config so the adapter has to prove itself.
-4. **A different embedding or LLM provider**: implement the two-method
-   `EmbeddingProvider` / `LLMClient` interfaces; stamp a distinct
-   `version` so re-embedding stays findable.
-5. **A different auth backend**: implement `AuthBackend`
-   (authenticate + rate check) and wire it into your application factory;
-   the shipped `create_app()` selects open or static-key mode from settings.
+1. **A new document parser**: add a branch in `ingest/parsers.py::parse_file` producing the shared block model.
+2. **A new corpus collector** (S3, an API): produce `CorpusEntry` rows; nothing downstream changes.
+3. **A reranker**: implement the `Reranker` protocol and add an ablation config so the adapter must prove itself.
+4. **A different embedding or LLM provider**: implement the two-method `EmbeddingProvider` / `LLMClient` interfaces. Stamp a distinct `version` so re-embedding stays findable.
+5. **A different auth backend**: implement `AuthBackend` (authenticate + rate check) and wire it into your application factory. The shipped `create_app()` selects open or static-key mode from settings.
 
 ## What is deliberately absent
 
-No task queue, no cache service, no vector-store sidecar, no graph
-database, no plugin framework. We considered each and declined it for v1.
-The [decision records](adr/0001-graph-in-postgres.md) hold the arguments,
-including the conditions under which we would reverse them. [Extend the
-kit](extend.md) walks through each of the five seams above with the tests
-and evidence a change owes.
+No task queue, no cache service, no vector-store sidecar, no graph database, no plugin framework. We considered each and declined it for v1. The [decision records](adr/0001-graph-in-postgres.md) hold the arguments and the conditions under which we would reverse them. [Extend the kit](extend.md) walks through each of the five seams above with the tests and evidence a change owes.

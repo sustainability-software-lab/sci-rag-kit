@@ -285,11 +285,11 @@ its place; the profiler only tells you what it costs.
 
 You have run the drill at least once: dump, restore into a scratch database,
 `sci-rag doctor` clean, and a corpus digest that matches the snapshot you took
-before the dump. A backup you have never restored is a hypothesis.
+before the dump. Know whether your restore procedure works before you need it.
 </div>
 
 ## Next steps
 
 - Re-embed after changing a model or a dimension: [Configuration](configuration.md)
-- Understand what a snapshot pins, and why a citation needs one: [Evidence and rights](evidence-and-rights.md)
+- Understand what a license class does to retrieval: [Scope precedes ranking](methodology.md#7-scope-precedes-ranking)
 - Run the same service on managed infrastructure: [Deploy on Google Cloud](deploy-gcp.md)

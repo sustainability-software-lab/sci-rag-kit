@@ -5,9 +5,9 @@ description: Learn which five public surfaces hold stable inside 0.x, and what e
 
 # Versioning
 
-sci-rag-kit follows [Semantic Versioning](https://semver.org/) with the
-0.x rules spelled out, because "semver" alone promises nothing before
-1.0 and users deserve to know what actually holds.
+sci-rag-kit follows [Semantic Versioning](https://semver.org/). This
+page spells out the 0.x rules: "semver" alone does not promise anything
+before 1.0, and users deserve clarity on what holds.
 
 ## While we are 0.x
 
@@ -46,8 +46,8 @@ minor release.
 ## Deprecation
 
 Within 0.x: deprecated surface keeps working for one minor release with
-a visible warning, then goes. The CHANGELOG lists every deprecation the
-release it starts and the release it lands.
+a visible warning, then goes. The CHANGELOG lists every deprecation, the
+release it starts in, and the release it lands in.
 
 ## Criteria for 1.0
 
@@ -122,7 +122,7 @@ establish that trust once per index, by hand. CI cannot do it for you:
 
    Do not point the installer at both indexes at once. TestPyPI is full of
    placeholder and name-squatted packages, and any resolver told to consider
-   both will happily prefer a fake `fastapi 1.0` from TestPyPI over the real
+   both may prefer a fake `fastapi 1.0` from TestPyPI over the real
    one. Installing the single artifact by URL sidesteps that entirely: it
    tests the thing you built, with the dependencies your users will get.
 

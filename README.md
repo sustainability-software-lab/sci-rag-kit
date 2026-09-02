@@ -11,86 +11,87 @@
 
 Retrieval-augmented generation, built around your scientific domain.
 
-Put your papers and reports into one database, ask questions in plain
-language, and get answers that cite the passages they came from. A template
-repository for retrieval-augmented generation that is already assembled: you
-supply the documents, name the concepts your field cares about, and write a
-few questions with known answers so you can measure how well it works.
+Sci RAG Kit is a project template for question answering over scientific
+documents. You put papers and reports into a Postgres database, and the kit
+answers questions about them with citations back to the passages it used. A
+template repository for retrieval-augmented generation with the pipeline
+assembled: parsing, chunking, embeddings, a concept graph, five kinds of
+search, an evaluation harness, and a REST and MCP server. Your part is to supply the
+documents, name the concepts your field cares about, and write a few
+questions with known answers.
 
-**Start a project** with two commands. `sci-rag new` asks a few questions
-and writes a configured, git-initialized project:
+Start a project with two commands. `sci-rag new` asks a few questions and
+writes a configured, git-initialized project directory:
 
 ```bash
 pipx install sci-rag-kit
 sci-rag new
 ```
 
-**Try it first** by cloning this repository and running the demo corpus
-(see [Set up](#set-up) below). The
+To read the kit before creating a project, clone this repository and run the
+demo corpus (see [Set up](#set-up)). The
 [documentation site](https://sustainability-software-lab.github.io/sci-rag-kit/)
-has the guided path; the [quickstart](docs/quickstart.md) takes about ten
+has the guided path. The [quickstart](docs/quickstart.md) takes about ten
 minutes.
 
 ## Components
 
-What you get, in the order a document meets it:
-
 - **Ingestion.** PDF, HTML, Markdown, and plain-text files are split into
-  passages that keep their section headings and whole tables. Duplicates are
-  skipped. Each document records who wrote it and whether its text may be
-  redistributed.
-- **One database.** Passages, their vectors, a full-text index, and the
-  concept graph all live in PostgreSQL with the pgvector extension. There is
-  nothing else to run or back up.
+  passages that keep their section headings and whole tables. Each document
+  records its authors, its source, and whether its text may be redistributed.
+- **One database.** Passages, vectors, a full-text index, and the concept
+  graph live in PostgreSQL with the pgvector extension. There is nothing else
+  to run or back up.
 - **A concept graph.** With a model credential, the kit reads every passage
-  and pulls out the concepts and relationships your field cares about, using
-  a short list of types you declare in `domain/domain.yaml`. Related concepts
-  are clustered and summarized. This is what makes questions that span
-  several documents work.
-- **Five ways to search.** By meaning, by exact words, through the concept
-  graph, through the cluster summaries, and by a model's guess at what an
-  answering passage would say. The five result lists merge into one ranking,
-  and the tool shows which one found each result.
-- **Cited answers.** The model answers only from the passages retrieved,
-  citing each by number. When the documents do not contain an answer, it
+  and extracts the concepts and relationships you declare in
+  `domain/domain.yaml`. Related concepts are clustered and summarized. This is
+  what answers questions that span several documents.
+- **Five kinds of search.** By meaning, by exact words, through the concept
+  graph, through the cluster summaries, and by a model-written hypothetical
+  answer that the kit searches near. The five result lists merge into one ranking,
+  and every result names the layer that found it.
+- **Cited answers.** The model answers from the retrieved passages only and
+  cites each one by number. When the documents do not contain an answer, it
   says so.
-- **Rights built in.** Every document carries a license class (`public`,
-  `open_commercial`, `open_noncommercial`, `restricted`, or `unknown`). A
-  request that restricts rights never sees passages outside its scope, so a
-  shared endpoint cannot leak a paywalled PDF you hold internally.
+- **Rights.** Every document carries a license class. A request that
+  restricts rights never sees passages outside its scope, so a shared
+  endpoint cannot leak a paywalled PDF you hold internally.
 - **Measurement.** Score retrieval and grade answers against questions with
-  known answers, see what each search layer contributes on your corpus, and
-  compare two runs. Every report records which documents and models produced
-  its numbers.
-- **Serving.** One process answers the command line, a REST API (with
-  interactive docs at `/docs`), and agents over MCP, the protocol tools such
-  as Claude Code use to call external systems. API keys with scopes and rate
-  limits are built in.
-- **Model choice.** Gemini by default, through a free Google AI Studio key or
-  a Vertex AI project. Claude and any OpenAI-compatible endpoint are one
+  known answers. See what each search layer contributes on your corpus.
+  Every report records the documents and models that produced it.
+- **Serving.** One process answers the command line, a REST API with
+  interactive docs at `/docs`, and agents over MCP (the protocol Claude Code
+  and similar tools use to call external systems). API keys carry scopes and
+  rate limits.
+- **Models.** Gemini by default, through a free Google AI Studio key or a
+  Vertex AI project. Claude and any OpenAI-compatible endpoint are one
   setting away for generation. An offline mode runs everything except the
-  graph and generated answers with no credential at all.
+  graph and generated answers, without a credential.
 
 ## Set up
 
-Requirements: [uv](https://docs.astral.sh/uv/), Docker (or PostgreSQL 16
-through 18 with pgvector; see below), and optionally a
+You need [uv](https://docs.astral.sh/uv/), Docker or a PostgreSQL 16 through
+18 server with pgvector, and optionally a
 [Google AI Studio API key](https://aistudio.google.com/apikey).
+
+Create the local configuration file. The second command matters: the file is
+about to hold a credential, and `cp` alone leaves it readable by every
+account on the machine.
 
 ```bash
 cp .env.example .env
-chmod 600 .env          # owner only: it is about to hold a credential
+chmod 600 .env
 ```
 
-In `.env`, set one of:
+In `.env`, set one of these:
 
-| Setting | When |
+| Setting | When to use it |
 |---|---|
-| `SCI_RAG_GOOGLE_API_KEY=...` | A free AI Studio key. Right for almost everyone. |
-| `SCI_RAG_GCP_PROJECT=...` | Your lab already runs on Google Cloud (after `gcloud auth application-default login`). |
+| `SCI_RAG_GOOGLE_API_KEY=...` | A free AI Studio key. The right choice for almost everyone. |
+| `SCI_RAG_GCP_PROJECT=...` | Your lab already runs on Google Cloud. Run `gcloud auth application-default login` first. |
 | `SCI_RAG_EMBEDDING_PROVIDER=local-hash` | No credential yet. Retrieval works; the graph and generated answers wait. |
 
-Then:
+Then install, start the database, and run the demo:
 
 ```bash
 make setup     # install dependencies, start Postgres, create the tables
@@ -98,9 +99,9 @@ make demo      # ingest the demo corpus, run a retrieval, score it
 ```
 
 `make setup` starts the selected database backend and creates every table.
-Docker is the template default; a project can also use a conda-forge
+Docker is the template default. A project can instead use a conda-forge
 server, a system PostgreSQL such as Postgres.app, or a Cloud SQL development
-instance. [Run Postgres your way](docs/run-postgres.md) covers each.
+instance; [Run Postgres your way](docs/run-postgres.md) covers each.
 
 With a credential configured, the graph and the answers work too:
 
@@ -111,17 +112,18 @@ uv run sci-rag serve   # REST at /docs, MCP at /mcp
 ```
 
 The demo corpus is five short synthetic documents about agricultural
-residues, with plausible but fictional numbers, so the pipeline can run end
-to end before you commit your own documents.
+residues. The numbers in them are plausible but fictional. They exist so the
+pipeline runs end to end before you add your own documents.
 
 ## Use your own documents
 
-Seven commands, each explained in
-[Bring your own domain](docs/bring-your-own-domain.md):
+Put your PDFs, HTML, Markdown, or text files in `data/raw/`, then run seven
+commands. [Bring your own domain](docs/bring-your-own-domain.md) explains
+each one.
 
 ```bash
-uv run sci-rag draft manifest --folder data/raw      # 1. describe the documents you put in data/raw/
-uv run sci-rag manifest lint data/corpus.jsonl        # 2. check the description (and decide rights)
+uv run sci-rag draft manifest --folder data/raw      # 1. describe the documents
+uv run sci-rag manifest lint data/corpus.jsonl        # 2. check the description, decide rights
 uv run sci-rag draft ontology --folder data/raw       # 3. name the concepts your field cares about
 uv run sci-rag build --manifest data/corpus.jsonl     # 4. ingest, then build the graph
 uv run sci-rag draft questions --count 10             # 5. draft questions with known answers
@@ -129,26 +131,26 @@ uv run sci-rag eval retrieval --ablation              # 6. measure
 uv run sci-rag answer "a question in your field"      # 7. ask
 ```
 
-The three `draft` commands write a file for you to review, and each also
-works with no model credential: `--print-prompt` gives you the prompt to
-paste into any assistant, and `--from-file` reads the reply back. Two things
-are never drafted for you: a document's rights, and the labels used to
-check the answer grader against human judgment.
+The three `draft` commands write a file for you to review. Each also works
+without a model credential: `--print-prompt` prints the prompt for any
+assistant, and `--from-file` reads the reply back. Two things are never
+drafted for you: a document's rights, and the human labels that check the
+answer grader.
 
-In a hurry? `uv run sci-rag build data/raw` ingests a folder with no
+In a hurry, `uv run sci-rag build data/raw` ingests a folder with no
 manifest at all and builds the graph when a credential is present.
 
 ## Commands
 
-The ones you will use most. `uv run sci-rag --help` groups all of them by
-stage, and the [CLI reference](docs/cli.md) lists every option.
+`uv run sci-rag --help` groups every command by stage. The
+[CLI reference](docs/cli.md) lists every option. The ones you will use most:
 
 | Command | What it does |
 |---------|--------------|
 | `sci-rag new` | Create a configured project |
-| `sci-rag doctor` | Check configuration, database, corpus, and credentials in one pass |
+| `sci-rag doctor` | Check configuration, database, corpus, and credentials |
 | `sci-rag build <folder>` or `--manifest file.jsonl` | Ingest documents, then build the graph |
-| `sci-rag draft manifest`, `draft ontology`, `draft questions` | Draft the domain files from your own documents |
+| `sci-rag draft manifest`, `draft ontology`, `draft questions` | Draft the domain files from your documents |
 | `sci-rag retrieve "question"` | Show the evidence, layer by layer |
 | `sci-rag answer "question"` | A cited answer |
 | `sci-rag eval retrieval --ablation` | Score retrieval and each layer's contribution |
@@ -178,23 +180,23 @@ docs/              This documentation
 
 ## Documentation
 
-The complete site is at
+The full site is at
 [sustainability-software-lab.github.io/sci-rag-kit](https://sustainability-software-lab.github.io/sci-rag-kit/).
 
 | | |
 |---|---|
 | [Quickstart](docs/quickstart.md) | Install, run the demo, serve it. Ten minutes. |
 | [Bring your own domain](docs/bring-your-own-domain.md) | The seven-command recipe, step by step |
-| [How it works](docs/learn.md) | What happens between a document and a cited answer, in plain words |
-| [FAQ](docs/faq.md) | Short answers, and the reasoning behind each design decision |
+| [How it works](docs/learn.md) | What happens between a document and a cited answer |
+| [FAQ](docs/faq.md) | Short answers, and the reason behind each design decision |
 | [Troubleshooting](docs/troubleshooting.md) | From the symptom to the fix |
-| [Evaluate your pipeline](docs/evaluation.md) | Seed questions, per-layer scores, the answer grader |
+| [Evaluate your pipeline](docs/evaluation.md) | Test questions, per-layer scores, the answer grader |
 | [Run a corpus campaign](docs/campaigns.md) | Find papers by topic or DOI list, with their rights |
 | [Run Postgres your way](docs/run-postgres.md) | Docker, conda-forge, a system server, or Cloud SQL |
 | [Deploy on Google Cloud](docs/deploy-gcp.md) | Cloud SQL and Cloud Run from the included Terraform |
 | [REST, MCP, and Python API](docs/api.md) | Endpoints, agent tools, keys, errors |
 | [Architecture](docs/architecture.md) and [Methodology](docs/methodology.md) | How the code is shaped, and why |
-| [Choosing Sci RAG Kit](docs/choosing-sci-rag-kit.md) | An honest comparison with GraphRAG, LightRAG, PaperQA2, LlamaIndex |
+| [Choosing Sci RAG Kit](docs/choosing-sci-rag-kit.md) | A comparison with GraphRAG, LightRAG, PaperQA2, and LlamaIndex |
 | [Benchmarks](docs/benchmarks.md) | Measured demo-corpus results, reproducible with `make benchmark` |
 | [Decision records](docs/adr/) | The architectural bets, with the conditions that would reverse them |
 
@@ -202,11 +204,10 @@ The complete site is at
 
 Python 3.11 or 3.12. PostgreSQL 16 through 18 with pgvector; Docker is the
 template default and matches CI. Embeddings come from Google's
-`gemini-embedding-001` at 1536 dimensions, and generation defaults to a
-Gemini model (`uv run sci-rag doctor` prints the current one). Docling gives
-the best PDF parsing and is an optional extra (`uv sync --extra docling`)
-because of its size; without it, pypdf handles PDFs with reduced table
-fidelity.
+`gemini-embedding-001` at 1536 dimensions. Generation defaults to a Gemini
+model; `uv run sci-rag doctor` prints the current one. Docling gives the best
+PDF parsing and is an optional extra (`uv sync --extra docling`) because of
+its size. Without it, pypdf handles PDFs with reduced table fidelity.
 
 ## License
 

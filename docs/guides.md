@@ -1,6 +1,6 @@
 ---
 title: Guides
-description: Complete a specific Sci RAG Kit task, from measuring quality to deploying and operating the service.
+description: Complete a specific task, from measuring quality to deploying and operating the service.
 ---
 
 # Guides
@@ -23,4 +23,4 @@ Each guide starts from an outcome and assumes you have finished the [quickstart]
 
 </div>
 
-Most people arrive here with their own corpus already in the database, from [Bring your own domain](bring-your-own-domain.md). Read [Evaluate your pipeline](evaluation.md) first, before you change a single retrieval setting. The other guides are there when you need them, and not before.
+Most readers arrive here with their own corpus in the database, from [Bring your own domain](bring-your-own-domain.md). Read [Evaluate your pipeline](evaluation.md) first, before you change any retrieval setting. The other guides are for when you need them.
