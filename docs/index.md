@@ -388,7 +388,7 @@ The Quick session above, in full. `scripts/render_cast.py` builds it by driving 
 <span class="srag-term__line srag-term__line--empty"></span>
 <span class="srag-term__line srag-term__line--section"><span class="srag-term__heading">Writing membrane-materials-kb/</span></span>
 <span class="srag-term__line srag-term__line--empty"></span>
-<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  removed                docs/planning/, infra/terraform/, scripts/cloud_postgres.py, infra/terraform/dev-database/, data/demo/, examples/</span></span>
+<span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  removed                docs/planning/, infra/terraform/, scripts/cloud_postgres.py, infra/terraform/dev-database/, data/demo/, examples/, scripts/graph_replay.py, tests/unit/test_graph_replay_contract.py, tests/integration/test_graph_replay.py, tests/unit/test_graph_replay_makefile.py, tests/unit/test_graph_replay_scaffold.py, docs/adr/0011-committed-benchmark-graph-replay.md</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  domain/domain.yaml     8 entity types, 6 relation types, 4 query classes</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  domain/eval_seed_questions.jsonl   guided blank</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  .env                   google_ai_studio, gemini-3.6-flash, gemini-embedding-001</span></span>

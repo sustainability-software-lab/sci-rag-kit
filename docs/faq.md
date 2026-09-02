@@ -5,7 +5,7 @@ description: Short answers to what Sci RAG Kit is, who it is for, and why each d
 
 # Frequently asked questions
 
-The reasoning behind the kit is written down at length in ten decision records and a methodology page. This page gives the answer first, the reason second, and a link to the long version.
+The reasoning behind the kit is written down at length in the decision records and the methodology page. This page gives the answer first, the reason second, and a link to the long version.
 
 ## What this is
 
@@ -96,6 +96,20 @@ Because rendering placeholders would reintroduce everything the template decisio
 ### Will `--template-path` copy my credentials into a new project?
 
 No. Generating from a local checkout copies the files git tracks and nothing else, so an ignored `.env`, proxy credentials, virtual environment, or Terraform state is never considered. A directory git knows nothing about falls back to a rule that lets nothing hidden through. [ADR 0010](adr/0010-template-copy-boundary.md).
+
+### Why commit model output for the demo benchmark?
+
+Because a live extraction call can produce a different graph from the same
+corpus, model, and prompt. The benchmark needs one reviewed graph draw that a
+fresh database can reproduce without another provider call.
+
+The committed replay artifact is limited to the tracked synthetic CC0 demo. It
+stores raw completions with content, model, prompt-input, and graph-output
+digests, then strict replay sends them through the normal parser and persistence
+path. Any mismatch stops the benchmark. General caches remain local and ignored,
+and real corpora still move between systems through database backup and restore.
+
+Full argument and reversal conditions: [ADR 0011](adr/0011-committed-benchmark-graph-replay.md).
 
 ### When should I use local PostgreSQL, Cloud SQL, or Docker?
 
