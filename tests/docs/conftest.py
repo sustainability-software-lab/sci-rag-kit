@@ -50,13 +50,22 @@ class _QuietHandler(http.server.SimpleHTTPRequestHandler):
         return
 
 
+def is_redirect_stub(page: Path) -> bool:
+    """A retired address that forwards to the page's new home.
+
+    `scripts/docs_redirects.py` writes these. They carry no theme, so they
+    are not documentation pages and the geometry rules do not apply.
+    """
+    return 'http-equiv="refresh"' in page.read_text(encoding="utf-8")
+
+
 @pytest.fixture(scope="session")
 def built_pages() -> list[str]:
     """Every page the build emitted, as site-relative URLs in a stable order."""
     pages = sorted(SITE.rglob("*.html")) if SITE.is_dir() else []
     if not pages:
         pytest.skip(f"no built site at {SITE}; run `make docs` first")
-    return [page.relative_to(SITE).as_posix() for page in pages]
+    return [page.relative_to(SITE).as_posix() for page in pages if not is_redirect_stub(page)]
 
 
 @pytest.fixture(scope="session")

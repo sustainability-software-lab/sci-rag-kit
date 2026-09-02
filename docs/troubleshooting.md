@@ -54,7 +54,9 @@ The setup flow uses arrow-key menus when the terminal supports them. It falls
 back to plain numbered prompts when input or output is not a TTY, an explicit
 stream is in use, `NO_COLOR` is set, `TERM` is blank or `TERM=dumb`, or the
 prompt library cannot load. The questions, defaults, validation, and
-resulting files are the same in both presentations.
+resulting files are the same in both presentations; the plain form prints
+each question in words above the field name it will record the answer under,
+which is the name an answers file uses.
 
 Pass `--no-tty` to `sci-rag new` or `sci-rag init` when you want the numbered
 form even in a supported terminal. Pressing Ctrl-C cancels setup instead of

@@ -24,9 +24,10 @@ from sci_rag.domain import DomainConfig, RerankerTuning
 from sci_rag.scaffold.naming import slugify
 from sci_rag.scaffold.runners import RunnerProfile, get_runner, runner_keys
 
-# The transcript shows a hint in the default slot, ccds style. Taking it
-# literally would write prose into a machine-readable mailto header, so the
-# unedited hint means "no email".
+# Earlier releases showed this hint in the default slot, ccds style, and an
+# answers file copied from one of those transcripts can still carry it. Taking
+# it literally would write prose into a machine-readable mailto header, so the
+# unedited hint still means "no email". The default is empty today.
 CONTACT_EMAIL_PLACEHOLDER = "Sent to OpenAlex, Crossref, and Unpaywall"
 
 _YES = {"yes", "y", "true", "1"}

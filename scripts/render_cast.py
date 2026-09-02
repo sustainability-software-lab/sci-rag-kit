@@ -266,14 +266,42 @@ def _parse_line(line: str, *, in_next: bool) -> tuple[str, list[tuple[str, str]]
     return "output", [("raw", line)]
 
 
-def _format_line(line: str, *, in_next: bool) -> tuple[str, str]:
-    """Return ``(kind, inner_html)`` for one transcript line."""
-    kind, parts = _parse_line(line, in_next=in_next)
+Parsed = tuple[str, str, list[tuple[str, str]]]
+
+
+def _parse_transcript(transcript: str) -> list[Parsed]:
+    """Every line as ``(line, kind, parts)``, with question wording recognised.
+
+    The plain prompter writes a question in words on the line above its
+    ``field (default):`` line or its ``Select field`` menu. That line is only
+    recognisable by what follows it, so classification needs one line of
+    lookahead, which is why this runs over the whole transcript at once.
+    """
+    parsed: list[Parsed] = []
+    in_next = False
+    for line in transcript.splitlines():
+        if not line:
+            parsed.append((line, "empty", []))
+            continue
+        kind, parts = _parse_line(line, in_next=in_next)
+        if kind == "done":
+            in_next = True
+        parsed.append((line, kind, parts))
+    for index, (line, kind, _parts) in enumerate(parsed):
+        if kind != "output":
+            continue
+        following = next((k for _l, k, _p in parsed[index + 1 :] if k != "empty"), None)
+        if following in {"prompt", "select"}:
+            parsed[index] = (line, "label", [("status", line)])
+    return parsed
+
+
+def _inner_html(parts: list[tuple[str, str]]) -> str:
     inner: list[str] = []
     for role, text in parts:
         class_name = _ROLE_CLASS.get(role)
         inner.append(_span(class_name, text) if class_name else html.escape(text))
-    return kind, "".join(inner)
+    return "".join(inner)
 
 
 def _ansi_line(parts: list[tuple[str, str]]) -> str:
@@ -321,6 +349,7 @@ def _delay_after(kind: str, line: str) -> float:
         "done": 1.6,
         "next": 0.75,
         "output": 0.25,
+        "label": 0.45,
     }
     return delays.get(kind, 0.2)
 
@@ -328,7 +357,11 @@ def _delay_after(kind: str, line: str) -> float:
 def _needs_break(kind: str, previous: str | None) -> bool:
     if previous in {None, "empty"}:
         return False
-    if kind in {"select", "section", "done"}:
+    if kind == "label":
+        return True
+    if kind == "select":
+        return previous != "label"
+    if kind in {"section", "done"}:
         return True
     if kind == "status" and previous not in {"status", "empty"}:
         return True
@@ -349,19 +382,15 @@ def format_transcript_html(transcript: str) -> str:
     """
     rendered: list[str] = []
     previous: str | None = None
-    in_next = False
-    for line in transcript.splitlines():
-        if not line:
+    for _line, kind, parts in _parse_transcript(transcript):
+        if kind == "empty":
             rendered.append('<span class="srag-term__line srag-term__line--empty"></span>')
             previous = "empty"
             continue
-        kind, inner = _format_line(line, in_next=in_next)
-        if kind == "done":
-            in_next = True
         classes = f"srag-term__line srag-term__line--{kind}"
         if _needs_break(kind, previous):
             classes += " srag-term__break"
-        rendered.append(f'<span class="{classes}">{inner}</span>')
+        rendered.append(f'<span class="{classes}">{_inner_html(parts)}</span>')
         previous = kind
     body = "\n".join(rendered) + "\n"
     return (
@@ -389,7 +418,6 @@ def render_cast(transcript: str) -> str:
     }
     events: list[tuple[float, str]] = []
     clock = 0.4
-    in_next = False
 
     def emit(payload: str) -> None:
         nonlocal clock
@@ -399,14 +427,11 @@ def render_cast(transcript: str) -> str:
             clock = stamp
         events.append((stamp, payload))
 
-    for line in transcript.splitlines():
-        if not line:
+    for line, kind, parts in _parse_transcript(transcript):
+        if kind == "empty":
             emit("\r\n")
             clock += _delay_after("empty", line)
             continue
-        kind, parts = _parse_line(line, in_next=in_next)
-        if kind == "done":
-            in_next = True
         if kind == "prompt":
             prefix, typed = _split_typed_value(parts)
             emit(_ansi_line(prefix))
