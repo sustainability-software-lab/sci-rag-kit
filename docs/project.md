@@ -27,4 +27,4 @@ Sci RAG Kit is alpha software with a stated compatibility promise, a roadmap tha
 - **One operational story.** Postgres holds text, vectors, full-text search, and graph rows, so a team operates one data system.
 - **Named seams, not a plug-in framework.** The kit exposes five boundaries where real projects vary and keeps everything else readable.
 
-Read [Roadmap](ROADMAP.md) for where the project is going, [Versioning](VERSIONING.md) for what will not break under you, and the [decision records](adr/0001-graph-in-postgres.md) for why the shape is the shape. To contribute, start with [Contributing](contributing.md) and [Documentation style](STYLE.md).
+Read [Roadmap](ROADMAP.md) for where the project is going, [Versioning](VERSIONING.md) for what's guaranteed to remain stable, and the [decision records](adr/0001-graph-in-postgres.md) for why the shape is the shape. To contribute, start with [Contributing](contributing.md) and [Documentation style](STYLE.md).

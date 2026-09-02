@@ -43,8 +43,9 @@ Notable changes to sci-rag-kit. The format follows
   the campaign commands do, so the address the wizard wrote is used.
 - **Documentation rewritten for readability and trimmed to essentials.** Every
   reader-facing page was line-edited or rewritten in a plain, direct register:
-  shorter sentences, terms defined where they are used, no aphorisms, and each
-  rule stated once on its home page. The rights page folded into the
+  shorter sentences, terms defined where they are used, no aphorisms, each
+  rule stated once on its home page, and prose centered on what the kit does
+  rather than on the reader, with the imperative kept for the steps. The rights page folded into the
   methodology (section 7) with a redirect; the FAQ answers at decision-plus-
   reason length; the domain tutorial leads with the recipe and moved its field
   semantics to the generated configuration reference, which now documents the

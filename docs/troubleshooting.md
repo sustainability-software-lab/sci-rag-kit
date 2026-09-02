@@ -5,7 +5,7 @@ description: Diagnose Sci RAG Kit setup, database, credential, parsing, retrieva
 
 # Troubleshooting
 
-Every entry starts from a symptom you can see and ends at the command that fixes it. Work from the symptom map and let the kit tell you which layer is missing.
+Every entry starts from a visible symptom and ends at the command that fixes it. Work from the symptom map and the kit will tell which layer is missing.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A diagnosis, from a symptom to its cause</div>
@@ -25,9 +25,9 @@ $ uv run sci-rag doctor
 `doctor` checks configuration, domain validation, database connectivity, migrations, corpus state, graph state, and credentials. It spends no model tokens. Add `--probe` for one live embedding and generation round trip on top.
 
 <div class="srag-checkpoint" markdown>
-**Checkpoint: you know which layer is unhappy**
+**Checkpoint: identify the failing layer**
 
-`doctor` names the failing check. Take that name to the symptom map below. If every check is healthy and the behavior is still wrong, the problem is in your domain profile, not in the plumbing.
+`doctor` names the failing check. Take that name to the symptom map below. If every check is healthy and the behavior is still wrong, the problem is in the domain profile, not in the plumbing.
 </div>
 
 ## Fast symptom map
@@ -50,9 +50,9 @@ $ uv run sci-rag doctor
 
 ## Setup prompts look different
 
-The setup flow uses arrow-key menus when the terminal supports them. It falls back to numbered prompts when input or output is not a TTY, `NO_COLOR` is set, `TERM` is blank or `TERM=dumb`, or the prompt library cannot load. The questions, defaults, validation, and files are the same in both presentations.
+The setup flow uses arrow-key menus when the terminal supports them. It falls back to numbered prompts when input or output is not a TTY, `NO_COLOR` is set, `TERM` is blank or `TERM=dumb`, or the prompt library cannot load. The questions, defaults, validation, and files are identical in both presentations.
 
-Pass `--no-tty` to `sci-rag new` or `sci-rag init` when you want the numbered form even in a supported terminal. Pressing Ctrl-C cancels setup instead of treating the interruption as an answer.
+Pass `--no-tty` to `sci-rag new` or `sci-rag init` to force the numbered form even in a supported terminal. Pressing Ctrl-C cancels setup instead of treating the interruption as an answer.
 
 ## Postgres is unreachable
 
@@ -76,7 +76,7 @@ $ uv run sci-rag db upgrade
 
 The compose service maps PostgreSQL to host port `5433`. Compose scopes the container, network, and volume to the project directory, so several projects can each keep their own database. The host port is machine-wide, so only one project can use `5433` at a time.
 
-If `docker compose up` reports that the port is already allocated, either stop the other project's database with `make db-down` there, or give this project a free port. Publishing a different port takes two matching edits:
+If `docker compose up` reports that the port is already allocated, either stop the other project's database with `make db-down` there, or give this project a free port. Publishing a different port requires two matching edits:
 
 ```yaml title="~/docker-compose.yml"
     ports:
@@ -87,12 +87,11 @@ If `docker compose up` reports that the port is already allocated, either stop t
 SCI_RAG_DATABASE_URL=postgresql+asyncpg://sci_rag:sci_rag@localhost:5434/sci_rag
 ```
 
-Then run `make db-up` again. `docker compose ps` shows the port Compose
-actually published, which is the value `SCI_RAG_DATABASE_URL` has to match.
+Run `make db-up` again. `docker compose ps` shows the port Compose actually published, which `SCI_RAG_DATABASE_URL` must match.
 
 ### Local or system PostgreSQL
 
-For PostgreSQL 16 through 18, including Postgres.app with pgvector, put `initdb`, `pg_ctl`, and `psql` on PATH:
+For PostgreSQL 16 through 18 (including Postgres.app with pgvector), add `initdb`, `pg_ctl`, and `psql` to PATH:
 
 ```console
 $ SCI_RAG_DB_BACKEND=local make db-up
@@ -118,7 +117,7 @@ $ tail -n 40 .cloudsql/proxy.log
 
 The helper chooses a dynamic port at or above `SCI_RAG_CLOUD_PG_PORT`. Copy the current URL from `config`. Do not assume the first port remained available.
 
-If the password secret was rotated, run `stop`, move `.cloudsql/password` and `.cloudsql/pgpass` to a private backup location, then run `start`. Never paste either file into an issue.
+If the password secret was rotated, run `stop`, move `.cloudsql/password` and `.cloudsql/pgpass` to a private backup, then run `start`. Never paste either file into an issue.
 
 Missing `gcloud`, `cloud-sql-proxy`, or `psql` fails before the helper changes anything. Authentication errors need `gcloud auth application-default login`. Permission failures name the rejected Cloud SQL or Secret Manager operation. A stale port or proxy PID stays in `.cloudsql/`. Inspect `proxy.log`, stop the matching process through the helper, and run `start` again.
 <!-- END GENERATED PROJECT FEATURE: cloud-helper -->
@@ -131,7 +130,7 @@ Missing `gcloud`, `cloud-sql-proxy`, or `psql` fails before the helper changes a
 Database schema is up to date.
 ```
 
-If the selected backend is healthy but `doctor` cannot connect, compare `.env` with the helper's current configuration. A copied port, a different workspace database, or stale local proxy state are common mismatches.
+If the selected backend is healthy but `doctor` cannot connect, compare `.env` with the helper's current configuration. A copied port, a different workspace database, or stale proxy state indicate common mismatches.
 
 ## A command needs model credentials
 
@@ -141,29 +140,29 @@ Three modes are supported:
 - `SCI_RAG_GCP_PROJECT` plus Application Default Credentials: Vertex AI.
 - `SCI_RAG_EMBEDDING_PROVIDER=local-hash`: offline, deterministic retrieval mechanics only.
 
-The offline embedder is lexical, not semantic. It does not make graph extraction, HyDE, community summarization, answer generation, or LLM reranking available. A refusal at that boundary is correct behavior.
+The offline embedder is lexical, not semantic. It does not enable graph extraction, HyDE, community summarization, answer generation, or LLM reranking. A refusal at that boundary is correct behavior.
 
 Use `uv run sci-rag doctor --probe` after configuring a credential. The probe spends one small request and distinguishes a present-looking credential from one the provider accepts.
 
 ### Recover during project setup
 
-`sci-rag new` checks an entered Google credential with one small model request and a 15-second deadline before downloading the template. A failed check uses actionable, safe error text and never prints the raw provider exception or credential value. The wizard offers three choices:
+`sci-rag new` checks an entered Google credential with one small model request and a 15-second deadline before downloading the template. A failed check uses actionable, safe error text and never prints the raw provider exception or credential value. Three choices follow:
 
 1. **Try a different credential** to replace the current key or project and run the check again.
 2. **Switch to an AI Studio key** to leave the Vertex path and enter a key from [Google AI Studio](https://aistudio.google.com/apikey).
 3. **Continue without a model** to finish with the worked example ontology.
 
-The third choice keeps your chosen credential mode and writes the entered key or project to `.env`. It skips only the ontology draft. You can fix the credential or run `gcloud auth application-default login` later without rebuilding the project. Run `uv run sci-rag doctor --probe` after the fix.
+The third choice keeps your chosen credential mode and writes the entered key or project to `.env`. It skips only the ontology draft. Fix the credential or run `gcloud auth application-default login` later without rebuilding. Run `uv run sci-rag doctor --probe` after the fix.
 
 The `--no-preflight` flag skips the preliminary model request. It is only available on `sci-rag new`. This escape hatch does not validate the credential. An ontology draft can still call the provider later when a value was entered. Use it only when the preliminary probe itself is the problem, then run `uv run sci-rag doctor --probe` from the generated project.
 
 ### Running offline on purpose
 
-A project that sets `SCI_RAG_EMBEDDING_PROVIDER=local-hash` and leaves `SCI_RAG_LLM_MODEL` at its shipped default is a supported mode, not a half-finished setup. The setup wizard writes exactly that for `credentials: offline`. `doctor` reports unavailable generation features as warnings and exits `0`. A green run means the offline pipeline is healthy.
+A project that sets `SCI_RAG_EMBEDDING_PROVIDER=local-hash` and leaves `SCI_RAG_LLM_MODEL` at its shipped default is a supported mode, not a half-finished setup. The setup wizard writes exactly that for `credentials: offline`. `doctor` reports unavailable generation features as warnings and exits `0`. A passing run means the offline pipeline is healthy.
 
 Retrieval in an offline project reports model-only layers as `disabled`, not `error`. Graph and HyDE ask a model about every query, so a project with no credential cannot run them. `disabled` is the status for a layer this project does not have. `error` is reserved for a layer that should have worked. Vector, keyword, and community retrieval run normally.
 
-Reaching for a model with no credential is still a failure. `doctor` reports `FAIL` when the Google embedding provider is selected without credentials, or when a generation model is named explicitly (such as `SCI_RAG_LLM_MODEL=anthropic:claude-opus-5`) with no key or project. Writing a model id is how you say you intend to generate. The diagnosis follows what the configuration asks for.
+Reaching for a model with no credential is still a failure. `doctor` reports `FAIL` when the Google embedding provider is selected without credentials, or when a generation model is named explicitly (such as `SCI_RAG_LLM_MODEL=anthropic:claude-opus-5`) with no key or project. Writing a model id signals intent to generate. The diagnosis follows the configuration.
 
 ## Graph extraction reports a failed batch
 
@@ -225,7 +224,7 @@ $ uv run sci-rag stats
 $ uv run sci-rag retrieve "a representative question" --profile interactive --limit 3
 ```
 
-Include the doctor table, stage traces, package version, operating system, and whether Postgres is compose-managed or external. Never paste `.env`, bearer keys, passwords, or credentials into an issue.
+Include the doctor table, stage traces, package version, operating system, and whether Postgres is compose-managed or external. Do not paste `.env`, bearer keys, passwords, or credentials into an issue.
 
 ## Next steps
 

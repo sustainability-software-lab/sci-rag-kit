@@ -5,11 +5,7 @@ description: Discover a resumable DOI list, resolve explicit open-access rights,
 
 # Run a corpus campaign
 
-A campaign turns a research topic or a seed DOI file into a reproducible list
-of scientific works, with an explicit rights answer attached to every one.
-Discovery stays separate from ingestion on purpose, so you can inspect the
-candidates and resume interrupted network work before anything lands in the
-corpus.
+A campaign turns a research topic or a seed DOI file into a reproducible list of scientific works, with an explicit rights answer attached to each one. Discovery stays separate from ingestion by design, so candidates can be inspected and interrupted network work resumed before ingestion begins.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A screened, rights-resolved corpus manifest</div>
@@ -28,9 +24,7 @@ corpus.
 | A topic phrase or a file of DOIs | The two ways to start a campaign | |
 | Network access | Every step here talks to an external index | |
 
-Campaigns never decide rights for you. Discovery produces candidates and an
-explicit open-access signal; anything unestablished stays `unknown`, which
-retrieval treats as unsafe.
+Campaigns never make rights decisions. Discovery produces candidates and an explicit open-access signal; anything unestablished stays `unknown`, which retrieval treats as unsafe.
 
 ## Discover from a topic
 
@@ -44,10 +38,7 @@ uv run sci-rag campaign discover \
   --max-results 100
 ```
 
-Topic discovery searches OpenAlex and follows cursor pagination. Casual use
-works without a key. For a larger API budget, set `OPENALEX_API_KEY` in the
-environment. The kit never prints that key and never writes it to campaign
-state.
+Topic discovery searches OpenAlex and follows cursor pagination. Casual use works without a key. For a larger API budget, set `OPENALEX_API_KEY` in the environment. The kit does not print that key or write it to campaign state.
 
 ## Discover from DOI seeds
 
@@ -205,11 +196,7 @@ Walk the queue interactively:
 uv run sci-rag campaign review --name rice-straw
 ```
 
-For each row, choose `include`, `exclude`, or `skip`, then record a reason.
-Human decisions append after the model suggestion instead of overwriting it,
-and the report regenerates from the latest decision under that protocol.
-Skipping leaves the row in `awaiting_review`, so the totals continue to
-reconcile without pretending the campaign is complete.
+For each row, choose `include`, `exclude`, or `skip`, then record a reason. Human decisions append after the model suggestion instead of overwriting it, and the report regenerates from the latest decision. Skipping leaves the row in `awaiting_review`, so the totals reconcile without claiming completeness.
 
 <div class="srag-checkpoint" markdown>
 **Checkpoint: every row has a decision**
@@ -221,10 +208,7 @@ plus `awaiting review` equals `screened`. No row is missing, and no row is
 included without a rights answer you can point at.
 </div>
 
-**Verify the manifest is ready to ingest.** Open
-`data/campaigns/rice-straw/screening-report.json` and confirm: the `included`
-and `excluded` fields sum to the `screened` field. The `corpus.jsonl` file
-exists and contains one JSON object per row, matching the included papers.
+**Verify the manifest is ready to ingest.** Open `data/campaigns/rice-straw/screening-report.json` and confirm: the `included` and `excluded` fields sum to the `screened` field. The `corpus.jsonl` file exists and contains one JSON object per row matching the included papers.
 
 ## Next steps
 

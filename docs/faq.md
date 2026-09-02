@@ -11,15 +11,15 @@ The reasoning behind the kit is written down at length in ten decision records a
 
 ### What is Sci RAG Kit?
 
-A project template for retrieval-augmented generation over scientific documents, on one Postgres database. You copy it, point it at your documents, and get a knowledge base that answers questions with numbered citations to the passages it used.
+A project template for retrieval-augmented generation over scientific documents, on one Postgres database. Copy it, point it at documents, and it becomes a knowledge base that answers questions with numbered citations to the passages it used.
 
-It parses PDF, HTML, Markdown, and text. It builds a knowledge graph from concepts you declare and searches with five retrieval layers that merge into one ranking. It includes an evaluation harness and one service that answers REST clients and agents. Everything is stored in Postgres with the pgvector extension.
+It parses PDF, HTML, Markdown, and text. It builds a knowledge graph from concepts declared in the domain ontology and searches with five retrieval layers that merge into one ranking. It includes an evaluation harness and one service that answers REST clients and agents. Everything is stored in Postgres with the pgvector extension.
 
 ### Who is it for?
 
-A scientific group that needs a defensible knowledge base over its own literature and has no retrieval engineer to spare. The architectural decisions are made and written down with their reasons, so you can defend them in a review. The operational surface is one database, because a group without a platform team pays for every extra system.
+A scientific group that needs a defensible knowledge base over its own literature and has no retrieval engineer to spare. The architectural decisions are made and written down with their reasons, so they can be defended in a review. The operational surface is one database, because a group without a platform team pays for every extra system.
 
-If you are building a bespoke retrieval application and want to make every architectural call yourself, a library fits better. [Choosing Sci RAG Kit](choosing-sci-rag-kit.md) names the alternatives.
+A group building a bespoke retrieval application, and wanting to make every architectural call itself, is better served by a library. [Choosing Sci RAG Kit](choosing-sci-rag-kit.md) names the alternatives.
 
 ### Is this a library, a framework, or a template?
 
@@ -31,17 +31,17 @@ Three things that break naive retrieval on scientific text. The evidence is nume
 
 ### How does it compare to LightRAG, PaperQA2, or LlamaIndex?
 
-They are different shapes. LightRAG and LlamaIndex are libraries you build an application around, and they win when you want to make the architectural calls yourself. PaperQA2 is an agent that reasons over papers in several steps per question, and it wins when a question is hard enough to be worth that cost and latency. This kit is infrastructure with the decisions already made and measured. [Choosing Sci RAG Kit](choosing-sci-rag-kit.md) is the comparison.
+They are different shapes. LightRAG and LlamaIndex are libraries to build an application around, and they win when architectural calls must be made by the builder. PaperQA2 is an agent that reasons over papers in several steps per question, and it wins when a question is hard enough to justify that cost and latency. This kit is infrastructure with the decisions already made and measured. [Choosing Sci RAG Kit](choosing-sci-rag-kit.md) is the comparison.
 
 ## Getting started
 
 ### What is the fastest way to try it?
 
-Clone the repository and run the demo. In about ten minutes and with no credentials, it ingests five synthetic documents about agricultural residues, retrieves evidence for one question, and scores retrieval against the bundled test questions. To start a project of your own, run `pipx install sci-rag-kit` and then `sci-rag new`. The [quickstart](quickstart.md) has both routes.
+Clone the repository and run the demo. In about ten minutes and with no credentials, it ingests five synthetic documents about agricultural residues, retrieves evidence for one question, and scores retrieval against the bundled test questions. To start a new project, run `pipx install sci-rag-kit` and then `sci-rag new`. The [quickstart](quickstart.md) has both routes.
 
 ### Do I need Google credentials?
 
-Not to try it, and not to run retrieval. Yes for anything that calls a model. With `SCI_RAG_EMBEDDING_PROVIDER=local-hash` the kit uses an offline embedder that matches on words, and parsing, chunking, storage, retrieval, and retrieval scoring work. The graph, the hypothetical-answer search, community summaries, generated answers, and graded answers need a credential. Generation can use Gemini, Claude, or any OpenAI-compatible endpoint. Embeddings are Google-only, because changing the embedder means re-embedding every chunk in the database; see [why you can change the LLM but not the embedding provider](#why-can-i-change-the-llm-but-not-the-embedding-provider).
+Not to try it, and not to run retrieval. Yes for anything that calls a model. With `SCI_RAG_EMBEDDING_PROVIDER=local-hash` the kit uses an offline embedder that matches on words, and parsing, chunking, storage, retrieval, and retrieval scoring work. The graph, the hypothetical-answer search, community summaries, generated answers, and graded answers need a credential. Generation can use Gemini, Claude, or any OpenAI-compatible endpoint. Embeddings are Google-only, because changing the embedder means re-embedding every chunk in the database; see [why the LLM can be changed but not the embedding provider](#why-can-i-change-the-llm-but-not-the-embedding-provider).
 
 ### Do I need Docker?
 
@@ -49,9 +49,9 @@ With pixi or conda, no: those managers install PostgreSQL and pgvector from cond
 
 ### Do I have to clone the repository?
 
-No. `pipx install sci-rag-kit` then `sci-rag new` fetches the template at a pinned tag and writes a configured, git-initialized project directory. Quick asks for six setup decisions and the credential value the selected mode needs. Advanced asks every applicable question. Choose Offline when you do not want a model credential.
+No. `pipx install sci-rag-kit` then `sci-rag new` fetches the template at a pinned tag and writes a configured, git-initialized project directory. Quick asks for six setup decisions and the credential value the selected mode needs. Advanced asks every applicable question. Choose Offline when no model credential is desired.
 
-Clicking **Use this template** or cloning works too. Run `sci-rag init` inside that checkout. It configures the same files without downloading a template or running the credential check. Both routes start from the same tree and use the same appliers.
+**Use this template** or cloning works too. Run `sci-rag init` inside that checkout. It configures the same files without downloading a template or running the credential check. Both routes start from the same tree and use the same appliers.
 
 ### Can I run it completely offline?
 
@@ -63,7 +63,7 @@ Each answer gives the decision and its reason. The decision record behind it lis
 
 ### Why is the knowledge graph in Postgres and not Neo4j?
 
-Because this workload never issues the query a graph engine is for. The only traversal is a two-hop walk from a few seed entities to their evidence chunks, which is a recursive query over indexed foreign keys. A graph engine would add a second backup, migration, and access-control story for no query it needs. One database also lets a chunk and its graph rows commit together. Deep path queries and centrality are out of scope; export the two tables when you want them. [ADR 0001](adr/0001-graph-in-postgres.md).
+Because this workload never issues the query a graph engine is for. The only traversal is a two-hop walk from a few seed entities to their evidence chunks, which is a recursive query over indexed foreign keys. A graph engine would add a second backup, migration, and access-control story for no query it needs. One database also lets a chunk and its graph rows commit together. Deep path queries and centrality are out of scope; export the two tables when they're needed. [ADR 0001](adr/0001-graph-in-postgres.md).
 
 ### Why 1536-dimension embeddings when models offer 3072?
 
@@ -75,11 +75,11 @@ Because it installs several gigabytes of machine-learning dependencies. It is st
 
 ### Why a template repository and not a cookiecutter?
 
-Because a cookiecutter template is code you cannot run. Its placeholders make the tree hard to browse, impossible to execute, and testable only by generating a project and looking. A runnable template inverts all three: you evaluate the kit by running it, the demo documents the behavior, and the CI that gates the application gates the template. The cost is less parameterization; disagreeing with an opinion is a normal code change in a repository you own. [ADR 0004](adr/0004-template-repo-not-cookiecutter.md).
+Because a cookiecutter template is code that cannot run. Its placeholders make the tree hard to browse, impossible to execute, and testable only by generating a project and looking. A runnable template inverts all three: the kit is evaluated by running it, the demo documents the behavior, and the CI that gates the application gates the template. The cost is less parameterization; disagreeing with an opinion is a normal code change in a repository that's owned. [ADR 0004](adr/0004-template-repo-not-cookiecutter.md).
 
 ### Why do citations get their own table?
 
-Because a citation is not the kind of edge the knowledge graph stores. Graph edges run entity to entity, carry a type from your ontology, and quote the phrase that stated them. A citation runs document to document, has one type, and its evidence is a DOI match in a reference list. Forcing citations into the graph would put paper titles among concepts and have community detection summarize the mixture. So `document_citations` holds them. [ADR 0005](adr/0005-citation-edges-as-a-document-table.md).
+Because a citation is not the kind of edge the knowledge graph stores. Graph edges run entity to entity, carry a type from the ontology, and quote the phrase that stated them. A citation runs document to document, has one type, and its evidence is a DOI match in a reference list. Forcing citations into the graph would put paper titles among concepts and have community detection summarize the mixture. So `document_citations` holds them. [ADR 0005](adr/0005-citation-edges-as-a-document-table.md).
 
 ### Why hand-written provider adapters?
 
@@ -113,15 +113,15 @@ Because each layer finds evidence the others miss, and on scientific text the ga
 
 ### Why merge by rank and not by score?
 
-Because the layers' native scores are incomparable and their ranks are not. Each layer contributes `weight / (60 + rank)` per passage, so a passage several layers agree on beats one a single layer scored highly. The default weights are vector 1.5, keyword 1.0, graph 0.8, community 0.6, and hypothetical answer 1.2. They are defaults, not findings about your corpus; the [evaluation](evaluation.md) reports what each layer contributes before you change one.
+Because the layers' native scores are incomparable and their ranks are not. Each layer contributes `weight / (60 + rank)` per passage, so a passage several layers agree on beats one a single layer scored highly. The default weights are vector 1.5, keyword 1.0, graph 0.8, community 0.6, and hypothetical answer 1.2. They are defaults, not findings about a specific corpus; the [evaluation](evaluation.md) reports what each layer contributes before changing one.
 
 ### What is HyDE, and why is it never cited?
 
-HyDE (hypothetical document embeddings) has a model write the short passage a real document would contain if it answered your question, then searches near that passage. It is never cited because it is not evidence. It is a guess used only to aim the search, and the domain profile can steer its style per question class.
+HyDE (hypothetical document embeddings) has a model write the short passage a real document would contain if it answered a question, then searches near that passage. It is never cited because it is not evidence. It is a guess used only to aim the search, and the domain profile can steer its style per question class.
 
 ### Why is the reranker off by default?
 
-Because it has not earned the default on your corpus. Two adapters ship, one using the configured model and one using a local cross-encoder behind the `rerank` extra. Either stays off until the `with_rerank` against `no_rerank` comparison justifies the latency on the corpus you have. Answer compression is held to the same rule and passed it at a relevance floor of 0.0, so it ships on. [Benchmarks](benchmarks.md) publishes the runs.
+Because it has not earned the default on a specific corpus. Two adapters ship, one using the configured model and one using a local cross-encoder behind the `rerank` extra. Either stays off until the `with_rerank` against `no_rerank` comparison justifies the latency on the corpus. Answer compression is held to the same rule and passed it at a relevance floor of 0.0, so it ships on. [Benchmarks](benchmarks.md) publishes the runs.
 
 ### Why does the community layer skip my query when I filter?
 
@@ -135,7 +135,7 @@ Because the alternative is an answer built from the model's memory. The answer p
 
 ### Can I use this on papers I hold but may not redistribute?
 
-Yes. Every document carries a license class from the manifest: `public`, `open_commercial`, `open_noncommercial`, `restricted`, or `unknown`. A paper you hold under a subscription is `restricted`. It can sit in the corpus and be retrieved by an internal caller whose scope allows that class, and it stays unreachable from a surface you do not control. Every layer applies the scope inside its own query, before ranking, so an ineligible document can never displace an eligible one. [Scope precedes ranking](methodology.md#7-scope-precedes-ranking) in the methodology has the full contract.
+Yes. Every document carries a license class from the manifest: `public`, `open_commercial`, `open_noncommercial`, `restricted`, or `unknown`. A paper held under a subscription is `restricted`. It can sit in the corpus and be retrieved by an internal caller whose scope allows that class, and it stays unreachable from publicly accessible surfaces. Every layer applies the scope inside its own query, before ranking, so an ineligible document can never displace an eligible one. [Scope precedes ranking](methodology.md#7-scope-precedes-ranking) in the methodology has the full contract.
 
 ### Why does an empty license allowlist return nothing?
 
@@ -143,7 +143,7 @@ Because "allow nothing" and "no restriction" are different requests. `license_cl
 
 ### Why is `unknown` treated as unsafe?
 
-Because "nobody has established the rights" is not "the rights are permissive". Missing or unrecognized license metadata normalizes to `unknown`, and `unknown` never enters a requested allowlist unless named. Only `public` and `open_commercial` are treated as safe for a service you do not fully control. Campaign discovery follows the same rule: a missing or unrecognized license signal stays `unknown`.
+Because "nobody has established the rights" is not "the rights are permissive". Missing or unrecognized license metadata normalizes to `unknown`, and `unknown` never enters a requested allowlist unless named. Only `public` and `open_commercial` are treated as safe for publicly accessible services. Campaign discovery follows the same rule: a missing or unrecognized license signal stays `unknown`.
 
 ### Why does the grader never see the reference answer?
 
@@ -157,7 +157,7 @@ The graph is sized for the hundreds to low tens of thousands of entities a domai
 
 ### What does it cost to run?
 
-Locally, nothing beyond your machine and the model calls you make. Deployed, the database is the steady cost: the default `db-g1-small` Cloud SQL tier is a few tens of dollars a month, so destroy experiments with `terraform destroy`. Model cost follows the profile. `interactive` costs one query embedding; `deep` adds a generation call each for the graph and hypothetical-answer layers. There is no per-question agent loop, so cost per question is predictable.
+Locally, nothing beyond the machine and the model calls made. Deployed, the database is the steady cost: the default `db-g1-small` Cloud SQL tier is a few tens of dollars a month, so destroy experiments with `terraform destroy`. Model cost follows the profile. `interactive` costs one query embedding; `deep` adds a generation call each for the graph and hypothetical-answer layers. There is no per-question agent loop, so cost per question is predictable.
 
 ### What happens when a retrieval layer times out?
 
@@ -185,11 +185,11 @@ No, on purpose. There is also no task queue, cache service, vector-store sidecar
 
 ### Can I rename the Python package?
 
-You can, but derived projects keep the `sci_rag` import path. Renaming buys nothing functional and costs the ability to diff your project against the upstream template and pull improvements. `sci-rag init` and `scripts/init_domain.py` set the project name and description without touching the import path.
+It's possible, but derived projects keep the `sci_rag` import path. Renaming buys nothing functional and costs the ability to diff a project against the upstream template and pull improvements. `sci-rag init` and `scripts/init_domain.py` set the project name and description without touching the import path.
 
 ### How much of this should I change?
 
-As much as you need. The parts built to be replaced are `domain/`, the corpus manifest, and `.env`, and most projects never need more. Beyond them, the five boundaries above are where real projects vary. Keep two things if you can: run an evaluation before and after a retrieval change, and keep the rights scope inside every layer's query.
+As much as needed. The parts built to be replaced are `domain/`, the corpus manifest, and `.env`, and most projects never need more. Beyond them, the five boundaries above are where real projects vary. Keep two things if possible: run an evaluation before and after a retrieval change, and keep the rights scope inside every layer's query.
 
 ## The project
 
