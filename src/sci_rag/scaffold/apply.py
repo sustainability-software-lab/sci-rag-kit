@@ -55,7 +55,7 @@ CORPUS_MANIFEST_TEMPLATE = """\
 #  "source": "my-collection"}
 #
 # license_class is a rights boundary, not a label: "unknown" is treated as
-# unsafe to redistribute. See docs/evidence-and-rights.md.
+# unsafe to redistribute. See docs/methodology.md, section 7.
 """
 
 DOI_FILE_TEMPLATE = """\

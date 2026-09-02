@@ -443,7 +443,7 @@ def draft_manifest_command(
     console.print(
         f"[yellow]{result.needs_rights_decision} documents need a rights decision.[/yellow] "
         'Every row says license_class "unknown", which excludes it from scoped '
-        "retrieval until you say otherwise. See docs/evidence-and-rights.md."
+        "retrieval until you say otherwise. See docs/methodology.md, section 7."
     )
 
     if dry_run:

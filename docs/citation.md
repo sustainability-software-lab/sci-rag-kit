@@ -37,4 +37,4 @@ A software citation alone does not identify a RAG experiment. Also report:
 - enabled layers, routing profile, and reranker state;
 - evaluation question-set version and judge calibration evidence.
 
-Evaluation reports and named corpus snapshots already record most of this provenance. See [Evaluate your pipeline](evaluation.md) and [Evidence and rights](evidence-and-rights.md).
+Evaluation reports and named corpus snapshots already record most of this provenance. See [Evaluate your pipeline](evaluation.md) and the [methodology](methodology.md).

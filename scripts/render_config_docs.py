@@ -19,6 +19,8 @@ from pydantic.fields import PydanticUndefined
 
 from sci_rag.config import Settings
 from sci_rag.domain import DomainConfig, load_domain
+from sci_rag.evals.seeds import SeedQuestion
+from sci_rag.ingest.manifest import CorpusEntry
 
 ENV_PREFIX = str(Settings.model_config.get("env_prefix", ""))
 ENV_PATTERN = re.compile(r"^#?\s*(SCI_RAG_[A-Z0-9_]+)\s*=")
@@ -120,6 +122,45 @@ def _default(field: Any) -> str:
     if isinstance(value, (dict, list, tuple)):
         return json.dumps(value, sort_keys=True)
     return str(value)
+
+
+MANIFEST_DESCRIPTIONS = {
+    "path": "Where the file is, relative to the manifest. The only required field.",
+    "title": "The document title, used in citations. Drafted from the first pages when missing.",
+    "authors": "Author names, as a list.",
+    "year": "Publication year.",
+    "doi": "Digital object identifier. Enables Crossref enrichment and retraction checks.",
+    "journal": "Journal or venue. Becomes a retrieval filter.",
+    "url": "Where the document came from, for the citation.",
+    "license_class": "Redistribution rights: `public`, `open_commercial`, `open_noncommercial`, `restricted`, or `unknown`. Never drafted; `unknown` is excluded from any request that restricts rights.",
+    "license_source": "The sentence or signal the license class was based on, kept as evidence.",
+    "source": "Your own grouping label, such as `journal_papers` or `agency_reports`. Becomes a retrieval filter.",
+}
+
+SEED_DESCRIPTIONS = {
+    "id": "A short stable identifier, used in reports.",
+    "question": "The question as a user would ask it.",
+    "reference_answer": "What a correct answer must say. Used by the correctness grader; optional for retrieval scoring.",
+    "reference_titles": "Titles of the documents that contain the answer. A retrieved chunk from one of them counts as relevant.",
+    "evidence_phrases": "Distinctive strings from the answering passages; numbers with units work best. A retrieved chunk containing one counts as relevant.",
+    "tags": "Your own labels, plus two with meaning: `unanswerable` marks a question the corpus cannot answer, and `drafted` marks a model-written question no expert has reviewed.",
+}
+
+
+def _model_rows(model: type[BaseModel], descriptions: dict[str, str]) -> list[str]:
+    """One table row per field of a flat JSONL row model."""
+    missing = [name for name in model.model_fields if name not in descriptions]
+    if missing:
+        raise SystemExit(f"{model.__name__} has undocumented fields: {', '.join(missing)}")
+    rows = []
+    for name, field in model.model_fields.items():
+        required = field.is_required()
+        default = "required" if required else _default(field)
+        rows.append(
+            f"| `{name}` | {_cell(_type_name(field.annotation))} | {_cell(default)} "
+            f"| {_cell(descriptions[name])} |"
+        )
+    return rows
 
 
 def _nested_model(annotation: Any) -> tuple[type[BaseModel] | None, bool]:
@@ -261,13 +302,34 @@ def render_config_docs(
 
     lines += [
         "",
+        "## `data/corpus.jsonl`",
+        "",
+        "The corpus manifest: one JSON object per document. `sci-rag ingest",
+        "--manifest` and `sci-rag build --manifest` read it; `sci-rag draft",
+        "manifest` writes a first version from the files in a folder; `sci-rag",
+        "manifest lint` checks it. Paths resolve relative to the manifest file.",
+        "",
+        "| Field | Type | Default | Purpose |",
+        "|---|---|---|---|",
+        *_model_rows(CorpusEntry, MANIFEST_DESCRIPTIONS),
+        "",
+        "## `domain/eval_seed_questions.jsonl`",
+        "",
+        "The test questions: one JSON object per question, with the evidence a",
+        "correct answer rests on. `sci-rag eval retrieval` and `sci-rag eval",
+        "answers` score against them; `sci-rag draft questions` writes a first",
+        "version from your corpus. Lines starting with `#` are comments.",
+        "",
+        "| Field | Type | Default | Purpose |",
+        "|---|---|---|---|",
+        *_model_rows(SeedQuestion, SEED_DESCRIPTIONS),
+        "",
         "## Files beside the YAML profile",
         "",
         "| Path | Contract |",
         "|---|---|",
         "| `domain/prompts/*.md` | `string.Template` prompt files. Preserve every required `$UPPER_CASE` slot. |",
-        "| `domain/eval_seed_questions.jsonl` | Retrieval ground truth and optional expert answers for the target corpus. |",
-        "| `domain/eval_calibration_labels.jsonl` | Independent human labels used to calibrate the model judge. |",
+        "| `domain/eval_calibration_labels.jsonl` | Human scores for a set of graded answers, used to check the model grader. Never drafted. |",
         "",
         "[Bring your own domain](bring-your-own-domain.md) explains how to change",
         "these together. [Evaluate your pipeline](evaluation.md) explains why a",

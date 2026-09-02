@@ -212,18 +212,22 @@ Skipping leaves the row in `awaiting_review`, so the totals continue to
 reconcile without pretending the campaign is complete.
 
 <div class="srag-checkpoint" markdown>
-**Checkpoint: every row has a decision or a reason**
+**Checkpoint: every row has a decision**
 
-`sci-rag campaign review --name rice-straw` ends by printing the
-PRISMA-aligned counts and the path to
-`data/campaigns/rice-straw/screening-report.json`, which it rewrites from the
-latest decisions. In that table `included` plus `excluded` plus
-`awaiting review` equals `screened`. No row is missing, and no row is included
-without a rights answer you can point at.
+`sci-rag campaign review --name rice-straw` ends by printing the PRISMA-aligned
+counts and the path to `data/campaigns/rice-straw/screening-report.json`, which
+it rewrites from the latest decisions. In that table `included` plus `excluded`
+plus `awaiting review` equals `screened`. No row is missing, and no row is
+included without a rights answer you can point at.
 </div>
+
+**Verify the manifest is ready to ingest.** Open
+`data/campaigns/rice-straw/screening-report.json` and confirm: the `included`
+and `excluded` fields sum to the `screened` field. The `corpus.jsonl` file
+exists and contains one JSON object per row, matching the included papers.
 
 ## Next steps
 
 - Ingest the manifest this produced: [Bring your own domain](bring-your-own-domain.md#step-5-ingest-and-build)
-- Understand what a license class does to retrieval: [Evidence and rights](evidence-and-rights.md)
+- Understand what a license class does to retrieval: [Scope precedes ranking](methodology.md#7-scope-precedes-ranking)
 - Enrich the DOIs and check for retractions: [Operate a live corpus](operations.md)
