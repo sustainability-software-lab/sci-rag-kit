@@ -39,10 +39,9 @@ graph and generate answers.
 The generator configures the live template and writes these answers directly
 into the project files. The resulting tree contains no placeholders to fill in.
 
-## Full Project Structure
+## Project structure
 
-Everything specific to a field sits in two folders and one file. The layout
-below is what `sci-rag new` produces.
+The directory structure below is produced upon running the `sci-rag new` command.
 
 <div class="srag-tree">your-project/
 ├── domain/                  the field
