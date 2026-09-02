@@ -173,7 +173,7 @@ def _body(page: Path) -> str:
 def _resolved(page: Path) -> str:
     """The page's body with any `--8<--` include inlined.
 
-    Three Project pages are one include line apiece, so the heading a reader
+    Some repository-level pages are one include line apiece, so the heading a reader
     sees comes from a file at the repository root.
     """
     lines = []
@@ -446,6 +446,27 @@ def test_a_page_heading_matches_its_title() -> None:
     assert disagreements == [], (
         f"add a documented entry to TITLE_EXCEPTIONS if the difference is deliberate: {disagreements}"
     )
+
+
+def test_methodology_headings_use_names_instead_of_outline_numbers() -> None:
+    """Visible outline numbers made the retrieval section look like it had seven layers."""
+    methodology = (DOCS / "methodology.md").read_text(encoding="utf-8")
+    headings = re.findall(r"^#{2,4}\s+(.+?)\s*$", methodology, re.MULTILINE)
+    labels = [heading.partition(" {#")[0] for heading in headings]
+    numbered = [label for label in labels if re.match(r"\d+(?:\.\d+)*\s", label)]
+
+    assert numbered == [], f"Methodology headings should not expose outline numbers: {numbered}"
+
+    for legacy_fragment in (
+        "1-why-this-shape",
+        "6-the-five-retrieval-layers",
+        "6-3-knowledge-graph-traversal",
+        "7-scope-precedes-ranking",
+        "9-evaluation-design",
+    ):
+        assert f"{{#{legacy_fragment}}}" in methodology, (
+            f"removing visible numbers must preserve the old #{legacy_fragment} link"
+        )
 
 
 @pytest.mark.parametrize("heading", ["Before you start", "Next steps"])

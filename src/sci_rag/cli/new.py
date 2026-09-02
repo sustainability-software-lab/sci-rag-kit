@@ -52,7 +52,7 @@ def new(
         "--answers-file",
         help="A YAML file of answers, for reproducible generation. Unanswered questions "
         "take their default. Answers that need a person, such as accepting a drafted "
-        "ontology, are refused rather than replaced.",
+        "ontology, must be supplied explicitly.",
     ),
     quick: bool | None = typer.Option(
         None,
@@ -72,19 +72,19 @@ def new(
     ref: str | None = typer.Option(
         None,
         "--ref",
-        help="Fetch the template at this tag or branch instead of the tag matching "
+        help="Fetch the template at this tag or branch, overriding the tag that matches "
         "this generator's version.",
     ),
     template_path: Path | None = typer.Option(
         None,
         "--template-path",
         help=(
-            "Generate from a local checkout instead of downloading. No network needed. "
+            "Generate from a local checkout with no network access. "
             "Copies what the checkout tracks, so local state stays local."
         ),
     ),
 ) -> None:
-    """Answer a short questionnaire, get a configured project directory."""
+    """Create a new Sci RAG Kit project."""
     try:
         _run_new(
             output_dir=output_dir,

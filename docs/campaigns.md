@@ -76,7 +76,7 @@ record.
 
 OpenAlex and Crossref calls are rate-limited. The client sends your contact address in both the query and User-Agent, retries 429 and 5xx with bounded backoff, and fails visibly when retries exhaust. An empty success report never happens.
 
-Discovery metadata tells you the document exists, not whether you can redistribute it. Resolve rights before you download:
+Discovery metadata establishes that a document exists. Resolve its redistribution rights before downloading:
 
 ```bash
 uv run sci-rag campaign build \
@@ -89,15 +89,15 @@ uv run sci-rag campaign build \
 
 The dry run queries Unpaywall for each DOI, prints direct-PDF counts and the license-class breakdown, and writes only resumable state. It does not create `pdfs/` or `corpus.jsonl`.
 
-`--max-results` bounds this invocation, not just discovery. If the campaign retained 100
+`--max-results` bounds discovery, rights resolution, screening, and download for this invocation. If the campaign retained 100
 candidates, `--max-results 20` resolves the first 20 and leaves the rest untouched in
 dry-run and download modes. Because campaign state is append-only, retrying works on
-the same prefix instead of sampling a new set. The report shows both `retained` and
+the same prefix. The report shows both `retained` and
 `candidates`; pass `--all-candidates` to process every retained candidate.
 
 ## Fail-closed rights mapping
 
-Availability and redistribution rights are different signals. Unpaywall marking a work green or gold means the document is reachable, not that you can share it. A work earns an open license class only when its selected location carries an explicit, recognized license:
+Availability and redistribution rights are different signals. Unpaywall may mark a green or gold copy as reachable. Sharing still requires an explicit, recognized license at the selected location:
 
 | Explicit location license | Corpus class |
 | --- | --- |
@@ -158,8 +158,8 @@ The screening report begins at the deduplicated campaign-state boundary.
 `identified`, `screened`, and the sum of `included`, `excluded`, and
 `awaiting_review` therefore reconcile against the unique discovered works.
 `campaign discover` already removed and reported the upstream duplicates, so
-`duplicates_removed` is zero at this boundary. Exclusions also include a
-reason breakdown rather than only an aggregate count.
+`duplicates_removed` is zero at this boundary. Exclusions include both an
+aggregate count and a breakdown by reason.
 
 ## Review uncertain rows
 
@@ -169,7 +169,7 @@ Walk the queue interactively:
 uv run sci-rag campaign review --name rice-straw
 ```
 
-For each row, choose `include`, `exclude`, or `skip` and record a reason. Human decisions append after the model's suggestion instead of replacing it, and the report regenerates from your latest choice. Skip a row and it stays `awaiting_review`, so totals reconcile without claiming you finished.
+For each row, choose `include`, `exclude`, or `skip` and record a reason. Human decisions append after the model's suggestion, and the report regenerates from your latest choice. Skip a row and it stays `awaiting_review`, so totals reconcile without claiming you finished.
 
 <div class="srag-checkpoint" markdown>
 **Checkpoint: every row has a decision**

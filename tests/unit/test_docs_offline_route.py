@@ -35,12 +35,12 @@ MODEL_ONLY = (
 
 # The marker a credentialed block carries. Prose, because the guard has to
 # read what a reader reads, and a class nobody sees would drift from it.
-CREDENTIALED_TITLE = '!!! note "Needs a model credential"'
+CREDENTIALED_TITLE = '!!! note "Needs LLM provider credentials"'
 
 # A single line inside a multi-command block may carry the same marker as a
 # trailing comment instead, so a recipe card can list the credentialed step
 # beside the offline ones without hiding it in a separate block.
-INLINE_MARKER = "needs a model credential"
+INLINE_MARKER = "needs llm provider credentials"
 
 
 def _page() -> str:

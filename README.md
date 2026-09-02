@@ -14,12 +14,12 @@ Retrieval-augmented generation, built around your scientific domain.
 Sci RAG Kit is a project template for question answering over scientific
 documents. It parses papers and reports, indexes their passages, runs five
 kinds of search, and measures retrieval against questions with known answers.
-With a model credential, it also builds a concept graph and writes answers
+With LLM provider credentials, it also builds a concept graph and writes answers
 that cite the passages they use. REST and MCP clients share the same service.
 Your project supplies the documents, the vocabulary of its field, and the
 questions used to score the result.
 
-Start a project with two commands. `sci-rag new` asks a few questions and
+Start a new project with two commands. `sci-rag new` asks a few questions and
 writes a configured, git-initialized project directory:
 
 ```bash
@@ -45,7 +45,7 @@ minutes.
   deliberate choice over a separate vector store or graph database: it
   leaves one thing to run, one thing to back up, and one place where a
   passage and its graph entries commit together.
-- **A concept graph.** With a model credential, the kit reads every passage
+- **A concept graph.** With LLM provider credentials, the kit reads every passage
   and extracts the concepts and relationships declared in
   `domain/domain.yaml`, then clusters related concepts and writes a summary
   of each cluster. The graph helps retrieve evidence when an answer spans
@@ -58,8 +58,7 @@ minutes.
   one ranking, and every result names the layer that found it.
 - **Cited answers.** The model answers from the retrieved passages only and
   cites each one by number, so a reader can check any claim against its
-  source. When the documents do not contain an answer, the kit says so
-  instead of filling the gap from memory.
+  source. When the documents cannot support an answer, the kit reports the gap.
 - **Rights.** Every document carries a license class. A request that
   restricts rights never sees passages outside its scope, because the filter
   runs inside each search before ranking, so a shared endpoint cannot leak a
@@ -83,7 +82,7 @@ minutes.
 ## Set up
 
 Setup needs [uv](https://docs.astral.sh/uv/), Docker or a PostgreSQL 16
-through 18 server with pgvector, and optionally a model credential such as a
+through 18 server with pgvector, and optionally LLM provider credentials such as a
 [Google AI Studio API key](https://aistudio.google.com/apikey).
 
 Create the local configuration file. The second command matters: the file is
@@ -113,7 +112,7 @@ make demo      # ingest the demo corpus, run a retrieval, score it
 `make setup` starts the selected database backend and creates every table.
 Docker is the template default. A project can instead use a conda-forge
 server, a system PostgreSQL such as Postgres.app, or a Cloud SQL development
-instance; [Run Postgres your way](docs/run-postgres.md) covers each.
+instance; [Configure Postgres backend](docs/run-postgres.md) covers each.
 
 With a credential configured, the graph and the answers work too:
 
@@ -144,7 +143,7 @@ uv run sci-rag answer "a question in your field"      # 7. ask
 ```
 
 The three `draft` commands write a file to review, and each works without
-a model credential: `--print-prompt` prints the prompt, and `--from-file`
+LLM provider credentials: `--print-prompt` prints the prompt, and `--from-file`
 reads the reply back. Printed prompts can contain sampled passages from your
 corpus. Before sending one to an assistant, confirm that the documents'
 rights, privacy requirements, provider terms, and institutional policy allow
@@ -207,13 +206,13 @@ The full site is at
 | [Troubleshooting](docs/troubleshooting.md) | From the symptom to the fix |
 | [Evaluate your pipeline](docs/evaluation.md) | Test questions, per-layer scores, the answer grader |
 | [Run a corpus campaign](docs/campaigns.md) | Find papers by topic or DOI list, with their rights |
-| [Run Postgres your way](docs/run-postgres.md) | Docker, conda-forge, a system server, or Cloud SQL |
+| [Configure Postgres backend](docs/run-postgres.md) | Docker, conda-forge, a system server, or Cloud SQL |
 | [Deploy on Google Cloud](docs/deploy-gcp.md) | Cloud SQL and Cloud Run from the included Terraform |
 | [REST, MCP, and Python API](docs/api.md) | Endpoints, agent tools, keys, errors |
 | [Architecture](docs/architecture.md) and [Methodology](docs/methodology.md) | How the code is shaped, and why |
 | [Choosing Sci RAG Kit](docs/choosing-sci-rag-kit.md) | A comparison with GraphRAG, LightRAG, PaperQA2, and LlamaIndex |
 | [Benchmarks](docs/benchmarks.md) | Measured demo-corpus results, reproducible with `make benchmark` |
-| [Decision records](docs/adr/) | The architectural bets, with the conditions that would reverse them |
+| [About and citation](docs/project.md) | Who developed Sci RAG Kit and how to cite it |
 
 ## Requirements and defaults
 

@@ -70,7 +70,7 @@ def make_genai_client(
         )
     if purpose == "generation":
         raise RuntimeError(
-            "No model credentials configured, so this project cannot generate. "
+            "No LLM provider credentials configured, so this project cannot generate. "
             f"{_CREDENTIAL_REPAIR} Ingestion, retrieval, and retrieval evaluation "
             "keep working without one. SCI_RAG_EMBEDDING_PROVIDER selects an "
             "embedder and cannot enable generation."

@@ -1,11 +1,12 @@
 ---
-title: Run Postgres your way
+title: Configure Postgres backend
 description: Choose and operate a supported PostgreSQL server with pgvector for Sci RAG Kit.
 ---
 
-# Run Postgres your way
+# Configure Postgres backend
 
-Choose a supported PostgreSQL path and point destructive tests at a database you can discard.
+Choose Docker, a local server, or Cloud SQL, then connect Sci RAG Kit to PostgreSQL with pgvector.
+Use a disposable database for destructive tests.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A running PostgreSQL 16 to 18 with pgvector</div>
@@ -126,7 +127,7 @@ An exported URL takes precedence over the value in `.env`.
 
 The optional Cloud helper isolates each workspace with its own development database, disposable test database, proxy process, and dynamic loopback port on one shared instance. Retain it with `sci-rag new --advanced` for a new project or `sci-rag init --advanced` for a checkout. Quick setup keeps Terraform and removes the helper.
 
-This helper is for development, not production deployment.
+Use this helper only for development. Follow [Deploy on Google Cloud](deploy-gcp.md) for a production-shaped deployment.
 <!-- END GENERATED PROJECT FEATURE: cloud-helper -->
 
 <!-- BEGIN GENERATED PROJECT FEATURE: cloud-provisioning -->
@@ -215,7 +216,7 @@ helper command prints the missing settings and exits nonzero.
 
 The helper normalizes the workspace name into `sci_rag_<workspace>` and `sci_rag_test_<workspace>`. Override `SCI_RAG_CLOUD_PG_WORKSPACE` when two checkouts have the same basename.
 
-The database pair and local proxy state prevent accidental URL and destructive-test collisions. Every database shares the same PostgreSQL role, so this separation is not an authorization boundary.
+The database pair and local proxy state prevent accidental URL and destructive-test collisions. Every database shares the same PostgreSQL role. Treat the separation as workspace isolation only.
 
 Start the backend and print both secret-free URLs:
 

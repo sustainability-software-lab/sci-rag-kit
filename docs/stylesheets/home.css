@@ -25,6 +25,7 @@
 }
 
 .srag-home-section + .srag-home-section {
+  padding-top: 1.3rem;
   border-top: 1px solid var(--srag-border);
 }
 
@@ -43,9 +44,13 @@
 
 /* ── Masthead ───────────────────────────────────────────────────────── */
 
-.srag-home-masthead {
+.srag-home-section.srag-home-masthead {
   padding-top: 1.6rem;
-  padding-bottom: 2.6rem;
+  padding-bottom: 1.6rem;
+}
+
+.srag-home-masthead + .srag-home-section {
+  border-top: 0;
 }
 
 .srag-home-masthead__brand {
@@ -97,7 +102,9 @@
 /* ── Pipeline figure ────────────────────────────────────────────────── */
 
 .md-typeset .srag-home-figure {
-  margin: 0;
+  width: calc(100% + 2.4rem);
+  max-width: none;
+  margin: 0 -1.2rem;
 }
 
 /* The diagram is drawn on paper, so it keeps a white plate in both schemes
@@ -181,7 +188,7 @@
     padding: 2.1rem 1.2rem;
   }
 
-  .srag-home-masthead {
+  .srag-home-section.srag-home-masthead {
     padding-top: 1.2rem;
   }
 

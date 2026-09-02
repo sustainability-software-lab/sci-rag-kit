@@ -115,9 +115,9 @@ class CompressionTuning(BaseModel):
         le=1.0,
         description=(
             "Drop a model-scored chunk below this relevance score. The default 0.0 "
-            "drops nothing, because summarizing a source is safe and discarding one "
-            "is not: a v0.3 sweep found groundedness and citation accuracy both fall "
-            "off their ceiling at 0.15 and above. Raise it only behind a paired "
+            "summarizes every source and drops none. A v0.3 sweep found groundedness "
+            "and citation accuracy both fall off their ceiling at 0.15 and above. "
+            "Raise it only behind a paired "
             "judged-answer run that holds. See docs/evaluation.md."
         ),
     )

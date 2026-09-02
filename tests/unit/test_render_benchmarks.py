@@ -218,7 +218,8 @@ def test_renders_full_page(tmp_path: Path) -> None:
     assert "67 extracted entities" not in page
     assert "10% on other counts" in page
     assert "named, disposable PostgreSQL database" in page
-    assert "Do not clear an unrelated development corpus" in page
+    assert "Select a disposable database for that preflight" in page
+    assert "leave development corpora intact" in page
 
 
 def test_the_renderer_names_the_committed_strict_graph_replay(tmp_path: Path) -> None:
@@ -350,8 +351,7 @@ def test_a_missing_resolved_entities_condition_is_explained(tmp_path: Path) -> N
         _write(tmp_path, "retrieval", retrieval_fixture()),
         _write(tmp_path, "answers", answers_fixture()),
     )
-    assert "`resolved_entities` is absent" in page
-    assert "a result rather than an" in page
+    assert "missing `resolved_entities` row records the outcome" in page
 
 
 # --- which report is which ---------------------------------------------------

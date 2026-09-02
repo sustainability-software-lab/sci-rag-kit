@@ -45,7 +45,8 @@ def _body(page: Path) -> str:
 
 def _headings(level: int) -> list[str]:
     marker = "#" * level
-    return re.findall(rf"^{marker} (?!#)(.+)$", _body(FAQ), re.MULTILINE)
+    headings = re.findall(rf"^{marker} (?!#)(.+)$", _body(FAQ), re.MULTILINE)
+    return [re.sub(r"\s+\{#[^}]+\}\s*$", "", heading) for heading in headings]
 
 
 def test_the_faq_is_a_page_in_the_nav() -> None:

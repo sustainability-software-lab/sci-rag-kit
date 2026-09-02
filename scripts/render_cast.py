@@ -6,11 +6,10 @@ what it printed, so a question added to ``sci_rag.scaffold.questions`` shows up
 here or ``--check`` fails. A hand-recorded cast goes stale the first time
 someone edits the question list, silently, on the page a new user reads first.
 
-Three artifacts come out of two runs:
+Two artifacts come out of two runs:
 
 * ``docs/assets/casts/sci-rag-new.cast``, the recommended Quick session.
-* ``docs/assets/casts/sci-rag-new-advanced.cast``, the full Advanced session.
-* both static transcripts in ``docs/index.md``, with Advanced collapsed.
+* both static transcripts in ``docs/index.md``, with Advanced collapsed beneath the Quick session.
 
 The two model calls are stubbed: credential preflight returns a fixed success,
 and ontology drafting uses the same mock LLM client as the tests. Their output
@@ -475,8 +474,6 @@ def render_index(index_text: str, quick: str, advanced: str) -> str:
     block = (
         f"{BEGIN}\n\n{format_transcript_html(quick)}\n"
         "<details markdown>\n<summary>Show the Advanced setup</summary>\n\n"
-        '<div class="srag-cast" data-cast="assets/casts/sci-rag-new-advanced.cast" '
-        'aria-label="Recorded Advanced sci-rag new session"></div>\n\n'
         f"{format_transcript_html(advanced)}\n</details>\n\n{END}"
     )
     return head + block + tail
@@ -498,11 +495,6 @@ def _write_or_check(path: Path, content: str, *, check: bool) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cast", type=Path, default=Path("docs/assets/casts/sci-rag-new.cast"))
-    parser.add_argument(
-        "--advanced-cast",
-        type=Path,
-        default=Path("docs/assets/casts/sci-rag-new-advanced.cast"),
-    )
     parser.add_argument("--index", type=Path, default=Path("docs/index.md"))
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
@@ -510,7 +502,6 @@ def main() -> None:
     quick = render_transcript(quick=True)
     advanced = render_transcript(quick=False)
     status = _write_or_check(args.cast, render_cast(quick), check=args.check)
-    status |= _write_or_check(args.advanced_cast, render_cast(advanced), check=args.check)
     status |= _write_or_check(
         args.index,
         render_index(args.index.read_text(encoding="utf-8"), quick, advanced),

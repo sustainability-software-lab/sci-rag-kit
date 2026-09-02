@@ -79,7 +79,7 @@ different answer for each:
 
 The project factory (main `sci-rag new` command,
 [epic #59](https://github.com/sustainability-software-lab/sci-rag-kit/issues/59))
-landed alongside wave 2 and is not part of it.
+landed alongside wave 2 as separate work.
 
 ## Wave 3: v0.4+ "Scale and intelligence"
 
@@ -90,11 +90,11 @@ has users whose corpora need them:
 - Per-document extraction caching for cheap update/delete (the LightRAG pattern)
 - Bi-temporal edge validity with `as_of` scoping
 - Multi-corpus deployments (schema-per-corpus) behind corpus routing,
-  feeding the federation seam
+  feeding the federation interface
 - Prometheus/OpenTelemetry observability and `/metrics`
 - HTML/LaTeX/DOCX parsers; Docling OCR exposure
 - Hierarchical communities (the `level` column earns its keep)
-- A visual-retrieval seam (image chunks + vision embeddings), last,
+- A visual-retrieval extension point (image chunks + vision embeddings), last,
   behind an extra
 
 Five things stay out of scope: a Neo4j or dedicated graph-database
@@ -102,20 +102,20 @@ migration, RAPTOR, agentic retrieval loops on every query, index-time
 contextual embedding, and learned fusion. The reasons are written down in
 the [methodology](methodology.md) and the planning docs.
 
-## Collaboration seams
+## Collaboration points
 
-Extend the kit at a named seam instead of forking it. Two collaborations
-shape which seams come first:
+Extend the kit at a supported extension point. Reserve a fork for changes outside those interfaces. Two collaborations
+shape which extensions come first:
 
 **UW SSEC** (University of Washington Scientific Software Engineering
-Center). Three workstreams plug into seams that exist today, on their
-timeline, not ours:
+Center). Three workstreams use extension points that exist today, on their
+timeline:
 
 - An **evaluation platform** consuming the eval harness's JSON reports
   (`eval_results/*/report.json`, `calibration.json`), which are stable,
   versioned artifacts precisely so external tooling can build on them
-- **OAuth** on the `AuthBackend` seam in `src/sci_rag/server/auth.py`
-  (static API keys are the shipped default; the seam exists for an
+- **OAuth** through the `AuthBackend` interface in `src/sci_rag/server/auth.py`
+  (static API keys are the shipped default; the interface supports an
   institutional identity provider)
 - **Federation** on the corpus-manifest endpoint
   (`/v1/corpus-manifest`), the machine-readable descriptor a multi-RAG
@@ -127,7 +127,7 @@ template cannot generate for itself. A real corpus at real scale.
 Calibration labels from domain experts, which replace the non-expert seed
 set that ships in the box. And the first public case study.
 
-## Launch-gated decisions (owner: maintainer, not automation)
+## Launch-gated decisions (owner: maintainer)
 
 These are listed here so they stay visible. No tooling executes them,
 because each one is a judgment call with public consequences. Two are now
@@ -154,4 +154,4 @@ Open a Discussion for direction-level proposals (see
 [good first issue](https://github.com/sustainability-software-lab/sci-rag-kit/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 Success for this project is measured behaviorally: external
 contributions merged, adopters listed in [ADOPTERS.md](adopters.md),
-and citations of the methodology, not stars.
+and citations of the methodology. Repository stars do not measure adoption.

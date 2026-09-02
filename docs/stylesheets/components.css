@@ -71,14 +71,32 @@
 /* ── Page metadata strip ────────────────────────────────────────────── */
 
 .srag-meta-strip {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.55rem 1.6rem;
   margin: 1.2rem 0 2rem;
   padding: 0.75rem 0;
   color: var(--srag-ink-800);
   font-size: 0.76rem;
   border-block: 1px solid var(--srag-border);
+}
+
+.srag-meta-strip > div {
+  grid-column: span 3;
+  min-width: 0;
+}
+
+.srag-meta-strip > div:first-child:nth-last-child(5),
+.srag-meta-strip > div:first-child:nth-last-child(5) ~ div {
+  grid-column: span 2;
+}
+
+@media screen and (max-width: 40em) {
+  .srag-meta-strip > div,
+  .srag-meta-strip > div:first-child:nth-last-child(5),
+  .srag-meta-strip > div:first-child:nth-last-child(5) ~ div {
+    grid-column: span 6;
+  }
 }
 
 .srag-meta-strip strong {

@@ -128,4 +128,4 @@ def test_the_published_page_states_the_tolerance_the_renderer_judges_against() -
             f"{count_tolerance} other counts",
         )
     )
-    assert "a finding, not a refresh" in page
+    assert "Publishing movement beyond the tolerance requires" in page

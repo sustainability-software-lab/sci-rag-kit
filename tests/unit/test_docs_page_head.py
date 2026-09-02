@@ -10,7 +10,7 @@ titles than the alignment was worth.
 The trail says where the page sits. It names every level of nesting the left
 sidebar shows and ends on the page you are reading, so `campaigns.md` reads
 `Guides > Discover a corpus` rather than the bare `Guides` the theme stops at.
-Section hub pages are the exception: `project.md` is the page the `Project`
+Section hub pages are the exception: `project.md` is the page the `About`
 crumb already points at, so its only crumb would repeat the title directly
 below it. Those pages keep the empty row, which is what holds the height, and
 carry no crumbs.
@@ -278,6 +278,8 @@ def test_the_trail_names_every_level_of_nesting_down_to_the_page(built_site: Pat
 
     wrong = {}
     for source, ancestors, configured, first in entries:
+        if source == HOME:
+            continue
         expected = _expected_trail(ancestors, _title(source, configured), first)
         rendered = [crumb["text"] for crumb in _crumbs(built_site, _built_path(source))]
         if rendered != expected:
@@ -313,9 +315,14 @@ def test_every_crumb_is_a_link_and_only_the_last_is_the_page_you_are_on(
     trails = {
         source: _crumbs(built_site, _built_path(source))
         for source, _, _, _ in entries
-        if _crumbs(built_site, _built_path(source))
+        if source != HOME and _crumbs(built_site, _built_path(source))
     }
-    assert len(trails) > 25, f"expected a trail on every page below a hub, got {len(trails)}"
+    expected = {
+        source
+        for source, ancestors, configured, first in entries
+        if source != HOME and _expected_trail(ancestors, _title(source, configured), first)
+    }
+    assert set(trails) == expected, "every page below a hub should carry a breadcrumb trail"
 
     offenders = {}
     for source, crumbs in trails.items():

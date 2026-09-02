@@ -1,14 +1,13 @@
 ---
-title: Get started
+title: Getting started
 description: Install Sci RAG Kit, run the demo corpus, then bring in a corpus of your own.
 ---
 
-# Get started
+# Getting started
 
 Install the kit with `pipx install sci-rag-kit`, then run `sci-rag new` to
-create a configured project. Start with the bundled demo, replace it with your
-own documents, and use the symptom map if a step does not produce the expected
-result.
+create a configured project. Run the bundled demo first, then replace it with
+your own documents. If a step fails, open the [Troubleshooting Guide](troubleshooting.md).
 
 <div class="srag-rows" markdown>
 
@@ -24,7 +23,7 @@ result.
 
 A knowledge base uses one Postgres database and one service. Documents become
 passages with vectors for semantic search, full-text entries for keyword
-search, and links to the concepts they mention. With a model credential,
+search, and links to the concepts they mention. With LLM provider credentials,
 answers include numbered citations to those passages.
 
 The same service handles the command line, REST, and agents over MCP. MCP is
@@ -32,15 +31,15 @@ the Model Context Protocol used by tools such as Claude Code to call external
 systems. An agent can therefore search and cite the corpus through the same
 service as a person at the terminal.
 
-The wizard asks for six setup decisions and any credential the chosen mode
-requires. For a credential-free first pass, choose Offline; ingestion,
-retrieval, and retrieval scoring still work. Add a credential later to build
-the graph and generate answers.
+The setup wizard asks for six setup decisions and any LLM provider credentials
+you want to use. For a credential-free first pass, choose Offline; ingestion,
+retrieval, and retrieval scoring still work. Add credentials later to build the
+graph and generate answers.
 
-The generator configures the live template and writes these answers into the
-project files instead of leaving placeholders to fill in.
+The generator configures the live template and writes these answers directly
+into the project files. The resulting tree contains no placeholders to fill in.
 
-## Where things live
+## Full Project Structure
 
 Everything specific to a field sits in two folders and one file. The layout
 below is what `sci-rag new` produces.
@@ -80,4 +79,4 @@ used for scoring; each one needs expert review.
 Still deciding whether this is the right tool? Read the [FAQ](faq.md) and
 [Choosing Sci RAG Kit](choosing-sci-rag-kit.md). If Postgres, credentials, or
 parsing get in the way, run `uv run sci-rag doctor` before following the
-[symptom map](troubleshooting.md#fast-symptom-map).
+[Troubleshooting Guide](troubleshooting.md#troubleshooting-guide).
