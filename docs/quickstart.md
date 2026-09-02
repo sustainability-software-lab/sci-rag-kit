@@ -5,7 +5,7 @@ description: Create a project, start the database, ingest the demo corpus, ask a
 
 # Quickstart
 
-In about 10 minutes you will have a working knowledge base over a small demo corpus: documents in a database and a question answered with citations. The same service will answer REST clients and agents. You will repeat every step here with your own documents.
+This page reaches a working knowledge base over a small demo corpus in about 10 minutes: documents in a database, a question answered with citations, and one service answering REST clients and agents. Every step here repeats later with a real corpus.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A served knowledge base over the demo corpus</div>
@@ -31,7 +31,7 @@ Without Docker, [Run Postgres your way](run-postgres.md) covers a conda-forge se
 
 ### The wizard
 
-Run the wizard from the directory where you keep projects. It writes a configured, git-initialized project directory.
+The wizard runs from whatever directory holds projects and writes a configured, git-initialized project directory there.
 
 ```console title="Terminal"
 $ pipx install sci-rag-kit
@@ -42,7 +42,7 @@ Choose **Quick**. It asks for six setup decisions: project name, a one-line desc
 
 The environment-manager menu preselects the first supported environment manager found on `PATH`. That preselection does not change what `--defaults` or an answers file would choose. If `SCI_RAG_GOOGLE_API_KEY` or `GOOGLE_API_KEY` is already set in your shell, the wizard offers to reuse it without displaying its value. Any key you type is masked. Pass `--no-tty` for plain numbered prompts.
 
-The wizard checks the credential with one small model request before it downloads the template. A failed check offers recovery choices and keeps your answers. When it finishes, change into the new directory and continue at step 3. Step 2 is for changing the credential mode it wrote.
+The wizard checks the credential with one small model request before it downloads the template. A failed check offers recovery choices and keeps the answers given so far. When the wizard finishes, change into the new directory and continue at step 3. Step 2 covers changing the credential mode it wrote.
 
 ### Other ways in
 
@@ -55,13 +55,13 @@ $ cd sci-rag-kit
 
 The other routes start from the same tree:
 
-- GitHub's **Use this template** button creates a repository under your account.
-- `sci-rag init` configures a checkout you already have. It asks the same Quick or Advanced questions and skips the credential check.
+- GitHub's **Use this template** button creates a repository under the signed-in account.
+- `sci-rag init` configures an existing checkout. It asks the same Quick or Advanced questions and skips the credential check.
 - The included dev container installs the project and starts Postgres. In GitHub Codespaces, continue at step 2 after it opens.
 
 ## 2. Choose a credential mode
 
-The wizard created `.env` with owner-only mode `0600` and wrote your choice into it. Skip to step 3 unless you want to change it.
+The wizard created `.env` with owner-only mode `0600` and wrote the chosen mode into it. Skip to step 3 unless that choice needs to change.
 
 From a clone or the GitHub template, create the file yourself. The second command matters: the file is about to hold a credential, and `cp` alone leaves it readable by every account on the machine.
 
@@ -82,7 +82,7 @@ Pick one mode. AI Studio is the right choice for almost everyone.
 
 === "Vertex AI"
 
-    The same models, billed through a Google Cloud project you already have. Authenticate once, then set the project:
+    The same models, billed through an existing Google Cloud project. Authenticate once, then set the project:
 
     ```console
     $ gcloud auth application-default login
@@ -100,7 +100,7 @@ Pick one mode. AI Studio is the right choice for almost everyone.
     SCI_RAG_EMBEDDING_PROVIDER=local-hash
     ```
 
-    Parsing, chunking, storage, retrieval, and retrieval scoring work. The graph, generated answers, and graded answers wait until you add a credential.
+    Parsing, chunking, storage, retrieval, and retrieval scoring work. The graph, generated answers, and graded answers wait until a credential is added.
 
 ## 3. Install the project and create the database tables
 
@@ -130,7 +130,7 @@ Run `uv run sci-rag doctor`. Configuration, domain, database, and schema report 
 $ make demo
 ```
 
-This ingests five short synthetic documents about agricultural residues, runs one retrieval so you can see what comes back, and scores retrieval against the bundled test questions. The numbers in the documents are plausible but fictional.
+This ingests five short synthetic documents about agricultural residues, runs one retrieval to show what comes back, and scores retrieval against the bundled test questions. The numbers in the documents are plausible but fictional.
 
 **Expected output**
 
@@ -146,7 +146,7 @@ graph      disabled    ...
 `graph disabled` is expected here. The retrieval that `make demo` runs uses the fast profile, which leaves the model-dependent layers off.
 
 <div class="srag-checkpoint" markdown>
-**Checkpoint: you can see the evidence**
+**Checkpoint: the evidence is visible**
 
 The retrieval table shows each result's title, the section it came from, its license class, the layers that found it, and an excerpt. The stage table says, for each layer, whether it succeeded, found nothing, was disabled, or failed.
 </div>
@@ -207,7 +207,7 @@ Connect a local agent such as Claude Code:
 $ claude mcp add demo-corpus -- uv run --directory "$(pwd)" sci-rag mcp
 ```
 
-Ask the agent a question and tell it to use `demo-corpus`. You should see a `search_corpus` or `answer_question` tool call. An answer with no tool call came from the agent's own memory.
+Ask the agent a question and tell it to use `demo-corpus`. A `search_corpus` or `answer_question` tool call should appear. An answer with no tool call came from the agent's own memory.
 
 <div class="srag-checkpoint" markdown>
 **Checkpoint: one database, three front doors**
@@ -217,7 +217,7 @@ One Postgres database holds the documents, their chunks and vectors, the full-te
 
 ## Next steps
 
-- Replace the demo with your own documents: [Bring your own domain](bring-your-own-domain.md)
+- Replace the demo with a real corpus: [Bring your own domain](bring-your-own-domain.md)
 - Something did not match this page: [Troubleshooting](troubleshooting.md)
 - Understand what just happened: [How it works](learn.md)
 - Put the service where other people can reach it: [Deploy on Google Cloud](deploy-gcp.md)

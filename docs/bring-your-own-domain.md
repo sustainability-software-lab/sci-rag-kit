@@ -1,21 +1,21 @@
 ---
 title: Bring your own domain
-description: Put your own documents into a knowledge base you can question, with your concepts in the graph and your questions scoring the result.
+description: Turn a folder of documents into a knowledge base that answers questions about them, with the field's concepts in the graph and its own test questions scoring the result.
 ---
 
 # Bring your own domain
 
-At the end of this tutorial your documents are in the database, your concepts are in the graph, and your questions are scoring the result. None of it requires editing Python. Your field lives in a folder of documents, one manifest file that describes them, and the `domain/` folder.
+At the end of this tutorial the documents are in the database, the field's concepts are in the graph, and its own test questions are scoring the result. None of it requires editing Python. A field lives in a folder of documents, one manifest file that describes them, and the `domain/` folder.
 
 <div class="srag-meta-strip">
-  <div><strong>You'll build</strong>A knowledge base over your own documents</div>
+  <div><strong>You'll build</strong>A knowledge base over a corpus of your own</div>
   <div><strong>You'll need</strong>Documents on disk and a finished quickstart</div>
   <div><strong>Time</strong>An hour for a first pass; an afternoon for a careful one</div>
   <div><strong>Credentials</strong>Needed for the graph and cited answers; every other step has an offline route</div>
   <div><strong>Tested with</strong>v0.4</div>
 </div>
 
-The worked example: you study membrane materials for water treatment and have 60 PDFs of papers, theses, and technical reports.
+The worked example throughout is a group that studies membrane materials for water treatment and has 60 PDFs of papers, theses, and technical reports.
 
 The whole recipe is seven commands. Each step below explains one line.
 
@@ -29,38 +29,38 @@ $ uv run sci-rag eval retrieval --ablation              # 6. measure
 $ uv run sci-rag answer "a question in your field"      # 7. ask (needs a model credential)
 ```
 
-Three of these commands draft a file for you to review. Each one also works without a model credential: add `--print-prompt` to get the prompt, answer it in any assistant you already use, and feed the reply back with `--from-file reply.json`. [Drafting with a model](#drafting-with-a-model) explains that pair once.
+Three of these commands draft a file to review. Each one also works without a model credential: `--print-prompt` prints the prompt, any assistant can answer it, and `--from-file reply.json` feeds the reply back. [Drafting with a model](#drafting-with-a-model) explains that pair once.
 
 ## Before you start
 
 | Requirement | Why | Check |
 |---|---|---|
 | A finished [quickstart](quickstart.md) | The database and its tables must exist first | `uv run sci-rag doctor` |
-| Your documents under `data/raw/` | Every step reads them | `ls data/raw \| wc -l` |
+| The documents under `data/raw/` | Every step reads them | `ls data/raw \| wc -l` |
 | A model credential, for two steps | The graph and the cited answer need one; ingestion, retrieval, and retrieval scoring do not | `grep SCI_RAG_GOOGLE .env` |
 | A domain expert, for one hour | Step 5 needs questions somebody can vouch for | |
 
 There are two end states.
 
-**With a model credential** you finish with your corpus ingested, a knowledge graph over your own concepts, retrieval scored against your own questions, judged answers, and a cited answer to a question in your field.
+**With a model credential** the tutorial ends with the corpus ingested, a knowledge graph over the field's concepts, retrieval scored against its own questions, judged answers, and a cited answer to a question in the field.
 
-**Without one** you finish with your corpus ingested, your concepts and questions written and validated, and retrieval scored against those questions. Four commands need a credential: `graph extract`, `graph communities`, `eval answers`, and `sci-rag answer`. [Offline: what you can prove without a model](#offline-what-you-can-prove-without-a-model) lists the route in one place.
+**Without one** it ends with the corpus ingested, the concepts and questions written and validated, and retrieval scored against those questions. Four commands need a credential: `graph extract`, `graph communities`, `eval answers`, and `sci-rag answer`. [Offline: what you can prove without a model](#offline-what-you-can-prove-without-a-model) lists the route in one place.
 
 ## Step 0: run the setup wizard
 
-If you came from `sci-rag new`, setup already wrote your decisions and the defaults behind them. Skip to step 1.
+A project created by `sci-rag new` already has its setup decisions and the defaults behind them written down; skip to step 1.
 
-In a checkout you cloned or created from the GitHub template, run the same wizard in place:
+In a checkout cloned or created from the GitHub template, run the same wizard in place:
 
 ```bash
 uv run sci-rag init --advanced
 ```
 
-Advanced asks every applicable question. `uv run sci-rag init` lets you choose between Quick and Advanced, and `--quick` takes the short path with defaults for the rest. `--no-tty` gives plain numbered prompts. `--dry-run` shows what setup would change without writing. `--defaults` answers every question with the shipped default.
+Advanced asks every applicable question. `uv run sci-rag init` offers the choice between Quick and Advanced, and `--quick` takes the short path with defaults for the rest. `--no-tty` gives plain numbered prompts. `--dry-run` shows what setup would change without writing. `--defaults` answers every question with the shipped default.
 
-Unlike `sci-rag new`, `sci-rag init` does not run the live credential check. It uses the key or project you enter as given. Run `uv run sci-rag doctor --probe` afterward to confirm the provider accepts it.
+Unlike `sci-rag new`, `sci-rag init` does not run the live credential check. It uses the key or project entered as given. Run `uv run sci-rag doctor --probe` afterward to confirm the provider accepts it.
 
-Setup writes ordinary files, and nothing regenerates behind you. Re-run it to change several answers at once, or edit the files directly:
+Setup writes ordinary files, and nothing regenerates them later. Re-run it to change several answers at once, or edit the files directly:
 
 | Setup area | Where to review it |
 |---|---|
@@ -78,7 +78,7 @@ Put PDFs, HTML pages, Markdown, or plain-text files in `data/raw/`.
 
 - Choose documents that contain answers. Reviews, reports, and characterization papers hold more retrievable facts than commentary and slide decks.
 - Know each document's redistribution rights. The system quotes these documents back to people. A public-domain or CC BY document is fine anywhere. A paywalled PDF you legitimately hold is fine for your own instance, but mark it `restricted` so it never appears on a service you share.
-- Start with 20 to 50 good documents. The pipeline handles 5 to a few thousand, and a small curated set plus the evaluation step teaches you more than a dump.
+- Start with 20 to 50 good documents. The pipeline handles 5 to a few thousand, and a small curated set plus the evaluation step teaches more than a dump.
 
 For a first pass with no manifest, `uv run sci-rag build data/raw` ingests the folder, marks every document `unknown` for rights, and builds the graph when a credential is present. Use it for a first spike only. A document is ingested once: a later manifest for the same file is skipped as a duplicate, so its rights and metadata would never be recorded. To start over, remove the documents with `sci-rag corpus delete` and ingest from the manifest.
 
@@ -106,7 +106,7 @@ For a handful of documents, write the file by hand:
 
 `path` is relative to the manifest file and is the only required field. `license_class` is one of `public`, `open_commercial`, `open_noncommercial`, `restricted`, or `unknown`; aliases such as `CC-BY` and `cc0` are understood. `source` is your own grouping label and becomes a retrieval filter, so choose 3 to 6 labels. The [configuration reference](configuration.md#datacorpusjsonl) describes every field.
 
-Check the file before you ingest it:
+Check the file before ingesting it:
 
 ```bash
 uv run sci-rag manifest lint data/corpus.jsonl
@@ -117,22 +117,22 @@ The linter reports every problem at once with line numbers: missing files, paths
 <div class="srag-checkpoint" markdown>
 **Checkpoint: the manifest is clean and the rights are decided**
 
-`manifest lint` reports no problems. No row still says `license_class: unknown` unless you meant it to. The count the linter prints is the number of rights decisions still owed.
+`manifest lint` reports no problems. No row still says `license_class: unknown` unless that is intended. The count the linter prints is the number of rights decisions still owed.
 </div>
 
 ## Step 3: name your concepts
 
-`domain/domain.yaml` declares the kinds of things in your field (entity types) and how they relate (relation types). Together these are the ontology. The graph builder extracts only what this file declares. It ships with the demo's agricultural types; replace them with yours.
+`domain/domain.yaml` declares the kinds of things in the field (entity types) and how they relate (relation types). Together these are the ontology. The graph builder extracts only what this file declares. It ships with the demo's agricultural types; replace them with yours.
 
-Draft it from your documents, then edit:
+Draft it from the documents, then edit:
 
 ```bash title="Terminal"
 uv run sci-rag draft ontology --folder data/raw
 ```
 
-Review `domain/domain.yaml.proposed`, or re-run with `--apply`. After ingestion, drop `--folder` and the drafter samples the corpus in the database. If you already have an ontology you mostly like, run with `--refine`: the model then proposes only additions and removals, with a reason for each removal. `--cold` drafts from the description alone. The tuned `retrieval:` and `compression:` blocks carry over unchanged in every case.
+Review `domain/domain.yaml.proposed`, or re-run with `--apply`. After ingestion, drop `--folder` and the drafter samples the corpus in the database. For an ontology that is mostly right already, `--refine` has the model propose only additions and removals, with a reason for each removal. `--cold` drafts from the description alone. The tuned `retrieval:` and `compression:` blocks carry over unchanged in every case.
 
-You will edit this file by hand. Filled in for the worked example:
+This file gets edited by hand in every project. Filled in for the worked example:
 
 ```yaml title="domain/domain.yaml"
 name: "Membrane Materials KB"
@@ -177,7 +177,7 @@ Three rules for choosing well:
 - Write each description as a prompt. The extraction model sees it verbatim, and concrete examples in parentheses do more than abstract phrasing.
 - Make each relation read as a sentence: "polyamide SUFFERS_FROM chlorine degradation".
 
-Update `query_classes` in the same file: 3 to 5 kinds of question your users ask, each with a few trigger keywords and a one-line instruction for how an answering passage would read. These steer the retrieval layer that writes a hypothetical answer and searches for text that resembles it.
+Update `query_classes` in the same file: 3 to 5 kinds of question users ask, each with a few trigger keywords and a one-line instruction for how an answering passage would read. These steer the retrieval layer that writes a hypothetical answer and searches for text that resembles it.
 
 ## Step 4: build the knowledge base
 
@@ -189,7 +189,7 @@ uv run sci-rag build --manifest data/corpus.jsonl
 
 Ingestion parses each document, splits it into chunks that keep their section headings and tables intact, embeds the chunks, and stores everything in Postgres. This part runs on any embedding setup, including the offline one.
 
-The graph needs a model. The builder reads every chunk, extracts entities and relationships in your ontology, clusters related entities, and writes a summary of each cluster. Without a credential, `build` says so and stops after ingestion. Vector and keyword retrieval work at that point. The two graph steps are also available on their own, which is how you add the graph later or rebuild it after changing the ontology:
+The graph needs a model. The builder reads every chunk, extracts entities and relationships from the ontology, clusters related entities, and writes a summary of each cluster. Without a credential, `build` says so and stops after ingestion. Vector and keyword retrieval work at that point. The two graph steps are also available on their own, which is how you add the graph later or rebuild it after changing the ontology:
 
 !!! note "Needs a model credential"
 
@@ -200,7 +200,7 @@ The graph needs a model. The builder reads every chunk, extracts entities and re
 
     Without a credential these exit 1 at the model boundary. Skip them and continue; nothing later in this tutorial depends on the graph except the graph's own checkpoint.
 
-Look at what you have:
+Then look at what the database holds:
 
 ```bash
 uv run sci-rag stats
@@ -208,11 +208,11 @@ uv run sci-rag retrieve "a question in your field" --profile interactive
 ```
 
 <div class="srag-checkpoint" markdown>
-**Checkpoint: the corpus and the graph both look like your field**
+**Checkpoint: the corpus and the graph both look like the field**
 
-`sci-rag stats` after ingest: the chunk count is plausible (a dense 20-page PDF is usually 15 to 40 chunks) and the license classes match what you declared.
+`sci-rag stats` after ingest: the chunk count is plausible (a dense 20-page PDF is usually 15 to 40 chunks) and the license classes match the manifest.
 
-`sci-rag retrieve` with a question from your field: the top chunks are recognizable, and the stage table names the layer that found each one.
+`sci-rag retrieve` with a question from the field: the top chunks are recognizable, and the stage table names the layer that found each one.
 
 `sci-rag stats` after the graph built: a 50-document corpus shows entities in the low hundreds. Near zero means the ontology and the corpus do not match, usually because the types are too abstract or the documents too thin. Thousands means the types are too loose. In either case, return to step 3, redraft with `--refine`, and run `graph extract` again.
 
@@ -229,13 +229,13 @@ Draft the first ten, then sign off on each one:
 uv run sci-rag draft questions --count 10
 ```
 
-The drafter samples passages from your corpus, asks the model for questions grounded in them, and then verifies in Python that every quoted evidence phrase appears in a passage from a document the question names. Rows that fail are dropped and reported.
+The drafter samples passages from the corpus, asks the model for questions grounded in them, and then verifies in Python that every quoted evidence phrase appears in a passage from a document the question names. Rows that fail are dropped and reported.
 
 Every drafted row carries a `drafted` tag. While any remain, `sci-rag eval retrieval` and `sci-rag eval answers` state in their reports that the ground truth is unreviewed. Read each question, check it against the document it cites, and delete the tag. That deletion is the sign-off; nothing removes the tag for you.
 
-If you already have questions people asked, `uv run sci-rag draft seed-from-answers questions.txt` takes one question per line, answers each, and proposes the reference answer and evidence phrases from what the answer cited. It keeps a phrase only when it appears verbatim in both the answer and the source. These rows arrive tagged `drafted` too.
+When real questions from users already exist, `uv run sci-rag draft seed-from-answers questions.txt` takes one question per line, answers each, and proposes the reference answer and evidence phrases from what the answer cited. It keeps a phrase only when it appears verbatim in both the answer and the source. These rows arrive tagged `drafted` too.
 
-To add your own, write one JSON object per line:
+Hand-written questions go in the same file, one JSON object per line:
 
 ```jsonl title="domain/eval_seed_questions.jsonl"
 {"id": "pfas-rejection", "question": "What PFAS rejection does a polyamide RO membrane achieve?", "reference_answer": "Above 99 percent for long-chain PFAS at typical seawater RO conditions, per Lee 2021.", "reference_titles": ["Membrane Fouling Mechanisms: A Review"], "evidence_phrases": ["99", "long-chain PFAS"], "tags": ["performance"]}
@@ -249,7 +249,7 @@ Then measure:
 uv run sci-rag eval retrieval --ablation
 ```
 
-This runs offline. It scores retrieval against your questions and prints one row per layer configuration, so you can see what each layer contributes on your corpus. Grading generated answers is a second pass and needs a model:
+This runs offline. It scores retrieval against the seed questions and prints one row per layer configuration, which shows what each layer contributes on this corpus. Grading generated answers is a second pass and needs a model:
 
 !!! note "Needs a model credential"
 
@@ -263,10 +263,10 @@ Compare every row against `full_deep`, the row with every layer on. If `no_graph
 
 The prompts in `domain/prompts/` are short Markdown files. For most fields only two are worth touching:
 
-- `entity_extraction.md`: keep the rules and change the example JSON names to your field, so the model sees the register you expect.
+- `entity_extraction.md`: keep the rules and change the example JSON names to the field's own, so the model sees the expected register.
 - `answer.md`: add domain-specific answer norms, such as "always report flux in LMH" or "state the test conditions with every rejection value".
 
-A model can reword them for your field while keeping the job identical:
+A model can reword them for the field while keeping the job identical:
 
 ```bash title="Terminal"
 uv run sci-rag draft prompts entity_extraction
@@ -279,7 +279,7 @@ Prompt wording moves every downstream number. Run `sci-rag eval retrieval --abla
 
 ## Step 7: ask, then serve
 
-With a credential, ask a question in your field. Ask one the corpus cannot answer as well; the response should say so.
+With a credential, ask a question in the field. Ask one the corpus cannot answer as well; the response should say so.
 
 !!! note "Needs a model credential"
 
@@ -296,9 +296,9 @@ uv run sci-rag serve
 Before anyone else connects, set API keys in `.env` (see `.env.example`) and decide what an outside caller may see. A public or semi-public endpoint should pin callers to `{"license_classes": ["public", "open_commercial"]}` so `restricted` and `unknown` documents stay internal. [REST, MCP, and Python API](api.md) covers keys, scopes, and the agent tools. [Deploy on Google Cloud](deploy-gcp.md) covers Cloud Run.
 
 <div class="srag-checkpoint" markdown>
-**Checkpoint: it is your knowledge base now**
+**Checkpoint: the knowledge base is real**
 
-Offline, ask a question in your field through `POST /v1/query`. The response names documents you put there, with the license class you declared and the retrieval layer that found each one.
+Offline, ask a question in the field through `POST /v1/query`. The response names documents from the manifest, with the license class it declared and the retrieval layer that found each one.
 
 With a credential, the same question through `POST /v1/answer` or `sci-rag answer` returns numbered citations to those documents.
 </div>
@@ -306,7 +306,7 @@ With a credential, the same question through `POST /v1/answer` or `sci-rag answe
 ## Drafting with a model
 
 Three of the steps above draft a file: the manifest, the ontology, and the seed questions. `sci-rag new` and `sci-rag init` can also draft the ontology from a one-sentence description before any document exists; that draft is a first guess to replace in step 3.
-Only `sci-rag new` checks the credential with a small live request first. `sci-rag init` uses the key or project you enter as given.
+Only `sci-rag new` checks the credential with a small live request first. `sci-rag init` uses the key or project entered as given.
 
 Every drafter offers the same three routes to the same validated file.
 
@@ -320,7 +320,7 @@ Every drafter offers the same three routes to the same validated file.
 
 === "Paste it into any assistant"
 
-    No API key and no provider account. `--print-prompt` writes the rendered prompt, including the sampled passages, to standard output. Paste it into the assistant you already use, save the reply, and feed it back.
+    No API key and no provider account. `--print-prompt` writes the rendered prompt, including the sampled passages, to standard output. Paste it into any assistant, save the reply, and feed it back.
 
     ```bash title="Terminal"
     uv run sci-rag draft questions --count 10 --print-prompt > prompt.txt
@@ -336,7 +336,7 @@ Every drafter offers the same three routes to the same validated file.
 
 Four rules hold for every drafter:
 
-- Nothing is overwritten. A run writes `<file>.proposed` and prints a summary; moving it into place is your step. `--apply` skips the proposal, and for seed questions it appends, never replaces. `--dry-run` writes nothing.
+- Nothing is overwritten. A run writes `<file>.proposed` and prints a summary; moving it into place is a deliberate step. `--apply` skips the proposal, and for seed questions it appends, never replaces. `--dry-run` writes nothing.
 - Rights are never guessed. Every drafted manifest row says `unknown`.
 - Drafted questions stay labeled until a person removes the `drafted` tag. The evaluation reports repeat the label until then.
 - `domain/eval_calibration_labels.jsonl` is never drafted. It holds human scores used to check the model grader, and generating it with a model would remove the only independent measurement.
@@ -362,15 +362,15 @@ uv run sci-rag eval retrieval --ablation
 uv run sci-rag serve
 ```
 
-The offline embedder matches on words, not meaning. Treat its retrieval scores as a floor for your corpus, not as a comparison with a credentialed run. This route does not reach the knowledge graph, community summaries, graded answers, or generated cited answers.
+The offline embedder matches on words, not meaning. Its retrieval scores are a floor for the corpus, not a comparison with a credentialed run. This route does not reach the knowledge graph, community summaries, graded answers, or generated cited answers.
 
 ## The improvement loop
 
-Corpus and ontology changes are cheap, and the evaluation reports tell you whether a change helped. Add or fix a handful of documents, run `build` again (it processes only what is new), run the two eval commands, and read the diffs. When a user asks a question the system misses, add it as a seed question first, then fix the miss.
+Corpus and ontology changes are cheap, and the evaluation reports show whether a change helped. Add or fix a handful of documents, run `build` again (it processes only what is new), run the two eval commands, and read the diffs. When a user asks a question the system misses, add it as a seed question first, then fix the miss.
 
 ## Next steps
 
-- Read the evaluation table before you change a retrieval setting: [Evaluate your pipeline](evaluation.md)
+- Read the evaluation table before changing a retrieval setting: [Evaluate your pipeline](evaluation.md)
 - Grow the corpus from a topic or a DOI list: [Run a corpus campaign](campaigns.md)
 - See what a license class does to retrieval: [Scope precedes ranking](methodology.md#7-scope-precedes-ranking)
-- Put the service where your group can reach it: [Deploy on Google Cloud](deploy-gcp.md)
+- Put the service where the group can reach it: [Deploy on Google Cloud](deploy-gcp.md)

@@ -111,7 +111,7 @@ A help string is a documentation page. Write it that way: one action, present te
 These apply to every type.
 
 1. **Open with the outcome.** The first sentence says what the reader will have, or what the page lets them decide. A title that names a noun ("Ingestion") tells a reader less than one that names a result.
-2. **Write to the reader as "you".** The project is "we" only where a human made a judgment call. Nobody is "the user" on a page the user is reading.
+2. **Center the kit when describing what it does; address the reader as "you" only when they act.** "The kit stores passages in Postgres" describes a capability. "Run `make setup`" is an action. A page that says "you" in every sentence reads as a script; a page that never says it reads as a brochure. Nobody is "the user" on a page the user is reading, and the project is "we" only where a human made a judgment call.
 3. **Active voice.** Name who acts. "The parser records the route", not "the route is recorded".
 4. **Put an action in every step.** A numbered step with no verb is a paragraph wearing a number.
 5. **Prerequisites come before the procedure**, never inside step four.

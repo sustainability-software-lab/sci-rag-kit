@@ -12,12 +12,12 @@
 Retrieval-augmented generation, built around your scientific domain.
 
 Sci RAG Kit is a project template for question answering over scientific
-documents. You put papers and reports into a Postgres database, and the kit
-answers questions about them with citations back to the passages it used. A
+documents. It stores papers and reports in a Postgres database and answers
+questions about them with citations back to the passages it used. It is a
 template repository for retrieval-augmented generation with the pipeline
 assembled: parsing, chunking, embeddings, a concept graph, five kinds of
-search, an evaluation harness, and a REST and MCP server. Your part is to supply the
-documents, name the concepts your field cares about, and write a few
+search, an evaluation harness, and a REST and MCP server. A project supplies
+the documents, names the concepts its field cares about, and writes a few
 questions with known answers.
 
 Start a project with two commands. `sci-rag new` asks a few questions and
@@ -43,22 +43,23 @@ minutes.
   graph live in PostgreSQL with the pgvector extension. There is nothing else
   to run or back up.
 - **A concept graph.** With a model credential, the kit reads every passage
-  and extracts the concepts and relationships you declare in
+  and extracts the concepts and relationships declared in
   `domain/domain.yaml`. Related concepts are clustered and summarized. This is
   what answers questions that span several documents.
 - **Five kinds of search.** By meaning, by exact words, through the concept
-  graph, through the cluster summaries, and by a model-written hypothetical
-  answer that the kit searches near. The five result lists merge into one ranking,
-  and every result names the layer that found it.
+  graph, through the cluster summaries, and through a model-written
+  hypothetical answer. The five result lists merge into one ranking, and
+  every result names the layer that found it.
 - **Cited answers.** The model answers from the retrieved passages only and
   cites each one by number. When the documents do not contain an answer, it
   says so.
 - **Rights.** Every document carries a license class. A request that
   restricts rights never sees passages outside its scope, so a shared
-  endpoint cannot leak a paywalled PDF you hold internally.
-- **Measurement.** Score retrieval and grade answers against questions with
-  known answers. See what each search layer contributes on your corpus.
-  Every report records the documents and models that produced it.
+  endpoint cannot leak a paywalled PDF held internally.
+- **Measurement.** The kit scores retrieval and grades answers against
+  questions with known answers, and reports what each search layer
+  contributes on a given corpus. Every report records the documents and
+  models that produced it.
 - **Serving.** One process answers the command line, a REST API with
   interactive docs at `/docs`, and agents over MCP (the protocol Claude Code
   and similar tools use to call external systems). API keys carry scopes and
@@ -70,8 +71,8 @@ minutes.
 
 ## Set up
 
-You need [uv](https://docs.astral.sh/uv/), Docker or a PostgreSQL 16 through
-18 server with pgvector, and optionally a
+Setup needs [uv](https://docs.astral.sh/uv/), Docker or a PostgreSQL 16
+through 18 server with pgvector, and optionally a
 [Google AI Studio API key](https://aistudio.google.com/apikey).
 
 Create the local configuration file. The second command matters: the file is
@@ -88,7 +89,7 @@ In `.env`, set one of these:
 | Setting | When to use it |
 |---|---|
 | `SCI_RAG_GOOGLE_API_KEY=...` | A free AI Studio key. The right choice for almost everyone. |
-| `SCI_RAG_GCP_PROJECT=...` | Your lab already runs on Google Cloud. Run `gcloud auth application-default login` first. |
+| `SCI_RAG_GCP_PROJECT=...` | The lab already runs on Google Cloud. Run `gcloud auth application-default login` first. |
 | `SCI_RAG_EMBEDDING_PROVIDER=local-hash` | No credential yet. Retrieval works; the graph and generated answers wait. |
 
 Then install, start the database, and run the demo:
@@ -112,12 +113,12 @@ uv run sci-rag serve   # REST at /docs, MCP at /mcp
 ```
 
 The demo corpus is five short synthetic documents about agricultural
-residues. The numbers in them are plausible but fictional. They exist so the
-pipeline runs end to end before you add your own documents.
+residues, with plausible but fictional numbers. It exists so the pipeline
+runs end to end before a real corpus goes in.
 
 ## Use your own documents
 
-Put your PDFs, HTML, Markdown, or text files in `data/raw/`, then run seven
+Put PDFs, HTML, Markdown, or text files in `data/raw/`, then run seven
 commands. [Bring your own domain](docs/bring-your-own-domain.md) explains
 each one.
 
@@ -131,19 +132,19 @@ uv run sci-rag eval retrieval --ablation              # 6. measure
 uv run sci-rag answer "a question in your field"      # 7. ask
 ```
 
-The three `draft` commands write a file for you to review. Each also works
-without a model credential: `--print-prompt` prints the prompt for any
-assistant, and `--from-file` reads the reply back. Two things are never
-drafted for you: a document's rights, and the human labels that check the
-answer grader.
+The three `draft` commands write a file to review, and each works without
+a model credential: `--print-prompt` prints the prompt for any assistant, and
+`--from-file` reads the reply back. Two things are never drafted: a
+document's rights, and the human labels that check the answer grader.
 
-In a hurry, `uv run sci-rag build data/raw` ingests a folder with no
-manifest at all and builds the graph when a credential is present.
+For a first pass with no manifest, `uv run sci-rag build data/raw` ingests a
+folder directly and builds the graph when a credential is present.
 
 ## Commands
 
-`uv run sci-rag --help` groups every command by stage. The
-[CLI reference](docs/cli.md) lists every option. The ones you will use most:
+`uv run sci-rag --help` groups every command by stage, and the
+[CLI reference](docs/cli.md) lists every option. The commands most projects
+use daily:
 
 | Command | What it does |
 |---------|--------------|
@@ -168,8 +169,8 @@ claude mcp add my-corpus -- uv run --directory /path/to/your/repo sci-rag mcp
 ## Repository layout
 
 ```
-domain/            Your field: concepts, prompts, test questions
-data/raw/          Your documents; data/corpus.jsonl describes them
+domain/            The field: concepts, prompts, test questions
+data/raw/          The documents; data/corpus.jsonl describes them
 data/demo/         The demo corpus (synthetic, CC0)
 src/sci_rag/       The pipeline: ingest, embed, graph, retrieve, answer, evals, server, cli
 migrations/        Database tables

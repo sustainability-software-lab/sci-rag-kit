@@ -5,7 +5,7 @@ description: Add a parser, corpus collector, reranker, model provider, or authen
 
 # Extend the kit
 
-Sci RAG Kit has no plug-in registry. It has five small boundaries where real projects vary. Extend the narrowest seam that fits, and keep its surrounding invariants visible in tests and evaluation.
+Sci RAG Kit has no plug-in registry. It defines five small boundaries where projects vary. Extend the narrowest seam that fits, and keep its surrounding invariants visible in tests and evaluation.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A new parser, collector, reranker, provider, or auth backend</div>
@@ -26,10 +26,10 @@ Sci RAG Kit has no plug-in registry. It has five small boundaries where real pro
 
 | Need | Contract | Primary file | Evidence to add |
 |---|---|---|---|
-| New document type | Produce the shared parsed block model | `src/sci_rag/ingest/parsers.py` | Parser and chunking tests with a small fixture |
+| New document type | Produce the shared parsed block model | `src/sci_rag/ingest/parsers.py` | Parser and chunking tests with a fixture |
 | New source system | Produce `CorpusEntry` values | `src/sci_rag/ingest/manifest.py` | Metadata, rights, pagination, and resume tests |
 | New post-fusion ranking | Implement `Reranker` | `src/sci_rag/retrieve/rerank.py` | Failure fallback test and before/after ablation |
-| New embedding or generation model | Implement `EmbeddingProvider` or `LLMClient` | `src/sci_rag/embed/`, `src/sci_rag/llm/` | Offline contract tests plus version/dimension checks |
+| New embedding or generation model | Implement `EmbeddingProvider` or `LLMClient` | `src/sci_rag/embed/`, `src/sci_rag/llm/` | Offline contract tests plus version and dimension checks |
 | New identity system | Implement `AuthBackend` and wire the app factory | `src/sci_rag/server/auth.py` | Auth, scope, rate, REST, and MCP coverage |
 
 ## 1. Add a document parser
@@ -99,7 +99,7 @@ Stamp a provider-specific version that changes when stored vectors become incomp
 
 An LLM client implements full generation and streaming. JSON consumers use the shared `generate_json()` helper, which requests deterministic JSON mode and strips a surrounding code fence before parsing.
 
-Provider additions need a deliberate selection path in `get_embedder()` or `get_llm()`. This small factory keeps supported providers visible in one file.
+Provider additions need a deliberate selection path in `get_embedder()` or `get_llm()`. This factory keeps supported providers visible in one place.
 
 ### Generation providers that ship with the kit
 
@@ -150,7 +150,7 @@ Two cells are easy to get wrong:
 - **Lowering effort is not the same as disabling thinking.** Disabling it on current Claude models can leak reasoning tags into visible text, corrupting the parsed JSON.
 - **Not every Claude model accepts the effort knob.** `claude-sonnet-5` takes it; `claude-haiku-4-5` rejects it. The adapter probes once per client and remembers the result.
 
-Where a provider may reject a knob, adapters retry once without it. Retry policy is shared: `retry_async()` in `llm/client.py` owns the backoff. SDK clients are constructed with `max_retries=0` to avoid compounding retries.
+Where a provider may reject a knob, adapters retry once without it. Retry policy is shared: `retry_async()` in `llm/client.py` manages backoff. SDK clients are constructed with `max_retries=0` to prevent compounding retries.
 
 ### Embeddings are Google-only on purpose
 
@@ -164,11 +164,11 @@ An embedder is not a runtime-swappable choice. A migration bakes `SCI_RAG_EMBEDD
 
 `AuthBackend` has two synchronous operations: authenticate a bearer token into an `AuthContext`, and enforce its rate limit. The shipped factory selects open local mode or static JSON keys from `SCI_RAG_API_KEYS`.
 
-A deployment that adds OAuth or institutional identity should:
+To add OAuth or institutional identity:
 
 1. Map external identity and claims to the existing scope vocabulary.
 2. Implement `authenticate()` and `check_rate()`.
-3. Wire the backend into its application factory to guard REST and the `/mcp` mount.
+3. Wire the backend into the application factory to guard REST and the `/mcp` mount.
 4. Preserve stable `application/problem+json` error codes.
 5. Test REST and MCP access together.
 
@@ -188,9 +188,7 @@ See [Architecture](architecture.md#extension-points-in-order-of-likely-need) for
 <div class="srag-checkpoint" markdown>
 **Checkpoint: the seam holds**
 
-`make check` is green, your new code is exercised by an offline test, and if
-you touched ranking you have two ablation tables from the same corpus
-fingerprint. If any of those three is missing, the change is not done.
+`make check` is green, the new code is exercised by an offline test, and if ranking changed there are two ablation tables from the same corpus fingerprint. If any of those three is missing, the change is not done.
 </div>
 
 ## Next steps

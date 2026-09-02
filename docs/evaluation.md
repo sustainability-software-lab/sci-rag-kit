@@ -5,11 +5,7 @@ description: Run retrieval ablations and judged-answer evaluation, compare two r
 
 # Evaluate your pipeline
 
-By the end of this page you can say, with evidence, whether a change to your
-pipeline helped. The harness is built to make that hard to fake, including by
-accident: mechanical retrieval metrics against expert ground truth, per-layer
-ablations showing what each component contributes, and a judge whose prompts
-structurally separate grounding from correctness.
+This page shows how to tell, with evidence, whether a change to the pipeline helped. The harness makes that hard to fake, even by accident: mechanical retrieval metrics against expert ground truth, per-layer comparisons that show what each component contributes, and a grader whose prompts keep grounding and correctness apart.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A reproducible before-and-after on your own corpus</div>
@@ -35,11 +31,7 @@ sci-rag eval retrieval --ablation   # did the right evidence come back, per laye
 sci-rag eval answers                # are the generated answers grounded, cited, correct?
 ```
 
-Both read `domain/eval_seed_questions.jsonl`, print a summary table, and
-write a JSON and Markdown report to `eval_results/`. Every report carries a
-corpus fingerprint (documents, chunks, graph size, embedding versions,
-latest ingestion time) and the git commit. Keep the reports; cite the
-fingerprint with any number you publish.
+Both read `domain/eval_seed_questions.jsonl`, print a summary table, and write a JSON and Markdown report to `eval_results/`. Every report carries a corpus fingerprint (documents, chunks, graph size, embedding versions, latest ingestion time) and the git commit. Keep the reports; cite the fingerprint with any published number.
 
 Real example output from the shipped demo corpus:
 [examples/demo-eval/retrieval-ablation.md](examples/demo-eval/retrieval-ablation.md)
@@ -69,17 +61,14 @@ One JSON object per line:
   marks an honesty probe (see below), and `drafted` marks a question a
   model wrote that no expert has checked yet (see below).
 
-Three pieces of writing advice. Ten great questions beat a hundred vague
-ones. Include one or two multi-hop questions whose evidence spans
-documents. And grow the set from real user questions, especially the ones
-the system fumbled.
+Three recommendations for writing seed questions: ten great questions beat a hundred vague ones. Include one or two multi-hop questions whose evidence spans documents. Grow the set from real user questions, especially the ones the system fumbled.
 
-If typing them cold is the part you keep putting off,
+For help drafting seed questions from scratch,
 [`sci-rag draft questions`](bring-your-own-domain.md#step-5-write-seed-questions-then-measure) writes a first pass
 grounded in your own documents and verifies every quoted phrase against the
 passage it claims to come from.
 
-If you already have the questions, which is the better position to be in,
+If questions already exist,
 [`sci-rag draft seed-from-answers questions.txt`](bring-your-own-domain.md#step-5-write-seed-questions-then-measure) fills
 in the rest. It answers each of your questions and proposes the reference
 answer and evidence phrases from what that answer cited, keeping only phrases
@@ -101,10 +90,7 @@ The JSON block sits beside the corpus fingerprint:
 "ground_truth": {"drafted": 7, "reviewed": 3}
 ```
 
-Read the question, check its evidence against the document it cites, then
-delete the `drafted` tag. That deletion is the expert sign-off, and it is
-the only thing that moves the counts. Nothing in the kit removes the tag
-for you.
+Read the question, check its evidence against the document it cites, then delete the `drafted` tag. That deletion is the expert sign-off, and it is the only thing that moves the counts. The kit does not remove the tag automatically.
 
 ## Retrieval metrics, and how to read the ablation table
 
@@ -115,9 +101,7 @@ the first relevant item).
 
 This is deliberately mechanical. Its job is regression detection and
 layer comparison, not absolute truth; the judged answer eval is where
-quality judgment lives. Retrieval metrics never grade answer text by
-substring matching, because that conflates paraphrase detection with
-grounding.
+quality judgment lives. Retrieval metrics never grade answer text by substring matching because that conflates paraphrase detection with grounding.
 
 `--ablation` re-runs the questions under the registered configurations:
 `full_deep`, `interactive`, `vector_only`, `keyword_only`, `no_graph`,
@@ -149,27 +133,16 @@ unchanged corpus from being mislabeled. Read every layer-ablation row against
   grows.
 
 <div class="srag-checkpoint" markdown>
-**Checkpoint: you can name what each layer is worth**
+**Checkpoint: measure each layer's contribution**
 
-Point at one row of the ablation table and say what removing that layer cost
-you on your corpus. If every row equals `full_deep`, the ablation is telling
-you the corpus is too small or the ontology is not matching, and no weight you
-change from here will be measurable.
+Point at one row of the ablation table and say what removing that layer cost on the corpus. If every row equals `full_deep`, the ablation signals a corpus that is too small or an ontology that is not matching; no weight adjustment will be measurable.
 </div>
 
 ## The judge, and why it is blind
 
 Grading a generated answer happens in two independent passes:
 
-**Pass 1, grounding (blind).** The judge sees the question, the answer,
-and exactly the sources the assistant retrieved. It scores three
-dimensions, 0 to 2 each: groundedness, meaning the sources support the
-claims; citation accuracy, meaning the bracketed numbers point at sources
-that really support the adjacent claim; and completeness, meaning the
-answer used the relevant retrieved material. It never sees the reference
-answer. A judge that does see it rewards an answer for
-matching the reference even when the cited sources say no such thing.
-That quietly converts your grounding metric into a paraphrase detector.
+**Pass 1, grounding (blind).** The judge sees the question, the answer, and exactly the sources the assistant retrieved. It scores three dimensions, 0 to 2 each: groundedness (the sources support the claims), citation accuracy (the bracketed numbers point at sources that really support the adjacent claim), and completeness (the answer used the relevant retrieved material). The judge never sees the reference answer. A judge that does see it rewards an answer for matching the reference even when the cited sources contradict it, converting the grounding metric into a paraphrase detector.
 
 **Pass 2, correctness (reference-based).** A separate call compares the
 answer against the expert reference, without the sources, and scores
@@ -196,10 +169,7 @@ uv run sci-rag eval diff eval_results/<uncompressed>/report.json \
   eval_results/<compressed>/report.json
 ```
 
-Adopt compression only when every judged dimension remains inside the comparison
-confidence interval and median prompt tokens fall measurably. Otherwise leave
-`compression.enabled: false` and record the rejection. A token reduction alone
-is not evidence that answer quality held.
+Adopt compression only when every judged dimension remains inside the comparison confidence interval and median prompt tokens drop measurably. Otherwise keep `compression.enabled: false` and document the finding. A token reduction alone does not prove answer quality remained constant.
 
 The demo's own comparison, run at three floors on the v0.3 benchmark with
 10 seed questions and one corpus snapshot:
@@ -216,14 +186,10 @@ none dropped. [See the benchmarks for the full gate](benchmarks.md#contextual-co
 
 ## Calibrating the judge
 
-The judged-answers table is only as citable as the judge behind it, so
-the kit ships calibration as a workflow you re-run, not a one-off study:
+The judged-answers table is only as citable as the judge behind it, so the kit ships calibration as a repeatable workflow:
 
-1. Run an answers eval (`sci-rag eval answers`) and open its
-   `report.json` in `eval_results/`.
-2. Have a human read each generated answer (and its sources) **without**
-   looking at the judge's scores, and record their own 0-2 scores per
-   dimension, one JSON object per line:
+1. Run an answers eval (`sci-rag eval answers`) and open `report.json` from `eval_results/`.
+2. Have a human read each generated answer (and its sources) **without** looking at the judge's scores, and record their own 0-2 scores per dimension, one JSON object per line:
 
    ```
    {"question_id": "rice-straw-ash", "groundedness": 2,
@@ -266,11 +232,7 @@ as a single file you can attach to an email:
 uv run sci-rag eval html eval_results/<run>
 ```
 
-It writes `report.html` next to the report, or wherever `--output`
-points. The page is self-contained: inline styles, no fonts, no scripts,
-nothing fetched when it opens. That is deliberate. A page that fetches
-anything renders differently for the recipient than for you, and
-eventually renders as nothing behind a corporate firewall.
+It writes `report.html` next to the report, or wherever `--output` points. The page is self-contained: inline styles, no fonts, no scripts, nothing fetched when it opens. A page that fetches anything renders differently for the recipient than for the author, and can fail behind a corporate firewall.
 
 It leads with the provenance receipt, because a reader who cannot run the
 command has no other way to find out which model produced what they are
@@ -325,10 +287,7 @@ When two people disagree about whether a change helped, the reports settle it.
 <div class="srag-checkpoint" markdown>
 **Checkpoint: the numbers are citable**
 
-Your newest report names a corpus snapshot, a git commit, the answering and
-grading models, and the enabled layers, and no question in it still carries the
-`drafted` tag. A number missing any of those is a number you cannot put in a
-methods section.
+The newest report names a corpus snapshot, a git commit, the answering and grading models, and the enabled layers, and no question carries the `drafted` tag. A number missing any of these cannot be cited in a methods section.
 </div>
 
 ## Next steps

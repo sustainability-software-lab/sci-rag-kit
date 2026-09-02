@@ -23,7 +23,7 @@ For work performed with the current release, cite the software title, version or
 }
 ```
 
-Add `note = {Git commit ...; accessed YYYY-MM-DD}` when the exact code state matters. If you modified the template substantially, cite both Sci RAG Kit and your derived repository or archived release so readers can reproduce the deployed method.
+Add `note = {Git commit ...; accessed YYYY-MM-DD}` when the exact code state matters. If the template was substantially modified, cite both Sci RAG Kit and the derived repository or archived release so readers can reproduce the deployed method.
 
 ## What else to report in a methods section
 

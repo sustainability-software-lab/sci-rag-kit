@@ -9,10 +9,7 @@ One server, two front doors, one service behind both. Start it with `sci-rag ser
 
 ## Authentication
 
-Send `Authorization: Bearer <key>`, or `X-API-Key: <key>` when something
-upstream has already claimed the first header. Cloud Run is the case that
-matters: its frontend inspects `Authorization: Bearer` and rejects anything
-that is not its own identity token, before your container sees the request. On a deployed service, use the second header. `Authorization` wins when both are sent.
+Send `Authorization: Bearer <key>`, or `X-API-Key: <key>` when something upstream has already claimed the first header. Cloud Run is the case that matters: its frontend inspects `Authorization: Bearer` and rejects anything that is not its own identity token, before the container sees the request. On a deployed service, use the second header. `Authorization` wins when both are sent.
 
 Keys are configured by the operator as a JSON map in `SCI_RAG_API_KEYS`:
 
@@ -29,9 +26,7 @@ Keys are configured by the operator as a JSON map in `SCI_RAG_API_KEYS`:
 | `corpus:read` | document catalog and `/v1/status` |
 | `byo_llm` | may supply `llm_api_key` per request |
 
-With no keys configured the server runs **open** and warns loudly at
-startup; that is for localhost development only. `GET /health` and
-`GET /v1/corpus-manifest` never require auth.
+With no keys configured, the server runs **open** and warns loudly at startup; that is for localhost development only. `GET /health` and `GET /v1/corpus-manifest` never require auth.
 
 ## Errors
 
@@ -42,7 +37,7 @@ Every error is RFC 9457 `application/problem+json` with a stable `code` and requ
  "status": 401, "code": "invalid_key", "detail": "", "request_id": "9f2c..."}
 ```
 
-The same id comes back in the `X-Request-ID` response header on every response. Send your own in the request header to have it echoed, and quote it when asking an operator to find the call in the logs. A `500` never carries the underlying exception message, query, or chunk text. It names the exception type and points at the logs.
+The same id comes back in the `X-Request-ID` response header on every response. Send one in the request header to have it echoed, and quote it when asking an operator to find the call in logs. A `500` never carries the underlying exception message, query, or chunk text. It names the exception type and points to the logs.
 
 Codes you can branch on:
 
@@ -132,7 +127,7 @@ Failed, malformed, empty, duplicate, or over-budget model output falls back to t
 
 Known retracted documents are excluded from answers by default. The flag comes from explicit Crossref metadata written by `sci-rag corpus enrich`. Missing enrichment is not guessed to mean retracted. Raw `/v1/query` retrieval keeps its previous behavior. The CLI has `sci-rag answer --include-retracted` for the rare case where an operator needs retracted evidence in an answer.
 
-**Bring your own key.** A request may include `llm_api_key` (an AI Studio key) if its API key holds the `byo_llm` scope. The operator can also bind an LLM key to an API key server-side. Either way, the credential is used for that call only and never stored or logged.
+**Bring your own key.** A request may include `llm_api_key` (an AI Studio key) if the API key holds the `byo_llm` scope. Operators can also bind an LLM key to an API key server-side. Either way, the credential is used for that call only and never stored or logged.
 
 ### GET /v1/documents and GET /v1/documents/{id}
 
