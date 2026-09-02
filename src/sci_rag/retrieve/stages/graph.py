@@ -148,11 +148,15 @@ _WALK_SQL = text(
         FROM combined_candidates
         GROUP BY id
     )
-    SELECT id, hop
+    SELECT candidates.id, candidates.hop
     FROM candidates
-    ORDER BY CASE WHEN :confidence_weighted THEN path_confidence END DESC NULLS LAST,
-             hop,
-             id
+    JOIN chunks ranked_chunk ON ranked_chunk.id = candidates.id
+    JOIN documents ranked_document ON ranked_document.id = ranked_chunk.document_id
+    ORDER BY CASE WHEN :confidence_weighted
+                  THEN candidates.path_confidence END DESC NULLS LAST,
+             candidates.hop,
+             ranked_document.content_hash,
+             ranked_chunk.chunk_index
     LIMIT :limit
     """
 ).bindparams(

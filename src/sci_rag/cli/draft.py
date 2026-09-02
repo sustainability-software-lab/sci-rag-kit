@@ -5,8 +5,8 @@ interface to them:
 
 * nothing extra, and the configured model drafts it (Lane A);
 * ``--print-prompt``, and the rendered, corpus-grounded prompt goes to stdout
-  for pasting into any assistant, then ``--from-file reply.json`` feeds the
-  reply back through identical validation (Lane B);
+  for local use or an approved assistant, then ``--from-file reply.json``
+  feeds the reply back through identical validation (Lane B);
 * neither, and you write the file yourself exactly as before (Lane C).
 
 Nothing here overwrites a file a human vouched for. A run proposes
@@ -24,8 +24,8 @@ from rich.console import Console
 draft_app = typer.Typer(
     help=(
         "Draft the domain files you would otherwise hand-write. Every drafter can also "
-        "print its prompt for any assistant (--print-prompt) and read the reply back "
-        "(--from-file), so no API key is required."
+        "print its corpus-bearing prompt for local use or an approved assistant "
+        "(--print-prompt), then read the reply back (--from-file)."
     ),
     no_args_is_help=True,
 )
@@ -105,7 +105,10 @@ def draft_questions_command(
     print_prompt: bool = typer.Option(
         False,
         "--print-prompt",
-        help="Print the rendered prompt and exit. Paste it into any assistant.",
+        help=(
+            "Print the rendered prompt and exit. It may contain corpus text; "
+            "send it only to an approved destination."
+        ),
     ),
     from_file: Path | None = typer.Option(
         None,
@@ -355,7 +358,10 @@ def draft_manifest_command(
     print_prompt: bool = typer.Option(
         False,
         "--print-prompt",
-        help="Print the rendered prompt and exit. Paste it into any assistant.",
+        help=(
+            "Print the rendered prompt and exit. It may contain corpus text; "
+            "send it only to an approved destination."
+        ),
     ),
     from_file: Path | None = typer.Option(
         None,
@@ -489,7 +495,10 @@ def draft_ontology_command(
     print_prompt: bool = typer.Option(
         False,
         "--print-prompt",
-        help="Print the rendered prompt and exit. Paste it into any assistant.",
+        help=(
+            "Print the rendered prompt and exit. It may contain corpus text; "
+            "send it only to an approved destination."
+        ),
     ),
     from_file: Path | None = typer.Option(
         None,
@@ -657,7 +666,10 @@ def draft_prompts_command(
     print_prompt: bool = typer.Option(
         False,
         "--print-prompt",
-        help="Print the rendered prompt and exit. Paste it into any assistant.",
+        help=(
+            "Print the rendered prompt and exit. It may contain corpus text; "
+            "send it only to an approved destination."
+        ),
     ),
     from_file: Path | None = typer.Option(
         None,

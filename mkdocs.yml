@@ -107,6 +107,7 @@ nav:
           - "ADR 0008: PostgreSQL 16 through 18": adr/0008-supported-postgresql-versions.md
           - "ADR 0009: A shared Cloud SQL instance with workspace databases": adr/0009-cloud-dev-database.md
           - "ADR 0010: The local template boundary is tracked content": adr/0010-template-copy-boundary.md
+          - "ADR 0011: Commit benchmark graph replay evidence": adr/0011-committed-benchmark-graph-replay.md
       - Contributing: contributing.md
       - Documentation style: STYLE.md
       - Changelog: changelog.md

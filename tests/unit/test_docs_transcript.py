@@ -101,6 +101,18 @@ def test_the_transcripts_never_expose_the_scripted_key() -> None:
     assert "cast-example-key" not in _advanced_transcript()
 
 
+def test_the_transcripts_label_stubbed_model_work() -> None:
+    for transcript in (_quick_transcript(), _advanced_transcript()):
+        assert "check simulated for this recording; no model request sent" in transcript
+        assert "answered in 90 ms" not in transcript
+
+
+def test_the_transcripts_describe_ai_studio_without_cost_or_project_overclaims() -> None:
+    for transcript in (_quick_transcript(), _advanced_transcript()):
+        assert "Shortest local setup; no manual Cloud setup" in transcript
+        assert "One free key, no cloud project" not in transcript
+
+
 def test_quick_transcript_asks_the_six_base_questions_and_gated_key() -> None:
     from sci_rag.scaffold.questions import QUESTIONS
 

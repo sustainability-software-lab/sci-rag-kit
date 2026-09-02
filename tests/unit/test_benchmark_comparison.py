@@ -32,7 +32,6 @@ def _renderer() -> dict:  # type: ignore[type-arg]
 
 
 TOLERANCES = _renderer()["TOLERANCES"]
-GRAPH_COUNT_CAVEAT = _renderer()["GRAPH_COUNT_CAVEAT"]
 compare_pages = _renderer()["compare_pages"]
 
 
@@ -59,13 +58,27 @@ def test_a_metric_inside_the_tolerance_is_reported_but_not_a_failure() -> None:
     assert all(not entry.material for entry in moved)
 
 
-def test_a_graph_that_grew_by_twelve_percent_is_material() -> None:
-    """83 to 93 entities is the movement the audit measured."""
-    moved = compare_pages(_page(), _page(entities=93))
+@pytest.mark.parametrize(
+    ("field", "before", "after"),
+    (("entities", 83, 84), ("relationships", 79, 80)),
+)
+def test_pinned_graph_counts_have_zero_tolerance(field: str, before: int, after: int) -> None:
+    """One pinned graph row moving is implementation or provenance drift."""
+    moved = compare_pages(_page(**{field: before}), _page(**{field: after}))
 
-    material = [entry for entry in moved if entry.material]
-    assert material, "the audit's own drift has to fail this"
-    assert any("entities" in entry.label for entry in material)
+    assert len(moved) == 1
+    assert moved[0].label == field
+    assert moved[0].material
+
+
+@pytest.mark.parametrize("field", ("documents", "chunks", "communities"))
+def test_other_counts_keep_the_declared_relative_tolerance(field: str) -> None:
+    """Only replay-pinned graph counts become exact comparisons."""
+    moved = compare_pages(_page(**{field: 100}), _page(**{field: 105}))
+
+    assert len(moved) == 1
+    assert moved[0].label == field
+    assert not moved[0].material
 
 
 def test_the_tolerances_are_declared_rather_than_implied() -> None:
@@ -107,24 +120,12 @@ def test_the_published_page_states_the_tolerance_the_renderer_judges_against() -
     page = Path("docs/benchmarks.md").read_text(encoding="utf-8")
 
     assert f"{TOLERANCES['metric']} absolute on a metric" in page
-    assert f"{TOLERANCES['count']:.0%} on a count" in page
+    count_tolerance = f"{TOLERANCES['count']:.0%} on"
+    assert any(
+        phrase in page
+        for phrase in (
+            f"{count_tolerance} a count",
+            f"{count_tolerance} other counts",
+        )
+    )
     assert "a finding, not a refresh" in page
-
-
-def test_the_published_page_names_the_graph_counts_as_the_known_exception() -> None:
-    """The tolerance claim has a documented counterexample, so the page says so.
-
-    Two reruns from identical recorded inputs moved the entity count 13% down
-    and 12% up, both outside the 10% count tolerance the paragraph above
-    promises. A reader who runs the command and sees a different entity count
-    has reproduced the documented behavior, and the page has to tell them that
-    before they go hunting for what they broke.
-
-    Held against the renderer's own constant, the way the tolerance is, so a
-    later re-render cannot keep the numbers and drop the caveat.
-    """
-    page = Path("docs/benchmarks.md").read_text(encoding="utf-8")
-
-    assert GRAPH_COUNT_CAVEAT in page
-    assert "does not make the extractor deterministic" in GRAPH_COUNT_CAVEAT
-    assert "one draw from a distribution" in GRAPH_COUNT_CAVEAT

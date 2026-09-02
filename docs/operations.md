@@ -5,7 +5,8 @@ description: Back up, restore, snapshot, delete, garbage-collect, and re-embed a
 
 # Operate a live corpus
 
-Everything the kit knows lives in one Postgres database, which keeps operational discipline simple. Snapshot what the corpus **is**, back up what the database **holds**, and rehearse restore before the moment you need it.
+Protect a live corpus with two records: a snapshot identifies its documents, while a
+database backup preserves the stored data. Rehearse the restore before you need it.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A backup, a restore drill, and a snapshot habit</div>
@@ -66,15 +67,28 @@ The report JSON carries the snapshot name, so later you can verify the numbers c
 
 ### Local or self-hosted Postgres
 
-`.env` is not exported to your shell, and `pg_dump` uses libpq instead of the application's async driver. Derive one connection string from the other:
+Keep the database password out of shell history and process arguments. Put it in a libpq
+passfile such as `~/.pgpass`, restrict the file to your account, and reference that file from
+the application URL. The passfile fields are `host:port:database:user:password`:
+
+```text
+localhost:5433:sci_rag:sci_rag:your-database-password
+```
 
 ```bash
-# libpq does not understand +asyncpg, so strip it.
+chmod 600 ~/.pgpass
+
+# Read the configured URL and convert the async driver name for libpq.
 SCI_RAG_DATABASE_URL_SYNC="$(
   grep -m1 '^SCI_RAG_DATABASE_URL=' .env |
     cut -d= -f2- |
     sed 's/^postgresql+asyncpg:/postgresql:/'
 )"
+
+# Refuse an inline password, which pg_dump would expose in its process arguments.
+case "$SCI_RAG_DATABASE_URL_SYNC" in
+  postgresql://*:*@*) echo "Use a passfile instead of an inline database password." >&2; exit 1 ;;
+esac
 
 # Custom-format archive: schema and data, compressed.
 pg_dump "$SCI_RAG_DATABASE_URL_SYNC" --format=custom \
@@ -85,13 +99,9 @@ pg_dump "$SCI_RAG_DATABASE_URL_SYNC" --format=custom \
 
 Keep only working copies there. Valuable data belongs encrypted, on a separate destination, under whatever retention your licenses require. Credentials and Terraform state are separate concerns. A database dump contains neither.
 
-Reading the URL from the file keeps the password out of shell history. If the URL carries `?passfile=`, as the Cloud SQL helper does, the password stays off the command line too.
-
-If `.env` does not hold the URL, set it and let libpq read the password from `~/.pgpass`:
-
-```bash
-SCI_RAG_DATABASE_URL_SYNC='postgresql://sci_rag@localhost:5433/sci_rag'
-```
+The procedure preserves a `?passfile=` query from the application URL and stops before
+`pg_dump` if the URL contains an inline password. If `.env` has no application URL, add a
+passwordless URL with a `passfile` query before running the procedure.
 
 `--format=custom` is why restore uses `pg_restore` not `psql`. A custom-format archive is compressed and lets you restore one table at a time. Plain output is SQL to replay, and they are not interchangeable.
 

@@ -22,15 +22,17 @@ Choose a supported PostgreSQL path and point destructive tests at a database you
 | One supported environment manager | It supplies the command runner | uv, pixi, conda, or venv + pip was selected during setup |
 | PostgreSQL 16 through 18 with pgvector | The application, migrations, and tests all need it | `psql --version` and `CREATE EXTENSION vector` |
 
-`SCI_RAG_DB_BACKEND` chooses which backend `make db-up`, `make db-down`, and `make setup` use. It accepts `docker` for the Compose service and `local` for `scripts/local_postgres.py`.
+`SCI_RAG_DB_BACKEND` selects the backend used by `make db-up`, `make db-down`, and `make setup`. Set it to `docker` for the Compose service or `local` for `scripts/local_postgres.py`.
 <!-- BEGIN GENERATED PROJECT FEATURE: cloud-helper -->
-It also accepts `cloud` for the optional `scripts/cloud_postgres.py`.
+Set it to `cloud` for the optional `scripts/cloud_postgres.py`.
 <!-- END GENERATED PROJECT FEATURE: cloud-helper -->
-Every project retains all its backends. Your environment manager defaults to one when you set nothing. `SCI_RAG_DATABASE_URL` controls the application; `SCI_RAG_TEST_DATABASE_URL` controls the destructive test suite. Selecting a backend does not rewrite either URL.
+Every project retains its supported backends, with one default selected by the environment manager. `SCI_RAG_DATABASE_URL` controls the application. `SCI_RAG_TEST_DATABASE_URL` controls the destructive test suite. Selecting a backend does not rewrite either URL.
 
 ## Recommended defaults
 
-Docker is the template default and matches the PostgreSQL 16 service in CI. Generated pixi and conda projects default to `local` because their manifests bundle PostgreSQL and pgvector from conda-forge. Any environment manager can select `local` when a supported system PostgreSQL and pgvector are on `PATH`, including Postgres.app. Advanced setup retains the optional Cloud helper; Quick keeps the default and removes it.
+Docker is the template default and matches the PostgreSQL 16 service in CI. Generated pixi and conda projects default to `local` because their manifests bundle PostgreSQL and pgvector from conda-forge.
+
+Any environment manager can select `local` when PostgreSQL 16 through 18 and pgvector are on `PATH`, including through Postgres.app. Advanced setup can retain the optional Cloud helper. Quick keeps the default and removes the helper.
 
 | Environment manager | Default value | What launches | Also selectable |
 |---|---|---|---|
@@ -49,7 +51,7 @@ If you use the template checkout with no backend override, run:
 $ make setup
 ```
 
-This synchronizes dependencies, starts the selected backend, and applies migrations. Docker is the default, so it starts Compose on port `5433`.
+This synchronizes dependencies, starts the selected backend, and applies migrations. With the default backend, Compose starts on port `5433`.
 
 Generated pixi or conda projects default to the bundled server. To use Compose instead:
 
@@ -72,7 +74,7 @@ healthy. An empty corpus is fine at this point.
 
 ## Run Postgres from conda-forge
 
-Generated pixi and conda projects declare `postgresql` and `pgvector` in the manifest, so their Makefile defaults to `SCI_RAG_DB_BACKEND=local`. Running `make setup` starts `scripts/local_postgres.py`:
+Generated pixi and conda projects declare `postgresql` and `pgvector` in the manifest. Their Makefile sets `SCI_RAG_DB_BACKEND=local`, so `make setup` starts `scripts/local_postgres.py`:
 
 ```console title="Terminal"
 $ make setup
@@ -93,13 +95,15 @@ report a healthy database and current schema.
 
 ## Point at a system PostgreSQL
 
-`local` runs `scripts/local_postgres.py`, which uses whichever PostgreSQL is on `PATH`: the bundled conda-forge build, or a system install. Any environment manager can use it when `initdb`, `pg_ctl`, and `psql` from PostgreSQL 16–18 are on `PATH`. Postgres.app is supported on macOS. Add its versioned `bin` to `PATH`, then run:
+`local` runs `scripts/local_postgres.py` with the PostgreSQL installation on `PATH`, either the bundled conda-forge build or a user-installed system server. Any environment manager can use it when `initdb`, `pg_ctl`, and `psql` from PostgreSQL 16 through 18 are available.
+
+Postgres.app is supported on macOS. Add its versioned `bin` directory to `PATH`, then run:
 
 ```console title="Terminal"
 $ SCI_RAG_DB_BACKEND=local make setup
 ```
 
-The helper creates the `sci_rag` database and enables pgvector. Alternatively, point at an existing compatible server. Set the application URL and apply migrations:
+The helper creates the `sci_rag` database and enables pgvector. To use an existing compatible server, set the application URL and apply migrations:
 
 ```dotenv title="~/.env"
 SCI_RAG_DATABASE_URL=postgresql+asyncpg://user:password@host:5432/sci_rag
@@ -120,13 +124,17 @@ An exported URL takes precedence over the value in `.env`.
 <!-- BEGIN GENERATED PROJECT FEATURE: cloud-helper -->
 ## Share a Cloud SQL development instance
 
-The optional Cloud helper gives each workspace its own development database, a disposable test database, a proxy process, and a dynamic loopback port on one shared instance. For a new project, choose `sci-rag new --advanced`; for a checkout, `sci-rag init --advanced`. Quick keeps Terraform and removes the helper. The helper is a development path, not the production deployment.
+The optional Cloud helper isolates each workspace with its own development database, disposable test database, proxy process, and dynamic loopback port on one shared instance. Retain it with `sci-rag new --advanced` for a new project or `sci-rag init --advanced` for a checkout. Quick setup keeps Terraform and removes the helper.
+
+This helper is for development, not production deployment.
 <!-- END GENERATED PROJECT FEATURE: cloud-helper -->
 
 <!-- BEGIN GENERATED PROJECT FEATURE: cloud-provisioning -->
 ## One-time Cloud SQL provisioning
 
-An operator performs this once. You need billing, `gcloud`, Application Default Credentials, Terraform, the Cloud SQL Auth Proxy, and `psql`. The operator needs permission to create and update the Cloud SQL instance, create databases, connect through the proxy, read the password secret, and manage IAM bindings. Cloud SQL Editor plus access to one Secret Manager secret covers this.
+An operator performs this step once. It requires billing, `gcloud`, Application Default Credentials, Terraform, the Cloud SQL Auth Proxy, and `psql`.
+
+The operator needs permission to create and update the Cloud SQL instance, create databases, connect through the proxy, read the password secret, and manage IAM bindings. Cloud SQL Editor plus access to one Secret Manager secret covers these operations.
 
 Authenticate, then apply the development-only module with an explicit project:
 
@@ -145,21 +153,18 @@ $ terraform output -raw sci_rag_cloud_pg_config
 $ cd ../../..
 ```
 
-Replace all three placeholders. `project_id` and `instance_name` have no defaults, so Terraform stops at input validation if you omit either, before reading state. That is deliberate: a module that guessed could aim changes at an instance you never named.
+Replace all three placeholders. `project_id` and `instance_name` have no defaults. If you omit either, Terraform stops at input validation before reading state, preventing the module from targeting an unnamed instance.
 
-Read the saved plan before applying it. Every line should be a create. A
-change or a destroy on an instance you did not expect means the inputs point
-somewhere you did not intend, and applying anyway is how shared infrastructure
-gets reconciled by accident.
+Read the saved plan before applying it. Every line should be a create. If it
+changes or destroys an unexpected instance, stop and correct the inputs.
 
 Terraform prints only non-secret helper settings, but Terraform state contains
 the generated database password. Store the state as a credential and never
 commit or paste it into an issue.
 
-Advanced setup lets a generated project retain the helper while declining the
-Terraform tree. That helper-only project has no provisioning module. Connect it
-to an existing compatible instance or copy the development module from the
-upstream template before provisioning.
+Advanced setup can retain the helper without the Terraform tree. Such a project
+has no provisioning module. Connect it to an existing compatible instance, or
+copy the development module from the upstream template before provisioning.
 
 Save the printed settings where the helper reads them. The output is already
 `KEY=VALUE` lines, so this is the whole configuration step:
@@ -179,9 +184,8 @@ no database password.
 <!-- BEGIN GENERATED PROJECT FEATURE: cloud-helper -->
 ## Start a Cloud SQL workspace
 
-Configure the helper with these inputs. The project and the instance have no
-defaults, because `pause` and `resume` act on whatever they name and a shipped
-default would aim them at somebody else's database.
+Configure the helper with the inputs below. The project and instance have no
+defaults because `pause` and `resume` act on the named instance.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -204,14 +208,14 @@ SCI_RAG_CLOUD_PG_REGION=us-west1
 SCI_RAG_CLOUD_PG_USER=sci_rag
 ```
 
-An exported variable wins over the file, so the file holds the default and an
-export is a deliberate override. Point `SCI_RAG_CLOUD_PG_CONFIG` at a path
-outside any checkout to share one instance across several of them without a
-per-checkout step. Without a project and an instance the helper prints what to
-set and exits nonzero, for every verb, rather than resolving to an instance
-nobody named.
+An exported variable overrides the file. To share one instance across several
+checkouts without configuring each one, point `SCI_RAG_CLOUD_PG_CONFIG` at a
+path outside the checkouts. Without both a project and an instance, every
+helper command prints the missing settings and exits nonzero.
 
-The helper normalizes the workspace name into `sci_rag_<workspace>` and `sci_rag_test_<workspace>`. Override `SCI_RAG_CLOUD_PG_WORKSPACE` when two checkouts have the same basename. The database pair and local proxy state prevent accidental URL and destructive-test collisions. Every database shares the same PostgreSQL role, so separation is not an authorization boundary.
+The helper normalizes the workspace name into `sci_rag_<workspace>` and `sci_rag_test_<workspace>`. Override `SCI_RAG_CLOUD_PG_WORKSPACE` when two checkouts have the same basename.
+
+The database pair and local proxy state prevent accidental URL and destructive-test collisions. Every database shares the same PostgreSQL role, so this separation is not an authorization boundary.
 
 Start the backend and print both secret-free URLs:
 
@@ -220,7 +224,9 @@ $ SCI_RAG_DB_BACKEND=cloud make db-up
 $ uv run python scripts/cloud_postgres.py config
 ```
 
-`start` resumes a paused instance, creates development and test databases, starts the proxy on a free port at or above `5433`, and enables pgvector. A first start can take several minutes while Cloud SQL activates. Record both printed URLs in an owner-only `.env`, then run migrations:
+`start` resumes a paused instance, creates the development and test databases, starts the proxy on a free port at or above `5433`, and enables pgvector. The first start can take several minutes while Cloud SQL activates.
+
+Record both printed URLs in an owner-only `.env`, then run migrations:
 
 ```console title="Terminal"
 $ chmod 600 .env
@@ -244,13 +250,13 @@ $ uv run sci-rag db upgrade
 | `pause` | Stops this proxy and pauses the shared instance; it affects every workspace |
 | `resume` | Changes the shared instance activation policy to running; `start` is still the workspace startup command |
 
-`stop` and Conductor archive do not delete a database. `pause` and `resume` affect every workspace, so only the shared-instance operator should use them. Normal cleanup runs `make db-down`, which stops only the current workspace proxy.
+`stop` and Conductor archive do not delete a database. Only the shared-instance operator should use `pause` and `resume`, which affect every workspace. Normal cleanup runs `make db-down` and stops only the current workspace proxy.
 
 The instance has public IPv4 enabled with no authorized networks. Connections use IAM authorization and TLS through the Cloud SQL Auth Proxy. Backups and deletion protection are disabled by default. This development instance must not hold the only copy of a valuable corpus.
 
 ## Use Cloud SQL in Conductor workspaces
 
-This is user-installed, machine-local configuration that the kit does not ship and Conductor does not enable. Store `.conductor/settings.local.toml` and the wrapper scripts in the Conductor root clone, not in each worktree. The settings call them through `$CONDUCTOR_ROOT_PATH`:
+The kit does not ship or enable this user-installed, machine-local Conductor configuration. Store `.conductor/settings.local.toml` and the wrapper scripts in the Conductor root clone, outside the worktrees. The settings call them through `$CONDUCTOR_ROOT_PATH`:
 
 ```toml title="~/.conductor/settings.local.toml"
 "$schema" = "https://conductor.build/schemas/settings.repo.schema.json"
@@ -276,7 +282,7 @@ available_in = ["local"]
 icon = "test-tube"
 ```
 
-The setup wrapper synchronizes dependencies, starts or verifies the proxy, writes both secret-free URLs into an owner-only `.env`, and applies migrations. Replace placeholders with non-secret Cloud settings:
+The setup wrapper synchronizes dependencies, starts or verifies the proxy, writes both secret-free URLs to an owner-only `.env`, and applies migrations. Replace the placeholders with non-secret Cloud settings:
 
 ```bash title="~/.conductor/setup-cloud-workspace.sh"
 #!/bin/bash
@@ -330,7 +336,7 @@ make db-down
 <div class="srag-checkpoint" markdown>
 **Checkpoint: parallel workspaces stay isolated**
 
-Each workspace `.env` contains a different normalized development/test database pair and may use a different proxy port. Archiving one workspace leaves every other proxy and the shared instance running.
+Each workspace `.env` contains a different normalized development and test database pair, and each workspace may use a different proxy port. Archiving one workspace leaves every other proxy and the shared instance running.
 </div>
 <!-- END GENERATED PROJECT FEATURE: cloud-helper -->
 

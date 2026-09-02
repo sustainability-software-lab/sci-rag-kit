@@ -162,7 +162,7 @@ QUESTIONS: tuple[Question, ...] = (
         choices=("google_ai_studio", "vertex_ai", "offline"),
         label="How will you reach a model?",
         choice_help={
-            "google_ai_studio": "One free key, no cloud project",
+            "google_ai_studio": "Shortest local setup; no manual Cloud setup",
             "vertex_ai": "Billed through a Google Cloud project you already have",
             "offline": "No model calls, graph extraction, or generated answers",
         },

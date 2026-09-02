@@ -5,7 +5,9 @@ description: Follow ownership through the packages, the storage layer, the concu
 
 # Architecture
 
-How the code fits together, what talks to what, and where the seams are. For the reasoning behind the retrieval design itself, read [Methodology](methodology.md) first. This page focuses on the software.
+The package moves documents and questions through public facades backed by one Postgres database.
+Each module owns one pipeline step and exposes a named replacement seam. For the scientific and
+retrieval decisions behind those boundaries, read [Methodology](methodology.md).
 
 ## The map
 
@@ -51,7 +53,7 @@ Package by package (`src/sci_rag/`):
 | `campaigns` | bounded discovery, explicit OA resolution, verified PDF download, protocol screening, PRISMA-aligned reporting, manifest output, and append-only resumable state | `discover_by_topic()`, `build_campaign()`, `screen_campaign()`, `CampaignState` |
 | `enrich` | Crossref journal, citation-count, and explicit retraction metadata | `enrich_documents()` |
 | `embed` | `EmbeddingProvider` interface; Google + offline hash implementations | `get_embedder()` |
-| `llm` | `LLMClient` interface; Google implementation + `MockLLM` | `get_llm()` |
+| `llm` | `LLMClient` interface; Google, Anthropic, and OpenAI-compatible implementations; `MockLLM` for tests | `get_llm()` |
 | `graph` | entity/relation extraction, community detection + summaries | `extract_graph()`, `build_communities()` |
 | `retrieve` | five stages, RRF fusion, scope, the orchestrator | `Retriever.retrieve()` |
 | `answer` | optional snippet compression, prompt assembly, citations, streaming events | `AnswerEngine.answer_stream()` |
@@ -60,10 +62,9 @@ Package by package (`src/sci_rag/`):
 | `server` | FastAPI app, auth, schemas, MCP server | `create_app()`, `build_mcp_server()` |
 | `cli` | Typer commands wiring it all together | `sci-rag ...` |
 
-Two rules keep this navigable.
-
-1. **Application code depends on facades, not internals.** Callers use `Retriever.retrieve()` and `AnswerEngine`; nothing outside `retrieve/` touches stage SQL.
-2. **REST and MCP share one `RagService` instance.** The two front doors cannot drift apart because exactly one service stands behind both.
+Application code calls `Retriever.retrieve()` and `AnswerEngine`; stage SQL stays inside
+`retrieve/`. REST and MCP both call `RagService`, so authentication, scope, citations, errors, and
+results share one service contract.
 
 The answer engine retains two evidence views when contextual compression is enabled. `retrieval` holds the complete retrieved chunks and their provenance. `prompt_retrieval` holds the exact summaries shown to the answer model and the blind grounding judge. Both views retain the same document and chunk IDs. A malformed or failed summary falls back to complete source text and increments a visible failure count.
 
@@ -97,11 +98,13 @@ Vector and community retrieval share one shielded query-embedding task. Graph an
 
 ## Data model
 
-Five tables, one database.
+Seven application tables share one database.
 
 * `documents`: source identity, citation metadata, license class, content hash (unique; the dedup backstop), and sparse Crossref enrichment including explicit retraction status.
 * `chunks`: the retrieval unit. Text, token count, section path, `is_table`, a pgvector embedding (HNSW indexed) with its `embedding_version`, a generated `search_tsv` full-text column (GIN indexed), and `graph_extracted_at`. NULL means the graph builder has not seen it yet; this is how incremental extraction finds work.
+* `document_citations`: resolved and unresolved DOI references between documents, kept separate from ontology relationships.
 * `kg_entities`: canonical by name, type from the ontology, retained source aliases, evidence pointers (`chunk_ids`, `document_ids`).
+* `entity_resolution_audit`: the durable record of each applied entity merge.
 * `kg_relationships`: directed typed edges with the quoted evidence phrase, its chunk, and calibrated confidence (1.0 for direct statements, 0.7 for strong implications, 0.4 for cross-sentence inferences). Repeated extraction preserves the highest observed confidence for the typed edge on each document and chunk evidence surface.
 * `kg_communities`: cluster membership, an LLM summary, and the summary's embedding.
 
@@ -109,11 +112,17 @@ A migration fixes the embedding dimension from `SCI_RAG_EMBEDDING_DIM` (default 
 
 ## Concurrency model
 
-Everything is asyncio end to end: SQLAlchemy async and asyncpg. The retrieval orchestrator runs each enabled stage as its own task with its own database session (asyncpg cannot multiplex one session) under its own `asyncio.wait_for` timeout. A shared task computes the query embedding once; vector and community both await it. That task is shielded, so one stage's timeout cannot cancel it out from under the other. A failing stage records `error` in its trace and contributes nothing. The request survives.
+Database and retrieval paths use asyncio, SQLAlchemy async, and asyncpg. The retrieval orchestrator
+runs each enabled stage as its own task and database session because asyncpg cannot multiplex one
+session. Each task has an `asyncio.wait_for` timeout.
+
+Vector and community retrieval await one shielded query-embedding task. A timeout in one stage
+cannot cancel that shared work for another. A failed stage records `error`, contributes no
+candidates, and leaves the other stages running.
 
 ## Error and degradation philosophy
 
-* Layers degrade, requests survive. Degradation is always visible (`traces`, `degraded_stages`), not silent.
+* A failed retrieval layer contributes no candidates and appears in `traces` and `degraded_stages`.
 * Ingestion fails per document, never per corpus. Every failure is a row in the report with a reason.
 * Fail-closed beats fail-open where rights matter: empty license scope returns nothing; `unknown` license is unsafe; the community layer refuses scoped requests.
 * Every layer applies its license, source, year, author, journal, document, and DOI conditions before it orders or limits candidates.
@@ -144,7 +153,7 @@ For agents over stdio (Claude Code and friends), `sci-rag mcp` runs the same too
 | Ranking behavior | `src/sci_rag/retrieve/` | Scope before ranking, traces, and ablation evidence |
 | External interface | `RagService` first, then the REST or MCP adapter | One behavior behind both front doors |
 
-The first four rows are configuration and data. Most projects never look beyond them.
+The first four rows are the configuration and data entry points for adapting a project.
 
 ## Extension points, in order of likely need
 
@@ -156,4 +165,7 @@ The first four rows are configuration and data. Most projects never look beyond 
 
 ## What is deliberately absent
 
-No task queue, no cache service, no vector-store sidecar, no graph database, no plugin framework. We considered each and declined it for v1. The [decision records](adr/0001-graph-in-postgres.md) hold the arguments and the conditions for reversal. [Extend the kit](extend.md) walks through each of the five seams with the tests and evidence a change owes.
+The kit has no task queue, cache service, vector-store sidecar, graph database, or plugin
+framework. The [decision records](adr/0001-graph-in-postgres.md) explain the accepted architecture
+and its reversal conditions. [Extend the kit](extend.md) walks through each seam and the evidence a
+change owes.

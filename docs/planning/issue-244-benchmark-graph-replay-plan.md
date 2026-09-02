@@ -179,7 +179,7 @@ adapter, and graph-output verification.
 - `scripts/graph_replay.py` - add artifact validation, canonical hashing,
   `require|refresh|off` orchestration, recording and replay `LLMClient` adapters,
   pristine-demo checks, and receipt output.
-- `tests/unit/test_graph_replay.py` - cover artifact shape, canonical hashes,
+- `tests/unit/test_graph_replay_contract.py` - cover artifact shape, canonical hashes,
   identity drift, immutable writes, mode failures, and zero-provider strict replay.
 - `tests/integration/test_graph_replay.py` - prove database ordering,
   record/replay persistence, evidence mapping, and cross-ID equivalence.
@@ -213,7 +213,7 @@ adapter, and graph-output verification.
 
 - Name: `test_require_rejects_identity_drift_without_building_a_model_client`
 - Tier: unit.
-- File: `tests/unit/test_graph_replay.py`
+- File: `tests/unit/test_graph_replay_contract.py`
 - Asserts: corpus, model, domain, contract, prompt, or generation-parameter drift
   exits visibly before any provider construction or fallback call.
 - Red trigger: no strict replay validator exists.
@@ -253,7 +253,7 @@ page checks, project pruning, and ADR.
   domain, corpus, artifact, and output identities.
 - `src/sci_rag/scaffold/apply.py` - prune `scripts/graph_replay.py` and
   `benchmark-refresh-graph` when a generated project declines `data/demo/`.
-- `tests/unit/test_scaffold_apply.py` - prove demo pruning removes the replay
+- `tests/unit/test_graph_replay_scaffold.py` - prove demo pruning removes the replay
   artifact, script, target, and all references while demo projects retain them.
 - `docs/adr/0011-committed-benchmark-graph-replay.md` - record context, decision,
   consequences, safety rules, and reversal conditions.
@@ -297,7 +297,7 @@ page checks, project pruning, and ADR.
 
 - Name: `test_declining_demo_prunes_graph_replay_surfaces`
 - Tier: unit.
-- File: `tests/unit/test_scaffold_apply.py`
+- File: `tests/unit/test_graph_replay_scaffold.py`
 - Asserts: declining the demo removes the artifact directory, replay script, Make
   targets, PHONY names, and references without disturbing other scripts.
 - Red trigger: current pruning knows none of the new replay surfaces.
@@ -390,11 +390,11 @@ same merge.
 Run focused offline checks during development:
 
 ```bash
-uv run pytest tests/unit/test_graph_replay.py \
+uv run pytest tests/unit/test_graph_replay_contract.py \
   tests/unit/test_benchmark_provenance.py \
   tests/unit/test_benchmark_comparison.py \
   tests/unit/test_render_benchmarks.py \
-  tests/unit/test_scaffold_apply.py -q
+  tests/unit/test_graph_replay_scaffold.py -q
 uv run ruff check src tests examples scripts
 uv run ruff format --check src tests examples scripts
 uv run mypy

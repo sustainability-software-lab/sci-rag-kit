@@ -5,34 +5,32 @@ description: See who decides what, how a proposal becomes a decision, and what a
 
 # Governance
 
-Lightweight on purpose. This page says who decides what, how decisions
-get recorded, and how those answers change as the project grows.
+Code changes are decided in pull requests, architecture changes in decision
+records, and direction-level proposals in public RFC discussions.
 
 ## Roles
 
-**Maintainers** merge to `main`, cut releases, own the roadmap and the launch-gated decisions, and are the escalation point for conduct issues (see CODE_OF_CONDUCT.md). Current maintainers: the Sustainability Software Lab (LBL) team that builds the kit.
+**Maintainers** merge to `main`, cut releases, own the roadmap and launch-gated decisions, and handle conduct escalations (see CODE_OF_CONDUCT.md). The current maintainers are the Sustainability Software Lab (LBL) team that builds the kit.
 
-**Reviewers** are regular contributors invited by a maintainer after a track record of quality reviews and merged work. Reviews from reviewers count toward merging; maintainers still land the merge while the project is 0.x.
+**Reviewers** are regular contributors whom a maintainer invites after a track record of quality reviews and merged work. Their reviews count toward merging. Maintainers still land the merge while the project is 0.x.
 
-**Contributors** are everyone who opens an issue, improves a doc, or sends a pull request. CONTRIBUTING.md covers the mechanics. The short version: tests and `make check` green, honest claims, no fabricated numbers.
+**Contributors** open issues, improve documentation, and send pull requests. CONTRIBUTING.md covers the mechanics: tests and `make check` must pass, claims must be honest, and numbers must come from evidence.
 
 ## How decisions are made
 
-- **Code-level decisions** happen in pull requests. Disagreements resolve by evidence (an ablation, a benchmark, a failing test) over opinion. The ablation-first house rule applies to maintainers too.
-- **Architecture decisions** get an ADR in `docs/adr/` (numbered, short, stating context, decision, consequences). Existing ADRs are the format reference. A change that contradicts an ADR updates or supersedes the ADR in the same pull request.
-- **Direction-level proposals** start as an RFC. That covers new subsystems, roadmap changes, and anything touching the five public surfaces in [VERSIONING.md](VERSIONING.md). An RFC is a GitHub Discussion in the "Ideas" category, titled "RFC: ...", laying out the problem, the proposal, and the alternatives considered. When an RFC converges, it becomes an ADR plus issues. When it does not, the Discussion records why, which is worth as much.
-- **Tie-breaks**: maintainers decide, in the open, with the reasoning written down where the discussion happened.
+- **Code-level decisions** happen in pull requests. Ablations, benchmarks, and failing tests resolve disagreements. The ablation-first rule applies to maintainers too.
+- **Architecture decisions** get a numbered ADR in `docs/adr/` that states the context, decision, consequences, and reversal conditions. A contradictory change updates or supersedes the ADR in the same pull request.
+- **Direction-level proposals** start as a GitHub Discussion in the "Ideas" category. Title it "RFC: ..." and state the problem, proposal, and alternatives considered. This route covers new subsystems, roadmap changes, and anything touching the five public surfaces in [VERSIONING.md](VERSIONING.md). A proposal that converges becomes an ADR plus issues; otherwise, the Discussion records why it stopped.
+- **Tie-breaks** go to maintainers, who decide in public and record their reasoning where the discussion happened.
 
 ## What we optimize for
 
-Correct over clever, honest over impressive, evidence over authority.
-An eval harness project that fudged its own numbers would be worse than
-no project; reviewers are explicitly empowered to block anything that
-publishes an unmeasured claim.
+Reviewers may block any change that publishes an unmeasured claim. The project
+favors inspectable designs, visible limitations, and evidence that another
+person can reproduce.
 
 ## Changing this document
 
-Governance changes are direction-level: RFC Discussion first, then a
-pull request updating this page. While the project is 0.x, expect this
-page to stay short; roles get added when there are people to fill them,
-not before.
+Governance changes follow the direction-level route: start an RFC Discussion,
+then update this page in a pull request. While the project is 0.x, add roles
+only when there are people to fill them.

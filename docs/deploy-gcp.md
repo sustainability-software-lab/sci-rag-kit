@@ -1,19 +1,20 @@
 ---
 title: Deploy on Google Cloud
-description: Provision Cloud SQL and Cloud Run from the included Terraform, then verify the running service end to end.
+description: Provision Cloud SQL and Cloud Run from the included Terraform, then verify infrastructure and schema readiness.
 ---
 
 # Deploy on Google Cloud
 
-By the end, the service runs on Cloud Run backed by Cloud SQL with pgvector,
-reachable by REST and MCP clients, and removable through reviewed
-protection-update and destroy plans.
+You will provision a Cloud Run service backed by Cloud SQL with pgvector,
+stage a corpus outside the image through a read-only bucket mount, verify the
+deployed service, and remove it through reviewed protection-update and destroy
+plans.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>One Cloud Run service and one Cloud SQL instance</div>
   <div><strong>You'll need</strong>A Google Cloud project and billing enabled</div>
-  <div><strong>Time</strong>About 45 minutes, most of it waiting</div>
-  <div><strong>Cost</strong>Tens of dollars a month while it is up</div>
+  <div><strong>Time</strong>Depends on provisioning and organization policy</div>
+  <div><strong>Cost</strong>Varies by region and selected resource tiers; charges continue until teardown</div>
   <div><strong>Tested with</strong>v0.4</div>
 </div>
 
@@ -27,7 +28,9 @@ protection-update and destroy plans.
     [the template](https://github.com/sustainability-software-lab/sci-rag-kit/tree/main/infra/terraform)
     if you want them back.
 
-The kit ships Terraform (`infra/terraform/`) that provisions a production deployment: Cloud SQL Postgres with pgvector, one Cloud Run service for REST and MCP, one Cloud Run job for migrations and ingestion, a corpus bucket, secrets, and a least-privilege service account.
+The kit ships Terraform under `infra/terraform/` for Cloud SQL with pgvector, one
+Cloud Run service for REST and MCP, an operations job, a corpus bucket, secrets, and a
+least-privilege service account.
 
 <!-- BEGIN GENERATED PROJECT FEATURE: cloud-provisioning -->
 !!! warning "The development database is a different module"
@@ -39,7 +42,8 @@ The kit ships Terraform (`infra/terraform/`) that provisions a production deploy
     protection by default. Never point a deployment at it. This page uses the production-shaped path.
 <!-- END GENERATED PROJECT FEATURE: cloud-provisioning -->
 
-This costs money while it runs. The database is the steady cost: the default `db-g1-small` tier costs tens of dollars a month. Tear down experiments with `terraform destroy`. Everything here is also doable by hand in the console. The Terraform is 300 readable lines; reading it teaches you the architecture.
+These resources accrue charges while they run. Review the selected tiers and region in the saved
+Terraform plan, and tear down experiments with `terraform destroy`.
 
 ## Before you start
 
@@ -156,11 +160,12 @@ echo '{"team-key": {"scopes": ["retrieval:query", "retrieval:answer", "corpus:re
 
 URL=$(terraform output -raw service_url)
 curl -s $URL/health
-curl -s $URL/v1/corpus-manifest
+curl -s $URL/v1/corpus-manifest -H "X-API-Key: team-key"
 curl -s -X POST $URL/v1/query -H "X-API-Key: team-key" \
   -H 'Content-Type: application/json' -d '{"query": "rice straw availability"}'
 ```
 
+Run the query only after the corpus upload and operations jobs have succeeded.
 Remote agents connect to `$URL/mcp/` with the same application key in
 `X-API-Key`.
 

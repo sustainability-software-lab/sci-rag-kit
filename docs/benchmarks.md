@@ -14,15 +14,14 @@ axes other than benchmark scores.
 
 ## What was measured
 
-- Corpus: 5 documents, 34 chunks, 72 entities, 72 relationships, 7 communities (the synthetic agricultural-residue demo corpus shipped in `data/demo/`)
-- Corpus snapshot: `benchmark-20260831-041957` (see `data/snapshots/`; the digest pins the exact document set)
-- Embedding: `gemini-embedding-001@1536`; models: answer `google:gemini-2.5-flash`, extraction `google:gemini-2.5-flash`, judge `google:gemini-2.5-flash`
-- Code: commit `49130d1`; domain and prompts: `11194722ed59`
-- Rendered: 2026-08-31
+- Corpus: 5 documents, 34 chunks, 67 entities, 78 relationships, 8 communities (the synthetic agricultural-residue demo corpus shipped in `data/demo/`)
+- Corpus snapshot: `benchmark-20260902-051515` (see `data/snapshots/`; the digest pins the exact document set)
+- Embedding: `gemini-embedding-001@1536`; models: answer `google:gemini-3.6-flash`, extraction `google:gemini-3.6-flash`, judge `google:gemini-3.6-flash`
+- Code: commit `44ecac4`; domain and prompts: `11194722ed59`
+- Graph: strict replay from `data/demo/graph-replay/a24c3fb88f163941048866b86fc494a3470337b0c24257f1d9235c8b00f19d15.json` (`a24c3fb88f163941048866b86fc494a3470337b0c24257f1d9235c8b00f19d15`); 4 recorded calls replayed, 0 live extraction calls; canonical graph `3ec1cba1f5484bef25101812c3240cecb5b1be55652c3caebea2e2c1d5485b14`
+- Rendered: 2026-09-02
 
-Graph construction and judged answers are stochastic. Repeating the command below reproduces these numbers within a declared tolerance of 0.1 absolute on a metric and 10% on a count, and `--check` fails visibly when one moves further. A number that moves beyond it is a finding, not a refresh: publishing it needs a reviewed source report and an explanation of which recorded input changed.
-
-The graph counts are the known exception to that promise. Two reruns from identical recorded inputs, the same corpus, the same models, and the same ontology, moved the entity count 13% down and 12% up. Decoding at `temperature: 0.0` does not make the extractor deterministic, and these numbers are the evidence. Read `entities` and `relationships` as one draw from a distribution. A different count on your machine is the documented behavior, not a sign that you have broken something.
+The reviewed graph replay makes entity and relationship counts exact. Judged answers and other model-backed measurements remain stochastic. Repeating the command below reproduces those measurements within a declared tolerance of 0.1 absolute on a metric and 10% on other counts, and `--check` fails visibly when one moves further. A number that moves beyond it is a finding, not a refresh: publishing it needs a reviewed source report and an explanation of which recorded input changed.
 
 ## Retrieval ablations
 
@@ -35,19 +34,19 @@ like this, that qualitative story is the only defensible claim.
 
 | Config | hit@5 | hit@10 | MRR | nDCG@10 | n |
 |--------|---:|---:|---:|---:|---:|
-| full_deep | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.95 [0.91, 0.98] | 9 |
+| full_deep | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.91 [0.73, 1.00] | 0.90 [0.79, 0.99] | 9 |
 | interactive | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.96 [0.91, 1.00] | 9 |
 | vector_only | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.96 [0.91, 1.00] | 9 |
 | keyword_only | 0.33 [0.00, 0.67] | 0.33 [0.00, 0.67] | 0.33 [0.00, 0.67] | 0.33 [0.00, 0.67] | 9 |
-| no_graph | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.92 [0.83, 0.99] | 9 |
-| confidence_weighted | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.93 [0.78, 1.00] | 0.92 [0.85, 0.98] | 9 |
-| with_citations | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.90, 0.98] | 9 |
-| no_hyde | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.96 [0.92, 0.99] | 9 |
-| no_community | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.92 [0.82, 0.98] | 9 |
-| with_rerank | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.95 [0.91, 0.99] | 9 |
-| no_rerank | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.95 [0.93, 0.98] | 9 |
-| auto_routed | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.95 [0.90, 0.99] | 9 |
-| no_retracted | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.90, 0.98] | 9 |
+| no_graph | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.93 [0.78, 1.00] | 0.91 [0.82, 0.99] | 9 |
+| confidence_weighted | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.91 [0.73, 1.00] | 0.91 [0.81, 1.00] | 9 |
+| with_citations | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.91 [0.73, 1.00] | 0.90 [0.80, 0.98] | 9 |
+| no_hyde | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.94 [0.88, 0.99] | 9 |
+| no_community | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.91 [0.73, 1.00] | 0.90 [0.79, 0.99] | 9 |
+| with_rerank | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.89, 0.98] | 9 |
+| no_rerank | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.94 [0.83, 1.00] | 0.93 [0.87, 0.99] | 9 |
+| auto_routed | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.93 [0.78, 1.00] | 0.90 [0.79, 0.98] | 9 |
+| no_retracted | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] | 0.91 [0.73, 1.00] | 0.90 [0.80, 0.98] | 9 |
 
 `resolved_entities` is absent, and that is a result rather than an
 omission. It is a separate condition (`sci-rag eval retrieval
@@ -79,7 +78,7 @@ How to read it:
 | groundedness | 2.00 [2.00, 2.00] |
 | citation_accuracy | 2.00 [2.00, 2.00] |
 | completeness | 2.00 [2.00, 2.00] |
-| correctness | 1.70 [1.30, 2.00] |
+| correctness | 1.80 [1.40, 2.00] |
 | graded / total | 10 / 10 |
 
 The grounding judge never sees the reference answer; correctness
@@ -105,8 +104,8 @@ trade from summarizing, and it needs its own paired run.
 | groundedness | 2.00 [2.00, 2.00] | 2.00 [2.00, 2.00] |
 | citation_accuracy | 2.00 [2.00, 2.00] | 2.00 [2.00, 2.00] |
 | completeness | 2.00 [2.00, 2.00] | 2.00 [2.00, 2.00] |
-| correctness | 1.70 [1.30, 2.00] | 1.80 [1.50, 2.00] |
-| median prompt tokens | 1391 | 977 (30% lower) |
+| correctness | 1.80 [1.40, 2.00] | 2.00 [2.00, 2.00] |
+| median prompt tokens | 1315 | 887 (33% lower) |
 
 Sources dropped by the relevance floor: 0. Compression failures: 0. Questions: 10.
 
@@ -123,7 +122,7 @@ and the judge's scores on the same answers:
 | groundedness | 1.00 | 1.00 | 10 |
 | citation_accuracy | 1.00 | 1.00 | 10 |
 | completeness | 1.00 | 1.00 | 10 |
-| correctness | 0.00 | 0.80 | 10 |
+| correctness | 0.00 | 0.90 | 10 |
 
 Kappa is reported as measured, never asserted as a target. A
 kappa of 0 with high exact agreement means one rater was
@@ -139,10 +138,12 @@ make benchmark
 
 Prerequisites: a selected PostgreSQL backend with pgvector, uv, and Google
 credentials in `.env` (`SCI_RAG_GOOGLE_API_KEY` or
-`SCI_RAG_GCP_PROJECT`; see `.env.example`). The target ingests the
-demo corpus with real embeddings, builds the graph, snapshots the
-corpus, runs the full retrieval ablation plus the judged answers
-eval, and re-renders this page from the report JSONs. Without
-credentials the eval commands stop with a clear message; nothing
-on this page is reachable offline, by design: published numbers
-come from real models or not at all.
+`SCI_RAG_GCP_PROJECT`; see `.env.example`). The backend must point to a
+named, disposable PostgreSQL database. The target ingests the tracked
+demo corpus into otherwise pristine graph state before strict replay.
+Do not clear an unrelated development corpus to satisfy that preflight; select
+a disposable database instead. It then creates communities, snapshots the
+corpus, runs the full retrieval ablation plus the judged answers eval, and
+re-renders this page from the report JSONs. Without credentials the eval
+commands stop with a clear message; nothing on this page is reachable
+offline, by design: published numbers come from real models or not at all.

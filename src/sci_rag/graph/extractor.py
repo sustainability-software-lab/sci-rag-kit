@@ -30,7 +30,7 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.sql.sqltypes import Text as TextType
 
-from sci_rag.db.models import Chunk, KgEntity, KgRelationship
+from sci_rag.db.models import Chunk, Document, KgEntity, KgRelationship
 from sci_rag.domain import DomainProfile
 from sci_rag.llm import LLMClient
 
@@ -185,8 +185,10 @@ async def extract_graph(
 ) -> ExtractionStats:
     stats = ExtractionStats()
     async with session_factory() as session:
-        statement = select(Chunk.id, Chunk.document_id, Chunk.content).order_by(
-            Chunk.document_id, Chunk.chunk_index
+        statement = (
+            select(Chunk.id, Chunk.document_id, Chunk.content)
+            .join(Document, Document.id == Chunk.document_id)
+            .order_by(Document.content_hash, Chunk.chunk_index)
         )
         if not reprocess_all:
             statement = statement.where(Chunk.graph_extracted_at.is_(None))
@@ -217,8 +219,9 @@ def _batch_id(batch: Sequence[Row[tuple[str, str, str]]]) -> str:
     """A stable, content-free name for a batch, so logs can be followed.
 
     Derived from the chunk ids in order, which are identifiers rather than
-    text, so a batch keeps the same name across a split and across runs and
-    nothing about the documents reaches the log.
+    text, so a batch keeps the same name while one ingestion run retries or
+    splits it and nothing about the documents reaches the log. Fresh ingestion
+    assigns fresh chunk ids and therefore a fresh batch name.
     """
     digest = hashlib.sha256("|".join(row[0] for row in batch).encode("utf-8"))
     return digest.hexdigest()[:12]
@@ -350,17 +353,29 @@ async def _upsert_entities(
     if not entities:
         return {}
     names_lower = [e.name.lower() for e in entities]
-    existing_rows = (
+    existing_rows = list(
         (
             await session.execute(
-                select(KgEntity)
-                .where(or_(func.lower(KgEntity.name).in_(names_lower), _ALIAS_MATCH))
-                .order_by(KgEntity.id),
+                select(KgEntity).where(
+                    or_(func.lower(KgEntity.name).in_(names_lower), _ALIAS_MATCH)
+                ),
                 {"entity_names": names_lower},
             )
         )
         .scalars()
         .all()
+    )
+    # Alias matches can have equal priority. Resolve their candidate ordering with
+    # an application-defined total semantic key rather than database collation or
+    # fresh persistence UUIDs. Entity names are unique, so the raw name makes the
+    # key total after its case-insensitive prefix.
+    existing_rows.sort(
+        key=lambda row: (
+            row.name.casefold(),
+            row.name,
+            row.entity_type.casefold(),
+            row.entity_type,
+        )
     )
     existing: dict[tuple[str, str], KgEntity] = {}
     priorities: dict[tuple[str, str], int] = {}

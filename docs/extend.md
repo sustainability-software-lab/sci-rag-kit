@@ -5,7 +5,7 @@ description: Add a parser, corpus collector, reranker, model provider, or authen
 
 # Extend the kit
 
-Sci RAG Kit has no plug-in registry. It defines five small boundaries where projects vary. Extend at the narrowest seam that fits, and keep its invariants visible in tests and evaluation.
+Choose the narrowest of five supported extension seams, then prove that its invariants still hold in tests and evaluation. The kit does not use a plug-in registry.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A new parser, collector, reranker, provider, or auth backend</div>
@@ -18,9 +18,9 @@ Sci RAG Kit has no plug-in registry. It defines five small boundaries where proj
 
 | Requirement | Why | Check |
 |---|---|---|
-| `make check` green on an unmodified checkout | So a failure afterwards is yours | `make check` |
-| A read of [Architecture](architecture.md) | The seams only make sense against the ownership map | |
-| An evaluation baseline, for anything touching ranking | A retrieval change without a before is not measurable | `uv run sci-rag eval retrieval --ablation` |
+| `make check` green on an unmodified checkout | Separates baseline failures from your change | `make check` |
+| A read of [Architecture](architecture.md) | Places each seam in the ownership map | |
+| An evaluation baseline, for anything touching ranking | Makes the retrieval change measurable | `uv run sci-rag eval retrieval --ablation` |
 
 ## Choose the seam
 
@@ -34,7 +34,7 @@ Sci RAG Kit has no plug-in registry. It defines five small boundaries where proj
 
 ## 1. Add a document parser
 
-`parse_file()` dispatches by suffix and returns one `ParsedDocument`. Structured parsers produce ordered `Block` values (`heading`, `text`, or `table`). The chunker owns normalization, token sizing, overlap, and section breadcrumbs.
+`parse_file()` dispatches by suffix and returns one `ParsedDocument`. Structured parsers produce ordered `Block` values: `heading`, `text`, or `table`. The chunker owns normalization, token sizing, overlap, and section breadcrumbs.
 
 Uphold these properties:
 
@@ -62,7 +62,7 @@ license_class: str
 source: str
 ```
 
-Resolve remote bytes to stable local paths before ingestion. Normalize identifiers, retain provider source references, and rate-limit external APIs. Make resume behavior explicit. When you cannot establish redistribution rights, leave `license_class` as `unknown`.
+Resolve remote bytes to stable local paths before ingestion. Normalize identifiers and retain provider source references. Rate-limit external APIs and make resume behavior explicit. If you cannot establish redistribution rights, leave `license_class` as `unknown`.
 
 ## 3. Add a reranker
 
@@ -77,7 +77,7 @@ class Reranker(Protocol):
     ) -> list[RetrievedItem]: ...
 ```
 
-The orchestrator passes a wider fused pool and expects a reordered, truncated list. Any exception must leave a visible rerank trace and fall back to the fused order. Add the adapter selection to the domain tuning model only if users need to configure it.
+The orchestrator passes a wider fused pool and expects a reordered, truncated list. If the reranker raises an exception, leave a visible trace and fall back to the fused order. Add adapter selection to the domain tuning model only when projects need to configure it.
 
 Do not enable a new reranker by default. Run `sci-rag eval retrieval --ablation` with and without it on your corpus, including latency and confidence intervals.
 
@@ -95,9 +95,9 @@ class EmbeddingProvider(ABC):
     ) -> list[list[float]]: ...
 ```
 
-Stamp a provider-specific version that changes when stored vectors become incompatible. Assert every returned dimension. Distinguish document and query tasks where the model supports asymmetric embeddings. Normalize vectors if the provider's reduced dimensions require it.
+Stamp a provider-specific version whenever stored vectors become incompatible, and assert every returned dimension. Distinguish document and query tasks when the model supports asymmetric embeddings. Normalize vectors if the provider's reduced dimensions require it.
 
-An LLM client implements full generation and streaming. JSON consumers call the shared `generate_json()` helper, which requests deterministic JSON mode and strips a surrounding code fence.
+An LLM client implements full generation and streaming. JSON consumers use the shared `generate_json()` helper to request deterministic JSON mode and remove a surrounding code fence.
 
 Provider additions need a deliberate selection path in `get_embedder()` or `get_llm()`. This factory keeps supported providers in one place.
 
@@ -111,7 +111,7 @@ Three adapters live in `src/sci_rag/llm/`, selected by a `provider:model` spec. 
 | `anthropic` | Claude, on Vertex or the direct API | `SCI_RAG_GCP_PROJECT` (ADC) or `SCI_RAG_ANTHROPIC_API_KEY` | `anthropic` |
 | `openai-compatible` | Vertex partner models (Grok, Llama, Mistral, DeepSeek), OpenAI, self-hosted vLLM/Ollama | `SCI_RAG_GCP_PROJECT` (ADC) or `SCI_RAG_OPENAI_API_KEY` (+ optional `SCI_RAG_OPENAI_BASE_URL`) | `openai` |
 
-On Google Cloud, the third row is the only path to non-Google partner models. Vertex serves them behind an OpenAI-compatible endpoint, so one adapter covers current and future models. Model ids keep their publisher prefix, like `xai/grok-4.1-fast-reasoning`. Sending the bare id is rejected.
+On Google Cloud, the third row is the path to non-Google partner models. Vertex serves them behind an OpenAI-compatible endpoint, so the same adapter covers each supported model. Model ids keep their publisher prefix, such as `xai/grok-4.1-fast-reasoning`; the adapter rejects a bare id.
 
 !!! warning "Partner models are not served from every region"
 
@@ -156,9 +156,9 @@ Where a provider may reject a knob, adapters retry once without it. Retry policy
 
 `SCI_RAG_EMBEDDING_PROVIDER` accepts `google` or `local-hash`. There is no third option by design. Anthropic ships no embedding API. On Vertex, the only managed text embeddings are Google's. Every alternative means deploying and paying for your own Model Garden endpoint.
 
-An embedder is not runtime-swappable. A migration bakes `SCI_RAG_EMBEDDING_DIM` into the pgvector column (see [ADR 0002](adr/0002-embeddings-1536-hnsw.md)). Each chunk stores the `version` that produced it. Changing embedders means a migration, full re-embedding, and index rebuild.
+An embedder is not runtime-swappable. A migration bakes `SCI_RAG_EMBEDDING_DIM` into the pgvector column (see [ADR 0002](adr/0002-embeddings-1536-hnsw.md)), and each chunk stores the `version` that produced it. Changing embedders requires a migration, full re-embedding, and index rebuild.
 
-`sci-rag embed reindex` plans this work. It reports which rows a version change affects and writes nothing by default. It fails when the dimension you configured does not match the live column. `--apply` is the separate step that re-embeds. Point `SCI_RAG_EMBEDDING_MODEL` at a different Google embedding model freely. Treat anything beyond that as a data migration, not configuration.
+`sci-rag embed reindex` reports which rows a version change affects and writes nothing by default. It fails if the configured dimension does not match the live column. The separate `--apply` step performs the re-embedding. Point `SCI_RAG_EMBEDDING_MODEL` at another Google embedding model; treat any broader change as a data migration.
 
 ## 5. Add an authentication backend
 
@@ -172,16 +172,16 @@ To add OAuth or institutional identity:
 4. Keep `application/problem+json` error codes stable.
 5. Test REST and MCP access together.
 
-The `create_app()` builds the shipped backend from settings. Keep any factory change explicit. Never import arbitrary authentication code from configuration.
+`create_app()` builds the shipped backend from settings. Keep factory changes explicit, and never import arbitrary authentication code from configuration.
 
 ## The invariants around every seam
 
-- **Rights scope precedes ranking.** Apply all document conditions before the candidate limit.
-- **Degradation is visible.** Optional components may fail without killing a request, but the trace must name what failed.
-- **Stored model output is validated.** Drop or reject unknown ontology values and malformed JSON.
-- **REST and MCP share behavior.** Add domain logic to `RagService` before exposing it through either.
-- **Tests run offline by default.** Mark credentialed coverage with the `cloud` tag.
-- **Retrieval changes come with evidence.** Include ablation results in your pull request.
+- Apply rights scope and all other document conditions before the candidate limit.
+- Record optional-component failures in the trace even when the request continues.
+- Validate stored model output, dropping or rejecting unknown ontology values and malformed JSON.
+- Add domain logic to `RagService` before exposing it through REST or MCP.
+- Run tests offline by default and mark credentialed coverage with the `cloud` tag.
+- Include ablation results with every retrieval change.
 
 See [Architecture](architecture.md#extension-points-in-order-of-likely-need) for ownership, [Contributing](contributing.md) for the change bar, and [Evaluate your pipeline](evaluation.md) for the measurement workflow.
 

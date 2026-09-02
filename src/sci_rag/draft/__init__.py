@@ -9,8 +9,8 @@ is what keeps them one system rather than three:
   calls the configured model, and validates the reply through the same
   pydantic model the loader uses.
 * **Lane B** renders the identical prompt to stdout so a scientist with no
-  credentials can paste it into any assistant, then reads the reply back from
-  a file through the identical validation.
+  credentials can handle it locally or use an approved assistant, then reads
+  the reply back from a file through the identical validation.
 * **Lane C** is writing the file by hand, which nothing here changes.
 
 Model output is untrusted everywhere. A drafter parses, validates, and (for

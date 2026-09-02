@@ -5,7 +5,7 @@ description: Status, principles, roadmap, governance, decision records, releases
 
 # Project
 
-Sci RAG Kit is alpha software with a stated compatibility promise, a roadmap that lands features only with evidence, and short decision records for the architectural bets that shape every deployment.
+Sci RAG Kit is alpha software. Its versioning policy states the current compatibility promise, the roadmap separates shipped work from plans, and decision records explain the architecture.
 
 <div class="srag-rows" markdown>
 
@@ -21,10 +21,10 @@ Sci RAG Kit is alpha software with a stated compatibility promise, a roadmap tha
 
 ## Design principles
 
-- **Correct over clever.** A small explicit system is easier to inspect and defend.
-- **Evidence over authority.** Retrieval changes bring a before-and-after evaluation. Quality claims name their corpus and models.
-- **Honest over impressive.** Missing evidence produces a refusal. A failed layer produces a visible trace. A planned feature stays labeled planned.
-- **One operational story.** Postgres holds text, vectors, full-text search, and graph rows, so a team operates one data system.
-- **Named seams, not a plug-in framework.** The kit exposes five boundaries where real projects vary and keeps everything else readable.
+- **Prefer explicit, inspectable designs.** A small system is easier to understand and defend.
+- **Require evidence for quality claims.** Retrieval changes bring a before-and-after evaluation, and reports name their corpus and models.
+- **Show uncertainty and failure.** Missing evidence produces a refusal, failed layers appear in traces, and planned features stay labeled planned.
+- **Keep operational state in Postgres.** Text, vectors, full-text search, and graph rows share one data system.
+- **Extend through named seams.** Five supported boundaries cover the places where projects vary without introducing a plug-in framework.
 
-Read [Roadmap](ROADMAP.md) for where the project is going, [Versioning](VERSIONING.md) for what's guaranteed to remain stable, and the [decision records](adr/0001-graph-in-postgres.md) for why the shape is the shape. To contribute, start with [Contributing](contributing.md) and [Documentation style](STYLE.md).
+Read [Roadmap](ROADMAP.md) for planned work, [Versioning](VERSIONING.md) for the compatibility promise, and the [decision records](adr/0001-graph-in-postgres.md) for architectural reasoning. To contribute, start with [Contributing](contributing.md) and [Documentation style](STYLE.md).

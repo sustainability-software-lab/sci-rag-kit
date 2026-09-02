@@ -5,19 +5,22 @@ description: Turn a folder of documents into a knowledge base that answers quest
 
 # Bring your own domain
 
-At the end of this tutorial the documents are in the database, the field's concepts are in the graph, and its own test questions are scoring the result. None of it requires editing Python. A field lives in three places the kit already knows about: a folder of documents, one manifest file that describes them, and the `domain/` folder that holds the concepts, the prompt wording, and the questions.
+You will finish with your documents ingested and retrieval scored against reviewed
+questions. With a model credential, you will also build the field's concept graph and
+generate a cited answer. The work stays in a document folder, its manifest, and the
+`domain/` folder for concepts, prompts, and questions. You do not need to edit Python.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A knowledge base over a corpus of your own</div>
   <div><strong>You'll need</strong>Documents on disk and a finished quickstart</div>
-  <div><strong>Time</strong>An hour for a first pass; an afternoon for a careful one</div>
+  <div><strong>Time</strong>Depends on corpus size and review</div>
   <div><strong>Credentials</strong>Needed for the graph and cited answers; every other step has an offline route</div>
   <div><strong>Tested with</strong>v0.4</div>
 </div>
 
 The worked example throughout is a group that studies membrane materials for water treatment and has 60 PDFs of papers, theses, and technical reports.
 
-The whole recipe is seven commands, and each step below explains one line: what the command reads, what it writes, and what to look at before moving on.
+The main path uses seven commands:
 
 ```console title="Terminal"
 $ uv run sci-rag draft manifest --folder data/raw      # 1. describe the documents
@@ -29,7 +32,11 @@ $ uv run sci-rag eval retrieval --ablation              # 6. measure
 $ uv run sci-rag answer "a question in your field"      # 7. ask (needs a model credential)
 ```
 
-Three of these commands draft a file to review, because writing a manifest, an ontology, or a question set from a blank page is slow and error-prone, while reacting to a draft grounded in the documents is quick. Each drafter also works without a model credential: `--print-prompt` prints the prompt, any assistant can answer it, and `--from-file reply.json` feeds the reply back through the same validation. [Drafting with a model](#drafting-with-a-model) explains that pair once.
+Three commands draft a file for review: the manifest, ontology, and question
+set. Each drafter also works without a configured model. `--print-prompt`
+prints the prompt, and `--from-file reply.json` validates a saved reply.
+[Drafting with a model](#drafting-with-a-model) covers the available routes
+and the disclosure check required before sending sampled passages elsewhere.
 
 ## Before you start
 
@@ -37,8 +44,8 @@ Three of these commands draft a file to review, because writing a manifest, an o
 |---|---|---|
 | A finished [quickstart](quickstart.md) | The database and its tables must exist first | `uv run sci-rag doctor` |
 | The documents under `data/raw/` | Every step reads them | `ls data/raw \| wc -l` |
-| A model credential, for two steps | The graph and the cited answer need one; ingestion, retrieval, and retrieval scoring do not | `grep SCI_RAG_GOOGLE .env` |
-| A domain expert, for one hour | Step 5 needs questions somebody can vouch for | |
+| A model credential, for two steps | The graph and the cited answer need one; ingestion, retrieval, and retrieval scoring do not | `uv run sci-rag doctor --probe` |
+| A domain expert | Step 5 needs questions somebody can vouch for | |
 
 There are two end states.
 
@@ -48,7 +55,8 @@ There are two end states.
 
 ## Step 0: run the setup wizard
 
-A project created by `sci-rag new` already has its setup decisions and the defaults behind them written down; skip to step 1.
+A project created by `sci-rag new` already contains its setup decisions and
+defaults. Skip to step 1.
 
 In a checkout cloned or created from the GitHub template, run the same wizard in place:
 
@@ -56,7 +64,11 @@ In a checkout cloned or created from the GitHub template, run the same wizard in
 uv run sci-rag init --advanced
 ```
 
-Advanced asks every applicable question. `uv run sci-rag init` offers the choice between Quick and Advanced, and `--quick` takes the short path with defaults for the rest. `--no-tty` gives plain numbered prompts. `--dry-run` shows what setup would change without writing. `--defaults` answers every question with the shipped default.
+Advanced asks every applicable question. Run `uv run sci-rag init` without a
+mode to choose between Quick and Advanced. `--quick` takes the short path
+with defaults for the rest. `--no-tty` gives plain numbered prompts,
+`--dry-run` shows what setup would change without writing, and `--defaults`
+answers every question with the shipped default.
 
 Unlike `sci-rag new`, `sci-rag init` does not run the live credential check. It uses the key or project entered as given. Run `uv run sci-rag doctor --probe` afterward to confirm the provider accepts it.
 
@@ -74,13 +86,20 @@ Setup writes ordinary files, and nothing regenerates them later. Re-run it to ch
 
 ## Step 1: collect your documents
 
-Put PDFs, HTML pages, Markdown, or plain-text files in `data/raw/`. Three things make the rest of the tutorial go better.
+Put PDFs, HTML pages, Markdown, or plain-text files in `data/raw/`.
 
 - Choose documents that contain answers. Reviews, reports, and characterization papers hold more retrievable facts than commentary and slide decks.
 - Know each document's redistribution rights. The system quotes these documents back to people. A public-domain or CC BY document is fine anywhere. A paywalled PDF you legitimately hold is fine for your own instance, but mark it `restricted` so it never appears on a service you share.
-- Start with 20 to 50 good documents. The pipeline handles 5 to a few thousand, and a small curated set plus the evaluation step teaches more than a dump.
+- Start with a corpus small enough to inspect and defend. A curated set plus
+  the evaluation step gives clearer feedback than an unreviewed dump.
 
-For a first pass with no manifest, `uv run sci-rag build data/raw` ingests the folder, marks every document `unknown` for rights, and builds the graph when a credential is present. Use it for a first spike only. A document is ingested once: a later manifest for the same file is skipped as a duplicate, so its rights and metadata would never be recorded. To start over, remove the documents with `sci-rag corpus delete` and ingest from the manifest.
+For a first pass with no manifest, `uv run sci-rag build data/raw` ingests the
+folder, marks every document `unknown` for rights, and builds the graph when a
+credential is present. Use this route for a first spike only.
+
+A document is ingested once. A later manifest for the same file is skipped as
+a duplicate, so its rights and metadata are not added. To start over, remove
+the documents with `sci-rag corpus delete` and ingest from the manifest.
 
 ## Step 2: describe your documents
 
@@ -104,7 +123,13 @@ For a handful of documents, write the file by hand:
 {"path": "raw/chen-thesis.pdf", "title": "Chen PhD Thesis", "year": 2023, "license_class": "restricted", "source": "theses"}
 ```
 
-`path` is relative to the manifest file and is the only required field. `license_class` is one of `public`, `open_commercial`, `open_noncommercial`, `restricted`, or `unknown`; aliases such as `CC-BY` and `cc0` are understood. `source` is your own grouping label and becomes a retrieval filter, so choose 3 to 6 labels. The [configuration reference](configuration.md#datacorpusjsonl) describes every field.
+`path` is relative to the manifest file and is the only required field.
+`license_class` is one of `public`, `open_commercial`,
+`open_noncommercial`, `restricted`, or `unknown`; aliases such as `CC-BY`
+and `cc0` are understood. `source` is your own grouping label and becomes a
+retrieval filter. Use labels that readers can apply consistently. The
+[configuration reference](configuration.md#datacorpusjsonl) describes every
+field.
 
 Check the file before ingesting it:
 
@@ -122,7 +147,11 @@ The linter reports every problem at once with line numbers: missing files, paths
 
 ## Step 3: name your concepts
 
-`domain/domain.yaml` declares the kinds of things in the field (entity types) and how they relate (relation types). Together these are the ontology, and the graph builder extracts only what it declares: a concept that has no type here is invisible to the graph, however often the documents mention it. The file ships with the demo's agricultural types; replace them with yours.
+`domain/domain.yaml` declares the field's entity and relation types. Together,
+they form the ontology. The graph builder extracts only what the ontology
+declares, so a concept without a matching type is invisible to the graph even
+when the documents mention it often. Replace the shipped agricultural types
+with your own.
 
 Draft it from the documents, then edit:
 
@@ -171,13 +200,18 @@ relation_types:
     description: "Treatment or material improves a performance metric"
 ```
 
-Three rules for choosing well:
+Use these checks while editing:
 
-- Use 6 to 15 entity types. With fewer, the graph blurs distinct concepts together; with more, extraction becomes inconsistent. Ask what column headings an expert would use to organize a spreadsheet of the field's facts.
+- Start from the entity types produced by the drafter, then use evaluation to
+  decide whether to combine or split them. Ask what column headings an expert
+  would use to organize a spreadsheet of the field's facts.
 - Write each description as a prompt. The extraction model sees it verbatim, and concrete examples in parentheses do more than abstract phrasing.
 - Make each relation read as a sentence: "polyamide SUFFERS_FROM chlorine degradation".
 
-Update `query_classes` in the same file: 3 to 5 kinds of question users ask, each with a few trigger keywords and a one-line instruction for how an answering passage would read. These steer the retrieval layer that writes a hypothetical answer and searches for text that resembles it.
+Update `query_classes` in the same file with the kinds of questions users
+ask. Give each one trigger keywords and a one-line description of a useful
+answering passage. These steer the retrieval layer that writes a hypothetical
+answer and searches for similar text.
 
 ## Step 4: build the knowledge base
 
@@ -210,11 +244,15 @@ uv run sci-rag retrieve "a question in your field" --profile interactive
 <div class="srag-checkpoint" markdown>
 **Checkpoint: the corpus and the graph both look like the field**
 
-`sci-rag stats` after ingest: the chunk count is plausible (a dense 20-page PDF is usually 15 to 40 chunks) and the license classes match the manifest.
+`sci-rag stats` after ingest: documents produced chunks, and the license
+classes match the manifest.
 
 `sci-rag retrieve` with a question from the field: the top chunks are recognizable, and the stage table names the layer that found each one.
 
-`sci-rag stats` after the graph built: a 50-document corpus shows entities in the low hundreds. Near zero means the ontology and the corpus do not match, usually because the types are too abstract or the documents too thin. Thousands means the types are too loose. In either case, return to step 3, redraft with `--refine`, and run `graph extract` again.
+`sci-rag stats` after the graph built: entities and relationships are present.
+Inspect them rather than judging the graph by count alone. If the extracted
+concepts do not represent the field, return to step 3, redraft with
+`--refine`, and run `graph extract` again.
 
 Offline, the first two readings are the checkpoint. There are no entities to count.
 </div>
@@ -318,13 +356,18 @@ Every drafter offers the same three routes to the same validated file.
     uv run sci-rag draft questions --count 10
     ```
 
-=== "Paste it into any assistant"
+=== "Use an approved assistant"
 
-    No API key and no provider account. `--print-prompt` writes the rendered prompt, including the sampled passages, to standard output. Paste it into any assistant, save the reply, and feed it back.
+    `--print-prompt` writes the rendered prompt, including sampled corpus
+    passages, to standard output. Before sending that output to an assistant,
+    confirm that the documents' rights, privacy requirements, the provider's
+    terms, and your institution's policy allow the disclosure. If they do not,
+    use an approved provider or write the file yourself. Save the permitted
+    reply and feed it back through validation.
 
     ```bash title="Terminal"
     uv run sci-rag draft questions --count 10 --print-prompt > prompt.txt
-    # paste prompt.txt into an assistant, save the JSON reply as reply.json
+    # send prompt.txt only to an approved assistant; save the JSON reply as reply.json
     uv run sci-rag draft questions --count 10 --from-file reply.json
     ```
 
@@ -345,7 +388,10 @@ Four rules hold for every drafter:
 
 ## Offline: what you can prove without a model
 
-The whole route, in order, with nothing that stops at a credential boundary. Set `SCI_RAG_EMBEDDING_PROVIDER=local-hash` in `.env` first.
+Set `SCI_RAG_EMBEDDING_PROVIDER=local-hash` in `.env`, then run the route in
+order. The `--print-prompt` commands below still include sampled corpus text;
+answer locally or apply the disclosure check above before sending it to a
+provider.
 
 ```bash
 uv run sci-rag draft manifest --folder data/raw --print-prompt   # answer it yourself
@@ -366,7 +412,10 @@ The offline embedder matches on words, not meaning. Its retrieval scores are a f
 
 ## The improvement loop
 
-Corpus and ontology changes are cheap, and the evaluation reports show whether a change helped. A rhythm that works: add or fix a handful of documents, run `build` again (it processes only what is new), run the two eval commands, and read the diffs. When a user asks a question the system misses, add it as a seed question first and then fix the miss, so the fix is measured and the question is never lost.
+After adding or correcting documents, run `build` again; it processes only
+new content. Then run the two evaluation commands and read the diffs. When the
+system misses a user question, add it as a seed question before changing the
+pipeline so the fix is measured and the question is retained.
 
 ## Next steps
 
