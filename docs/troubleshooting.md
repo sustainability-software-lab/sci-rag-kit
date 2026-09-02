@@ -27,7 +27,7 @@ $ uv run sci-rag doctor
 <div class="srag-checkpoint" markdown>
 **Checkpoint: identify the failing layer**
 
-`doctor` names the failing check. Take that name to the symptom map below. If every check is healthy and the behavior is still wrong, the problem is in the domain profile, not in the plumbing.
+`doctor` names the failing check. Take that name to the symptom map below. If every check is healthy and the behavior is still wrong, the most common cause is the domain profile, not the plumbing. Also check for provider-side rate limits or network issues if the symptom involves model calls.
 </div>
 
 ## Fast symptom map

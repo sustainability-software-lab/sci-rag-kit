@@ -5,7 +5,7 @@ description: What happens between a document and a cited answer, with links to t
 
 # How it works
 
-This page is the ten-minute version of the design, written for a reader who has not built a retrieval system before. It follows one document into the database and one question back out, and it stops at the point where a design decision would need a page of its own. The pages linked at the end hold the full reasoning, the measurements, and the decisions the maintainers would reverse and under what conditions.
+The pages linked at the end hold the full reasoning, the measurements, and the decisions the maintainers would reverse and under what conditions.
 
 ## The idea
 

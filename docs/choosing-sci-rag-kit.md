@@ -13,7 +13,7 @@ No cross-system benchmark scores appear here. Numbers measured on different corp
 
 These readings were last checked as of 2026-08-28. Another project's status is the claim on this page most likely to go stale, so it carries a date.
 
-**Microsoft GraphRAG** established the pattern this space builds on: entity extraction, communities, global/local search. Its papers remain the reference reading. The project is in maintenance mode per the README. Bug fixes and CVE updates continue, but not new features. The releases match: v3.1.2 in August 2026, with earlier releases consisting of dependency updates. It is good for study and a considered choice for a new deployment that expects the feature set to grow.
+**Microsoft GraphRAG** established the pattern this space builds on: entity extraction, communities, global/local search. Its papers remain the reference reading. The project is in maintenance mode per the README. Bug fixes and CVE updates continue, but not new features. The releases match: v3.1.2 in August 2026, with earlier releases consisting of dependency updates. It is good for study and for deployments where the current feature set already meets all requirements.
 
 **LightRAG** is the most active general-purpose GraphRAG library. It offers incremental insert/delete, dual-level retrieval, multiple storage backends including Postgres, and a large community. It is a **library** to build an application around, not a ready-made application. For writing application code and making architectural calls, LightRAG is the strongest general choice. Some of its ideas, such as per-document extraction caching, are on our roadmap, credited.
 

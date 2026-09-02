@@ -5,7 +5,7 @@ description: Install Sci RAG Kit, run the demo corpus, then bring in a corpus of
 
 # Get started
 
-The kit installs with `pipx install sci-rag-kit`, and `sci-rag new` creates a configured project. The three pages below take that project from an empty database to a knowledge base over a corpus of your own. The first reaches a working demo in about ten minutes, with the bundled corpus standing in for real documents. The second replaces the demo with your own documents, which is the point of the exercise. The third is the place to go when a step fails or shows something other than what its page describes.
+The kit installs with `pipx install sci-rag-kit`, and `sci-rag new` creates a configured project. The three pages below take that project from an empty database to a knowledge base over a corpus of your own. The first reaches a working demo in about ten minutes, with the bundled corpus standing in for real documents. The second replaces the demo with your own documents. The third is the place to go when a step fails or shows something other than what its page describes.
 
 <div class="srag-rows" markdown>
 

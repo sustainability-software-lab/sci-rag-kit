@@ -5,9 +5,7 @@ description: Read the specification behind chunking, graph extraction, fusion, a
 
 # Methodology
 
-This document is the kit's specification, describing every design decision that matters in plain language. The approach is intended to be judged on whether it fits a field, explained in a paper, or re-implemented in another stack. The code follows this document, not the other way around.
-
-In one sentence: hybrid retrieval over a single Postgres database, a knowledge graph built from a user-defined ontology, fail-closed license scoping, and an evaluation harness designed to be hard to game.
+In one sentence: hybrid retrieval over a single Postgres database, a knowledge graph built from a user-defined ontology, fail-closed license scoping, and an evaluation harness designed to be hard to game. The code follows this document, not the other way around.
 
 ## 1 Why this shape
 
@@ -140,7 +138,10 @@ This architecture makes multi-hop questions work because the connecting entity b
 
 #### 6.3.4 Scope inside the walk
 
-Alias strings currently do not carry per-surface document provenance, so only unrestricted graph walks may expand them. A restricted walk may seed from an exact active or tombstone name only when that literal surface occurs in one of the entity's eligible evidence chunks. Resolution tombstones retain their original evidence pointers for this check. The walk restricts retrieved chunks before ranking. Every traversed relationship must carry eligible document or chunk provenance. Restricted evidence therefore cannot seed, extend, or contribute a candidate to the walk.
+- **Alias expansion is unrestricted only.** Alias strings carry no per-surface document provenance, so a restricted walk may not expand them.
+- **Seeding from tombstones requires a literal match.** A restricted walk may seed from an exact active or tombstone name only when that literal surface occurs in one of the entity's eligible evidence chunks. Resolution tombstones retain their original evidence pointers for this check.
+- **Chunks are restricted before ranking.** Every traversed relationship must carry eligible document or chunk provenance.
+- **Restricted evidence is fully excluded.** It cannot seed, extend, or contribute a candidate to the walk.
 
 ### 6.4 Community summaries
 

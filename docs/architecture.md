@@ -113,7 +113,7 @@ Everything is asyncio end to end: SQLAlchemy async and asyncpg. The retrieval or
 
 ## Error and degradation philosophy
 
-* Layers degrade, requests survive. Degradation is always visible (`traces`, `degraded_stages`), not silent.
+* A failing layer records its status and returns nothing; the request continues with whatever the other layers found. Degradation is always visible (`traces`, `degraded_stages`), not silent.
 * Ingestion fails per document, never per corpus. Every failure is a row in the report with a reason.
 * Fail-closed beats fail-open where rights matter: empty license scope returns nothing; `unknown` license is unsafe; the community layer refuses scoped requests.
 * Every layer applies its license, source, year, author, journal, document, and DOI conditions before it orders or limits candidates.

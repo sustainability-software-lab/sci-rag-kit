@@ -70,7 +70,7 @@ $ cp .env.example .env
 $ chmod 600 .env
 ```
 
-Pick one mode. AI Studio is the right choice for almost everyone.
+Pick one mode. AI Studio is the right choice for individual use and first evaluation.
 
 === "AI Studio"
 
@@ -210,9 +210,9 @@ $ claude mcp add demo-corpus -- uv run --directory "$(pwd)" sci-rag mcp
 Ask the agent a question and tell it to use `demo-corpus`. A `search_corpus` or `answer_question` tool call should appear in its transcript. An answer with no tool call came from the agent's own memory, not from the corpus, which is exactly the failure the tools exist to prevent.
 
 <div class="srag-checkpoint" markdown>
-**Checkpoint: one database, three front doors**
+**Checkpoint: one database, two front doors**
 
-One Postgres database holds the documents, their chunks and vectors, the full-text index, and, after step 6, the concept graph. One service answers the command line, REST clients, and agents the same way. The reports under `eval_results/` record how it did on known questions.
+One Postgres database holds the documents, their chunks and vectors, the full-text index, and, after step 6, the concept graph. The same service answers the command line, REST clients, and agents. The reports under `eval_results/` record how it did on known questions.
 </div>
 
 ## Next steps
