@@ -924,3 +924,179 @@ Parent epic #185 retains ownership of this final cleanup and must be reevaluated
 rather than closed automatically. A generation that persists materially beyond
 its recorded hard-delete time requires an exact metadata receipt and a Google
 Cloud support case.
+
+## Amendment: dependency-preserving API baseline and IAM-only recovery
+
+> Approved 2026-09-02 UTC after RECOVER attempt 4 proved that active
+> `cloudapis.googleapis.com` depends on `telemetry.googleapis.com` and Google
+> Service Usage refuses the permitted Telemetry disable without `--force`.
+
+This amendment retains Telemetry, defines the exact 40-name API set as the API
+component of `S0` and `S1`, and replaces the consumed combined RECOVER path with
+a separately authorized IAM-only recovery. It authorizes plan and fail-closed
+tooling work only. It authorizes no IAM or other cloud mutation.
+
+### Authority and exact supersession
+
+This section has precedence only where it conflicts with the earlier plan and
+the quarantine amendment. It supersedes:
+
+- The use of the original 39-name observation as the executable RECOVER,
+  `S0`, `S1`, DELETE-restoration, PR-acceptance, or final-expiry API target.
+- The description of the 42-name attempt-4 starting set as current state.
+- The classification of all three attempt-4 additions as APIs still requiring
+  removal. Container Registry and IAM Credentials are absent. Telemetry is an
+  approved retained service.
+- The old combined RECOVER authorization and three-step API-disable sequence.
+  Its first two transitions are accomplished history. Its Telemetry transition
+  failed and is no longer permitted.
+- The statement that recovery completes only at the exact 39-name API set.
+- Any generic earlier instruction to restore or compare the API baseline. For
+  API acceptance, baseline now means the exact approved 40-name set below.
+- Any implication that attempt 4, its consumed authorization, marker, journal,
+  preview, snapshot, or directory can be resumed or reused.
+- The CREATE gate's reference to a 39-name `S0`. CREATE must bind the future
+  designated 40-name `S0` receipt.
+- DELETE's API restoration target. DELETE returns only run-attributable API
+  changes to the exact 40-name `S0`; `telemetry.googleapis.com` and
+  `cloudapis.googleapis.com` are retained.
+- The final natural-expiry check's API target. It must prove the exact 40-name
+  set remains unchanged.
+
+The original 39-name list and SHA-256
+`0f72c7ecc3b3f28c01007cf8bc1fc9b338b00f62b003312eddf86456d960547f`
+remain historical evidence of the 2026-08-31 observation. The 42-name set and
+SHA-256
+`34229fe02826501ded24024d0f3116165c3bb86b27863307008b735cc17774f4`
+remain historical evidence of attempt 4's starting state. Neither is an
+operational target after this amendment.
+
+The seven exact IAM tuples, every IAM checkpoint digest, the final 6/6 IAM
+digest, `Q0`, project labels, active service-account state, shared Cloud SQL,
+proxy, normal-resource, Terraform-state, credential, CREATE, SEED, DELETE,
+scientific-evidence, PR, and final-expiry safeguards remain in force.
+
+### Frozen attempt-4 evidence
+
+Attempt 4 started from 42 APIs and IAM 13/13. It produced these transitions:
+
+| Action | Result | Exact post-state |
+|---|---|---|
+| Disable Container Registry | One call, exit 0 | 41 APIs, `a8b9fa5c8fcc64fe063258b2541f3e31ced3ba8d4c53da1449193dd7ba53984a` |
+| Disable IAM Credentials | One call, exit 0 | 40 APIs, `afcfa4ed25bd705b03b659fa21f09960a1fe431af2700d42f14c7299dafe887e` |
+| Disable Telemetry | One call, nonzero dependency precondition | Telemetry remained enabled |
+
+The executor did not use `--force`, did not retry, captured a full post-state,
+and stopped before any IAM mutation. IAM remains 13 bindings and 13 members at
+SHA-256
+`e65c96ed603ecf66a1ca12b7d2d66b75a646ea8a96a0744d21fc2ef5997cf874`.
+There are zero live buckets, the same three `Q0` tuples, zero qualification
+resources, and unchanged labels, active service accounts, shared development
+instance, and observed proxies.
+
+The final post-state receipt has SHA-256
+`95e611c4a3e33bcc700ad5c7908fd82f470bbab24ee0364187b219c4249e255f`.
+The 14-record journal has SHA-256
+`706fa31e8e3671e0f059b55f82e32b141133d03aba082bb4a79956886ad76454`.
+The private attempt-4 source archive preserves the executor at SHA-256
+`9087776349699e9516f9dade40201708797e197530c5e6326d333481e0a27b7c`
+and the collector at SHA-256
+`92229a56be7a3b982e6571141869ff179281a96ea6bbb492520a3e3800781e58`.
+The archive remains ignored and mode 0600 under a mode-0700 directory.
+
+### Exact approved API component of `S0`
+
+The approved recovered API set is the earlier exact 39-name list plus only:
+
+```text
+telemetry.googleapis.com
+```
+
+Its required identity is:
+
+```text
+count: 40
+canonical SHA-256:
+afcfa4ed25bd705b03b659fa21f09960a1fe431af2700d42f14c7299dafe887e
+cloudapis.googleapis.com: present
+telemetry.googleapis.com: present
+containerregistry.googleapis.com: absent
+iamcredentials.googleapis.com: absent
+```
+
+Every new IAM recovery checkpoint, `S0`, `S1`, DELETE result, PR acceptance
+receipt, and final natural-expiry receipt must compare exact names, count, and
+digest. A count alone is not evidence. No future issue #189 command may enable
+or disable an API during IAM-only recovery. `telemetry.googleapis.com` and
+`cloudapis.googleapis.com` are not run-attributable `zr1` deltas and must
+remain enabled.
+
+### Fresh IAM-only RECOVER gate
+
+Present this exact action-time gate only after a new full snapshot and
+source-bound preview pass:
+
+```text
+AUTHORIZE IAM-ONLY RECOVER biositing-docs-pub:
+remove the seven enumerated unconditional IAM role/member bindings, one at a time;
+retain telemetry.googleapis.com and the exact 40-name API set with SHA-256
+afcfa4ed25bd705b03b659fa21f09960a1fe431af2700d42f14c7299dafe887e;
+do not enable or disable any API;
+do not use --force or replace the whole IAM policy;
+do not touch any bucket, project label, shared Cloud SQL resource, or proxy.
+```
+
+The approval for this amendment is not that gate. The old combined RECOVER
+authorization is consumed and cannot satisfy it. IAM-only RECOVER does not
+authorize lifecycle CREATE, SEED, or DELETE.
+
+### IAM-only executor and `S0`
+
+Use a new mode-0700 attempt directory. Do not write any new file into the
+attempt-4 run directory except its already-created source archive. Before
+requesting authorization:
+
+1. Capture a full action-time snapshot that has exactly 40 APIs at
+   `afcfa4ed...`, IAM 13/13 at `e65c96ed...`, and only the expected IAM
+   baseline failure.
+2. Require equality on source and PR head, labels, active service accounts,
+   live buckets, qualification resources, build context, demo inputs, shared
+   development instance, and observed proxies. Require the current
+   soft-deleted tuple set to remain a duplicate-free subset of both the
+   preview snapshot and `Q0`, so natural expiry remains permitted.
+3. Create a private preview that binds the exact snapshot, tracked plan,
+   executor and collector hashes, active principal, seven-command IAM plan,
+   and exact authorization text.
+4. Prove the executable plan contains no API enable or disable command, no
+   `--force`, no broad IAM replacement, and no bucket, service-account,
+   Cloud SQL, label, proxy, CREATE, SEED, or DELETE mutation.
+
+After a fresh exact authorization, capture `00-iam-1-pre` before consuming it.
+That checkpoint must equal the preview-bound state and must contain exactly one
+unconditional target member for the first role. Then create the single-use
+marker, journal authorization consumption, and execute the seven existing IAM
+steps in their existing order.
+
+Before every removal, refresh and validate the complete API set and IAM policy.
+After every removal, capture a full checkpoint and prove only the exact tuple
+disappeared, the IAM etag changed, APIs remained the exact 40-name set, all
+equality-protected non-IAM surfaces remained equal to the action-time snapshot,
+and the soft-deleted tuples remained a duplicate-free subset of the action-time
+snapshot and `Q0`. Any warning, timeout, nonzero result, already-removed or
+no-op response, malformed state, unexpected condition, concurrent change, or
+collateral transition requires one post-state capture followed by a hard stop
+without retry.
+
+After the seventh removal, require IAM 6/6 at SHA-256
+`80424fc5a092552e9ffdfda1c16a34f971395746298187387b3d8188ddf708bc`.
+Capture a separate final candidate and designate it `S0` only when it passes
+every collector check, matches the last IAM post-state on APIs and IAM, retains
+the default Compute account live and unprivileged, and preserves every other
+protected surface.
+
+The resulting private `S0` receipt, not the attempt-4 post-state, binds CREATE.
+The later lifecycle must return exact API names and digest to this 40-name
+`S0`, prove `S1 == S0` on every other measured surface, create no new
+soft-deleted tuple, and leave the `zr1` bucket absent from live and soft-deleted
+listings before PR #270 may merge. Issue #189 remains open through the existing
+post-expiry absence check, which must also prove the exact 40-name API set.
