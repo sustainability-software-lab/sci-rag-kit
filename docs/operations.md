@@ -9,7 +9,7 @@ Protect a live corpus with two records: a snapshot identifies its documents, whi
 database backup preserves the stored data. Rehearse the restore before you need it.
 
 <div class="srag-meta-strip">
-  <div><strong>You'll build</strong>A backup, a restore drill, and a snapshot habit</div>
+  <div><strong>You'll build</strong>A backup, a restore drill, and a snapshot protocol</div>
   <div><strong>You'll need</strong>Database access and `pg_dump`</div>
   <div><strong>Time</strong>About 30 minutes for the first pass</div>
   <div><strong>Tested with</strong>v0.4</div>
@@ -21,7 +21,7 @@ database backup preserves the stored data. Rehearse the restore before you need 
 |---|---|---|
 | A corpus worth protecting | Most of this page is unnecessary on the demo fixture | `uv run sci-rag stats` |
 | `pg_dump` and `psql` on your path | The backup and restore paths are ordinary Postgres tools | `pg_dump --version` |
-| Somewhere to put a dump that is not the database host | A backup on the same disk is not a backup | |
+| Storage outside the database host | A separate destination protects the dump from host or disk loss | |
 | A disposable database for the restore drill | You are going to restore into it, and it will be overwritten | |
 
 ## Crossref enrichment and retraction review
@@ -47,7 +47,7 @@ Resolved rows connect two corpus documents that exist. References to DOIs not ye
 
 After citation reconciliation, run `uv run sci-rag doctor`. It reports known retractions. Answer generation excludes retracted documents by default; raw retrieval does not change. Review flagged records and use `sci-rag corpus delete` when they should go.
 
-## Corpus snapshots (identity, not backup)
+## Record corpus identity
 
 ```bash
 uv run sci-rag corpus snapshot v0.2-demo
@@ -61,7 +61,7 @@ Snapshots are small, immutable (naming something twice fails), and safe to commi
 uv run sci-rag eval retrieval --ablation --snapshot v0.2-demo
 ```
 
-The report JSON carries the snapshot name, so later you can verify the numbers came from exactly that corpus. A snapshot records identity; it contains no data. Backup does.
+The report JSON carries the snapshot name, so later you can verify the numbers came from exactly that corpus. Snapshots contain identity metadata. Database backups preserve the stored data.
 
 ## Backup
 
@@ -85,9 +85,9 @@ SCI_RAG_DATABASE_URL_SYNC="$(
     sed 's/^postgresql+asyncpg:/postgresql:/'
 )"
 
-# Refuse an inline password, which pg_dump would expose in its process arguments.
+# Stop if the URL contains a password that pg_dump would expose in its process arguments.
 case "$SCI_RAG_DATABASE_URL_SYNC" in
-  postgresql://*:*@*) echo "Use a passfile instead of an inline database password." >&2; exit 1 ;;
+  postgresql://*:*@*) echo "Move the inline database password to a passfile." >&2; exit 1 ;;
 esac
 
 # Custom-format archive: schema and data, compressed.
@@ -103,7 +103,7 @@ The procedure preserves a `?passfile=` query from the application URL and stops 
 `pg_dump` if the URL contains an inline password. If `.env` has no application URL, add a
 passwordless URL with a `passfile` query before running the procedure.
 
-`--format=custom` is why restore uses `pg_restore` not `psql`. A custom-format archive is compressed and lets you restore one table at a time. Plain output is SQL to replay, and they are not interchangeable.
+Restore a custom-format archive with `pg_restore`. The archive is compressed and supports restoring one table at a time. Plain output is SQL for `psql`; each command accepts a different archive format.
 
 The pgvector extension types are included in the archive. The restore target needs the extension available; migration 0001 runs `CREATE EXTENSION vector`, and `pg_restore` recreates it from the archive.
 
@@ -172,9 +172,9 @@ sci-rag corpus export export/ --license public --license open_commercial
 
 Communities are never exported. A community summary aggregates across documents with no per-document attribution to filter on, the same reason the community retrieval layer disables under any scope.
 
-### Export is not a restore
+### Restore from a database backup
 
-Vectors round-trip as arrays and full-text columns rebuild on ingest, so restores always use `pg_restore` or Cloud SQL backups. In Parquet, `documents.extra` is a JSON string, not a struct, because its keys vary per document and an inferred schema would change with the corpus.
+Use `pg_restore` or Cloud SQL backups to restore the database. Analytical exports represent vectors as arrays and omit the database structures needed for a restore. In Parquet, `documents.extra` stays a JSON string because its keys vary by document and an inferred schema would change with the corpus.
 
 ## Retrieval latency
 
@@ -188,18 +188,18 @@ Nothing new is instrumented: each request already records per-stage duration. Th
 
 Two aspects are easy to misread, so the command names both:
 
-* **Stages do not sum to request time.** Candidate generators run concurrently, so a request is about as slow as its slowest stage, not their sum. Wall-clock time is measured separately and shown in each table's title.
+* **Concurrent stages overlap.** Candidate generators run at the same time, so request latency tracks the slowest stage. Each table title reports wall-clock time separately.
 * **The query-embedding cache is off while profiling.** Production requests cache query embeddings in memory, so replaying one question ten times would measure cache hits on runs 2–10 and report a p50 no real user sees. Every profile run is cold, which makes profiles comparable and slightly pessimistic about warm performance.
 
-A switched-off stage is not a failure. `interactive` disables graph, community, and HyDE by design. An unconfigured reranker is a choice. Both appear in status but never as degradation. The warning line is reserved for stages that ran and failed; a timeout is fast for the wrong reason.
+A switched-off stage reports `disabled`. The `interactive` profile disables graph, community, and HyDE by design, and an unconfigured reranker reports the same status. Degradation warnings are reserved for stages that ran and failed. A timeout can shorten a request while leaving it incomplete.
 
-This measures speed, not correctness. `docs/benchmarks.md` is where a layer earns its place. The profiler tells you what speed costs.
+The profiler measures speed. Use [Benchmarks](benchmarks.md) to judge whether a layer improves retrieval or answer quality.
 
 ## The habits that matter
 
 1. Snapshot before and after every bulk change (ingest campaign, delete, reindex). The digest diff is your receipt.
 2. Back up before schema migrations.
-3. Run the restore drill now, not when you need it.
+3. Run the restore drill before an incident.
 4. Run `sci-rag doctor` after every restore.
 
 <div class="srag-checkpoint" markdown>

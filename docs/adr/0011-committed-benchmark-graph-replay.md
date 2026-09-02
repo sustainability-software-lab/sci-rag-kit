@@ -84,7 +84,7 @@ record, and related references.
 * The committed artifact adds raw model responses and couples the benchmark to
   an extractor contract. Contract, prompt, model, corpus, or domain changes
   require a new credentialed candidate and review.
-* Refresh needs an explicitly configured model credential and a named pristine
+* Refresh needs explicitly configured LLM provider credentials and a named pristine
   disposable database. It is a deliberate evidence-producing operation, not a
   routine CI step.
 * The repository grows with reviewed replay evidence. Content-addressed names
@@ -112,4 +112,4 @@ Revisit this decision if any of these conditions holds:
 * A durable content-addressed service becomes available and preserves the same
   immutable identity, review, and offline verification guarantees.
 * Measured, rights-safe demand justifies a product replay feature for real
-  corpora rather than this benchmark-only seam.
+  corpora rather than this benchmark-only path.

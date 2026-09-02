@@ -58,9 +58,8 @@ def print_scaffold_report(
         console.print(f"  {run('sci-rag draft ontology --from-corpus')}")
         console.print(f"  {run('sci-rag draft questions --count 10')}")
         console.print(
-            "\nEach one proposes a file for you to review rather than writing one, and "
-            "each also prints its prompt (--print-prompt) if you would rather paste it "
-            "into an assistant you already have."
+            "\nEach command proposes a file for review. Add --print-prompt to copy its "
+            "prompt into an assistant you already use."
         )
     else:
         console.print(

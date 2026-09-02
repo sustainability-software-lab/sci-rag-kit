@@ -789,12 +789,9 @@ def render_benchmarks(
         "",
         "# Benchmarks",
         "",
-        "Measured results on the shipped demo corpus, regenerated with one command.",
-        "This page proves the evaluation harness end to end and publishes honest",
-        "numbers for this template on its own demo corpus. It makes no",
-        "state-of-the-art claim and compares against no other system; see",
-        "[Choosing Sci RAG Kit](choosing-sci-rag-kit.md) for that comparison, on",
-        "axes other than benchmark scores.",
+        "These results measure the shipped demo corpus and can be regenerated with one command.",
+        "They validate the evaluation workflow on this synthetic corpus. See",
+        "[Choosing Sci RAG Kit](choosing-sci-rag-kit.md) for a feature-level comparison.",
         "",
         "## What was measured",
         "",
@@ -818,17 +815,16 @@ def render_benchmarks(
         "declared tolerance of "
         f"{TOLERANCES['metric']} absolute on a metric and "
         f"{TOLERANCES['count']:.0%} on other counts, and `--check` fails visibly "
-        "when one moves further. A number that moves beyond it is a finding, "
-        "not a refresh: publishing it needs a reviewed source report and an "
-        "explanation of which recorded input changed.",
+        "when one moves further. Publishing movement beyond the tolerance requires "
+        "a reviewed source report and an explanation of which recorded input changed.",
         "",
         "## Retrieval ablations",
         "",
         "Cells are mean [95% bootstrap CI], resampled per question. The",
         "demo corpus has single-digit questions, so intervals are wide by",
         "construction: treat differences whose intervals overlap heavily as",
-        "noise, and read the table for the qualitative story (which layers",
-        "earn their keep) rather than decimal places. On a small sample",
+        "noise. Read the table for the qualitative story about which layers",
+        "earn their keep. On a small sample",
         "like this, that qualitative story is the only defensible claim.",
         "",
         "| Config | " + " | ".join(METRIC_LABELS[m] for m in METRICS) + " | n |",
@@ -844,15 +840,15 @@ def render_benchmarks(
     if "resolved_entities" not in names:
         lines += [
             "",
-            "`resolved_entities` is absent, and that is a result rather than an",
-            "omission. It is a separate condition (`sci-rag eval retrieval",
+            "The missing `resolved_entities` row records the outcome of its precondition.",
+            "It is a separate condition (`sci-rag eval retrieval",
             "--condition resolved_entities`) measured on a post-resolution",
             "snapshot, and it requires at least one persisted resolution audit",
             "row. On this corpus `sci-rag graph resolve-entities` finds no",
             f"automatic pairs and plans no merges: {corpus.get('entities')} extracted entities with",
-            "nothing duplicated enough to merge. The command refuses to run the",
-            "condition rather than report a number that would just be",
-            "`full_deep` under another name. A corpus with real alias variation",
+            "nothing duplicated enough to merge. The condition requires a real merge",
+            "and stops here because it would otherwise repeat `full_deep` under another",
+            "name. A corpus with real alias variation",
             "is what would exercise it.",
         ]
 
@@ -913,8 +909,8 @@ def render_benchmarks(
             "Kappa is reported as measured, never asserted as a target. A",
             "kappa of 0 with high exact agreement means one rater was",
             "constant (kappa cannot credit agreement it attributes to",
-            "chance); the fix is a seed set with more score variance, not a",
-            "different formula. Expert labels supersede this seed set.",
+            "chance). A seed set with more score variance fixes that limitation.",
+            "Expert labels supersede this seed set.",
             "",
         ]
 
@@ -930,12 +926,11 @@ def render_benchmarks(
         "`SCI_RAG_GCP_PROJECT`; see `.env.example`). The backend must point to a",
         "named, disposable PostgreSQL database. The target ingests the tracked",
         "demo corpus into otherwise pristine graph state before strict replay.",
-        "Do not clear an unrelated development corpus to satisfy that preflight; select",
-        "a disposable database instead. It then creates communities, snapshots the",
+        "Select a disposable database for that preflight and leave development corpora intact.",
+        "It then creates communities, snapshots the",
         "corpus, runs the full retrieval ablation plus the judged answers eval, and",
         "re-renders this page from the report JSONs. Without credentials the eval",
-        "commands stop with a clear message; nothing on this page is reachable",
-        "offline, by design: published numbers come from real models or not at all.",
+        "commands stop with a clear message. Published numbers require real models.",
         "",
     ]
     return "\n".join(lines)
@@ -993,11 +988,11 @@ def _compression_section(answers: dict[str, Any], compressed: dict[str, Any]) ->
         "",
         "Two judged-answer runs over the same questions and the same corpus,",
         "one with `--compressed` and one without. The gate requires judged",
-        "quality to HOLD while measured prompt tokens fall. A",
-        "token saving on its own is not evidence; it is half of a trade.",
+        "quality to HOLD while measured prompt tokens fall. Token savings alone",
+        "cannot justify the default.",
         "",
-        f"Measured at `relevance_floor: {floor}`, which is the load-bearing",
-        "setting, not a detail. The floor decides whether a source is dropped",
+        f"Measured at the load-bearing `relevance_floor: {floor}` setting.",
+        "The floor decides whether a source is dropped",
         "or summarized, and dropping evidence is what an answer cannot recover",
         "from. Raising it trades groundedness for tokens; that is a different",
         "trade from summarizing, and it needs its own paired run.",

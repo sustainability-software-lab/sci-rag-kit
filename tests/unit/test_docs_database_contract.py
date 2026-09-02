@@ -32,7 +32,7 @@ def test_setup_starts_the_selected_backend_with_docker_as_the_template_default()
         assert "`make setup` starts the compose Postgres" not in page, path
 
     readme = _read("README.md")
-    assert "[Run Postgres your way](docs/run-postgres.md)" in readme
+    assert "[Configure Postgres backend](docs/run-postgres.md)" in readme
 
 
 def test_compose_service_claims_no_process_global_container_name() -> None:
@@ -112,7 +112,8 @@ def test_postgres_guide_publishes_the_backend_matrix_and_cloud_stages() -> None:
     assert '-var "project_id=YOUR_PROJECT"' in page
     assert "Terraform state contains the generated database password" in normalized
     assert "first start can take several minutes" in normalized
-    assert "not an authorization boundary" in normalized
+    assert "Every database shares the same PostgreSQL role" in normalized
+    assert "Treat the separation as workspace isolation only" in normalized
     assert "must not hold the only copy of a valuable corpus" in normalized
 
 

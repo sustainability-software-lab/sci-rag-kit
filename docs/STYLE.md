@@ -40,29 +40,10 @@ Four types, from the [Diataxis](https://diataxis.fr/) framework. A page that can
 | `benchmarks.md` | reference |
 | `glossary.md` | reference |
 | `project.md` | explanation |
-| `ROADMAP.md` | reference |
-| `VERSIONING.md` | reference |
-| `GOVERNANCE.md` | explanation |
-| `adopters.md` | reference |
-| `STYLE.md` | reference |
-| `contributing.md` | reference |
-| `changelog.md` | reference |
-| `citation.md` | reference |
-| `adr/0001-graph-in-postgres.md` | explanation |
-| `adr/0002-embeddings-1536-hnsw.md` | explanation |
-| `adr/0003-docling-with-pypdf-fallback.md` | explanation |
-| `adr/0004-template-repo-not-cookiecutter.md` | explanation |
-| `adr/0005-citation-edges-as-a-document-table.md` | explanation |
-| `adr/0006-multi-provider-llms.md` | explanation |
-| `adr/0007-interactive-project-generator.md` | explanation |
-| `adr/0008-supported-postgresql-versions.md` | explanation |
-| `adr/0009-cloud-dev-database.md` | explanation |
-| `adr/0010-template-copy-boundary.md` | explanation |
-| `adr/0011-committed-benchmark-graph-replay.md` | explanation |
 
 Two assignments are worth defending, because a reasonable person would put them elsewhere.
 
-**The five section hubs are explanations.** A hub exists so a reader can tell which page in the section is theirs. That is understanding, so a hub gets an explanation's job: describe the shape of the section and recommend a starting point.
+**Section hubs are explanations.** A hub exists so a reader can tell which page in the section is theirs. That is understanding, so a hub gets an explanation's job: describe the shape of the section and recommend a starting point.
 
 **Contributing is reference.** It sets the bar a change has to clear. You look up the rule that applies to you; you do not read it start to finish.
 
@@ -72,12 +53,12 @@ Two assignments are worth defending, because a reasonable person would put them 
 
 Both teach a task, so both owe the reader the same contract. The tests enforce the two headings; the rest is review.
 
-1. An **outcome-first title** and a one-sentence lede saying what the reader will have when they finish. Not what the page covers.
+1. An **outcome-first title** and a one-sentence lede saying what the reader will have when they finish.
 2. A **meta strip** with what they will build, what they need, how long it takes, and what version it was tested against. Use the `srag-meta-strip` component.
 3. **`## Before you start`**, with the prerequisites as a list or a table. Anything a reader could be missing goes here, above the first command.
-4. **Step headings that begin with a verb.** "Ingest the corpus", not "Ingestion". One primary action per step.
+4. **Step headings that begin with a verb.** Use "Ingest the corpus". Avoid noun labels such as "Ingestion". One primary action per step.
 5. **A checkpoint after every stage that produces something observable**, using the `srag-checkpoint` component. Say what the reader should see, and what it means if they do not. No significant procedure ends on a command.
-6. **`## Next steps`**, with two to four real continuations. A link to the page a reader genuinely wants next, not a summary of what they just did.
+6. **`## Next steps`**, with two to four real continuations. Link to the page a reader genuinely wants next and omit a recap of the page they just read.
 
 The difference between the two types is the reader's state, and it changes the tone more than the shape. A tutorial reader is learning and has no context yet, so you make every decision for them and explain the ones that will matter later. A how-to reader has a job and some context, so you can assume the quickstart and get to the point.
 
@@ -95,7 +76,7 @@ Decision records are explanations with a fixed shape: **Context**, **Decision**,
 
 ### Reference
 
-Reference is looked up, not read. Keep tutorial prose out of it. Authentication, parameters, and errors stay in separate sections so a reader can jump to one. Consistency of structure matters more than elegance of sentence: if every entry has the same fields in the same order, a reader learns the shape once and scans forever.
+Readers scan reference pages for specific facts. Keep tutorial prose out of them. Authentication, parameters, and errors stay in separate sections so a reader can jump to one. Consistency of structure matters more than elegance of sentence: if every entry has the same fields in the same order, a reader learns the shape once and scans forever.
 
 Three reference pages are generated from source, and hand edits to them are reverted by `make docs`:
 
@@ -113,20 +94,20 @@ These apply to every type.
 
 1. **Open with the outcome.** The first sentence says what the reader will have, or what the page lets them decide. A title that names a noun ("Ingestion") tells a reader less than one that names a result.
 2. **Center the kit when describing what it does; address the reader as "you" only when they act.** "The kit stores passages in Postgres" describes a capability. "Run `make setup`" is an action. A page that says "you" in every sentence reads as a script; a page that never says it reads as a brochure. Nobody is "the user" on a page the user is reading, and the project is "we" only where a human made a judgment call.
-3. **Active voice.** Name who acts. "The parser records the route", not "the route is recorded".
+3. **Active voice.** Name who acts. Write "The parser records the route." Avoid passive constructions such as "The route is recorded."
 4. **Put an action in every step.** A numbered step with no verb is a paragraph wearing a number.
-5. **Prerequisites come before the procedure**, never inside step four.
+5. **Put prerequisites before the procedure.** Keep them out of the numbered steps.
 6. **Conditions come before instructions.** "If you use pixi, run `make setup`" gives a reader permission to skip. "Run `make setup` if you use pixi" makes them read a command that might not be theirs.
-7. **Name exact files and commands.** `domain/domain.yaml`, not "the domain configuration file".
+7. **Name exact files and commands.** Use `domain/domain.yaml`; generic labels such as "the domain configuration file" slow readers down.
 8. **Put code under the sentence that calls for it**, with the shortest fence that works.
 9. **State the expected result** after any action that produces one. A reader with no way to check has no way to continue.
-10. **Explain a concept where the next decision needs it**, and not before. Background that arrives early is background that gets skipped.
+10. **Explain a concept where the next decision needs it.** Readers skip background that arrives too early.
 11. **Recommend a default.** Three equally weighted options is a decision handed back to someone with less information than you. Name the one most readers should take, say who should take a different one, and put the alternatives after it.
 12. **Mark optional steps optional**, in the heading, so a reader skimming headings can skip them.
 13. **Warn only for security, destruction, likely failure, or genuine surprise.** A page of warnings is a page with none.
-14. **End on concrete next tasks.** "You have now learned about ingestion" is not a next step.
+14. **End on concrete next tasks.** Delete closing summaries such as "You have now learned about ingestion."
 15. **Contractions are fine.** They are how a knowledgeable colleague talks.
-16. **Personality lives at transitions, never inside an instruction.** A step is not the place to be interesting. The sentence before it is.
+16. **Keep personality in transitions and instructions plain.** The sentence before a step can carry the voice.
 
 The register to aim for: precise, direct, and willing to tell you what to do. This is a scientific tool from a national laboratory, so recommendations and contractions, yes; jokes, no.
 
@@ -142,14 +123,11 @@ Also no em dashes anywhere in repository source, including code, comments,
 docstrings, and documentation. That rule predates this guide and lives in
 [CONTRIBUTING.md](contributing.md).
 
-### The contrast budget
+### Avoid reflexive contrasts
 
-`rather than`, `instead of`, and `as opposed to` are good constructions, and this site was built almost entirely out of them: ninety-two uses, thirty-two on one page, so nearly every paragraph landed on the same X-not-Y beat. One move repeated is a voice with nothing in it, which is the problem the AI vocabulary was only a symptom of.
+This site once leaned on a contrast in nearly every paragraph. Most of those asides answered a distinction the reader had never raised and made the prose sound generated.
 
-The budget is roughly one per four hundred words, which is what unremarkable technical prose runs at. Hitting the cap does not mean a sentence is wrong. It means the page needs variety. Two ways out, in order of preference:
-
-- **Cut it.** Most of these sentences exist to perform a contrast the reader was not making. State the positive claim and stop.
-- **Vary it.** A semicolon, a full stop, "not", "over", "and not". English has many ways to say this; we used one.
+State the positive claim directly. When a distinction affects safety or correctness, give each side its own clause or sentence and name the practical consequence.
 
 ### Terminology
 

@@ -52,7 +52,7 @@ def init(
         "--answers-file",
         help="A YAML file of answers, for reproducible generation. Unanswered questions "
         "take their default. Answers that need a person, such as accepting a drafted "
-        "ontology, are refused rather than replaced.",
+        "ontology, must be supplied explicitly.",
     ),
     quick: bool | None = typer.Option(
         None,
@@ -68,11 +68,11 @@ def init(
         False, "--dry-run", help="Show what would change without writing anything."
     ),
 ) -> None:
-    """Configure this checkout for your own field.
+    """Configure an existing Sci RAG Kit checkout in place.
 
-    Asks about your project, credentials, ontology, corpus, and stack, then
-    rewrites the configuration files in place. Everything it writes is a file
-    you are meant to keep editing afterwards; nothing is generated code.
+    The setup wizard asks about your project, LLM provider credentials, domain,
+    corpus, and stack, then updates the target checkout's configuration files.
+    It writes editable configuration files.
     """
     from sci_rag.scaffold.answers import ProjectAnswers
     from sci_rag.scaffold.apply import apply_all

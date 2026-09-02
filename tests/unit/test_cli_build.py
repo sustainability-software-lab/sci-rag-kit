@@ -73,7 +73,7 @@ def test_offline_build_ingests_and_says_why_the_graph_was_skipped(
     assert len(stubs["ingest"]) == 1
     assert stubs["extract"] == []
     assert stubs["communities"] == []
-    assert "Skipping the knowledge graph: no model credential is configured" in output
+    assert "Skipping the knowledge graph: no LLM provider credentials are configured" in output
     assert "sci-rag graph extract" in output
     assert 'sci-rag answer "..."' in output
 

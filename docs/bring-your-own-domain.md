@@ -5,10 +5,10 @@ description: Turn a folder of documents into a knowledge base that answers quest
 
 # Bring your own domain
 
-You will finish with your documents ingested and retrieval scored against reviewed
-questions. With a model credential, you will also build the field's concept graph and
-generate a cited answer. The work stays in a document folder, its manifest, and the
-`domain/` folder for concepts, prompts, and questions. You do not need to edit Python.
+Turn your documents into a knowledge base and score retrieval against reviewed questions.
+Add LLM provider credentials to build the domain's concept graph and generate cited answers.
+Source files and the manifest stay under `data/`; concepts, prompts, and questions stay under
+`domain/`. No Python edits are required.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A knowledge base over a corpus of your own</div>
@@ -29,7 +29,7 @@ $ uv run sci-rag draft ontology --folder data/raw       # 3. name your concepts
 $ uv run sci-rag build --manifest data/corpus.jsonl     # 4. ingest, then build the graph
 $ uv run sci-rag draft questions --count 10             # 5. draft test questions
 $ uv run sci-rag eval retrieval --ablation              # 6. measure
-$ uv run sci-rag answer "a question in your field"      # 7. ask (needs a model credential)
+$ uv run sci-rag answer "a question in your field"      # 7. ask (needs LLM provider credentials)
 ```
 
 Three commands draft a file for review: the manifest, ontology, and question
@@ -44,12 +44,12 @@ and the disclosure check required before sending sampled passages elsewhere.
 |---|---|---|
 | A finished [quickstart](quickstart.md) | The database and its tables must exist first | `uv run sci-rag doctor` |
 | The documents under `data/raw/` | Every step reads them | `ls data/raw \| wc -l` |
-| A model credential, for two steps | The graph and the cited answer need one; ingestion, retrieval, and retrieval scoring do not | `uv run sci-rag doctor --probe` |
+| LLM provider credentials, for two steps | The graph and the cited answer need them; ingestion, retrieval, and retrieval scoring do not | `uv run sci-rag doctor --probe` |
 | A domain expert | Step 5 needs questions somebody can vouch for | |
 
 There are two end states.
 
-**With a model credential** the tutorial ends with the corpus ingested, a knowledge graph over the field's concepts, retrieval scored against its own questions, judged answers, and a cited answer to a question in the field.
+**With LLM provider credentials** the tutorial ends with the corpus ingested, a knowledge graph over the field's concepts, retrieval scored against its own questions, judged answers, and a cited answer to a question in the field.
 
 **Without one** it ends with the corpus ingested, the concepts and questions written and validated, and retrieval scored against those questions. Four commands need a credential: `graph extract`, `graph communities`, `eval answers`, and `sci-rag answer`. [Offline: what you can prove without a model](#offline-what-you-can-prove-without-a-model) lists the route in one place.
 
@@ -58,7 +58,7 @@ There are two end states.
 A project created by `sci-rag new` already contains its setup decisions and
 defaults. Skip to step 1.
 
-In a checkout cloned or created from the GitHub template, run the same wizard in place:
+In a checkout cloned or created from the GitHub template, run the same setup wizard in place:
 
 ```bash
 uv run sci-rag init --advanced
@@ -225,7 +225,7 @@ Ingestion parses each document, splits it into chunks that keep their section he
 
 The graph needs a model. The builder reads every chunk, extracts entities and relationships from the ontology, clusters related entities, and writes a summary of each cluster. Without a credential, `build` says so and stops after ingestion. Vector and keyword retrieval work at that point. The two graph steps are also available on their own, which is how you add the graph later or rebuild it after changing the ontology:
 
-!!! note "Needs a model credential"
+!!! note "Needs LLM provider credentials"
 
     ```bash
     uv run sci-rag graph extract
@@ -250,7 +250,7 @@ classes match the manifest.
 `sci-rag retrieve` with a question from the field: the top chunks are recognizable, and the stage table names the layer that found each one.
 
 `sci-rag stats` after the graph built: entities and relationships are present.
-Inspect them rather than judging the graph by count alone. If the extracted
+Inspect a sample because counts alone cannot establish graph quality. If the extracted
 concepts do not represent the field, return to step 3, redraft with
 `--refine`, and run `graph extract` again.
 
@@ -289,13 +289,13 @@ uv run sci-rag eval retrieval --ablation
 
 This runs offline. It scores retrieval against the seed questions and prints one row per layer configuration, which shows what each layer contributes on this corpus and, over time, whether a change to the ontology or the corpus made retrieval better or worse. Grading generated answers is a second pass and needs a model:
 
-!!! note "Needs a model credential"
+!!! note "Needs LLM provider credentials"
 
     ```bash
     uv run sci-rag eval answers
     ```
 
-Compare every row against `full_deep`, the row with every layer on. If `no_graph` matches `full_deep`, the graph is not contributing yet. That usually points to the ontology, sometimes to a small corpus. Edit the ontology or the corpus, run again, and compare. [Evaluate your pipeline](evaluation.md) explains every column.
+Compare every row against `full_deep`, the row with every layer on. If `no_graph` matches `full_deep`, the measured graph contribution is zero. That usually points to the ontology, sometimes to a small corpus. Edit the ontology or the corpus, run again, and compare. [Evaluate your pipeline](evaluation.md) explains every column.
 
 ## Step 6: adjust the prompts (optional)
 
@@ -319,7 +319,7 @@ Prompt wording moves every downstream number. Run `sci-rag eval retrieval --abla
 
 With a credential, ask a question in the field. Ask one the corpus cannot answer as well; the response should say so.
 
-!!! note "Needs a model credential"
+!!! note "Needs LLM provider credentials"
 
     ```bash
     uv run sci-rag answer "a question in your field"
@@ -408,7 +408,7 @@ uv run sci-rag eval retrieval --ablation
 uv run sci-rag serve
 ```
 
-The offline embedder matches on words, not meaning. Its retrieval scores are a floor for the corpus, not a comparison with a credentialed run. This route does not reach the knowledge graph, community summaries, graded answers, or generated cited answers.
+The offline embedder uses lexical word matching. Its retrieval scores establish a baseline for this corpus. A credentialed run uses a different embedding method and needs its own measurement. The offline route excludes the knowledge graph, community summaries, graded answers, and generated cited answers.
 
 ## The improvement loop
 

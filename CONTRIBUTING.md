@@ -26,7 +26,7 @@ in `docs/run-postgres.md`.
 The whole suite uses deterministic local embeddings and mock LLMs. Database
 tests destroy data in `SCI_RAG_TEST_DATABASE_URL`, so create a disposable test
 database for the selected backend. If PostgreSQL is unreachable, integration
-tests skip with instructions. A skipped database suite is not passing evidence.
+tests skip with instructions. A skipped database suite provides no passing evidence.
 
 `make docs-geometry` drives a real browser over `site/` to catch presentation
 bugs that Markdown checks cannot see, such as adjacent code blocks with no
@@ -41,14 +41,14 @@ CI runs them in the job that builds the site.
 * **`make check` is green**: ruff (lint and format), mypy, pytest. CI also
   verifies `uv.lock`, runs every configured pre-commit hook, enforces a
   coverage floor (see ci.yml), builds the Docker image, checks Terraform
-  formatting and validity, and verifies internal doc links. A change that
-  lowers coverage below the floor needs tests, not a floor edit.
+  formatting and validity, and verifies internal doc links. If a change lowers
+  coverage below the floor, add tests and leave the floor unchanged.
 * **Retrieval or eval behavior changes bring receipts**: run
   `sci-rag eval retrieval --ablation` on the demo corpus before and
   after, and put both tables in the PR description. The CI smoke eval
   enforces a floor, but the PR should show the delta.
-* **Docs move with behavior.** If a user-visible behavior changed and
-  no file in `docs/` changed, the PR is not done.
+* **Docs move with behavior.** Every user-visible behavior change must include
+  the corresponding update in `docs/`.
 * **Honest degradation over silent failure**, everywhere: new failure
   modes must be visible in traces, reports, or logs.
 

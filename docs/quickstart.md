@@ -5,15 +5,15 @@ description: Create a project, start the database, ingest the demo corpus, ask a
 
 # Quickstart
 
-In about 10 minutes, you will load the demo documents into a database and
-serve them to REST clients and agents. With a model credential, you will also
-generate a cited answer. A real corpus follows the same path.
+In about 10 minutes, you will turn the bundled demo corpus into a knowledge base
+served over REST and MCP. Add LLM provider credentials to generate a cited answer.
+Once the demo works, replace it with your own documents.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A served knowledge base over the demo corpus</div>
   <div><strong>You'll need</strong>Python, pipx, uv, and a way to run PostgreSQL</div>
   <div><strong>Time</strong>About 10 minutes</div>
-  <div><strong>Credentials</strong>Optional; the answer step needs one</div>
+  <div><strong>Credentials</strong>Optional; the answer step needs LLM provider credentials</div>
   <div><strong>Tested with</strong>v0.4</div>
 </div>
 
@@ -22,18 +22,18 @@ generate a cited answer. A real corpus follows the same path.
 | Requirement | Why | Check |
 |---|---|---|
 | Python 3.11 or 3.12 | The supported runtime | `python --version` |
-| [pipx](https://pipx.pypa.io/) | Installs the project wizard in its own environment | `pipx --version` |
+| [pipx](https://pipx.pypa.io/) | Installs the setup wizard in its own environment | `pipx --version` |
 | [uv](https://docs.astral.sh/uv/) | Installs the project's dependencies and runs its commands | `uv --version` |
 | Docker, or a PostgreSQL 16 through 18 server with pgvector | The database everything lives in | `docker --version` |
-| A model credential, optional | Real embeddings, the graph, and generated answers | [Create an AI Studio key](https://aistudio.google.com/apikey), or use Vertex AI |
+| LLM provider credentials, optional | Real embeddings, the graph, and generated answers | [Create an AI Studio key](https://aistudio.google.com/apikey), or use Vertex AI |
 
-Docker is the simplest way to get a database with the pgvector extension on a laptop, which is why the kit defaults to it. Without Docker, [Run Postgres your way](run-postgres.md) covers a conda-forge server, a system server such as Postgres.app, and the optional Cloud SQL development helper.
+Docker is the simplest way to get a database with the pgvector extension on a laptop, which is why the kit defaults to it. Without Docker, [Configure Postgres backend](run-postgres.md) covers a conda-forge server, a system server such as Postgres.app, and the optional Cloud SQL development helper.
 
 ## 1. Create the project
 
-### The wizard
+### The setup wizard
 
-The wizard runs from whatever directory holds projects and writes a configured, git-initialized project directory there, with the first commit already made.
+The setup wizard runs from whatever directory holds projects and writes a configured, git-initialized project directory there, with the first commit already made.
 
 ```console title="Terminal"
 $ pipx install sci-rag-kit
@@ -42,19 +42,19 @@ $ sci-rag new
 
 Choose **Quick**. It asks for six setup decisions: the project name, a one-line
 description, contact email, environment manager, credential mode, and source
-of the first documents. It then asks for the credential value that mode needs
-and uses the shipped defaults for the remaining settings.
+of the first documents. It then asks for the LLM provider credentials you want
+to use and applies the shipped defaults for the remaining settings.
 
-Choose **Offline** when you do not want a model credential yet. Retrieval
+Choose **Offline** when you do not want LLM provider credentials yet. Retrieval
 works without one; add a credential later for the graph and generated
 answers. Choose **Advanced** when you need to set models, parsing, reranking,
 infrastructure, or licensing yourself.
 
-The environment-manager menu preselects the first supported environment manager found on `PATH`. That preselection does not change what `--defaults` or an answers file would choose. If `SCI_RAG_GOOGLE_API_KEY` or `GOOGLE_API_KEY` is already set in your shell, the wizard offers to reuse it without displaying its value. Any key you type is masked. Pass `--no-tty` for plain numbered prompts.
+The environment-manager menu preselects the first supported environment manager found on `PATH`. That preselection does not change what `--defaults` or an answers file would choose. If `SCI_RAG_GOOGLE_API_KEY` or `GOOGLE_API_KEY` is already set in your shell, the setup wizard offers to reuse it without displaying its value. Any key you type is masked. Pass `--no-tty` for plain numbered prompts.
 
-The wizard checks the credential with one small model request before it downloads the template. A failed check offers recovery choices and keeps the answers given so far. When the wizard finishes, change into the new directory and continue at step 3. Step 2 covers changing the credential mode it wrote.
+The setup wizard checks the credential with one small model request before it downloads the template. A failed check offers recovery choices and keeps the answers given so far. When the setup wizard finishes, change into the new directory and continue at step 3. Step 2 covers changing the credential mode it wrote.
 
-### Other ways in
+### Other entrypoints
 
 To read the kit before creating a project, clone it and run the demo from the clone:
 
@@ -71,7 +71,7 @@ The other routes start from the same tree:
 
 ## 2. Choose a credential mode
 
-The wizard created `.env` with owner-only mode `0600` and wrote the chosen mode into it. Skip to step 3 unless that choice needs to change.
+The setup wizard created `.env` with owner-only mode `0600` and wrote the chosen mode into it. Skip to step 3 unless that choice needs to change.
 
 From a clone or the GitHub template, create the file yourself. The second command matters: the file is about to hold a credential, and `cp` alone leaves it readable by every account on the machine.
 
@@ -109,7 +109,7 @@ Choose Offline for a credential-free retrieval pass.
 
 === "Offline"
 
-    No model at all. The kit uses a built-in embedder that matches on words, not meaning:
+    No model at all. The kit uses a built-in embedder based on lexical word matching:
 
     ```dotenv title="~/.env"
     SCI_RAG_EMBEDDING_PROVIDER=local-hash
@@ -180,7 +180,7 @@ The expected answer for the demo corpus is approximately 302,000 dry tons, citin
 
 In Offline mode this command retrieves normally, then declines to answer and names the credential to set. It does not invent an answer, which is the same behavior a credentialed run shows when the corpus holds nothing relevant.
 
-If the stage table shows `timeout` for vector, graph, or HyDE, the model call was slow. The corpus is not empty. Raise `SCI_RAG_PROVIDER_CALL_TIMEOUT_S` in `.env` (60 seconds by default) and run the command again.
+If the stage table shows `timeout` for vector, graph, or HyDE, the model call was slow. A timeout says nothing about whether the corpus contains data. Raise `SCI_RAG_PROVIDER_CALL_TIMEOUT_S` in `.env` (60 seconds by default) and run the command again.
 
 ## 6. Build the graph and take the deep path (optional)
 
@@ -227,7 +227,7 @@ Connect a local agent such as Claude Code:
 $ claude mcp add demo-corpus -- uv run --directory "$(pwd)" sci-rag mcp
 ```
 
-Ask the agent a question and tell it to use `demo-corpus`. A `search_corpus` or `answer_question` tool call should appear in its transcript. An answer with no tool call came from the agent's own memory, not from the corpus, which is exactly the failure the tools exist to prevent.
+Ask the agent a question and tell it to use `demo-corpus`. A `search_corpus` or `answer_question` tool call should appear in its transcript. Discard an answer with no tool call because it came from the agent's memory without consulting the corpus.
 
 <div class="srag-checkpoint" markdown>
 **Checkpoint: each interface reaches the same service**

@@ -49,13 +49,13 @@ def test_stubs_point_at_the_target_from_the_old_directory(tmp_path: Path) -> Non
     (tmp_path / "get-started").mkdir()
     (tmp_path / "get-started" / "index.html").write_text("<h1>Get started</h1>", encoding="utf-8")
 
-    written = hook.write_redirects(tmp_path, {"tour.md": "get-started.md#where-things-live"})
+    written = hook.write_redirects(tmp_path, {"tour.md": "get-started.md#full-project-structure"})
 
     assert written == [tmp_path / "tour" / "index.html"]
     stub = written[0].read_text(encoding="utf-8")
     assert 'http-equiv="refresh"' in stub
-    assert "url=../get-started/#where-things-live" in stub
-    assert '<link rel="canonical" href="../get-started/#where-things-live">' in stub
+    assert "url=../get-started/#full-project-structure" in stub
+    assert '<link rel="canonical" href="../get-started/#full-project-structure">' in stub
 
 
 def test_a_redirect_to_a_page_the_build_did_not_produce_fails_the_build(tmp_path: Path) -> None:

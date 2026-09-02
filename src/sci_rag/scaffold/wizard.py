@@ -116,7 +116,7 @@ def collect_answers(
                 "Setup",
                 (
                     ("quick", "Quick - Six questions, sensible defaults for the rest"),
-                    ("advanced", "Advanced - Every option, for when you know what you want"),
+                    ("advanced", "Advanced - Every option for full customization"),
                 ),
                 "quick",
             )

@@ -14,7 +14,7 @@ before 1.0, and users deserve clarity on what holds.
 - **Minor releases (0.2 -> 0.3) may break APIs.** The CHANGELOG says so explicitly under a "Breaking" heading with a migration note. We break deliberately and loudly, never silently.
 - **Patch releases (0.2.0 -> 0.2.1) do not break anything**: fixes, docs, and additive features only.
 - **The database schema is versioned by Alembic migrations** (`migrations/versions/`). Every release's migrations run forward from any prior release's schema. Skipping releases is fine; downgrades are best-effort.
-- **Eval report JSON is additive**: new keys may appear in `report.json`/`calibration.json`; existing keys do not change meaning or type within 0.x. External tooling (the UW SSEC evaluation platform seam) can rely on that.
+- **Eval report JSON is additive**: new keys may appear in `report.json`/`calibration.json`; existing keys do not change meaning or type within 0.x. External tooling, including the UW SSEC evaluation platform, can rely on that interface.
 - **Domain profiles are forward-compatible.** A `domain/` directory written for an older 0.x keeps working. New capabilities arrive as optional keys with safe defaults. The reranker block is the model: absent means off.
 
 ## What is public API

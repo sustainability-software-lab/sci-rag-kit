@@ -1,13 +1,13 @@
 ---
 title: Architecture
-description: Follow ownership through the packages, the storage layer, the concurrency model, the two front doors, and the five extension seams.
+description: Follow ownership through the packages, the storage layer, the concurrency model, the two front doors, and the five extension points.
 ---
 
 # Architecture
 
-The package moves documents and questions through public facades backed by one Postgres database.
-Each module owns one pipeline step and exposes a named replacement seam. For the scientific and
-retrieval decisions behind those boundaries, read [Methodology](methodology.md).
+Sci RAG Kit moves documents and questions through one pipeline backed by Postgres. Each package
+owns one stage and exposes a specific extension point. [Methodology](methodology.md) explains the
+scientific and retrieval choices behind the design.
 
 ## The map
 
@@ -44,7 +44,7 @@ The domain profile shapes extraction, retrieval, answering, and evaluation. Both
 
 Package by package (`src/sci_rag/`):
 
-| Package | Responsibility | The seam it exposes |
+| Package | Responsibility | Extension point |
 |---------|----------------|---------------------|
 | `config` | pydantic-settings; every knob is an `SCI_RAG_*` env var | `get_settings()` |
 | `domain` | loads and validates `domain/` (ontology, prompts, tuning) | `DomainProfile` |
@@ -72,7 +72,7 @@ The shipped demo enables compression at `relevance_floor: 0.0`, which summarizes
 
 ## Retrieval flow
 
-The five candidate sources run concurrently where their dependencies allow, then fuse once. Scope conditions are part of each layer's database query, not a cleanup step after ranking.
+The five candidate sources run concurrently where their dependencies allow, then fuse once. Each layer applies scope conditions in its database query before ranking.
 
 ```mermaid
 flowchart LR
@@ -126,7 +126,7 @@ candidates, and leaves the other stages running.
 * Ingestion fails per document, never per corpus. Every failure is a row in the report with a reason.
 * Fail-closed beats fail-open where rights matter: empty license scope returns nothing; `unknown` license is unsafe; the community layer refuses scoped requests.
 * Every layer applies its license, source, year, author, journal, document, and DOI conditions before it orders or limits candidates.
-* The kit validates anything a model returns (ontology types, judge scores, JSON shapes) before touching the database. Malformed output is dropped, not repaired.
+* The kit validates anything a model returns (ontology types, judge scores, JSON shapes) before touching the database. It drops malformed output.
 * Campaign screening is stricter than ordinary retrieval degradation. A malformed response, missing abstract, or low-confidence decision becomes a human-review row. It can never become an exclusion implicitly.
 
 ## The server
@@ -167,5 +167,5 @@ The first four rows are the configuration and data entry points for adapting a p
 
 The kit has no task queue, cache service, vector-store sidecar, graph database, or plugin
 framework. The [decision records](adr/0001-graph-in-postgres.md) explain the accepted architecture
-and its reversal conditions. [Extend the kit](extend.md) walks through each seam and the evidence a
+and its reversal conditions. [Extend the kit](extend.md) walks through each extension point and the evidence a
 change owes.

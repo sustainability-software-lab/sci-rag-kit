@@ -18,12 +18,9 @@ hide:
 
 <div class="srag-home-masthead__lede" markdown>
 
-A project template for question answering over scientific documents. The kit
-indexes every passage for vector and keyword retrieval. With a model
-credential, it also builds the concept graph, enables the model-dependent
-retrieval layers, and writes answers that quote their supporting passages.
-Your project supplies the documents, the vocabulary of its field, and the
-questions used to measure the result.
+Sci RAG Kit provides a blueprint for scientific RAG development, from document
+ingestion, to knowledge graph generation, retrieval and evaluation. Fully
+extensible and ready to serve over API and MCP.
 
 </div>
 
@@ -38,7 +35,7 @@ questions used to measure the result.
     width="1360"
     height="600"
   >
-  <figcaption>End-to-end RAG architecture that ships with every new Sci RAG Kit project.</figcaption>
+  <figcaption>End-to-end RAG architecture that ships with Sci RAG Kit.</figcaption>
 </figure>
 
 </section>
@@ -47,26 +44,24 @@ questions used to measure the result.
 
 <!-- BEGIN KIT ONBOARDING: removed from generated projects by sci_rag.scaffold.apply -->
 
-## Start a project
+## Start a new project
 
-Two commands create a configured project. The generator writes your setup
-answers into the project's configuration files, ready for ingestion.
+Get started with two commands in the terminal. The setup wizard will ask a series
+of questions and initialize configuration files around your answers:
 
 ```console title="Terminal"
 $ pipx install sci-rag-kit
 $ sci-rag new
 ```
 
-The wizard asks about the project, the field, and how to reach a model. Quick
-mode asks for six setup decisions, plus the credential value required by the
-chosen mode, and uses the shipped defaults for the rest.
-Choose Offline for a credential-free first pass. Choose Advanced when you
-need to set models, parsing, reranking, infrastructure, or licensing yourself.
+Quick mode uses shipped defaults for models, parsing, reranking, infrastructure,
+and licensing, and configures any LLM credentials you wish to provide. Choose
+`Offline` for a credential-free first pass or `Advanced` for full customization.
 
 <div id="srag-cast" class="srag-cast" data-cast="assets/casts/sci-rag-new.cast" data-autoplay="true" aria-label="Recorded sci-rag new session"></div>
 <small> (A full trace of this terminal session can be found [below](#example))</small>
 
-Prefer to read the code before creating a project? [Other ways in](quickstart.md#other-ways-in) covers a clone, the GitHub template, `sci-rag init`, and the dev container. Every route ends at the same tree.
+Prefer to read the code before creating a project? [Other entrypoints](quickstart.md#other-entrypoints) covers a clone, the GitHub template, `sci-rag init`, and the dev container. Every route ends at the same tree.
 
 The [Quickstart](quickstart.md) goes from installation to a served knowledge
 base in about ten minutes, and [How it works](learn.md) explains what is
@@ -103,7 +98,7 @@ restricts rights never sees passages outside it, because the filter runs
 inside each search before anything is ranked. [Read the rights
 rules](methodology.md#7-scope-precedes-ranking).
 
-Cited answers: with a model credential, every claim points at a numbered
+Cited answers: with LLM provider credentials, every claim points at a numbered
 passage. When the documents do not contain an answer, the kit says so rather
 than filling the gap from a model's memory. [Use REST or MCP](api.md).
 
@@ -118,18 +113,18 @@ than by impression. [Evaluate your pipeline](evaluation.md).
 
 <section class="srag-home-section" id="repository" markdown>
 
-## Configure, do not code
+## Configure around your domain
 
-Point the kit at a new field by editing plain-text configuration, not Python.
-The field's concepts, prompt wording, and scoring questions all load at run
-time.
+Point the kit at a new domain by editing plain-text configuration. The domain's
+concepts, prompt wording, and scoring questions all load at run time without
+Python changes.
 
 <!-- BEGIN KIT ONBOARDING -->
 `pipx install sci-rag-kit` installs the kit. `sci-rag new` then fills in the
 configuration files from the answers given during setup.
 <!-- END KIT ONBOARDING -->
 
-`domain/` holds everything specific to the field: the concepts the graph
+`domain/` holds everything specific to the domain: the concepts the graph
 looks for, the prompt wording, and the test questions. `data/` holds the
 documents themselves and a one-line-per-document manifest that records who
 wrote each one and whether its text may be redistributed. Everything else
@@ -144,7 +139,7 @@ is the pipeline, and most projects never open it.
 ├── infra/terraform/  optional Google Cloud deployment
 └── docs/             this site</code></pre>
 
-[Where things live](get-started.md#where-things-live) · [Bring your own domain](bring-your-own-domain.md)
+[Full Project Structure](get-started.md#full-project-structure) · [Bring your own domain](bring-your-own-domain.md)
 
 </section>
 
@@ -178,7 +173,7 @@ is the pipeline, and most projects never open it.
 
 ## Example CLI Setup Wizard Session
 
-The Quick session above, in full. `scripts/render_cast.py` builds it by driving the real wizard, so it cannot drift from what `sci-rag new` asks. `make cast` regenerates it, and `make docs` fails when it is stale.
+The Quick session above, in full. `scripts/render_cast.py` builds it by driving the real setup wizard, so it cannot drift from what `sci-rag new` asks. `make cast` regenerates it, and `make docs` fails when it is stale.
 
 <!-- BEGIN GENERATED TRANSCRIPT: scripts/render_cast.py -->
 
@@ -188,7 +183,7 @@ The Quick session above, in full. `scripts/render_cast.py` builds it by driving 
 <span class="srag-term__line srag-term__line--cmd"><span class="srag-term__prompt">$ </span><span class="srag-term__cmd">sci-rag new</span></span>
 <span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select Setup</span></span>
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Quick - Six questions, sensible defaults for the rest</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">Advanced - Every option, for when you know what you want</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">Advanced - Every option for full customization</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"> 1</span></span>
 <span class="srag-term__line srag-term__line--label srag-term__break"><span class="srag-term__status">What is your project called?</span></span>
 <span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">project_name</span><span class="srag-term__default"> (My Scientific KB):</span><span class="srag-term__value"> Membrane Materials KB</span></span>
@@ -261,7 +256,7 @@ The Quick session above, in full. `scripts/render_cast.py` builds it by driving 
 <span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  uv run sci-rag draft ontology --from-corpus</span></span>
 <span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  uv run sci-rag draft questions --count 10</span></span>
 <span class="srag-term__line srag-term__line--empty"></span>
-<span class="srag-term__line srag-term__line--output">Each one proposes a file for you to review rather than writing one, and each also prints its prompt (--print-prompt) if you would rather paste it into an assistant you already have.</span>
+<span class="srag-term__line srag-term__line--output">Each command proposes a file for review. Add --print-prompt to copy its prompt into an assistant you already use.</span>
 <span class="srag-term__line srag-term__line--empty"></span>
 <span class="srag-term__line srag-term__line--output">The walkthrough: docs/bring-your-own-domain.md</span>
 </code></pre>
@@ -270,15 +265,13 @@ The Quick session above, in full. `scripts/render_cast.py` builds it by driving 
 <details markdown>
 <summary>Show the Advanced setup</summary>
 
-<div class="srag-cast" data-cast="assets/casts/sci-rag-new-advanced.cast" aria-label="Recorded Advanced sci-rag new session"></div>
-
 <div class="highlight srag-term">
 <span class="filename">Terminal</span>
 <pre><code><span class="srag-term__line srag-term__line--cmd"><span class="srag-term__prompt">$ </span><span class="srag-term__cmd">pipx install sci-rag-kit</span></span>
 <span class="srag-term__line srag-term__line--cmd"><span class="srag-term__prompt">$ </span><span class="srag-term__cmd">sci-rag new</span></span>
 <span class="srag-term__line srag-term__line--select srag-term__break"><span class="srag-term__heading">Select Setup</span></span>
 <span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">1 - </span><span class="srag-term__choice">Quick - Six questions, sensible defaults for the rest</span></span>
-<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">Advanced - Every option, for when you know what you want</span></span>
+<span class="srag-term__line srag-term__line--choice"><span class="srag-term__choice-n">2 - </span><span class="srag-term__choice">Advanced - Every option for full customization</span></span>
 <span class="srag-term__line srag-term__line--choose"><span class="srag-term__key">Choose from [1/2] (1):</span><span class="srag-term__value"> 2</span></span>
 <span class="srag-term__line srag-term__line--label srag-term__break"><span class="srag-term__status">What is your project called?</span></span>
 <span class="srag-term__line srag-term__line--prompt"><span class="srag-term__key">project_name</span><span class="srag-term__default"> (My Scientific KB):</span><span class="srag-term__value"> Membrane Materials KB</span></span>
@@ -416,7 +409,7 @@ The Quick session above, in full. `scripts/render_cast.py` builds it by driving 
 <span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  pixi run sci-rag draft ontology --from-corpus</span></span>
 <span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  pixi run sci-rag draft questions --count 10</span></span>
 <span class="srag-term__line srag-term__line--empty"></span>
-<span class="srag-term__line srag-term__line--output">Each one proposes a file for you to review rather than writing one, and each also prints its prompt (--print-prompt) if you would rather paste it into an assistant you already have.</span>
+<span class="srag-term__line srag-term__line--output">Each command proposes a file for review. Add --print-prompt to copy its prompt into an assistant you already use.</span>
 <span class="srag-term__line srag-term__line--empty"></span>
 <span class="srag-term__line srag-term__line--output">The walkthrough: docs/bring-your-own-domain.md</span>
 </code></pre>

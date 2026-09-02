@@ -36,14 +36,19 @@ def test_the_committed_page_matches_a_fresh_render() -> None:
     )
 
 
-def test_the_committed_casts_match_fresh_renders() -> None:
-    casts = {
-        "sci-rag-new.cast": _quick_transcript(),
-        "sci-rag-new-advanced.cast": _advanced_transcript(),
-    }
-    for name, transcript in casts.items():
-        cast = (REPO_ROOT / "docs" / "assets" / "casts" / name).read_text(encoding="utf-8")
-        assert cast == _MODULE["render_cast"](transcript), f"stale {name}; run make cast"
+def test_the_committed_cast_matches_a_fresh_render() -> None:
+    name = "sci-rag-new.cast"
+    cast = (REPO_ROOT / "docs" / "assets" / "casts" / name).read_text(encoding="utf-8")
+    assert cast == _MODULE["render_cast"](_quick_transcript()), f"stale {name}; run make cast"
+
+
+def test_the_advanced_session_is_static_only() -> None:
+    index = (REPO_ROOT / "docs" / "index.md").read_text(encoding="utf-8")
+    advanced = index.partition("<summary>Show the Advanced setup</summary>")[2]
+
+    assert 'class="highlight srag-term"' in advanced
+    assert "sci-rag-new-advanced.cast" not in advanced
+    assert "data-cast=" not in advanced
 
 
 def test_every_question_appears_in_the_transcript() -> None:

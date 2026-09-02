@@ -17,14 +17,16 @@ def _read(path: str) -> str:
 def test_readme_and_homepage_lead_with_pipx_and_the_main_cli() -> None:
     readme_lead = _read("README.md").partition("## Components")[0]
     homepage = _read("docs/index.md")
-    start = homepage.partition("## Start a project")[2].partition("<!-- END KIT ONBOARDING -->")[0]
+    start = homepage.partition("## Start a new project")[2].partition(
+        "<!-- END KIT ONBOARDING -->"
+    )[0]
 
     assert "pipx install sci-rag-kit" in readme_lead
     assert "`sci-rag new`" in readme_lead
     assert "`sci-rag-new`" not in readme_lead
 
     assert "$ pipx install sci-rag-kit\n$ sci-rag new" in start
-    assert "quickstart.md#other-ways-in" in start
+    assert "quickstart.md#other-entrypoints" in start
     assert "Install with pipx, the GitHub template, or a clone." not in homepage
 
     # The install route names pipx from the site footer now, so it states the
@@ -35,8 +37,8 @@ def test_readme_and_homepage_lead_with_pipx_and_the_main_cli() -> None:
 
 def test_quickstart_puts_the_wizard_before_all_other_routes() -> None:
     quickstart = _read("docs/quickstart.md")
-    wizard_at = quickstart.index("### The wizard")
-    alternatives_at = quickstart.index("### Other ways in")
+    wizard_at = quickstart.index("### The setup wizard")
+    alternatives_at = quickstart.index("### Other entrypoints")
     wizard = quickstart[wizard_at:alternatives_at]
     alternatives = quickstart[alternatives_at:].partition("## 2.")[0]
 
@@ -51,7 +53,7 @@ def test_quickstart_puts_the_wizard_before_all_other_routes() -> None:
 
 def test_get_started_opens_with_the_install_and_wizard_route() -> None:
     page = _read("docs/get-started.md")
-    opening = page.partition("# Get started")[2].partition('<div class="srag-rows"')[0]
+    opening = page.partition("# Getting started")[2].partition('<div class="srag-rows"')[0]
 
     assert "`pipx install sci-rag-kit`" in opening
     assert "`sci-rag new`" in opening
@@ -64,7 +66,7 @@ def test_get_started_opens_with_the_install_and_wizard_route() -> None:
 
 def test_troubleshooting_explains_all_three_credential_recovery_choices() -> None:
     page = _read("docs/troubleshooting.md")
-    credentials = page.partition("## A command needs model credentials")[2].partition(
+    credentials = page.partition("## A command needs LLM provider credentials")[2].partition(
         "## Retrieval is empty"
     )[0]
 
@@ -108,16 +110,22 @@ def test_current_guides_name_the_main_project_command() -> None:
 
 def test_quick_mode_docs_distinguish_setup_decisions_from_credential_input() -> None:
     homepage = _read("docs/index.md")
-    homepage_start = homepage.partition("## Start a project")[2].partition(
+    homepage_start = homepage.partition("## Start a new project")[2].partition(
         "<!-- END KIT ONBOARDING -->"
     )[0]
     quickstart = _read("docs/quickstart.md")
-    quickstart_wizard = quickstart.partition("### The wizard")[2].partition("### Other ways in")[0]
+    quickstart_wizard = quickstart.partition("### The setup wizard")[2].partition(
+        "### Other entrypoints"
+    )[0]
 
     for section in (homepage_start, quickstart_wizard):
-        assert "six setup decisions" in section
-        assert "credential value" in section
+        assert re.search(r"LLM (?:provider )?credentials", section)
         assert "Offline" in section
+
+    assert "six setup decisions" in quickstart_wizard
+    assert "six setup decisions" not in homepage_start
+    assert "The setup wizard will ask a series" in homepage_start
+    assert "The wizard asks" not in homepage_start
 
     assert "holding down Enter" not in homepage_start
     assert "pressing Enter" not in _read("docs/faq.md")
@@ -125,7 +133,7 @@ def test_quick_mode_docs_distinguish_setup_decisions_from_credential_input() -> 
 
 def test_quickstart_documents_tty_conveniences_without_changing_defaults() -> None:
     quickstart = _read("docs/quickstart.md")
-    wizard = quickstart.partition("### The wizard")[2].partition("### Other ways in")[0]
+    wizard = quickstart.partition("### The setup wizard")[2].partition("### Other entrypoints")[0]
 
     assert "first supported environment manager found on `PATH`" in wizard
     assert "`--defaults` or an answers file" in wizard
@@ -133,6 +141,20 @@ def test_quickstart_documents_tty_conveniences_without_changing_defaults() -> No
     assert "`GOOGLE_API_KEY`" in wizard
     assert "without displaying its value" in wizard
     assert "masked" in wizard
+
+
+def test_homepage_uses_the_requested_plain_language() -> None:
+    homepage = _read("docs/index.md")
+
+    assert "provides a blueprint for scientific RAG development" in homepage
+    assert "Fully\nextensible and ready to serve over API and MCP." in homepage
+    assert "## Configure around your domain" in homepage
+    assert "[Full Project Structure](get-started.md#full-project-structure)" in homepage
+    assert "## Configure, do not code" not in homepage
+    assert (
+        "<figcaption>End-to-end RAG architecture that ships with Sci RAG Kit.</figcaption>"
+        in homepage
+    )
 
 
 def test_checkout_setup_documents_modes_and_preflight_boundary() -> None:
@@ -163,7 +185,7 @@ def test_advanced_only_project_choices_are_labeled_as_advanced() -> None:
     assert "`sci-rag new --advanced`" in postgres
     assert "`sci-rag new --advanced`" in deploy
     assert "Quick keeps the default" in postgres
-    assert "Quick keeps Terraform" in deploy
+    assert "Generated projects include the production Terraform module by default" in deploy
 
 
 def test_troubleshooting_documents_prompt_and_preflight_escape_hatches() -> None:

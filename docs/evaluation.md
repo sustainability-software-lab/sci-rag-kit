@@ -5,10 +5,9 @@ description: Run retrieval ablations and judged-answer evaluation, compare two r
 
 # Evaluate your pipeline
 
-Measure a pipeline change against the same corpus and question set before you keep it.
-The harness reports retrieval by layer, then grades generated answers in two separate
-passes: one checks whether the sources support the answer, and the other checks whether
-the answer is correct.
+Measure every pipeline change against the same corpus and question set. The retrieval report
+isolates each layer. Answer evaluation separately checks whether the sources support the answer
+and whether the answer is correct.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A reproducible before-and-after on your own corpus</div>
@@ -24,7 +23,7 @@ the answer is correct.
 |---|---|---|
 | An ingested corpus | Every metric is computed against real chunks | `uv run sci-rag stats` |
 | `domain/eval_seed_questions.jsonl`, reviewed | This file is the ground truth. Drafted rows still tagged `drafted` make every number provisional | `uv run sci-rag doctor` |
-| A model credential | Retrieval metrics run offline; judged answers do not | `uv run sci-rag doctor` |
+| LLM provider credentials | Retrieval metrics run offline; judged answers do not | `uv run sci-rag doctor` |
 | A corpus snapshot, for anything you will cite | A number without a corpus identity cannot be traced to its inputs | `uv run sci-rag corpus snapshot` |
 
 ## The two commands
@@ -57,7 +56,7 @@ One JSON object per line:
  "tags": ["conversion"]}
 ```
 
-* **question**: exactly as a user would ask it, not exam-speak.
+* **question**: natural wording copied from how a user would ask it.
 * **reference_answer**: what a correct answer must say. An expert should
   be willing to sign it.
 * **reference_titles**: the documents that contain the answer.
@@ -105,14 +104,13 @@ Read the question, check its evidence against the document it cites, then delete
 
 A retrieved item counts as **relevant** to a question if it comes from a reference document or contains an evidence phrase (case and whitespace normalized). From that definition: hit@5 (was relevant in the top 5), hit@10, and MRR (mean reciprocal rank of the first relevant item).
 
-This metric is deliberately mechanical. Its job is catching regression and showing what each layer contributes, not evaluating correctness; the judged-answer eval is where quality judgment lives. Retrieval metrics never grade answer text by substring matching because that would conflate paraphrase with grounding. The judge exists to detect when the kit paraphrases beautifully but answers incorrectly.
+This metric is deliberately mechanical. It catches retrieval regressions and shows what each layer contributes. The judged-answer evaluation measures correctness. Retrieval metrics never grade answer text by substring matching because that would conflate paraphrase with grounding. The judge exists to detect fluent but incorrect answers.
 
 `--ablation` re-runs the questions under the registered configurations:
 `full_deep`, `interactive`, `vector_only`, `keyword_only`, `no_graph`,
 `confidence_weighted`, `with_citations`, `no_hyde`, `no_community`, the paired reranker rows,
-`auto_routed`, and `no_retracted`. Entity resolution changes persisted corpus state, not
-retrieval kwargs, so it is intentionally not a row in this same-state table.
-Capture it as two named snapshots instead:
+`auto_routed`, and `no_retracted`. Entity resolution changes persisted corpus state, so it needs
+two named snapshots and stays outside this same-state table:
 
 ```bash
 sci-rag eval retrieval --snapshot before-resolution
@@ -126,7 +124,7 @@ unchanged corpus from being mislabeled. Read every layer-ablation row against
 `full_deep`:
 
 * A layer earns its fusion weight when **removing** it hurts. If `no_graph`
-  equals `full_deep` on your corpus, your graph is not contributing yet;
+  equals `full_deep` on your corpus, its measured contribution is zero;
   fix the ontology or the corpus before touching weights.
 * `vector_only` versus `keyword_only` tells you how your users' phrasing
   relates to your documents' phrasing. On the demo corpus, keyword-only
@@ -134,12 +132,12 @@ unchanged corpus from being mislabeled. Read every layer-ablation row against
   retrieval exists.
 * Small corpora can saturate. In the five-document demo, most configurations
   reach 1.00, so only the observed differences support a conclusion. A larger
-  corpus may behave differently; measure it rather than extrapolating from the demo.
+  corpus may behave differently; measure it directly.
 
 <div class="srag-checkpoint" markdown>
 **Checkpoint: measure each layer's contribution**
 
-Point at one row of the ablation table and say what removing that layer cost on the corpus. If every row equals `full_deep`, the ablation signals a corpus that is too small or an ontology that is not matching; no weight adjustment will be measurable.
+Point at one row of the ablation table and say what removing that layer cost on the corpus. If every row equals `full_deep`, the corpus may be too small or the ontology may be missing its concepts. Weight changes will have no measurable effect yet.
 </div>
 
 ## The judge, and why it is blind
@@ -148,13 +146,13 @@ Grading a generated answer happens in two independent passes that cannot influen
 
 **Pass 1: grounding (blind).** The judge sees the question, the answer, and exactly the sources the assistant retrieved. It scores three dimensions (each 0 to 2): groundedness (do the sources support the claims?), citation accuracy (do the bracketed numbers point at sources that actually back up the adjacent claim?), and completeness (did the answer use the relevant material you gave it?). The judge never sees the reference answer. A judge that did see it would reward answers that match the reference even when the sources contradict it, converting grounding into paraphrase detection.
 
-**Pass 2: correctness (reference-based).** A second call compares the answer against the expert reference, without the sources. It scores factual agreement from 0 to 2. The reference is a floor, not a ceiling: extra correct detail is never penalized.
+**Pass 2: correctness (reference-based).** A second call compares the answer against the expert reference, without the sources. It scores factual agreement from 0 to 2 and allows additional correct detail.
 
-Both passes run at temperature 0. Malformed judge responses fail rather than get coerced into a score. The judge prompts live in `domain/prompts/judge_grounding.md` and `judge_correctness.md`. If you edit them, keep the blindness rules intact and spot-check a few judged answers by hand afterward. That is why the rationale strings are kept in `report.json`.
+Both passes run at temperature 0. Malformed judge responses fail validation and never become scores. The judge prompts live in `domain/prompts/judge_grounding.md` and `judge_correctness.md`. If you edit them, keep the blindness rules intact and spot-check a few judged answers by hand afterward. That is why the rationale strings are kept in `report.json`.
 
 ## Deciding whether to adopt snippet compression
 
-Contextual snippet compression is an answer-generation decision, not a retrieval ablation. Test it against your corpus by running the same question set twice on the same corpus snapshot, with the same models, and comparing the judged results:
+Evaluate contextual snippet compression with two answer-generation runs over the same questions, corpus snapshot, and models:
 
 ```bash
 uv run sci-rag eval answers --snapshot comparison-corpus
@@ -199,7 +197,7 @@ The judged-answers table is only as citable as the judge behind it. The kit ship
 
    You get Cohen's kappa per dimension, exact-agreement counts, and the full 3x3 matrices. The output appends to `report.md` and saves as `calibration.json` so the kappa travels with the numbers.
 
-Report kappa exactly as the tool computes it. The Landis-Koch adjective ("moderate", "substantial") is a reading aid, not a target. A low kappa means the judge and humans disagree on that dimension; the matrix shows how. Expect unstable kappa below about 30 labeled answers. More labels from a domain expert make the number trustworthy.
+Report kappa exactly as the tool computes it. Use the Landis-Koch adjective ("moderate", "substantial") only as a reading aid. A low kappa means the judge and humans disagree on that dimension; the matrix shows how. Expect unstable kappa below about 30 labeled answers. More labels from a domain expert make the number trustworthy.
 
 The repo ships `domain/eval_calibration_labels.jsonl`: a seed label set
 for the demo corpus, labeled by the kit's authors. It is marked

@@ -5,12 +5,14 @@ description: Add a parser, corpus collector, reranker, model provider, or authen
 
 # Extend the kit
 
-Choose the narrowest of five supported extension seams, then prove that its invariants still hold in tests and evaluation. The kit does not use a plug-in registry.
+Choose one of five extension points: parser, corpus collector, reranker, model provider, or
+authentication backend. Protect its existing behavior with tests, and measure any change to
+retrieval. Sci RAG Kit does not use a plug-in registry.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A new parser, collector, reranker, provider, or auth backend</div>
   <div><strong>You'll need</strong>A working checkout and its test suite</div>
-  <div><strong>Time</strong>An hour to a day, depending on the seam</div>
+  <div><strong>Time</strong>An hour to a day, depending on the extension</div>
   <div><strong>Tested with</strong>v0.4</div>
 </div>
 
@@ -19,10 +21,10 @@ Choose the narrowest of five supported extension seams, then prove that its inva
 | Requirement | Why | Check |
 |---|---|---|
 | `make check` green on an unmodified checkout | Separates baseline failures from your change | `make check` |
-| A read of [Architecture](architecture.md) | Places each seam in the ownership map | |
+| A read of [Architecture](architecture.md) | Places each extension point in the ownership map | |
 | An evaluation baseline, for anything touching ranking | Makes the retrieval change measurable | `uv run sci-rag eval retrieval --ablation` |
 
-## Choose the seam
+## Choose an extension point
 
 | Need | Contract | Primary file | Evidence to add |
 |---|---|---|---|
@@ -41,7 +43,7 @@ Uphold these properties:
 - Report which route was used when a fallback changes fidelity.
 - Keep tables as one block when possible.
 - Do not repeat the document title in every section path.
-- Fail with the supported list when the suffix is unknown. Blank text is not acceptable.
+- Fail with the supported list when the suffix is unknown, and reject blank text.
 - Add a test with a fixture demonstrating block order and metadata.
 
 Add the suffix to `SUPPORTED_SUFFIXES`, add a branch in `parse_file()`, and let the ingester handle deduplication, embedding, and transactions.
@@ -113,13 +115,13 @@ Three adapters live in `src/sci_rag/llm/`, selected by a `provider:model` spec. 
 
 On Google Cloud, the third row is the path to non-Google partner models. Vertex serves them behind an OpenAI-compatible endpoint, so the same adapter covers each supported model. Model ids keep their publisher prefix, such as `xai/grok-4.1-fast-reasoning`; the adapter rejects a bare id.
 
-!!! warning "Partner models are not served from every region"
+!!! warning "Check partner-model regions"
 
-    `SCI_RAG_GCP_LOCATION` defaults to `us-central1`, which serves Gemini but not Claude or Grok. Both are reachable from `global`, and Grok is only there. Set `SCI_RAG_GCP_LOCATION=global` when generating with a partner model. Google embeddings work from `global` too, though slower than from a region.
+    `SCI_RAG_GCP_LOCATION` defaults to `us-central1`, which serves Gemini. Claude and Grok require `global`, and Grok is available only there. Set `SCI_RAG_GCP_LOCATION=global` when generating with a partner model. Google embeddings work from `global` too, though slower than from a region.
 
-    A model that is not served where you asked fails with a `400` (location issue) or `404` (model not found). `sci-rag doctor --probe` catches these before a pipeline run. The probe names `SCI_RAG_GCP_LOCATION=global` as the repair for a `400`. A `404` also covers a wrong model id or an offering this project never enabled.
+    An unsupported location returns a `400`; a missing or unavailable model returns a `404`. `sci-rag doctor --probe` catches these before a pipeline run and recommends `SCI_RAG_GCP_LOCATION=global` for the location error. A `404` can also mean the model id is wrong or the project has not enabled that offering.
 
-    Which models a project can reach depends on its Model Garden settings. Treat the ids above as examples to check with `doctor`, not a guaranteed menu.
+    Which models a project can reach depends on its Model Garden settings. Check the example ids above with `doctor` before using them.
 
 !!! note "Partner model ids are dated examples"
 
@@ -147,7 +149,7 @@ On Google Cloud, the third row is the path to non-Google partner models. Vertex 
 Two mappings are tricky:
 
 - **Current Claude models removed the sampling parameters.** Forwarding `temperature` returns a 400, so the Anthropic adapter drops it. Low temperature intent maps to `effort` instead.
-- **Lowering effort is not disabling thinking.** Disabling thinking on current Claude models can leak reasoning tags into visible text, corrupting the parsed JSON.
+- **Keep thinking enabled when lowering effort.** Disabling thinking on current Claude models can leak reasoning tags into visible text and corrupt the parsed JSON.
 - **Not every Claude model accepts the effort knob.** `claude-sonnet-5` takes it; `claude-haiku-4-5` rejects it. The adapter probes once per client and remembers the result.
 
 Where a provider may reject a knob, adapters retry once without it. Retry policy is shared: `retry_async()` in `llm/client.py` manages backoff. SDK clients are constructed with `max_retries=0` to prevent compounding retries.
@@ -156,7 +158,7 @@ Where a provider may reject a knob, adapters retry once without it. Retry policy
 
 `SCI_RAG_EMBEDDING_PROVIDER` accepts `google` or `local-hash`. There is no third option by design. Anthropic ships no embedding API. On Vertex, the only managed text embeddings are Google's. Every alternative means deploying and paying for your own Model Garden endpoint.
 
-An embedder is not runtime-swappable. A migration bakes `SCI_RAG_EMBEDDING_DIM` into the pgvector column (see [ADR 0002](adr/0002-embeddings-1536-hnsw.md)), and each chunk stores the `version` that produced it. Changing embedders requires a migration, full re-embedding, and index rebuild.
+Changing the embedder requires a migration, full re-embedding, and index rebuild. The migration bakes `SCI_RAG_EMBEDDING_DIM` into the pgvector column (see [ADR 0002](adr/0002-embeddings-1536-hnsw.md)), and each chunk stores the `version` that produced it.
 
 `sci-rag embed reindex` reports which rows a version change affects and writes nothing by default. It fails if the configured dimension does not match the live column. The separate `--apply` step performs the re-embedding. Point `SCI_RAG_EMBEDDING_MODEL` at another Google embedding model; treat any broader change as a data migration.
 
@@ -174,7 +176,7 @@ To add OAuth or institutional identity:
 
 `create_app()` builds the shipped backend from settings. Keep factory changes explicit, and never import arbitrary authentication code from configuration.
 
-## The invariants around every seam
+## Invariants for every extension point
 
 - Apply rights scope and all other document conditions before the candidate limit.
 - Record optional-component failures in the trace even when the request continues.
@@ -186,13 +188,13 @@ To add OAuth or institutional identity:
 See [Architecture](architecture.md#extension-points-in-order-of-likely-need) for ownership, [Contributing](contributing.md) for the change bar, and [Evaluate your pipeline](evaluation.md) for the measurement workflow.
 
 <div class="srag-checkpoint" markdown>
-**Checkpoint: the seam holds**
+**Checkpoint: the extension passes**
 
-`make check` is green, the new code is exercised by an offline test, and if ranking changed there are two ablation tables from the same corpus fingerprint. If any of those three is missing, the change is not done.
+Completion requires a green `make check`, an offline test that exercises the new code, and two ablation tables from the same corpus fingerprint when ranking changed.
 </div>
 
 ## Next steps
 
 - Produce the before-and-after your change needs: [Evaluate your pipeline](evaluation.md)
-- Check the ownership map before widening a seam: [Architecture](architecture.md)
+- Check the ownership map before broadening an interface: [Architecture](architecture.md)
 - Read the bar a contribution has to clear: [Contributing](contributing.md)

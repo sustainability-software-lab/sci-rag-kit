@@ -24,7 +24,7 @@ code.
 
 The interface for this already existed. `LLMClient` has three methods, every
 consumer takes it by injection, and it had exactly one factory with a handful
-of call sites. The open question was not where the seam goes, but what fills
+of call sites. The open question was not where the interface belongs, but what fills
 it.
 
 The obvious alternative was a translation layer such as LiteLLM: one

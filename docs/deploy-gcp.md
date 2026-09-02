@@ -5,9 +5,9 @@ description: Provision Cloud SQL and Cloud Run from the included Terraform, then
 
 # Deploy on Google Cloud
 
-You will provision a Cloud Run service backed by Cloud SQL with pgvector, then verify service
-health and database migrations. The current image excludes corpus data, so this guide does not
-prove deployed ingestion or answers.
+Provision a Cloud Run service backed by Cloud SQL with pgvector, then verify service health and
+database migrations. The shipped container image does not include corpus data, so this guide stops
+at infrastructure and database readiness.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>One Cloud Run service and one Cloud SQL instance</div>
@@ -17,15 +17,15 @@ prove deployed ingestion or answers.
   <div><strong>Tested with</strong>v0.4</div>
 </div>
 
-!!! note "Optional, and you may have declined it"
+!!! note "Terraform is optional"
 
-    Quick keeps Terraform in the generated project. Run
-    `sci-rag new --advanced` for a new project, or `sci-rag init --advanced`
-    in a checkout, when you want setup to ask about it. If you answer no to
-    `include_terraform`, the directory and its CI job are not in your project.
-    Copy them from
+    Generated projects include the production Terraform module by default. To
+    change that choice, run `sci-rag new --advanced` for a new project or
+    `sci-rag init --advanced` in an existing checkout. Choosing `No` for
+    `include_terraform` removes `infra/terraform/` and its CI job. You can
+    restore both from
     [the template](https://github.com/sustainability-software-lab/sci-rag-kit/tree/main/infra/terraform)
-    if you want them back.
+    later.
 
 The kit ships Terraform under `infra/terraform/` for Cloud SQL with pgvector, one
 Cloud Run service for REST and MCP, an operations job, a corpus bucket, secrets, and a
@@ -36,8 +36,8 @@ least-privilege service account.
 
     `infra/terraform/dev-database/` provisions a shared, pausable development
     instance for laptop access through the Cloud SQL Auth Proxy. The
-    `scripts/cloud_postgres.py` helper, not Terraform, creates workspace-scoped
-    databases dynamically. The development module disables backups and deletion
+    `scripts/cloud_postgres.py` creates workspace-scoped databases dynamically.
+    The development module disables backups and deletion
     protection by default. Never point a deployment at it. This page uses the production-shaped path.
 <!-- END GENERATED PROJECT FEATURE: cloud-provisioning -->
 
@@ -111,10 +111,10 @@ corpus-delivery and teardown qualification. Do not add corpus files to the image
 remove the ignore rules as a workaround; that can publish restricted documents in an
 image layer.
 
-Until a delivery path is qualified, this guide proves infrastructure and schema setup,
-not an end-to-end deployed corpus. Keep ingestion on a separately reviewed path that
-does not expose source documents, and do not call the deployment complete from the
-checks below.
+Until a delivery path is qualified, this guide proves infrastructure and schema setup.
+The deployed corpus remains incomplete. Keep ingestion on a separately reviewed path
+that does not expose source documents, and do not call the deployment complete from
+the checks below.
 
 ## Step 4: set API keys and verify
 
