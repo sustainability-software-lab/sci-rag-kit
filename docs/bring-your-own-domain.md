@@ -5,7 +5,7 @@ description: Turn a folder of documents into a knowledge base that answers quest
 
 # Bring your own domain
 
-At the end of this tutorial the documents are in the database, the field's concepts are in the graph, and its own test questions are scoring the result. None of it requires editing Python. A field lives in three places the kit already knows about: a folder of documents, one manifest file that describes them, and the `domain/` folder that holds the concepts, the prompt wording, and the questions.
+At the end of this tutorial the documents are in the database, the field's concepts are in the graph, and its own test questions are scoring the result. None of it requires editing Python. A field lives in a folder of documents, a manifest that describes them, and the `domain/` folder that holds the concepts, the prompt wording, and the questions.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A knowledge base over a corpus of your own</div>
@@ -17,7 +17,7 @@ At the end of this tutorial the documents are in the database, the field's conce
 
 The worked example throughout is a group that studies membrane materials for water treatment and has 60 PDFs of papers, theses, and technical reports.
 
-The whole recipe is seven commands, and each step below explains one line: what the command reads, what it writes, and what to look at before moving on.
+The recipe is seven commands. Each step below explains one line: what the command reads, what it writes, and what to look at before moving on.
 
 ```console title="Terminal"
 $ uv run sci-rag draft manifest --folder data/raw      # 1. describe the documents
@@ -29,7 +29,7 @@ $ uv run sci-rag eval retrieval --ablation              # 6. measure
 $ uv run sci-rag answer "a question in your field"      # 7. ask (needs a model credential)
 ```
 
-Three of these commands draft a file to review, because writing a manifest, an ontology, or a question set from a blank page is slow and error-prone, while reacting to a draft grounded in the documents is quick. Each drafter also works without a model credential: `--print-prompt` prints the prompt, any assistant can answer it, and `--from-file reply.json` feeds the reply back through the same validation. [Drafting with a model](#drafting-with-a-model) explains that pair once.
+Three of these commands draft a file to review. Writing a manifest, an ontology, or a question set from a blank page is slow; reacting to a draft grounded in the documents is quicker. Each drafter also works without a model credential: `--print-prompt` prints the prompt, any assistant can answer it, and `--from-file reply.json` feeds the reply back through the same validation. [Drafting with a model](#drafting-with-a-model) explains that pair once.
 
 ## Before you start
 

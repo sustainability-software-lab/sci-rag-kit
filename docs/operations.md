@@ -5,7 +5,7 @@ description: Back up, restore, snapshot, delete, garbage-collect, and re-embed a
 
 # Operate a live corpus
 
-Everything the kit knows lives in one Postgres database, which keeps operational discipline simple. Snapshot what the corpus **is**, back up what the database **holds**, and rehearse restore before the moment you need it.
+Everything the kit knows lives in one Postgres database. Snapshot what the corpus **is**, back up what the database **holds**, and rehearse restore before you need it.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A backup, a restore drill, and a snapshot habit</div>
@@ -18,7 +18,7 @@ Everything the kit knows lives in one Postgres database, which keeps operational
 
 | Requirement | Why | Check |
 |---|---|---|
-| A corpus worth protecting | Most of this page is unnecessary on the demo fixture | `uv run sci-rag stats` |
+| A corpus worth protecting | The demo fixture does not need this runbook | `uv run sci-rag stats` |
 | `pg_dump` and `psql` on your path | The backup and restore paths are ordinary Postgres tools | `pg_dump --version` |
 | Somewhere to put a dump that is not the database host | A backup on the same disk is not a backup | |
 | A disposable database for the restore drill | You are going to restore into it, and it will be overwritten | |

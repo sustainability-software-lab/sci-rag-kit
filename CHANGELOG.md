@@ -16,6 +16,14 @@ Notable changes to sci-rag-kit. The format follows
 
 ### Changed
 
+- **Public documentation openings and a few over-absolute claims were
+  tightened.** Section hubs now start with the useful idea instead of
+  describing the page. Microsoft GraphRAG is no longer recommended for
+  deployments that expect new features. AI Studio is the laptop default,
+  not the right choice for almost everyone. A healthy `doctor` run means
+  the plumbing is fine, not that the domain profile is the only remaining
+  cause.
+
 - **The three documentation pages retired in this release keep answering at
   their old addresses.** `tour/`, `llm-assisted-setup/`, and `api-clients/`
   forward to the sections that absorbed them. The map lives in `mkdocs.yml`

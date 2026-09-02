@@ -5,7 +5,7 @@ description: Add a parser, corpus collector, reranker, model provider, or authen
 
 # Extend the kit
 
-Sci RAG Kit has no plug-in registry. It defines five small boundaries where projects vary. Extend at the narrowest seam that fits, and keep its invariants visible in tests and evaluation.
+Sci RAG Kit has no plug-in registry. It defines five small boundaries where projects vary. Extend at the narrowest seam that fits, and keep the invariants visible in tests and evaluation.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A new parser, collector, reranker, provider, or auth backend</div>

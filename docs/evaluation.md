@@ -5,7 +5,7 @@ description: Run retrieval ablations and judged-answer evaluation, compare two r
 
 # Evaluate your pipeline
 
-This page shows how to tell, with evidence, whether a change to the pipeline helped. The harness makes cheating difficult, even by accident. It uses mechanical retrieval metrics against expert ground truth, compares performance layer by layer so you see what each component contributes, and grades in two separate passes: one checking whether the kit's sources actually support its claims, the other checking whether those claims are right.
+Leave with a reproducible before-and-after on your own corpus. The harness uses mechanical retrieval metrics against expert ground truth, compares performance layer by layer, and grades in two passes: one checking whether the cited sources support the claims, the other checking whether those claims are right.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A reproducible before-and-after on your own corpus</div>
@@ -33,9 +33,11 @@ sci-rag eval answers                # are the generated answers grounded, cited,
 
 Both read `domain/eval_seed_questions.jsonl`, compute the metrics, print a summary table, and write a JSON and Markdown report to `eval_results/`. Every report carries a corpus fingerprint (documents, chunks, graph size, embedding versions, latest ingestion time) and the git commit, which means the numbers are repeatable. Keep the reports so you can cite the fingerprint when you publish.
 
-Real example output from the shipped demo corpus:
+Compact example tables from a demo run live at
 [examples/demo-eval/retrieval-ablation.md](examples/demo-eval/retrieval-ablation.md)
 and [examples/demo-eval/answers.md](examples/demo-eval/answers.md).
+The dated numbers and confidence intervals to cite are on the
+[benchmarks](benchmarks.md) page.
 
 ## Seed questions: your ground truth
 
@@ -133,7 +135,7 @@ unchanged corpus from being mislabeled. Read every layer-ablation row against
 Point at one row of the ablation table and say what removing that layer cost on the corpus. If every row equals `full_deep`, the ablation signals a corpus that is too small or an ontology that is not matching; no weight adjustment will be measurable.
 </div>
 
-## The judge, and why it is blind
+## Grade answers in two passes
 
 Grading a generated answer happens in two independent passes that cannot influence each other.
 

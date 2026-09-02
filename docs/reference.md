@@ -5,7 +5,7 @@ description: Look up the exact command, configuration field, file format, API co
 
 # Reference
 
-Three pages are generated from the source and checked by the build: the CLI page from the command definitions, the configuration page from the settings and domain models, and the benchmarks page from the evaluation reports. The others are hand-written.
+Look up a command, configuration field, file format, API contract, benchmark number, or term. The CLI, configuration, and benchmarks pages are generated from source and checked by the build, so they cannot drift from the code. The rest are hand-written.
 
 <div class="srag-rows" markdown>
 

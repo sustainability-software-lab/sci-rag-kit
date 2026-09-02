@@ -5,8 +5,8 @@ description: See who decides what, how a proposal becomes a decision, and what a
 
 # Governance
 
-Lightweight on purpose. This page says who decides what, how decisions
-get recorded, and how those answers change as the project grows.
+Lightweight on purpose. Who decides what, how those decisions get
+recorded, and how the answers change as the project grows.
 
 ## Roles
 

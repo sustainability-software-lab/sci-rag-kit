@@ -5,7 +5,7 @@ description: What each term means in this project.
 
 # Glossary
 
-These definitions describe how this project uses each term. Each is narrower than the term's general use in the literature, capturing the specific meaning in this codebase.
+How this project uses each term. Most of these words are narrower here than in the literature.
 
 ## Retrieval and answers
 

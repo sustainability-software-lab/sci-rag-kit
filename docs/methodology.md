@@ -5,9 +5,7 @@ description: Read the specification behind chunking, graph extraction, fusion, a
 
 # Methodology
 
-This document is the kit's specification, describing every design decision that matters in plain language. The approach is intended to be judged on whether it fits a field, explained in a paper, or re-implemented in another stack. The code follows this document, not the other way around.
-
-In one sentence: hybrid retrieval over a single Postgres database, a knowledge graph built from a user-defined ontology, fail-closed license scoping, and an evaluation harness designed to be hard to game.
+Hybrid retrieval over one Postgres database, a knowledge graph built from a user-defined ontology, fail-closed license scoping, and an evaluation harness that is hard to game. The implementation is written against this specification. If they disagree, that is a defect.
 
 ## 1 Why this shape
 
@@ -128,7 +126,17 @@ Relationships keep the quoted phrase that stated them and a confidence score: 1.
 
 #### 6.3.2 Entity resolution
 
-Extraction can fragment one concept across several names. Run `sci-rag graph resolve-entities --dry-run` to inspect a three-tier resolution pass. It tests normalized name and alias overlap first, high-similarity same-type names second, and one batched LLM decision for ambiguous cases. Nothing lands until `--apply`. A merge unions evidence and aliases, repoints relationships, and leaves the old row as a `canonical_entity_id` tombstone (marked deleted). Every merge has a durable row in `entity_resolution_audit`. Use `--no-llm` for deterministic-only merges. The doctor reports probable duplicates; graph cleanup preserves these tombstones. Because community summaries materialize entity membership, an applied merge clears them. Rebuild with `sci-rag graph communities` after reviewing the results.
+Extraction can fragment one concept across several names. Inspect a proposed merge before anything lands:
+
+```bash
+sci-rag graph resolve-entities --dry-run
+```
+
+The pass has three tiers: normalized name and alias overlap first, high-similarity same-type names second, and one batched LLM decision for ambiguous cases. Use `--no-llm` for deterministic-only merges. `doctor` reports probable duplicates.
+
+Nothing writes until `--apply`. A merge unions evidence and aliases, repoints relationships, and leaves the old row as a `canonical_entity_id` tombstone (marked deleted). Every merge has a durable row in `entity_resolution_audit`. Graph cleanup preserves those tombstones.
+
+Community summaries materialize entity membership, so an applied merge clears them. Rebuild with `sci-rag graph communities` after you review the results.
 
 #### 6.3.3 The two-hop walk
 
@@ -172,9 +180,9 @@ candidate several layers agree on beats a candidate one layer loved.
 | community | 0.6 |
 | HyDE | 1.2 |
 
-These defaults have held up in production use. To tune them for a specific
-corpus, use the evaluation harness's ablation mode: it reports what each
-layer actually contributes to hit rate before touching a weight.
+These defaults are the starting weights. Tune them for a specific corpus
+with the evaluation harness's ablation mode: it reports what each layer
+actually contributes to hit rate before you touch a weight.
 
 ### 6.7 Profiles and degradation
 

@@ -5,7 +5,7 @@ description: Create a project, start the database, ingest the demo corpus, ask a
 
 # Quickstart
 
-This page reaches a working knowledge base over a small demo corpus in about 10 minutes: documents in a database, a question answered with citations, and one service answering REST clients and agents. The demo corpus is a stand-in, but nothing else is; every step here is the same step a real corpus goes through later.
+In about ten minutes you will have a working knowledge base over a small demo corpus: documents in a database, a question answered with citations, and one service answering REST clients and agents. The demo corpus is a stand-in. Every other step is the same step a real corpus goes through later.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A served knowledge base over the demo corpus</div>
@@ -38,7 +38,9 @@ $ pipx install sci-rag-kit
 $ sci-rag new
 ```
 
-Choose **Quick**. It asks for six setup decisions: project name, a one-line description, contact email, environment manager, credential mode, and where your first documents will come from. It then asks for the credential value that mode needs and uses defaults for everything else, defaults that were chosen to work on a laptop without further tuning. Choose **Offline** as the credential mode when you do not want a model credential yet; retrieval works without one, and the graph and generated answers switch on later. Choose **Advanced** only when you need to set models, parsing, reranking, infrastructure, or licensing yourself.
+Choose **Quick**. It asks for six setup decisions: project name, a one-line description, contact email, environment manager, credential mode, and where your first documents will come from. It then asks for the credential value that mode needs and uses laptop-safe defaults for everything else.
+
+Choose **Offline** as the credential mode when you do not want a model credential yet. Retrieval works without one; the graph and generated answers switch on later. Choose **Advanced** only when you need to set models, parsing, reranking, infrastructure, or licensing yourself.
 
 The environment-manager menu preselects the first supported environment manager found on `PATH`. That preselection does not change what `--defaults` or an answers file would choose. If `SCI_RAG_GOOGLE_API_KEY` or `GOOGLE_API_KEY` is already set in your shell, the wizard offers to reuse it without displaying its value. Any key you type is masked. Pass `--no-tty` for plain numbered prompts.
 
@@ -70,7 +72,7 @@ $ cp .env.example .env
 $ chmod 600 .env
 ```
 
-Pick one mode. AI Studio is the right choice for almost everyone.
+Pick one mode. AI Studio is the default for a new laptop setup: one key, no cloud project, real embeddings and answers. Use Vertex when you already bill through a Google Cloud project. Use Offline when you do not want a model yet.
 
 === "AI Studio"
 
@@ -210,9 +212,9 @@ $ claude mcp add demo-corpus -- uv run --directory "$(pwd)" sci-rag mcp
 Ask the agent a question and tell it to use `demo-corpus`. A `search_corpus` or `answer_question` tool call should appear in its transcript. An answer with no tool call came from the agent's own memory, not from the corpus, which is exactly the failure the tools exist to prevent.
 
 <div class="srag-checkpoint" markdown>
-**Checkpoint: one database, three front doors**
+**Checkpoint: the service answers three clients**
 
-One Postgres database holds the documents, their chunks and vectors, the full-text index, and, after step 6, the concept graph. One service answers the command line, REST clients, and agents the same way. The reports under `eval_results/` record how it did on known questions.
+One Postgres database holds the documents, their chunks and vectors, the full-text index, and, after step 6, the concept graph. The same service answers the command line, REST clients, and agents. The reports under `eval_results/` record how it did on known questions.
 </div>
 
 ## Next steps

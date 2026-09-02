@@ -13,14 +13,11 @@ Retrieval-augmented generation, built around your scientific domain.
 
 Sci RAG Kit is a project template for question answering over scientific
 documents. Give it a folder of papers and reports and it builds a knowledge
-base from them, one that answers questions in plain language and quotes the
-exact passages each answer rests on. It is a template repository for
-retrieval-augmented generation with the whole pipeline assembled and
-measured: parsing, chunking, embeddings, a concept graph, five kinds of
-search, an evaluation harness, and a REST and MCP server. What a project
-brings is the documents, the vocabulary of its field, and a handful of
-questions with known answers so the result can be scored rather than
-admired.
+base from them: answers in plain language, each one quoting the passages it
+rests on. The pipeline comes assembled and measured: parsing, chunking,
+embeddings, a concept graph, five kinds of search, an evaluation harness,
+and a REST and MCP server. What a project brings is the documents, the
+vocabulary of its field, and a handful of questions with known answers.
 
 Start a project with two commands. `sci-rag new` asks a few questions and
 writes a configured, git-initialized project directory:
@@ -51,8 +48,8 @@ minutes.
 - **A concept graph.** With a model credential, the kit reads every passage
   and extracts the concepts and relationships declared in
   `domain/domain.yaml`, then clusters related concepts and writes a summary
-  of each cluster. This is what lets a question whose answer is spread across
-  several documents come back with all of them.
+  of each cluster. A question whose answer is spread across several
+  documents can then come back with all of them.
 - **Five kinds of search.** By meaning, by exact words, through the concept
   graph, through the cluster summaries, and through a model-written
   hypothetical answer. Each finds evidence the others miss: keyword search
@@ -102,7 +99,7 @@ In `.env`, set one of these:
 
 | Setting | When to use it |
 |---|---|
-| `SCI_RAG_GOOGLE_API_KEY=...` | A free AI Studio key. The right choice for almost everyone. |
+| `SCI_RAG_GOOGLE_API_KEY=...` | A free AI Studio key. The default for a new laptop setup. |
 | `SCI_RAG_GCP_PROJECT=...` | The lab already runs on Google Cloud. Run `gcloud auth application-default login` first. |
 | `SCI_RAG_EMBEDDING_PROVIDER=local-hash` | No credential yet. Retrieval works; the graph and generated answers wait. |
 

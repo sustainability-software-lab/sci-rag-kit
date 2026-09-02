@@ -5,7 +5,7 @@ description: Look up authentication scopes, endpoint shapes, streaming events, a
 
 # REST, MCP, and Python API
 
-One server, two front doors, one service behind both. Start with `sci-rag serve`. Interactive OpenAPI docs live at `/docs`.
+REST and MCP share one FastAPI process and the same `RagService`. Start with `sci-rag serve`. Interactive OpenAPI docs live at `/docs`.
 
 ## Authentication
 

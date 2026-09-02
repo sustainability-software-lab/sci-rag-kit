@@ -5,9 +5,9 @@ description: Learn which five public surfaces hold stable inside 0.x, and what e
 
 # Versioning
 
-sci-rag-kit follows [Semantic Versioning](https://semver.org/). This
-page spells out the 0.x rules: "semver" alone does not promise anything
-before 1.0, and users deserve clarity on what holds.
+sci-rag-kit follows [Semantic Versioning](https://semver.org/). "Semver"
+alone does not promise anything before 1.0, so the 0.x rules below say
+what holds.
 
 ## While we are 0.x
 

@@ -5,7 +5,7 @@ description: Follow ownership through the packages, the storage layer, the concu
 
 # Architecture
 
-How the code fits together, what talks to what, and where the seams are. For the reasoning behind the retrieval design itself, read [Methodology](methodology.md) first. This page focuses on the software.
+How the packages fit together, what talks to what, and where the seams are. For the retrieval design itself, start with [Methodology](methodology.md).
 
 ## The map
 
@@ -63,7 +63,7 @@ Package by package (`src/sci_rag/`):
 Two rules keep this navigable.
 
 1. **Application code depends on facades, not internals.** Callers use `Retriever.retrieve()` and `AnswerEngine`; nothing outside `retrieve/` touches stage SQL.
-2. **REST and MCP share one `RagService` instance.** The two front doors cannot drift apart because exactly one service stands behind both.
+2. **REST and MCP share one `RagService` instance.** They cannot drift apart because exactly one service stands behind both.
 
 The answer engine retains two evidence views when contextual compression is enabled. `retrieval` holds the complete retrieved chunks and their provenance. `prompt_retrieval` holds the exact summaries shown to the answer model and the blind grounding judge. Both views retain the same document and chunk IDs. A malformed or failed summary falls back to complete source text and increments a visible failure count.
 
@@ -113,7 +113,7 @@ Everything is asyncio end to end: SQLAlchemy async and asyncpg. The retrieval or
 
 ## Error and degradation philosophy
 
-* Layers degrade, requests survive. Degradation is always visible (`traces`, `degraded_stages`), not silent.
+* A slow or failed layer contributes nothing, and the request still completes. Degradation is always visible in `traces` and `degraded_stages`.
 * Ingestion fails per document, never per corpus. Every failure is a row in the report with a reason.
 * Fail-closed beats fail-open where rights matter: empty license scope returns nothing; `unknown` license is unsafe; the community layer refuses scoped requests.
 * Every layer applies its license, source, year, author, journal, document, and DOI conditions before it orders or limits candidates.

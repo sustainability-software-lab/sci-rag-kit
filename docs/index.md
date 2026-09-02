@@ -50,9 +50,8 @@ vocabulary of its field, and a handful of questions with known answers.
 ## Start a project
 
 Two commands create a configured project, and a third ingests the
-documents. There is no boilerplate to fill in afterward, because the
-generator writes the setup answers straight into the project's
-configuration files.
+documents. The generator writes the setup answers into the project's
+configuration files, so there is nothing left to fill in.
 
 ```console title="Terminal"
 $ pipx install sci-rag-kit
@@ -60,14 +59,14 @@ $ sci-rag new
 ```
 
 The wizard asks about the project, the field, and how to reach a model,
-then writes the answers into place. Quick mode asks for six setup decisions,
-plus the credential value required by the selected mode, and uses sensible
-defaults for the rest. Offline mode needs no model credential at all, which
-makes it a good first pass on a laptop without one, and Advanced mode
-exposes every option for projects that already know what they want.
+then writes the answers into place. Quick mode asks for six setup decisions
+plus the credential value that mode needs, and uses defaults for the rest.
+Offline mode needs no model credential, so it is a good first pass on a
+laptop without one. Advanced mode exposes every option for projects that
+already know what they want.
 
 <div id="srag-cast" class="srag-cast" data-cast="assets/casts/sci-rag-new.cast" data-autoplay="true" aria-label="Recorded sci-rag new session"></div>
-<small> (A full trace of this terminal session can be found [below](#example))</small>
+<small>The full transcript of this session is in [Example CLI Setup Wizard Session](#example).</small>
 
 Prefer to read the code before creating a project? [Other ways in](quickstart.md#other-ways-in) covers a clone, the GitHub template, `sci-rag init`, and the dev container. Every route ends at the same tree.
 
@@ -124,9 +123,8 @@ than by impression. [Evaluate your pipeline](evaluation.md).
 ## Configure, do not code
 
 Pointing the kit at a new field means editing configuration files, never
-Python. The concepts of the field, the wording of the prompts, and the
-questions used for scoring all live in plain text, and the pipeline reads
-them at run time.
+Python. The field's concepts, the prompt wording, and the scoring
+questions live in plain text. The pipeline reads them at run time.
 
 <!-- BEGIN KIT ONBOARDING -->
 `pipx install sci-rag-kit` installs the kit. `sci-rag new` then fills in the
@@ -139,7 +137,7 @@ documents themselves and a one-line-per-document manifest that records who
 wrote each one and whether its text may be redistributed. Everything else
 is the pipeline, and most projects never open it.
 
-<pre class="srag-home-tree" aria-label="Annotated repository tree"><code>your-sci-rag/
+<pre class="srag-home-tree" aria-label="Annotated repository tree"><code>your-project/
 ├── domain/           the field: concepts, prompts, test questions
 ├── data/             the documents and their manifest
 ├── src/sci_rag/      the pipeline, from ingestion to serving

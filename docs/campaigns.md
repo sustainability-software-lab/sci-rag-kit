@@ -5,7 +5,7 @@ description: Discover a resumable DOI list, resolve explicit open-access rights,
 
 # Run a corpus campaign
 
-A campaign turns a research topic or a seed DOI file into a reproducible list of scientific works, with an explicit rights answer attached to each. Discovery stays separate from ingestion by design, which means you can inspect candidates, interrupt if needed, and resume network work without restarting ingestion.
+A campaign turns a research topic or a seed DOI file into a reproducible list of scientific works, with an explicit rights answer attached to each. Discovery stays separate from ingestion, so you can inspect candidates, interrupt, and resume network work without restarting ingestion.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A screened, rights-resolved corpus manifest</div>
@@ -68,6 +68,8 @@ malformed upstream records, so none of them disappears silently.
 Campaign state lives in `data/campaigns/<name>/state.jsonl`. The run appends each completed DOI step to disk. Repeat the command and it skips records already present, so you can resume. If the process dies mid-write, the next run ignores only the truncated tail and continues appending safely.
 
 OpenAlex and Crossref calls are rate-limited. The client sends your contact address in both the query and User-Agent, retries 429 and 5xx with bounded backoff, and fails visibly when retries exhaust. An empty success report never happens.
+
+## Resolve rights before you download
 
 Discovery metadata tells you the document exists, not whether you can redistribute it. Resolve rights before you download:
 
@@ -174,6 +176,6 @@ included without a rights answer you can point at.
 
 ## Next steps
 
-- Ingest the manifest this produced: [Bring your own domain](bring-your-own-domain.md#step-5-ingest-and-build)
+- Ingest the manifest this produced: [Bring your own domain](bring-your-own-domain.md#step-4-build-the-knowledge-base)
 - Understand what a license class does to retrieval: [Scope precedes ranking](methodology.md#7-scope-precedes-ranking)
 - Enrich the DOIs and check for retractions: [Operate a live corpus](operations.md)

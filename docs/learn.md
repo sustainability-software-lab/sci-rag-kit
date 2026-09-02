@@ -5,7 +5,7 @@ description: What happens between a document and a cited answer, with links to t
 
 # How it works
 
-This page is the ten-minute version of the design, written for a reader who has not built a retrieval system before. It follows one document into the database and one question back out, and it stops at the point where a design decision would need a page of its own. The pages linked at the end hold the full reasoning, the measurements, and the decisions the maintainers would reverse and under what conditions.
+This is the short path from one document into the database and one question back out. It stops where a design decision needs a page of its own. The links at the end hold the full reasoning, the measurements, and the conditions under which the maintainers would reverse each choice.
 
 ## The idea
 
@@ -31,9 +31,11 @@ Five searches run at once, each finding candidate passages a different way.
 | Community | matching against the cluster summaries | big-picture questions no single passage covers |
 | Hypothetical answer | writing a guess at what an answering passage would say, then searching near it | bridging question wording and document wording |
 
-The five ranked lists merge by rank rather than by score, because a cosine distance and a full-text rank are not comparable numbers but positions in a list are. The effect is that a passage several layers agree on outranks one that a single layer scored highly. The top passages are numbered, and the model writes an answer that cites those numbers. Two profiles control how many layers run: `interactive` uses vector and keyword only, for a person waiting at a prompt, and `deep` runs all five, for agents, batch jobs, and evaluation. A layer that is slow or fails contributes nothing and is reported as such, and the request still completes with whatever the other layers found.
+The five ranked lists merge by rank, not by score. A cosine distance and a full-text rank are not comparable numbers; positions in a list are. A passage several layers agree on outranks one that a single layer scored highly. The top passages are numbered, and the model writes an answer that cites those numbers.
 
-Rights are enforced inside every search, before ranking. Each document carries a license class, and a request that restricts rights never sees passages outside its scope, because filtering after ranking would let an ineligible passage crowd an eligible one out of the results before disappearing. A shared endpoint therefore cannot leak a paywalled PDF held internally, and an internal caller with wider rights still sees everything.
+Two profiles control how many layers run. `interactive` uses vector and keyword only, for a person waiting at a prompt. `deep` runs all five, for agents, batch jobs, and evaluation. A layer that is slow or fails contributes nothing and is reported as such. The request still completes with whatever the other layers found.
+
+Rights are enforced inside every search, before ranking. Each document carries a license class, and a request that restricts rights never sees passages outside its scope. Filtering after ranking would let an ineligible passage crowd an eligible one out of the results before disappearing, so a shared endpoint cannot leak a paywalled PDF held internally.
 
 ## How the results are measured
 
@@ -53,4 +55,4 @@ Every project keeps a file of test questions with known answers, and two command
 
 </div>
 
-Unfamiliar words are in the [glossary](glossary.md). The [FAQ](faq.md) is the place to start when deciding whether the kit fits, [Architecture](architecture.md) when modifying code, and [Methodology](methodology.md) when the approach has to be defended in a review.
+Unfamiliar words are in the [glossary](glossary.md). Start with the [FAQ](faq.md) if you are still deciding whether the kit fits, [Architecture](architecture.md) if you are changing code, and [Methodology](methodology.md) if you have to defend the approach.

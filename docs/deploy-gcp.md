@@ -120,11 +120,11 @@ echo '{"team-key": {"scopes": ["retrieval:query", "retrieval:answer", "corpus:re
 URL=$(terraform output -raw service_url)
 curl -s $URL/health
 curl -s $URL/v1/corpus-manifest
-curl -s -X POST $URL/v1/query -H "Authorization: Bearer team-key" \
+curl -s -X POST $URL/v1/query -H "X-API-Key: team-key" \
   -H 'Content-Type: application/json' -d '{"query": "rice straw availability"}'
 ```
 
-Remote agents connect to `$URL/mcp/` with the same bearer key.
+Remote agents connect to `$URL/mcp/` with the same key. On Cloud Run, send `X-API-Key`; do not use `Authorization: Bearer`.
 
 ## Operating notes
 

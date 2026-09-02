@@ -5,7 +5,7 @@ description: Install Sci RAG Kit, run the demo corpus, then bring in a corpus of
 
 # Get started
 
-The kit installs with `pipx install sci-rag-kit`, and `sci-rag new` creates a configured project. The three pages below take that project from an empty database to a knowledge base over a corpus of your own. The first reaches a working demo in about ten minutes, with the bundled corpus standing in for real documents. The second replaces the demo with your own documents, which is the point of the exercise. The third is the place to go when a step fails or shows something other than what its page describes.
+Install with `pipx install sci-rag-kit`, then run `sci-rag new`. The three pages below take that project from an empty database to a knowledge base over a corpus of your own. The first reaches a working demo in about ten minutes. The second replaces the demo with your documents. The third is where to go when a step fails.
 
 <div class="srag-rows" markdown>
 
@@ -19,13 +19,13 @@ The kit installs with `pipx install sci-rag-kit`, and `sci-rag new` creates a co
 
 ## What the kit sets up
 
-A knowledge base built with the kit is one Postgres database and one small service, and that is the whole operational footprint. Documents go in as passages, each carrying a vector for search by meaning, an entry in the full-text index for search by exact words, and links into a graph of the concepts it mentions. Questions come out with numbered citations to the passages the answer used, so any claim can be checked against its source. One service answers the command line, a REST API, and agents over MCP. MCP is the Model Context Protocol, the way tools such as Claude Code call external systems, which means an agent can search the corpus and cite it the same way a person at the terminal does.
+A knowledge base built with the kit is one Postgres database and one small service. Documents go in as passages, each carrying a vector for search by meaning, an entry in the full-text index for search by exact words, and links into a graph of the concepts it mentions. Questions come out with numbered citations to the passages the answer used. One service answers the command line, a REST API, and agents over MCP. MCP is the Model Context Protocol: tools such as Claude Code call the corpus the same way a person at the terminal does.
 
-The wizard asks for six setup decisions and the credential value that decision needs. It is fine to choose Offline: ingestion, retrieval, and retrieval scoring all work without a model credential, and the graph and generated answers switch on the moment a credential is added later. The generator configures the live template in place rather than rendering placeholders, so the resulting project is the same tree that is readable on GitHub, with the setup answers written into its configuration files and nothing left to fill in.
+The wizard asks for six setup decisions and the credential value that mode needs. It is fine to choose Offline: ingestion, retrieval, and retrieval scoring work without a model, and the graph and generated answers switch on when a credential is added later. The generator configures the live template in place, so the resulting project is the same tree that is readable on GitHub, with nothing left as a placeholder.
 
 ## Where things live
 
-Everything specific to a field sits in two folders and one file, and pointing the kit at a new field never means editing Python. The layout below is what `sci-rag new` produces.
+A new field is configured in `domain/` and `data/`, not by editing Python. The layout below is what `sci-rag new` produces.
 
 <div class="srag-tree">your-project/
 ├── domain/                  the field
@@ -43,7 +43,7 @@ Everything specific to a field sits in two folders and one file, and pointing th
 ├── infra/terraform/         optional Google Cloud deployment
 └── docs/                    this site</div>
 
-`domain/domain.yaml` is the file most projects edit most. It names the kinds of things in the field (entity types such as `Membrane` or `Contaminant`) and how they relate (`REMOVES`, `SUFFERS_FROM`), and the graph builder extracts only what this file declares, which is why a vague ontology produces a thin graph and a precise one produces a useful one. `data/corpus.jsonl` records, for each document, the metadata a citation needs and whether the text may be redistributed. `domain/eval_seed_questions.jsonl` holds the questions every score is computed against; ten good ones an expert will vouch for are worth more than a hundred vague ones.
+`domain/domain.yaml` is the file most projects edit most. It names the kinds of things in the field (entity types such as `Membrane` or `Contaminant`) and how they relate (`REMOVES`, `SUFFERS_FROM`). The graph builder extracts only what this file declares, so a vague ontology produces a thin graph and a precise one produces a useful one. `data/corpus.jsonl` records, for each document, the metadata a citation needs and whether the text may be redistributed. `domain/eval_seed_questions.jsonl` holds the questions every score is computed against. Ten good ones an expert will vouch for are worth more than a hundred vague ones.
 
 [Architecture](architecture.md) explains what each package under `src/sci_rag/` owns, for projects that change the pipeline itself.
 

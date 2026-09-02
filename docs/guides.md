@@ -5,7 +5,7 @@ description: Complete a specific task, from measuring quality to deploying and o
 
 # Guides
 
-Each guide starts from an outcome and assumes a finished [quickstart](quickstart.md), so it spends its words on the task rather than on orientation. The reference section holds the exact commands, fields, and contracts when a guide names one without spelling it out.
+Finish a specific job after the [quickstart](quickstart.md): measure quality, grow a corpus, run Postgres, operate a live service, deploy, or extend. When a guide names a command or field without spelling it out, the [reference](reference.md) has the exact contract.
 
 <div class="srag-rows" markdown>
 

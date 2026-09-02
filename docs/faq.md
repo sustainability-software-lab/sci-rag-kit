@@ -5,7 +5,7 @@ description: Short answers to what Sci RAG Kit is, who it is for, and why each d
 
 # Frequently asked questions
 
-The reasoning behind the kit is written down at length in the decision records and the methodology page. This page gives the answer first, the reason second, and a link to the long version.
+Answer first, reason second, then a link to the long version. The decision records and the [methodology](methodology.md) hold the full arguments.
 
 ## What this is
 

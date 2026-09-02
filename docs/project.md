@@ -5,7 +5,7 @@ description: Status, principles, roadmap, governance, decision records, releases
 
 # Project
 
-Sci RAG Kit is alpha software with a stated compatibility promise, a roadmap that lands features only with evidence, and short decision records for the architectural bets that shape every deployment.
+Alpha software with a stated compatibility promise, a roadmap that lands features only with evidence, and short decision records for the architectural bets that shape every deployment.
 
 <div class="srag-rows" markdown>
 

@@ -5,15 +5,15 @@ description: Compare Sci RAG Kit against LightRAG, PaperQA2, LlamaIndex, and Mic
 
 # Choosing Sci RAG Kit
 
-Sci RAG Kit is an opinionated, evaluated template that configures into a field's knowledge base. For a library to compose, a managed product, or an agent that reasons over the literature per question, the systems below fit better. This page says which.
+Sci RAG Kit is an opinionated, evaluated template that configures into a field's knowledge base. For a library to compose, a managed product, or an agent that reasons over the literature per question, one of the systems below fits better.
 
 No cross-system benchmark scores appear here. Numbers measured on different corpora are not comparable. Our own numbers are on the [benchmarks page](benchmarks.md), measured on our demo corpus with confidence intervals and a reproduction command.
 
 ## The landscape
 
-These readings were last checked as of 2026-08-28. Another project's status is the claim on this page most likely to go stale, so it carries a date.
+These readings were last checked as of 2026-09-02. Another project's status is the claim on this page most likely to go stale, so it carries a date.
 
-**Microsoft GraphRAG** established the pattern this space builds on: entity extraction, communities, global/local search. Its papers remain the reference reading. The project is in maintenance mode per the README. Bug fixes and CVE updates continue, but not new features. The releases match: v3.1.2 in August 2026, with earlier releases consisting of dependency updates. It is good for study and a considered choice for a new deployment that expects the feature set to grow.
+**Microsoft GraphRAG** established the pattern this space builds on: entity extraction, communities, global/local search. Its papers remain the reference reading. The [open-source repository](https://github.com/microsoft/graphrag) is in maintenance mode as of this check (2026-09-02): it is not accepting new pull requests or implementing new features, and it will keep doing bug fixes and dependency updates, especially for CVEs. The latest release, v3.1.2 on 21 August 2026, is a dependency and bug-fix patch. Use it to study the original design. Do not pick it for a deployment that needs the feature set to grow; LightRAG or this kit are the active options in that case.
 
 **LightRAG** is the most active general-purpose GraphRAG library. It offers incremental insert/delete, dual-level retrieval, multiple storage backends including Postgres, and a large community. It is a **library** to build an application around, not a ready-made application. For writing application code and making architectural calls, LightRAG is the strongest general choice. Some of its ideas, such as per-document extraction caching, are on our roadmap, credited.
 

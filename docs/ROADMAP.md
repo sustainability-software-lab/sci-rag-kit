@@ -9,7 +9,7 @@ Where the kit is going, in the order the evidence supports.
 
 Wave 1, v0.2 "Credibility", has shipped. Waves 2 and 3 are committed directions, and each one gets its own planning pass before anyone writes code. Anything that touches retrieval lands the same way: behind an ablation config, with before and after numbers on a benchmark page. If the numbers do not hold up, it does not land.
 
-Development happens in the open, so the issue tracker milestones say what comes next. This page explains why.
+Development happens in the open, so the issue tracker milestones say what comes next. The sections below explain why those items are in that order.
 
 ## Shipped: v0.2 "Credibility"
 
