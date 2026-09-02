@@ -68,6 +68,13 @@ def test_every_decision_record_is_reachable_from_a_question() -> None:
     assert missing == [], f"no FAQ question links to these decision records: {missing}"
 
 
+def test_the_faq_does_not_hard_code_the_decision_record_count() -> None:
+    """Full and no-demo templates contain different, evolving ADR sets."""
+    number = r"one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\d+"
+
+    assert re.search(rf"\b(?:{number}) decision records?\b", _body(FAQ), re.IGNORECASE) is None
+
+
 def test_the_page_is_topic_groups_of_questions() -> None:
     """toc_depth is 3 and toc.integrate is on, so every H3 lands in the sidebar."""
     groups = _headings(2)
