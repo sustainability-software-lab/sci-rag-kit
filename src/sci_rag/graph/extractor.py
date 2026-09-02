@@ -357,7 +357,9 @@ async def _upsert_entities(
             await session.execute(
                 select(KgEntity)
                 .where(or_(func.lower(KgEntity.name).in_(names_lower), _ALIAS_MATCH))
-                .order_by(KgEntity.id),
+                # Alias matches can have equal priority. Resolve those ties by
+                # semantic identity so fresh database UUIDs cannot change the graph.
+                .order_by(func.lower(KgEntity.name), KgEntity.entity_type, KgEntity.id),
                 {"entity_names": names_lower},
             )
         )

@@ -30,6 +30,7 @@ from sci_rag.db import (
     get_session_factory,
 )
 from sci_rag.domain import load_domain
+from sci_rag.graph.extractor import ExtractedEntity, ExtractionStats, _upsert_entities
 from sci_rag.ingest import chunk_document, load_manifest, parse_file
 from sci_rag.ingest.ingester import content_hash_for
 from sci_rag.llm import LLMClient
@@ -315,6 +316,61 @@ async def _reset_database(database) -> None:  # type: ignore[no-untyped-def]
                 "kg_relationships, kg_communities, entity_resolution_audit CASCADE"
             )
         )
+
+
+async def _ambiguous_alias_target(*, almond_id: str, orchard_id: str) -> str:
+    async with get_session_factory()() as session:
+        session.add_all(
+            [
+                KgEntity(
+                    id=almond_id,
+                    name="almond prunings",
+                    entity_type="Feedstock",
+                    aliases=["prunings"],
+                    document_ids=[],
+                    chunk_ids=[],
+                ),
+                KgEntity(
+                    id=orchard_id,
+                    name="orchard prunings",
+                    entity_type="Feedstock",
+                    aliases=["prunings"],
+                    document_ids=[],
+                    chunk_ids=[],
+                ),
+            ]
+        )
+        await session.flush()
+        selected = await _upsert_entities(
+            session,
+            [
+                ExtractedEntity(
+                    name="prunings",
+                    entity_type="Feedstock",
+                    description="",
+                    passages=[],
+                )
+            ],
+            {},
+            {},
+            fallback_chunk_ids=[],
+            fallback_document_ids=[],
+            stats=ExtractionStats(),
+        )
+        row = await session.get(KgEntity, selected["prunings"])
+        assert row is not None
+        return row.name
+
+
+async def test_ambiguous_alias_tie_break_does_not_depend_on_database_ids(
+    clean_tables, database
+) -> None:  # type: ignore[no-untyped-def]
+    """Fresh UUIDs cannot change which semantic entity an alias enriches."""
+    first = await _ambiguous_alias_target(almond_id="f" * 32, orchard_id="a" * 32)
+    await _reset_database(database)
+    second = await _ambiguous_alias_target(almond_id="1" * 32, orchard_id="f" * 32)
+
+    assert first == second == "almond prunings"
 
 
 async def test_refresh_rejects_an_extra_public_demo_document_before_provider_construction(
