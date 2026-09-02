@@ -5,7 +5,7 @@ description: Diagnose Sci RAG Kit setup, database, credential, parsing, retrieva
 
 # Troubleshooting
 
-Every entry starts from a visible symptom and ends at the command that fixes it. Work from the symptom map and the kit will tell which layer is missing.
+Every entry starts from a visible symptom and ends at the command that fixes it. Work from the symptom map and the kit tells you which layer needs attention.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A diagnosis, from a symptom to its cause</div>
@@ -50,9 +50,9 @@ $ uv run sci-rag doctor
 
 ## Setup prompts look different
 
-The setup flow uses arrow-key menus when the terminal supports them. It falls back to numbered prompts when input or output is not a TTY, `NO_COLOR` is set, `TERM` is blank or `TERM=dumb`, or the prompt library cannot load. The questions, defaults, validation, and files are identical in both presentations.
+The setup flow uses arrow-key menus when the terminal supports them. It falls back to numbered prompts when input or output is not a TTY, `NO_COLOR` is set, `TERM` is blank or `TERM=dumb`, or the prompt library fails to load. The questions, defaults, validation, and files are identical both ways.
 
-Pass `--no-tty` to `sci-rag new` or `sci-rag init` to force the numbered form even in a supported terminal. Pressing Ctrl-C cancels setup instead of treating the interruption as an answer.
+Pass `--no-tty` to `sci-rag new` or `sci-rag init` to force the numbered form even in a supported terminal. Ctrl-C cancels setup instead of being treated as an answer.
 
 ## Postgres is unreachable
 
@@ -74,7 +74,7 @@ $ docker compose up -d --wait
 $ uv run sci-rag db upgrade
 ```
 
-The compose service maps PostgreSQL to host port `5433`. Compose scopes the container, network, and volume to the project directory, so several projects can each keep their own database. The host port is machine-wide, so only one project can use `5433` at a time.
+Compose scopes the container, network, and volume to the project directory, so each project keeps its own database. The compose service maps PostgreSQL to host port `5433`. The host port is machine-wide, so only one project can use `5433` at a time.
 
 If `docker compose up` reports that the port is already allocated, either stop the other project's database with `make db-down` there, or give this project a free port. Publishing a different port requires two matching edits:
 
@@ -138,11 +138,11 @@ Three modes are supported:
 
 - `SCI_RAG_GOOGLE_API_KEY`: Google AI Studio.
 - `SCI_RAG_GCP_PROJECT` plus Application Default Credentials: Vertex AI.
-- `SCI_RAG_EMBEDDING_PROVIDER=local-hash`: offline, deterministic retrieval mechanics only.
+- `SCI_RAG_EMBEDDING_PROVIDER=local-hash`: offline, deterministic retrieval only.
 
-The offline embedder is lexical, not semantic. It does not enable graph extraction, HyDE, community summarization, answer generation, or LLM reranking. A refusal at that boundary is correct behavior.
+The offline embedder is lexical, not semantic. It does not enable graph extraction, HyDE, community summarization, answer generation, or LLM reranking. A refusal at that boundary is correct.
 
-Use `uv run sci-rag doctor --probe` after configuring a credential. The probe spends one small request and distinguishes a present-looking credential from one the provider accepts.
+Run `uv run sci-rag doctor --probe` after configuring a credential. The probe spends one small request and tells whether the provider accepts it.
 
 ### Recover during project setup
 
@@ -152,7 +152,7 @@ Use `uv run sci-rag doctor --probe` after configuring a credential. The probe sp
 2. **Switch to an AI Studio key** to leave the Vertex path and enter a key from [Google AI Studio](https://aistudio.google.com/apikey).
 3. **Continue without a model** to finish with the worked example ontology.
 
-The third choice keeps your chosen credential mode and writes the entered key or project to `.env`. It skips only the ontology draft. Fix the credential or run `gcloud auth application-default login` later without rebuilding. Run `uv run sci-rag doctor --probe` after the fix.
+The third option keeps your chosen credential mode and writes the entered key or project to `.env`. It skips only the ontology draft. Fix the credential or run `gcloud auth application-default login` later without rebuilding. Run `uv run sci-rag doctor --probe` after the fix.
 
 The `--no-preflight` flag skips the preliminary model request. It is only available on `sci-rag new`. This escape hatch does not validate the credential. An ontology draft can still call the provider later when a value was entered. Use it only when the preliminary probe itself is the problem, then run `uv run sci-rag doctor --probe` from the generated project.
 
@@ -176,16 +176,16 @@ If a single chunk keeps failing, look at the chunk itself. An unusually long pas
 
 Check in this order:
 
-1. `uv run sci-rag stats` confirms documents and chunks exist.
-2. The result `traces` show which stages were `success`, `empty`, `skipped`, `timeout`, or `error`. `timeout` is not about the corpus. Raise `SCI_RAG_PROVIDER_CALL_TIMEOUT_S` when the slow part is an embedding or generation call rather than a database query.
+1. Run `uv run sci-rag stats`. It confirms documents and chunks exist.
+2. Look at the result `traces` to see which stages were `success`, `empty`, `skipped`, `timeout`, or `error`. Timeout is not about the corpus. Raise `SCI_RAG_PROVIDER_CALL_TIMEOUT_S` when an embedding or generation call is slow rather than a database query.
 3. Remove filters one family at a time: year, author/journal/DOI, source, then license.
-4. Confirm that an explicit empty `license_classes` list was not sent. Empty means deny all by design.
-5. Use `--profile interactive` to isolate vector and keyword retrieval from model-dependent layers.
+4. Check that you did not send an explicit empty `license_classes` list. Empty means deny all.
+5. Run `--profile interactive` to isolate vector and keyword from model-dependent stages.
 
-Rights and metadata filters run inside each eligible layer before ranking. They can turn a broad question into no result. The community stage always becomes `skipped` for a scoped request because stored community summaries combine multiple documents before request-time scope exists.
+Rights and metadata filters run inside each eligible layer before ranking. They can turn a broad question into no result. The community stage becomes `skipped` for a scoped request because stored community summaries combine multiple documents before request-time scope exists.
 
 !!! scientific "Do not repair an empty result by widening rights silently"
-    If the requested license scope contains no supporting document, return no evidence or ask for an explicitly wider scope. Treating `unknown` as public would be a rights failure, not a recall improvement.
+    If the requested license scope contains no supporting document, return no evidence or ask for an explicitly wider scope. Treating `unknown` as public is a rights failure, not a recall win.
 
 ## A PDF parses badly
 

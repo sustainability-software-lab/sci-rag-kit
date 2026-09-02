@@ -11,19 +11,19 @@ The reasoning behind the kit is written down at length in ten decision records a
 
 ### What is Sci RAG Kit?
 
-A project template for retrieval-augmented generation over scientific documents, on one Postgres database. Copy it, point it at documents, and it becomes a knowledge base that answers questions with numbered citations to the passages it used.
+A project template for retrieval-augmented generation over scientific documents, on one Postgres database. Copy it and point it at documents; it becomes a knowledge base that answers questions with numbered citations to the passages it used.
 
-It parses PDF, HTML, Markdown, and text. It builds a knowledge graph from concepts declared in the domain ontology and searches with five retrieval layers that merge into one ranking. It includes an evaluation harness and one service that answers REST clients and agents. Everything is stored in Postgres with the pgvector extension.
+It parses PDF, HTML, Markdown, and text, builds a knowledge graph from concepts you declare in the domain ontology, and searches with five retrieval layers that merge into one ranking. It includes an evaluation harness and one service that answers REST clients and agents. Everything is stored in Postgres with the pgvector extension.
 
 ### Who is it for?
 
-A scientific group that needs a defensible knowledge base over its own literature and has no retrieval engineer to spare. The architectural decisions are made and written down with their reasons, so they can be defended in a review. The operational surface is one database, because a group without a platform team pays for every extra system.
+A scientific group that needs a defensible knowledge base over its own literature and has no retrieval engineer to spare. The architectural decisions are made and written down with their reasons, so they can be defended in a review. The operational surface is one database, because a group without a platform team pays for every extra system you add.
 
-A group building a bespoke retrieval application, and wanting to make every architectural call itself, is better served by a library. [Choosing Sci RAG Kit](choosing-sci-rag-kit.md) names the alternatives.
+A group building a bespoke retrieval application and wanting to make every architectural call itself is better served by a library. [Choosing Sci RAG Kit](choosing-sci-rag-kit.md) names the alternatives.
 
 ### Is this a library, a framework, or a template?
 
-A template: a GitHub template repository that is itself a working application, with real code, a demo corpus, and green CI. You adapt it by editing data and configuration (the `domain/` folder, the corpus manifest, and `.env`). Nothing renames a Python package, and there are no placeholders to fill in. [Why a template repository and not a cookiecutter](#why-a-template-repository-and-not-a-cookiecutter) has the reasoning.
+A template: a GitHub template repository that is itself a working application, with real code, a demo corpus, and green CI. You adapt it by editing data and configuration (the `domain/` folder, the corpus manifest, and `.env`). Nothing renames a Python package; there are no placeholders to fill in. [Why a template repository and not a cookiecutter](#why-a-template-repository-and-not-a-cookiecutter) has the reasoning.
 
 ### What does "scientific" buy me over a general RAG framework?
 
@@ -37,7 +37,7 @@ They are different shapes. LightRAG and LlamaIndex are libraries to build an app
 
 ### What is the fastest way to try it?
 
-Clone the repository and run the demo. In about ten minutes and with no credentials, it ingests five synthetic documents about agricultural residues, retrieves evidence for one question, and scores retrieval against the bundled test questions. To start a new project, run `pipx install sci-rag-kit` and then `sci-rag new`. The [quickstart](quickstart.md) has both routes.
+Clone the repository and run the demo. In about ten minutes, with no credentials, it ingests five synthetic documents about agricultural residues, retrieves evidence for one question, and scores retrieval against the bundled test questions. To start a new project, run `pipx install sci-rag-kit` and then `sci-rag new`. The [quickstart](quickstart.md) covers both routes.
 
 ### Do I need Google credentials?
 
@@ -45,7 +45,7 @@ Not to try it, and not to run retrieval. Yes for anything that calls a model. Wi
 
 ### Do I need Docker?
 
-With pixi or conda, no: those managers install PostgreSQL and pgvector from conda-forge, keep the data in `.pgdata/`, and default to `SCI_RAG_DB_BACKEND=local`. With uv or venv + pip, Docker is the default and the easiest option, not a requirement. Every project can use `SCI_RAG_DB_BACKEND=local` when PostgreSQL 16 through 18 and pgvector are already installed, including Postgres.app, and every project can keep the optional Cloud SQL helper through Advanced setup. [ADR 0008](adr/0008-supported-postgresql-versions.md) records the supported range and [ADR 0009](adr/0009-cloud-dev-database.md) the Cloud helper.
+With pixi or conda, no. Those managers install PostgreSQL and pgvector from conda-forge, keep the data in `.pgdata/`, and default to `SCI_RAG_DB_BACKEND=local`. With uv or venv + pip, Docker is the default and the easiest option, not a requirement. Every project can use `SCI_RAG_DB_BACKEND=local` when PostgreSQL 16 through 18 and pgvector are already installed (including Postgres.app), and every project can keep the optional Cloud SQL helper through Advanced setup. [ADR 0008](adr/0008-supported-postgresql-versions.md) records the supported range and [ADR 0009](adr/0009-cloud-dev-database.md) the Cloud helper.
 
 ### Do I have to clone the repository?
 
@@ -63,11 +63,11 @@ Each answer gives the decision and its reason. The decision record behind it lis
 
 ### Why is the knowledge graph in Postgres and not Neo4j?
 
-Because this workload never issues the query a graph engine is for. The only traversal is a two-hop walk from a few seed entities to their evidence chunks, which is a recursive query over indexed foreign keys. A graph engine would add a second backup, migration, and access-control story for no query it needs. One database also lets a chunk and its graph rows commit together. Deep path queries and centrality are out of scope; export the two tables when they're needed. [ADR 0001](adr/0001-graph-in-postgres.md).
+This workload never issues the query a graph engine is built for. The only traversal is a two-hop walk from a few seed entities to their evidence chunks, which is a recursive query over indexed foreign keys. A graph engine would add a second backup, migration, and access-control story for no query it needs. One database also lets a chunk and its graph rows commit together, keeping them transactionally consistent. Deep path queries and centrality are out of scope; export the two tables when they're needed. [ADR 0001](adr/0001-graph-in-postgres.md).
 
 ### Why 1536-dimension embeddings when models offer 3072?
 
-Because pgvector's HNSW index stops at 2000 dimensions. A 3072-dimension column falls back to exact scans, which read every row on every query. The default model supports truncation, so the first 1536 dimensions carry most of the signal at a small published cost, and every truncated vector is re-normalized. [ADR 0002](adr/0002-embeddings-1536-hnsw.md).
+pgvector's HNSW index stops at 2000 dimensions. A 3072-dimension column falls back to exact scans, which read every row on every query. The default model supports truncation, so the first 1536 dimensions carry most of the signal at a small published cost. Every truncated vector is re-normalized to preserve the unit norm that cosine ranking assumes. [ADR 0002](adr/0002-embeddings-1536-hnsw.md).
 
 ### Why is Docling an optional extra?
 
@@ -109,7 +109,7 @@ Because nothing in the schema needs a particular major, and pixi and conda users
 
 ### Why five retrieval layers? Is vector search not enough?
 
-Because each layer finds evidence the others miss, and on scientific text the gaps are large. Vector search carries the highest weight. Keyword search catches exact terms, identifiers, and chemical names that embeddings blur. Graph traversal walks up to two hops from the concepts in the question, which brings in evidence whose words never appear in the question. Community summaries answer big-picture questions. The hypothetical-answer search bridges question wording and document wording. Not every layer runs every time: `interactive` uses vector and keyword only, and `deep` runs all five.
+Each layer finds evidence the others miss, and on scientific text the gaps are large. Vector search carries the highest weight but blurs exact terms and chemical names. Keyword search catches those. Graph traversal walks up to two hops from the concepts in the question, bringing in evidence whose words never appear in the question. Community summaries answer big-picture questions. Hypothetical-answer search bridges question wording and document wording. Not every layer runs every time: `interactive` uses vector and keyword only, and `deep` runs all five.
 
 ### Why merge by rank and not by score?
 
@@ -117,7 +117,7 @@ Because the layers' native scores are incomparable and their ranks are not. Each
 
 ### What is HyDE, and why is it never cited?
 
-HyDE (hypothetical document embeddings) has a model write the short passage a real document would contain if it answered a question, then searches near that passage. It is never cited because it is not evidence. It is a guess used only to aim the search, and the domain profile can steer its style per question class.
+HyDE (hypothetical document embeddings) has a model write a short passage describing what a real document would say if it answered a question. The kit then searches near that passage. It is never cited because it is not evidence; it is a guess used only to aim the search. The domain profile can steer its style per question class.
 
 ### Why is the reranker off by default?
 
@@ -153,7 +153,7 @@ Because a grader that sees the expected answer rewards agreement with it, includ
 
 ### How large a corpus can this handle?
 
-The graph is sized for the hundreds to low tens of thousands of entities a domain corpus produces. Vector search stays indexed because the default dimension sits inside pgvector's limit, and graph traversal is a two-hop walk over indexed keys. The decision record's own revisit condition is a corpus reaching millions of entities or a product that needs three or more hops per query. At that point the graph layer is one stage behind the retrieval facade, so a graph engine replaces that one stage.
+The graph is sized for the hundreds to low tens of thousands of entities a domain corpus produces. Vector search stays indexed because the default dimension sits inside pgvector's limit. Graph traversal is a two-hop walk over indexed keys, so it stays fast. The decision record's own revisit condition is a corpus reaching millions of entities or a product needing three or more hops per query. At that point the graph layer is one stage behind the retrieval facade, so a graph engine replaces that one stage.
 
 ### What does it cost to run?
 

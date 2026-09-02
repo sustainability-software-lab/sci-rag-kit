@@ -23,7 +23,7 @@ Sci RAG Kit is alpha software with a stated compatibility promise, a roadmap tha
 
 - **Correct over clever.** A small explicit system is easier to inspect and defend.
 - **Evidence over authority.** Retrieval changes bring a before-and-after evaluation. Quality claims name their corpus and models.
-- **Honest over impressive.** Missing evidence produces a refusal, a failed layer produces a visible trace, and a planned feature stays labeled planned.
+- **Honest over impressive.** Missing evidence produces a refusal. A failed layer produces a visible trace. A planned feature stays labeled planned.
 - **One operational story.** Postgres holds text, vectors, full-text search, and graph rows, so a team operates one data system.
 - **Named seams, not a plug-in framework.** The kit exposes five boundaries where real projects vary and keeps everything else readable.
 

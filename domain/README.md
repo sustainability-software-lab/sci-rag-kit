@@ -1,6 +1,6 @@
 # The domain folder
 
-Everything the kit knows about a field lives in this folder. Pointing it at a new field never means editing Python.
+Everything the kit knows about a field lives in this folder: the concepts it looks for, the words it uses when it asks a model for something, and the questions it scores itself against. Pointing it at a new field never means editing Python.
 
 | File | What it controls |
 |------|------------------|
@@ -17,7 +17,7 @@ Everything the kit knows about a field lives in this folder. Pointing it at a ne
 | `eval_seed_questions.jsonl` | The test questions, with the evidence a correct answer rests on |
 | `eval_calibration_labels.jsonl` | Human scores for graded answers, used to check the grader |
 
-Prompts are Markdown with `$UPPER_CASE` slots filled at runtime (`$DOMAIN_NAME`, `$QUERY`, `$ENTITY_TYPES`, and so on). Edit the words around the slots freely. Keep every slot; a template that lost one loads without error and fails mid-run.
+Prompts are Markdown with `$UPPER_CASE` slots filled at runtime (`$DOMAIN_NAME`, `$QUERY`, `$ENTITY_TYPES`, and so on). Edit the words around the slots freely; that is how the register of a prompt gets moved from agricultural residues to membrane chemistry. Keep every slot, though, because a template that lost one loads without error and fails mid-run.
 
 As shipped, the folder is configured for the demo domain, agricultural residues, so everything works before anything changes. [Bring your own domain](../docs/bring-your-own-domain.md) is the seven-command recipe for pointing it at a new field; three of the commands write into this folder.
 

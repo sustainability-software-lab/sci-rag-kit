@@ -5,7 +5,7 @@ description: Run retrieval ablations and judged-answer evaluation, compare two r
 
 # Evaluate your pipeline
 
-This page shows how to tell, with evidence, whether a change to the pipeline helped. The harness makes that hard to fake, even by accident: mechanical retrieval metrics against expert ground truth, per-layer comparisons that show what each component contributes, and a grader whose prompts keep grounding and correctness apart.
+This page shows how to tell, with evidence, whether a change to the pipeline helped. The harness makes cheating difficult, even by accident. It uses mechanical retrieval metrics against expert ground truth, compares performance layer by layer so you see what each component contributes, and grades in two separate passes: one checking whether the kit's sources actually support its claims, the other checking whether those claims are right.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A reproducible before-and-after on your own corpus</div>
@@ -31,7 +31,7 @@ sci-rag eval retrieval --ablation   # did the right evidence come back, per laye
 sci-rag eval answers                # are the generated answers grounded, cited, correct?
 ```
 
-Both read `domain/eval_seed_questions.jsonl`, print a summary table, and write a JSON and Markdown report to `eval_results/`. Every report carries a corpus fingerprint (documents, chunks, graph size, embedding versions, latest ingestion time) and the git commit. Keep the reports; cite the fingerprint with any published number.
+Both read `domain/eval_seed_questions.jsonl`, compute the metrics, print a summary table, and write a JSON and Markdown report to `eval_results/`. Every report carries a corpus fingerprint (documents, chunks, graph size, embedding versions, latest ingestion time) and the git commit, which means the numbers are repeatable. Keep the reports so you can cite the fingerprint when you publish.
 
 Real example output from the shipped demo corpus:
 [examples/demo-eval/retrieval-ablation.md](examples/demo-eval/retrieval-ablation.md)
@@ -61,7 +61,7 @@ One JSON object per line:
   marks an honesty probe (see below), and `drafted` marks a question a
   model wrote that no expert has checked yet (see below).
 
-Three recommendations for writing seed questions: ten great questions beat a hundred vague ones. Include one or two multi-hop questions whose evidence spans documents. Grow the set from real user questions, especially the ones the system fumbled.
+Three recommendations for writing seed questions: ten excellent questions outclass a hundred vague ones. Include one or two multi-hop questions where evidence spans documents, because that tests whether the kit can chain reasoning across chunks. Grow the set from real user questions, starting with the ones your system got wrong.
 
 For help drafting seed questions from scratch,
 [`sci-rag draft questions`](bring-your-own-domain.md#step-5-write-seed-questions-then-measure) writes a first pass
@@ -94,14 +94,9 @@ Read the question, check its evidence against the document it cites, then delete
 
 ## Retrieval metrics, and how to read the ablation table
 
-A retrieved item counts as **relevant** to a question if it comes from a
-reference document or contains an evidence phrase (case and whitespace
-normalized). From that: hit@5, hit@10, and MRR (mean reciprocal rank of
-the first relevant item).
+A retrieved item counts as **relevant** to a question if it comes from a reference document or contains an evidence phrase (case and whitespace normalized). From that definition: hit@5 (was relevant in the top 5), hit@10, and MRR (mean reciprocal rank of the first relevant item).
 
-This is deliberately mechanical. Its job is regression detection and
-layer comparison, not absolute truth; the judged answer eval is where
-quality judgment lives. Retrieval metrics never grade answer text by substring matching because that conflates paraphrase detection with grounding.
+This metric is deliberately mechanical. Its job is catching regression and showing what each layer contributes, not evaluating correctness; the judged-answer eval is where quality judgment lives. Retrieval metrics never grade answer text by substring matching because that would conflate paraphrase with grounding. The judge exists to detect when the kit paraphrases beautifully but answers incorrectly.
 
 `--ablation` re-runs the questions under the registered configurations:
 `full_deep`, `interactive`, `vector_only`, `keyword_only`, `no_graph`,
@@ -140,27 +135,17 @@ Point at one row of the ablation table and say what removing that layer cost on 
 
 ## The judge, and why it is blind
 
-Grading a generated answer happens in two independent passes:
+Grading a generated answer happens in two independent passes that cannot influence each other.
 
-**Pass 1, grounding (blind).** The judge sees the question, the answer, and exactly the sources the assistant retrieved. It scores three dimensions, 0 to 2 each: groundedness (the sources support the claims), citation accuracy (the bracketed numbers point at sources that really support the adjacent claim), and completeness (the answer used the relevant retrieved material). The judge never sees the reference answer. A judge that does see it rewards an answer for matching the reference even when the cited sources contradict it, converting the grounding metric into a paraphrase detector.
+**Pass 1: grounding (blind).** The judge sees the question, the answer, and exactly the sources the assistant retrieved. It scores three dimensions (each 0 to 2): groundedness (do the sources support the claims?), citation accuracy (do the bracketed numbers point at sources that actually back up the adjacent claim?), and completeness (did the answer use the relevant material you gave it?). The judge never sees the reference answer. A judge that did see it would reward answers that match the reference even when the sources contradict it, converting grounding into paraphrase detection.
 
-**Pass 2, correctness (reference-based).** A separate call compares the
-answer against the expert reference, without the sources, and scores
-factual agreement 0 to 2. The reference is a floor, not a ceiling: extra
-correct detail is never penalized.
+**Pass 2: correctness (reference-based).** A second call compares the answer against the expert reference, without the sources. It scores factual agreement from 0 to 2. The reference is a floor, not a ceiling: extra correct detail is never penalized.
 
-Both passes run at temperature 0, scores clamp to the rubric, and a
-malformed judge response counts as a failure rather than getting silently
-coerced. The judge prompts live in `domain/prompts/judge_grounding.md` and
-`judge_correctness.md`. If you edit them, keep the blindness rules intact
-and spot-check a handful of judged answers by hand afterward. The
-rationale strings in `report.json` are kept for exactly that.
+Both passes run at temperature 0. Malformed judge responses fail rather than get coerced into a score. The judge prompts live in `domain/prompts/judge_grounding.md` and `judge_correctness.md`. If you edit them, keep the blindness rules intact and spot-check a few judged answers by hand afterward. That is why the rationale strings are kept in `report.json`.
 
 ## Deciding whether to adopt snippet compression
 
-Contextual snippet compression is an answer-generation condition, not a
-retrieval ablation. Compare two real runs on the same corpus fingerprint,
-question set, answer model, and independent judge model:
+Contextual snippet compression is an answer-generation decision, not a retrieval ablation. Test it against your corpus by running the same question set twice on the same corpus snapshot, with the same models, and comparing the judged results:
 
 ```bash
 uv run sci-rag eval answers --snapshot uncompressed
@@ -169,7 +154,7 @@ uv run sci-rag eval diff eval_results/<uncompressed>/report.json \
   eval_results/<compressed>/report.json
 ```
 
-Adopt compression only when every judged dimension remains inside the comparison confidence interval and median prompt tokens drop measurably. Otherwise keep `compression.enabled: false` and document the finding. A token reduction alone does not prove answer quality remained constant.
+Adopt compression only when every judged dimension stays within the confidence interval and median prompt tokens drop noticeably. Otherwise, keep `compression.enabled: false` and record why. Token savings alone do not show answer quality stayed the same; the grounded and correctness scores must stay strong too.
 
 The demo's own comparison, run at three floors on the v0.3 benchmark with
 10 seed questions and one corpus snapshot:
@@ -186,34 +171,26 @@ none dropped. [See the benchmarks for the full gate](benchmarks.md#contextual-co
 
 ## Calibrating the judge
 
-The judged-answers table is only as citable as the judge behind it, so the kit ships calibration as a repeatable workflow:
+The judged-answers table is only as citable as the judge behind it. The kit ships calibration as a repeatable workflow you can run yourself:
 
 1. Run an answers eval (`sci-rag eval answers`) and open `report.json` from `eval_results/`.
-2. Have a human read each generated answer (and its sources) **without** looking at the judge's scores, and record their own 0-2 scores per dimension, one JSON object per line:
+2. Have a human read each generated answer (and its sources) **without** looking at the judge's scores. Record their own 0-2 scores per dimension, one JSON object per line:
 
    ```
    {"question_id": "rice-straw-ash", "groundedness": 2,
     "citation_accuracy": 2, "completeness": 1, "correctness": 2}
    ```
 
-   `#` comment lines are allowed. Dimensions may be omitted per row.
-3. Compare:
+   Comment lines starting with `#` are allowed. Omit dimensions you did not score.
+3. Compare your labels to the judge's:
 
    ```bash
    uv run sci-rag eval calibrate --labels labels.jsonl --report eval_results/<run>/report.json
    ```
 
-   You get Cohen's kappa per dimension, exact agreement, and the full
-   3x3 agreement matrices. The section is appended to the run's
-   `report.md` and stored as `calibration.json` next to it, so the kappa
-   travels with the numbers it qualifies.
+   You get Cohen's kappa per dimension, exact-agreement counts, and the full 3x3 matrices. The output appends to `report.md` and saves as `calibration.json` so the kappa travels with the numbers.
 
-Report kappa as measured. The Landis-Koch adjective in the output
-("moderate", "substantial", and so on) is a standard reading aid, not a
-target. A low kappa on a dimension is a real finding: the judge and a
-human disagree there, and the agreement matrix shows how. Expect
-unstable kappa below roughly 30 labeled answers; more labels, and labels
-from a domain expert, make the number mean more.
+Report kappa exactly as the tool computes it. The Landis-Koch adjective ("moderate", "substantial") is a reading aid, not a target. A low kappa means the judge and humans disagree on that dimension; the matrix shows how. Expect unstable kappa below about 30 labeled answers. More labels from a domain expert make the number trustworthy.
 
 The repo ships `domain/eval_calibration_labels.jsonl`: a seed label set
 for the demo corpus, labeled by the kit's authors. It is marked
@@ -224,45 +201,25 @@ those for the flagship deployment.
 
 ## Sharing a run with someone who has no terminal
 
-A domain expert asked to sanity-check ten judged answers should not have
-to be talked through cloning anything. `sci-rag eval html` renders a run
-as a single file you can attach to an email:
+A domain expert asked to sanity-check ten judged answers should not have to clone the repository. `sci-rag eval html` renders a run as one file you can email:
 
 ```bash
 uv run sci-rag eval html eval_results/<run>
 ```
 
-It writes `report.html` next to the report, or wherever `--output` points. The page is self-contained: inline styles, no fonts, no scripts, nothing fetched when it opens. A page that fetches anything renders differently for the recipient than for the author, and can fail behind a corporate firewall.
+It writes `report.html` next to the report, or wherever `--output` points. The page is self-contained: inline styles, no external fonts or scripts, nothing fetched when it opens. That matters because pages that phone home render differently for each reader, and can fail behind a corporate firewall.
 
-It leads with the provenance receipt, because a reader who cannot run the
-command has no other way to find out which model produced what they are
-reading. The small-sample and drafted-ground-truth warnings sit next to
-the metrics, in the same place `report.md` puts them. `calibration.json`
-is picked up automatically when it sits beside the report.
+It leads with the provenance receipt so a reader who cannot run commands can see which model produced what they are reading. The small-sample and drafted-ground-truth warnings sit next to the metrics in the same places `report.md` puts them. `calibration.json` is included automatically when it sits beside the report.
 
-In an ablation table, a cell whose confidence interval overlaps the
-baseline config is shaded, and one that clears it is bold. Overlapping
-intervals are the most common way these tables get misread, and on a
-single-digit corpus most cells will be shaded. That is the honest
-reading, not a rendering failure.
+In an ablation table, cells whose confidence intervals overlap the baseline are shaded; cells that clear the interval are bold. Overlapping intervals are how these tables get misread most often, and on a tiny corpus most cells will be shaded. That is the honest reading, not a rendering bug.
 
 ## Honesty probes
 
-Include at least one question your corpus cannot answer, tagged
-`unanswerable`. Retrieval metrics skip it; the answer eval keeps it. A
-healthy system responds "the corpus does not cover this" and the
-grounding judge scores that honesty a 2. If your probe comes back with a
-confident invented answer, stop tuning retrieval and fix your answer
-prompt first.
+Include at least one question your corpus cannot answer, tagged `unanswerable`. Retrieval metrics skip it; the answer eval runs it. A healthy system responds "the corpus does not cover this" and the grounding judge scores that honesty a 2. If your probe comes back with a confident invented answer, stop tuning retrieval and fix your answer prompt first. A system that hallucinates confidently is worse than one that retrieves wrong evidence.
 
 ## CI keeps the demo honest
 
-`tests/integration/test_eval_smoke.py` runs the retrieval eval on the
-shipped demo corpus with the offline embedder on every CI run, with
-conservative thresholds (hit@10 at least 0.65). It exists to catch a
-broken chunker, layer, or seed file before it ships. It is also the
-pattern to copy for your own corpus: freeze a small fixture corpus, pin
-thresholds under your current numbers, and let regressions fail loudly.
+`tests/integration/test_eval_smoke.py` runs the retrieval eval on the shipped demo corpus with the offline embedder on every CI run. It uses conservative thresholds (hit@10 at least 0.65) to catch a broken chunker, layer, or seed file before it ships. Copy that pattern for your own corpus: freeze a small fixture, pin thresholds at your current numbers, and fail loudly if anything regresses.
 
 ## The improvement loop
 

@@ -11,23 +11,11 @@ before 1.0, and users deserve clarity on what holds.
 
 ## While we are 0.x
 
-- **Minor releases (0.2 -> 0.3) may break APIs**, and the CHANGELOG
-  says so explicitly under a "Breaking" heading with a migration note.
-  We break deliberately and loudly, never silently.
-- **Patch releases (0.2.0 -> 0.2.1) do not break anything**: fixes,
-  docs, and additive features only.
-- **The database schema is versioned by Alembic migrations**
-  (`migrations/versions/`), and every release's migrations run forward
-  from any prior release's schema. Skipping releases is fine;
-  downgrades are best-effort.
-- **Eval report JSON is additive**: new keys may appear in
-  `report.json`/`calibration.json`; existing keys do not change meaning
-  or type within 0.x. External tooling (the UW SSEC evaluation platform
-  seam) can rely on that.
-- **Domain profiles are forward-compatible.** A `domain/` directory
-  written for an older 0.x keeps working. New capabilities arrive as
-  optional keys with safe defaults; the reranker block is the model, where
-  absent means off.
+- **Minor releases (0.2 -> 0.3) may break APIs.** The CHANGELOG says so explicitly under a "Breaking" heading with a migration note. We break deliberately and loudly, never silently.
+- **Patch releases (0.2.0 -> 0.2.1) do not break anything**: fixes, docs, and additive features only.
+- **The database schema is versioned by Alembic migrations** (`migrations/versions/`). Every release's migrations run forward from any prior release's schema. Skipping releases is fine; downgrades are best-effort.
+- **Eval report JSON is additive**: new keys may appear in `report.json`/`calibration.json`; existing keys do not change meaning or type within 0.x. External tooling (the UW SSEC evaluation platform seam) can rely on that.
+- **Domain profiles are forward-compatible.** A `domain/` directory written for an older 0.x keeps working. New capabilities arrive as optional keys with safe defaults. The reranker block is the model: absent means off.
 
 ## What is public API
 
@@ -68,12 +56,9 @@ guides.
 
 ## Release mechanics
 
-Releases are tagged `vX.Y.Z` from `main` with CI green, a CHANGELOG
-entry, and (once the maintainer enables it; see the launch-gated list in
-[ROADMAP.md](ROADMAP.md)) an archival DOI per release.
+Releases are tagged `vX.Y.Z` from `main` with CI green, a CHANGELOG entry, and (once the maintainer enables it; see the launch-gated list in [ROADMAP.md](ROADMAP.md)) an archival DOI per release.
 
-Pushing the tag runs [`.github/workflows/release.yml`](https://github.com/sustainability-software-lab/sci-rag-kit/blob/main/.github/workflows/release.yml),
-which verifies, publishes to TestPyPI, then publishes to PyPI:
+Pushing the tag runs [`.github/workflows/release.yml`](https://github.com/sustainability-software-lab/sci-rag-kit/blob/main/.github/workflows/release.yml), which verifies, publishes to TestPyPI, then publishes to PyPI.
 
 1. `verify` runs four checks. It confirms the `ci` workflow already
    passed for the tagged commit, confirms the tag matches

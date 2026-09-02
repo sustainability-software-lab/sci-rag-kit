@@ -5,7 +5,7 @@ description: Turn a folder of documents into a knowledge base that answers quest
 
 # Bring your own domain
 
-At the end of this tutorial the documents are in the database, the field's concepts are in the graph, and its own test questions are scoring the result. None of it requires editing Python. A field lives in a folder of documents, one manifest file that describes them, and the `domain/` folder.
+At the end of this tutorial the documents are in the database, the field's concepts are in the graph, and its own test questions are scoring the result. None of it requires editing Python. A field lives in three places the kit already knows about: a folder of documents, one manifest file that describes them, and the `domain/` folder that holds the concepts, the prompt wording, and the questions.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A knowledge base over a corpus of your own</div>
@@ -17,7 +17,7 @@ At the end of this tutorial the documents are in the database, the field's conce
 
 The worked example throughout is a group that studies membrane materials for water treatment and has 60 PDFs of papers, theses, and technical reports.
 
-The whole recipe is seven commands. Each step below explains one line.
+The whole recipe is seven commands, and each step below explains one line: what the command reads, what it writes, and what to look at before moving on.
 
 ```console title="Terminal"
 $ uv run sci-rag draft manifest --folder data/raw      # 1. describe the documents
@@ -29,7 +29,7 @@ $ uv run sci-rag eval retrieval --ablation              # 6. measure
 $ uv run sci-rag answer "a question in your field"      # 7. ask (needs a model credential)
 ```
 
-Three of these commands draft a file to review. Each one also works without a model credential: `--print-prompt` prints the prompt, any assistant can answer it, and `--from-file reply.json` feeds the reply back. [Drafting with a model](#drafting-with-a-model) explains that pair once.
+Three of these commands draft a file to review, because writing a manifest, an ontology, or a question set from a blank page is slow and error-prone, while reacting to a draft grounded in the documents is quick. Each drafter also works without a model credential: `--print-prompt` prints the prompt, any assistant can answer it, and `--from-file reply.json` feeds the reply back through the same validation. [Drafting with a model](#drafting-with-a-model) explains that pair once.
 
 ## Before you start
 
@@ -74,7 +74,7 @@ Setup writes ordinary files, and nothing regenerates them later. Re-run it to ch
 
 ## Step 1: collect your documents
 
-Put PDFs, HTML pages, Markdown, or plain-text files in `data/raw/`.
+Put PDFs, HTML pages, Markdown, or plain-text files in `data/raw/`. Three things make the rest of the tutorial go better.
 
 - Choose documents that contain answers. Reviews, reports, and characterization papers hold more retrievable facts than commentary and slide decks.
 - Know each document's redistribution rights. The system quotes these documents back to people. A public-domain or CC BY document is fine anywhere. A paywalled PDF you legitimately hold is fine for your own instance, but mark it `restricted` so it never appears on a service you share.
@@ -84,7 +84,7 @@ For a first pass with no manifest, `uv run sci-rag build data/raw` ingests the f
 
 ## Step 2: describe your documents
 
-The manifest, `data/corpus.jsonl`, has one JSON line per document. Citations and rights come from it.
+The manifest, `data/corpus.jsonl`, has one JSON line per document, and it is where two things the kit cannot guess come from: the metadata a citation needs, and whether the document's text may be redistributed.
 
 Draft it, then review it:
 
@@ -92,7 +92,7 @@ Draft it, then review it:
 uv run sci-rag draft manifest --folder data/raw
 ```
 
-The drafter reads each document's opening pages and proposes a title, authors, year, DOI, journal, and a shared source label per document. Review `data/corpus.jsonl.proposed`, then move it into place, or re-run with `--apply`.
+The drafter reads each document's opening pages through the same parsers ingestion uses and proposes a title, authors, year, DOI, journal, and a shared source label per document. Typing sixty of those by hand is how a manifest ends up with three spellings of one journal, so the draft is worth having even when every row needs a correction. Review `data/corpus.jsonl.proposed`, then move it into place, or re-run with `--apply`.
 
 Every drafted row says `license_class: unknown`, and the command reports how many documents need a rights decision. Retrieval treats `unknown` as unsafe: those documents stay reachable from your own terminal and drop out of any request that restricts rights. When the drafter finds a license sentence in the document, it quotes the sentence into `license_source` for you to read.
 
@@ -122,7 +122,7 @@ The linter reports every problem at once with line numbers: missing files, paths
 
 ## Step 3: name your concepts
 
-`domain/domain.yaml` declares the kinds of things in the field (entity types) and how they relate (relation types). Together these are the ontology. The graph builder extracts only what this file declares. It ships with the demo's agricultural types; replace them with yours.
+`domain/domain.yaml` declares the kinds of things in the field (entity types) and how they relate (relation types). Together these are the ontology, and the graph builder extracts only what it declares: a concept that has no type here is invisible to the graph, however often the documents mention it. The file ships with the demo's agricultural types; replace them with yours.
 
 Draft it from the documents, then edit:
 
@@ -187,7 +187,7 @@ One command ingests the manifest and then builds the graph:
 uv run sci-rag build --manifest data/corpus.jsonl
 ```
 
-Ingestion parses each document, splits it into chunks that keep their section headings and tables intact, embeds the chunks, and stores everything in Postgres. This part runs on any embedding setup, including the offline one.
+Ingestion parses each document, splits it into chunks that keep their section headings and tables intact, embeds the chunks, and stores everything in Postgres in one transaction per document. This part runs on any embedding setup, including the offline one, so a corpus can be loaded and inspected before any model is involved.
 
 The graph needs a model. The builder reads every chunk, extracts entities and relationships from the ontology, clusters related entities, and writes a summary of each cluster. Without a credential, `build` says so and stops after ingestion. Vector and keyword retrieval work at that point. The two graph steps are also available on their own, which is how you add the graph later or rebuild it after changing the ontology:
 
@@ -221,7 +221,7 @@ Offline, the first two readings are the checkpoint. There are no entities to cou
 
 ## Step 5: write seed questions, then measure
 
-`domain/eval_seed_questions.jsonl` needs 10 to 20 questions a domain expert can vouch for. Every retrieval and answer score is computed against them, which makes this the most important manual step in the tutorial.
+`domain/eval_seed_questions.jsonl` needs 10 to 20 questions a domain expert can vouch for. Every retrieval and answer score is computed against them, which makes this the most important manual step in the tutorial: a question set nobody stands behind produces numbers nobody can act on.
 
 Draft the first ten, then sign off on each one:
 
@@ -249,7 +249,7 @@ Then measure:
 uv run sci-rag eval retrieval --ablation
 ```
 
-This runs offline. It scores retrieval against the seed questions and prints one row per layer configuration, which shows what each layer contributes on this corpus. Grading generated answers is a second pass and needs a model:
+This runs offline. It scores retrieval against the seed questions and prints one row per layer configuration, which shows what each layer contributes on this corpus and, over time, whether a change to the ontology or the corpus made retrieval better or worse. Grading generated answers is a second pass and needs a model:
 
 !!! note "Needs a model credential"
 
@@ -366,7 +366,7 @@ The offline embedder matches on words, not meaning. Its retrieval scores are a f
 
 ## The improvement loop
 
-Corpus and ontology changes are cheap, and the evaluation reports show whether a change helped. Add or fix a handful of documents, run `build` again (it processes only what is new), run the two eval commands, and read the diffs. When a user asks a question the system misses, add it as a seed question first, then fix the miss.
+Corpus and ontology changes are cheap, and the evaluation reports show whether a change helped. A rhythm that works: add or fix a handful of documents, run `build` again (it processes only what is new), run the two eval commands, and read the diffs. When a user asks a question the system misses, add it as a seed question first and then fix the miss, so the fix is measured and the question is never lost.
 
 ## Next steps
 

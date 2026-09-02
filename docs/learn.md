@@ -5,7 +5,7 @@ description: What happens between a document and a cited answer, with links to t
 
 # How it works
 
-This page is the ten-minute version of the design, for a reader who has not built a retrieval system before. The pages linked at the end hold the full reasoning, the measurements, and the decisions the maintainers would reverse and under what conditions.
+This page is the ten-minute version of the design, written for a reader who has not built a retrieval system before. It follows one document into the database and one question back out, and it stops at the point where a design decision would need a page of its own. The pages linked at the end hold the full reasoning, the measurements, and the decisions the maintainers would reverse and under what conditions.
 
 ## The idea
 
@@ -13,11 +13,11 @@ A language model on its own answers from memory, and for scientific questions th
 
 ## What happens to a document
 
-1. **Parse.** A PDF, HTML page, Markdown file, or text file becomes headings, paragraphs, and tables. Tables stay whole, because in scientific writing the answer is often a table row.
-2. **Chunk.** The text is cut into pieces of about 800 tokens. Each chunk keeps its section heading, so a table from "Results" is still labeled as such when it is retrieved on its own.
-3. **Embed.** Each chunk becomes a vector, a list of numbers that places similar meanings near each other. This is what lets a question find a passage that uses different words.
-4. **Store.** Chunks, vectors, a full-text index, and the document's metadata and license class go into one Postgres database.
-5. **Build the graph.** With a model credential, the kit reads each chunk and extracts the concepts the field cares about (the declared entity types) and how they relate. Related concepts are clustered, and each cluster gets a short summary. This step is optional. It is what makes questions that span several documents work.
+1. **Parse.** A PDF, HTML page, Markdown file, or text file becomes headings, paragraphs, and tables. Tables stay whole, because in scientific writing the answer is often a table row, and a table split across three chunks answers nothing.
+2. **Chunk.** The text is cut into pieces of about 800 tokens, with a little overlap so a sentence at a boundary is not lost. Each chunk keeps its section heading, so a table from "Results" is still labeled as such when it is retrieved on its own, months later, with no surrounding page to explain it.
+3. **Embed.** Each chunk becomes a vector, a list of numbers that places similar meanings near each other. This is what lets a question about "straw yield per county" find a passage that talks about "harvested acres and a straw-to-grain ratio" without sharing a single word.
+4. **Store.** Chunks, vectors, a full-text index, and the document's metadata and license class go into one Postgres database. A document and all of its chunks are written in one transaction, so a failure part-way leaves nothing behind.
+5. **Build the graph.** With a model credential, the kit reads each chunk and extracts the concepts the field cares about (the declared entity types) and how they relate, keeping the quoted phrase that stated each relationship. Related concepts are clustered, and each cluster gets a short summary. This step is optional, and it is what makes questions that span several documents work: the connecting concept brings its evidence along even when the question never names it.
 
 ## What happens to a question
 
@@ -31,13 +31,13 @@ Five searches run at once, each finding candidate passages a different way.
 | Community | matching against the cluster summaries | big-picture questions no single passage covers |
 | Hypothetical answer | writing a guess at what an answering passage would say, then searching near it | bridging question wording and document wording |
 
-The five ranked lists merge by rank, so a passage several layers agree on outranks one that a single layer scored highly. The top passages are numbered, and the model writes an answer that cites those numbers. Two profiles control how many layers run: `interactive` uses vector and keyword only, for a person waiting at a prompt, and `deep` runs all five, for agents, batch jobs, and evaluation. A layer that is slow or fails contributes nothing, is reported as such, and the request still completes.
+The five ranked lists merge by rank rather than by score, because a cosine distance and a full-text rank are not comparable numbers but positions in a list are. The effect is that a passage several layers agree on outranks one that a single layer scored highly. The top passages are numbered, and the model writes an answer that cites those numbers. Two profiles control how many layers run: `interactive` uses vector and keyword only, for a person waiting at a prompt, and `deep` runs all five, for agents, batch jobs, and evaluation. A layer that is slow or fails contributes nothing and is reported as such, and the request still completes with whatever the other layers found.
 
-Rights are enforced inside every search, before ranking. Each document carries a license class, and a request that restricts rights never sees passages outside its scope. A shared endpoint therefore cannot leak a paywalled PDF held internally.
+Rights are enforced inside every search, before ranking. Each document carries a license class, and a request that restricts rights never sees passages outside its scope, because filtering after ranking would let an ineligible passage crowd an eligible one out of the results before disappearing. A shared endpoint therefore cannot leak a paywalled PDF held internally, and an internal caller with wider rights still sees everything.
 
 ## How the results are measured
 
-Every project keeps a file of test questions with known answers, and two commands measure the system against them. One scores whether the right passages came back, layer by layer. The other has a model grade the generated answers for grounding, citation accuracy, and correctness. The grader never sees the reference answer while it judges grounding, so it cannot reward an answer for matching the reference while citing passages that say something else. Every report records the documents and models that produced its numbers.
+Every project keeps a file of test questions with known answers, and two commands measure the system against them. One scores whether the right passages came back, layer by layer, which shows what each layer is contributing on this particular corpus and whether a change helped or hurt. The other has a model grade the generated answers for grounding, citation accuracy, and correctness. The grader never sees the reference answer while it judges grounding, so it cannot reward an answer for matching the reference while citing passages that say something else; correctness is judged in a separate pass. Every report records the documents and models that produced its numbers, so a result can be reproduced or questioned later.
 
 ## Read next
 
