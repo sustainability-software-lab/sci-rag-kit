@@ -75,12 +75,12 @@ documents. And grow the set from real user questions, especially the ones
 the system fumbled.
 
 If typing them cold is the part you keep putting off,
-[`sci-rag draft questions`](llm-assisted-setup.md) writes a first pass
+[`sci-rag draft questions`](bring-your-own-domain.md#step-5-write-seed-questions-then-measure) writes a first pass
 grounded in your own documents and verifies every quoted phrase against the
 passage it claims to come from.
 
 If you already have the questions, which is the better position to be in,
-[`sci-rag draft seed-from-answers questions.txt`](llm-assisted-setup.md) fills
+[`sci-rag draft seed-from-answers questions.txt`](bring-your-own-domain.md#step-5-write-seed-questions-then-measure) fills
 in the rest. It answers each of your questions and proposes the reference
 answer and evidence phrases from what that answer cited, keeping only phrases
 that appear verbatim in both the answer and its source. Rows arrive tagged
@@ -361,4 +361,4 @@ methods section.
 
 - Turn a measured improvement into a shipped default: [Methodology](methodology.md)
 - See what the same harness produced on the demo corpus: [Benchmarks](benchmarks.md)
-- Add a retrieval stage the ablation can measure: [Extend the seams](extend.md)
+- Add a retrieval stage the ablation can measure: [Extend the kit](extend.md)

@@ -215,6 +215,22 @@ manifest) and `corpus://methodology` (how retrieval works here, one
 page). Tool descriptions are written for the agent reading them; if you
 add tools, hold that bar.
 
+## Generated clients
+
+The running server publishes its schema at `/openapi.json`, so a typed client
+in any language is one generator call away. Two that work with the shipped
+schema:
+
+```console title="Terminal"
+$ uvx openapi-python-client generate --url http://127.0.0.1:8000/openapi.json
+$ npx openapi-typescript http://127.0.0.1:8000/openapi.json -o sci-rag.d.ts
+```
+
+The first writes an installable Python package, the second a TypeScript
+type file. Pass the key as `Authorization: Bearer <key>` (or `X-API-Key`
+behind Cloud Run) exactly as with `curl`; the generated clients add nothing
+to the authentication contract above.
+
 ## Python API
 
 The CLI and server are thin wrappers over importable pieces, so the same

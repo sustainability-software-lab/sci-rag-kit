@@ -36,28 +36,31 @@ def print_scaffold_report(
     def run(command: str) -> str:
         return answers.runner.run(command, project_slug=project_slug)
 
-    console.print(f"\nDone. [bold]{answers.project_name}[/bold] is yours. Next:\n")
+    console.print(f"\nDone. [bold]{answers.project_name}[/bold] is set up. Next:\n")
     if created_directory:
         console.print(f"  cd {answers.repo_name}")
-    console.print(f"  {answers.runner.sync(extras=answers.extras)}")
+    console.print("  make setup                # install, start Postgres, create the tables")
     console.print(f"  {run('sci-rag doctor')}")
     if answers.corpus_source in {"openalex_topic", "doi_list"}:
-        console.print("  make corpus")
+        console.print("  make corpus               # discover papers and write data/corpus.jsonl")
+        console.print(f"  {run('sci-rag build --manifest data/corpus.jsonl')}")
     elif answers.corpus_source == "demo_only":
-        console.print("  make demo")
+        console.print("  make demo                 # ingest the demo corpus and score retrieval")
     else:
-        if answers.draft_domain_files:
-            console.print(f"  {run('sci-rag draft manifest --folder data/raw')}")
-        console.print(f"  {run('sci-rag ingest --manifest data/corpus.jsonl')}")
+        console.print("  # copy your PDFs, HTML, Markdown, or text files into data/raw/")
+        console.print(f"  {run('sci-rag build data/raw')}")
+    ask = 'sci-rag answer "a question in your field"'
+    console.print(f"  {run(ask)}")
 
     if answers.draft_domain_files:
         console.print("\nThen let a model draft the rest of your domain files:\n")
+        console.print(f"  {run('sci-rag draft manifest --folder data/raw')}")
         console.print(f"  {run('sci-rag draft ontology --from-corpus')}")
         console.print(f"  {run('sci-rag draft questions --count 10')}")
         console.print(
             "\nEach one proposes a file for you to review rather than writing one, and "
             "each also prints its prompt (--print-prompt) if you would rather paste it "
-            "into an assistant you already have. Guide: docs/llm-assisted-setup.md"
+            "into an assistant you already have."
         )
     else:
         console.print(

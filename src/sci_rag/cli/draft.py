@@ -466,7 +466,10 @@ def draft_ontology_command(
     from_corpus: bool = typer.Option(
         False,
         "--from-corpus",
-        help="Redraft the ontology from real passages. The default when documents exist.",
+        help=(
+            "Draft from passages in your ingested corpus (or data/raw before ingestion). "
+            "This is the default; the flag names it explicitly."
+        ),
     ),
     refine: bool = typer.Option(
         False,
