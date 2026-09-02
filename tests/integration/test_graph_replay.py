@@ -297,6 +297,7 @@ def _source_commit(manifest_path: Path) -> str:
 async def _seed_tracked_demo(
     manifest_path: Path,
     *,
+    persistence_ids: tuple[tuple[str, tuple[str, ...]], ...] | None = None,
     source: str | None = None,
     license_class: str | None = None,
     stamped: bool = False,
@@ -304,10 +305,18 @@ async def _seed_tracked_demo(
     with_chunks: bool = True,
     audit_row: bool = False,
 ) -> None:
+    entries = load_manifest(manifest_path)
+    if persistence_ids is not None:
+        assert len(persistence_ids) == len(entries)
     async with get_session_factory()() as session:
-        for entry in load_manifest(manifest_path):
+        for entry_index, entry in enumerate(entries):
             parsed = parse_file(entry.path)
             drafts = chunk_document(parsed)
+            entry_persistence_ids = (
+                persistence_ids[entry_index] if persistence_ids is not None else None
+            )
+            if entry_persistence_ids is not None:
+                assert len(entry_persistence_ids[1]) == len(drafts)
             document = Document(
                 title=entry.title or parsed.title,
                 source=source or entry.source,
@@ -322,20 +331,23 @@ async def _seed_tracked_demo(
                 page_count=parsed.page_count,
                 chunk_count=len(drafts) if with_chunks else 0,
             )
+            if entry_persistence_ids is not None:
+                document.id = entry_persistence_ids[0]
             session.add(document)
             await session.flush()
             for index, draft in enumerate(drafts if with_chunks else []):
-                session.add(
-                    Chunk(
-                        document_id=document.id,
-                        chunk_index=index,
-                        content=draft.content,
-                        token_count=draft.token_count,
-                        section_path=draft.section_path,
-                        is_table=draft.is_table,
-                        graph_extracted_at=datetime.now(UTC) if stamped else None,
-                    )
+                chunk = Chunk(
+                    document_id=document.id,
+                    chunk_index=index,
+                    content=draft.content,
+                    token_count=draft.token_count,
+                    section_path=draft.section_path,
+                    is_table=draft.is_table,
+                    graph_extracted_at=datetime.now(UTC) if stamped else None,
                 )
+                if entry_persistence_ids is not None:
+                    chunk.id = entry_persistence_ids[1][index]
+                session.add(chunk)
         if graph_row:
             session.add(
                 KgEntity(
@@ -370,6 +382,14 @@ async def _reset_database(database) -> None:  # type: ignore[no-untyped-def]
                 "kg_relationships, kg_communities, entity_resolution_audit CASCADE"
             )
         )
+
+
+async def _document_titles_in_chunk_id_order() -> list[str]:
+    async with get_session_factory()() as session:
+        result = await session.scalars(
+            select(Document.title).join(Chunk, Chunk.document_id == Document.id).order_by(Chunk.id)
+        )
+        return list(result)
 
 
 async def _ambiguous_alias_target(
@@ -627,7 +647,14 @@ async def test_record_and_require_replay_survive_fresh_database_ids(
     clean_tables, database, tmp_path: Path
 ) -> None:  # type: ignore[no-untyped-def]
     manifest_path = _write_tracked_demo(tmp_path)
-    await _seed_tracked_demo(manifest_path)
+    await _seed_tracked_demo(
+        manifest_path,
+        persistence_ids=(
+            ("1" * 32, ("1" * 32,)),
+            ("2" * 32, ("2" * 32,)),
+        ),
+    )
+    assert await _document_titles_in_chunk_id_order() == ["Alpha fixture", "Beta fixture"]
     artifact_dir = tmp_path / "artifacts"
     record_receipt = tmp_path / "record-receipt.json"
 
@@ -652,8 +679,15 @@ async def test_record_and_require_replay_survive_fresh_database_ids(
     assert record_receipt.is_file()
 
     await _reset_database(database)
-    # The same tracked content now has fresh persistence ids.
-    await _seed_tracked_demo(manifest_path)
+    # The same tracked content now has fresh ids whose persistence order is reversed.
+    await _seed_tracked_demo(
+        manifest_path,
+        persistence_ids=(
+            ("f" * 32, ("f" * 32,)),
+            ("e" * 32, ("e" * 32,)),
+        ),
+    )
+    assert await _document_titles_in_chunk_id_order() == ["Beta fixture", "Alpha fixture"]
     provider_constructions = 0
 
     def forbidden_provider() -> LLMClient:

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -10,6 +12,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).parents[2]))
 
 import pytest
+import scripts.graph_replay as graph_replay
 from scripts.graph_replay import (
     GraphReplayError,
     ReplayArtifact,
@@ -61,6 +64,110 @@ def _artifact() -> ReplayArtifact:
         relationship_count=0,
         graph_digest="c" * 64,
     )
+
+
+@pytest.mark.parametrize(
+    ("field", "drifted_value", "expected_error"),
+    [
+        ("corpus_digest", "d" * 64, "replay identity drift: corpus digest"),
+        ("domain_digest", "e" * 64, "replay identity drift: domain digest"),
+        ("batch_size", 3, "replay identity drift: batch size"),
+        (
+            "generation_parameters",
+            {"temperature": 0.0, "json_mode": True, "max_tokens": 4096},
+            "replay identity drift: generation parameters",
+        ),
+        ("schema_version", 2, "unsupported replay schema version 2; expected 1"),
+        (
+            "extractor_contract_version",
+            2,
+            "unsupported extractor contract version 2; expected 1",
+        ),
+    ],
+    ids=(
+        "corpus-digest",
+        "domain-digest",
+        "batch-size",
+        "generation-parameters",
+        "schema-version",
+        "extractor-contract-version",
+    ),
+)
+async def test_require_rejects_identity_drift_matrix_without_provider_or_output(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    field: str,
+    drifted_value: object,
+    expected_error: str,
+) -> None:
+    """Every strict identity mismatch stops before provider or output side effects."""
+    raw_artifact = _artifact().to_dict()
+    raw_artifact[field] = drifted_value
+    canonical = json.dumps(
+        raw_artifact,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    artifact_dir = tmp_path / "artifacts"
+    artifact_dir.mkdir()
+    artifact_path = artifact_dir / f"{hashlib.sha256(canonical).hexdigest()}.json"
+    artifact_path.write_text(json.dumps(raw_artifact), encoding="utf-8")
+    original_artifact = artifact_path.read_bytes()
+
+    async def corpus_state(_session_factory: object) -> SimpleNamespace:
+        return SimpleNamespace(
+            digest="a" * 64,
+            document_count=1,
+            chunk_count=1,
+            non_demo_count=0,
+            non_public_count=0,
+            stamped_chunk_count=0,
+            entity_count=0,
+            relationship_count=0,
+            community_count=0,
+            resolution_audit_count=0,
+        )
+
+    def accept_tracked_demo(_state: object, _manifest_path: Path) -> None:
+        return None
+
+    monkeypatch.setattr(graph_replay, "_corpus_state", corpus_state)
+    monkeypatch.setattr(graph_replay, "_require_tracked_demo", accept_tracked_demo)
+    monkeypatch.setattr(graph_replay, "domain_digest", lambda _directory: "b" * 64)
+
+    provider_calls = 0
+
+    def forbidden_provider() -> Any:
+        nonlocal provider_calls
+        provider_calls += 1
+        raise AssertionError("strict identity drift constructed a live provider")
+
+    receipt_path = tmp_path / "receipt.json"
+    candidate_dir = tmp_path / "candidates"
+    files_before = {path.relative_to(tmp_path) for path in tmp_path.rglob("*") if path.is_file()}
+
+    with pytest.raises(GraphReplayError, match=expected_error):
+        await graph_replay.run_graph_replay(
+            mode="require",
+            receipt_path=receipt_path,
+            session_factory=object(),  # type: ignore[arg-type]
+            domain=SimpleNamespace(directory=tmp_path),  # type: ignore[arg-type]
+            extraction_model="google:gemini-2.5-flash",
+            llm_factory=forbidden_provider,
+            artifact_path=artifact_path,
+            artifact_dir=candidate_dir,
+            manifest_path=tmp_path / "manifest.jsonl",
+            batch_size=2,
+            rate_limit_s=0.0,
+        )
+
+    assert provider_calls == 0
+    assert artifact_path.read_bytes() == original_artifact
+    assert not receipt_path.exists()
+    assert not candidate_dir.exists()
+    files_after = {path.relative_to(tmp_path) for path in tmp_path.rglob("*") if path.is_file()}
+    assert files_after == files_before
 
 
 def test_candidate_is_content_addressed_and_never_overwritten(tmp_path: Path) -> None:
@@ -149,8 +256,8 @@ async def test_canonical_entities_do_not_inherit_database_order_for_equal_semant
     )
 
     forward, _, _ = await _canonical_graph(lambda: Session([first, second]))  # type: ignore[arg-type]
-    reversed_rows, _, _ = await _canonical_graph(  # type: ignore[arg-type]
-        lambda: Session([second, first])
+    reversed_rows, _, _ = await _canonical_graph(
+        lambda: Session([second, first])  # type: ignore[arg-type]
     )
 
     assert forward == reversed_rows
