@@ -13,9 +13,8 @@ code. Anything that touches retrieval lands the same way: behind an
 ablation config, with before and after numbers on a benchmark page. If
 the numbers do not hold up, it does not land.
 
-You will not find dates here. That is deliberate. Development happens in
-the open, so the milestones on the issue tracker say what comes next.
-This page says why.
+Development happens in the open, so the milestones on the issue tracker
+say what comes next. This page says why.
 
 ## Shipped: v0.2 "Credibility"
 

@@ -25,7 +25,6 @@ Four types, from the [Diataxis](https://diataxis.fr/) framework. A page that can
 | `faq.md` | explanation |
 | `architecture.md` | explanation |
 | `methodology.md` | explanation |
-| `evidence-and-rights.md` | explanation |
 | `guides.md` | explanation |
 | `bring-your-own-domain.md` | tutorial |
 | `campaigns.md` | how-to |

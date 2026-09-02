@@ -38,8 +38,8 @@ sci-rag eval answers                # are the generated answers grounded, cited,
 Both read `domain/eval_seed_questions.jsonl`, print a summary table, and
 write a JSON and Markdown report to `eval_results/`. Every report carries a
 corpus fingerprint (documents, chunks, graph size, embedding versions,
-latest ingestion time) and the git commit. Keep the reports; a number
-without its fingerprint is just a rumor.
+latest ingestion time) and the git commit. Keep the reports; cite the
+fingerprint with any number you publish.
 
 Real example output from the shipped demo corpus:
 [examples/demo-eval/retrieval-ablation.md](examples/demo-eval/retrieval-ablation.md)
@@ -115,10 +115,9 @@ the first relevant item).
 
 This is deliberately mechanical. Its job is regression detection and
 layer comparison, not absolute truth; the judged answer eval is where
-quality judgment lives. What it will never do is grade generated answer
-text by substring matching. That famous shortcut, where "the answer
-contains 'IRR', so it is grounded", measures nothing, and this kit refuses
-to implement it.
+quality judgment lives. Retrieval metrics never grade answer text by
+substring matching, because that conflates paraphrase detection with
+grounding.
 
 `--ablation` re-runs the questions under the registered configurations:
 `full_deep`, `interactive`, `vector_only`, `keyword_only`, `no_graph`,
@@ -168,7 +167,7 @@ dimensions, 0 to 2 each: groundedness, meaning the sources support the
 claims; citation accuracy, meaning the bracketed numbers point at sources
 that really support the adjacent claim; and completeness, meaning the
 answer used the relevant retrieved material. It never sees the reference
-answer. A judge that does see it will happily reward an answer for
+answer. A judge that does see it rewards an answer for
 matching the reference even when the cited sources say no such thing.
 That quietly converts your grounding metric into a paraphrase detector.
 
@@ -197,18 +196,13 @@ uv run sci-rag eval diff eval_results/<uncompressed>/report.json \
   eval_results/<compressed>/report.json
 ```
 
-Each record contains measured prompt-token counts, compression fallbacks, and
-dropped-source counts. The report gives median prompt tokens before and after;
-the diff pairs judge dimensions and prompt-token deltas by question. Adopt the
-domain default only when every judged dimension remains inside the comparison
+Adopt compression only when every judged dimension remains inside the comparison
 confidence interval and median prompt tokens fall measurably. Otherwise leave
-`compression.enabled: false` and record the rejection. A token reduction by
-itself is not evidence that answer quality held.
+`compression.enabled: false` and record the rejection. A token reduction alone
+is not evidence that answer quality held.
 
-The demo's own gate is worth reading in full, because it was run at three
-settings and only one of them passed. Every run below used the v0.3 benchmark's
-10 seed questions and one corpus snapshot, with real `gemini-2.5-flash` answers
-and judging; all 10 graded with no evaluation failures.
+The demo's own comparison, run at three floors on the v0.3 benchmark with
+10 seed questions and one corpus snapshot:
 
 | relevance_floor | groundedness | citation accuracy | completeness | correctness | median prompt tokens |
 |---|---:|---:|---:|---:|---:|
@@ -217,28 +211,8 @@ and judging; all 10 graded with no evaluation failures.
 | 0.15 | 1.80 | 1.80 | 1.60 | 1.70 | 348 |
 | 0.3 | 1.80 | 1.80 | 1.80 | 1.50 | 356 |
 
-At 0.15 and above the gate fails, and it fails on two dimensions in particular:
-groundedness and citation accuracy both leave their ceiling. That is the
-signature of the relevance floor discarding sources, not of the summarizer
-mangling them, and the counters confirm it: at 0.3, 61 sources were dropped
-across the 10 questions with zero compression failures. Nothing failed to
-summarize. The answer simply lost evidence it needed.
-
-At 0.0, where every source is summarized and none dropped, the gate holds. Three
-independent paired runs at that setting kept every judged dimension at or above
-the uncompressed baseline while median prompt tokens fell 25% to 28%. So the
-demo enables compression, at floor 0.0, and the model default floor matches it.
-
-Two things generalize from this. First, summarizing a source and discarding one
-are different trades, and the larger token saving is the unsafe one: dropping
-bought 74% instead of 27%, and cost groundedness. Second, correctness moved
-around a lot between identical baseline runs, from 1.30 to 1.80, so nothing here
-rests on it. The three dimensions that sit at ceiling are what the gate turns on,
-because a dimension pinned at 2.00 has nowhere to go but down if the change hurts.
-
-[Benchmarks](benchmarks.md#contextual-compression-the-paired-gate) carries the
-run's provenance, and these small-corpus results decide the demo default only,
-not a general quality claim for other corpora.
+The demo enables compression at floor 0.0, where every source is summarized and
+none dropped. [See the benchmarks for the full gate](benchmarks.md#contextual-compression-the-paired-gate).
 
 ## Calibrating the judge
 

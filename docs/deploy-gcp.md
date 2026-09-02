@@ -27,11 +27,7 @@ clients, and removable through reviewed protection-update and destroy plans.
     [the template](https://github.com/sustainability-software-lab/sci-rag-kit/tree/main/infra/terraform)
     if you want them back.
 
-The kit ships a small, honest Terraform module (`infra/terraform/`) that
-stands up a production-shaped instance. You get Cloud SQL Postgres with
-pgvector, one Cloud Run service serving REST and MCP, one Cloud Run job
-for migrations and ingestion, a corpus bucket, secrets, and a
-least-privilege service account. This page walks it end to end.
+The kit ships Terraform (`infra/terraform/`) that stands up a production-shaped instance: Cloud SQL Postgres with pgvector, one Cloud Run service for REST and MCP, one Cloud Run job for migrations and ingestion, a corpus bucket, secrets, and a least-privilege service account.
 
 <!-- BEGIN GENERATED PROJECT FEATURE: cloud-provisioning -->
 !!! warning "The development database is a different module"
@@ -40,20 +36,14 @@ least-privilege service account. This page walks it end to end.
     instance for laptop access through the Cloud SQL Auth Proxy. The
     `scripts/cloud_postgres.py` helper, not Terraform, creates workspace-scoped
     databases dynamically. The development module disables backups and deletion
-    protection by default. Never point a deployment at it. This page and the
-    parent `infra/terraform/` module remain the production-shaped path.
+    protection by default. Never point a deployment at it. This page uses the production-shaped path.
 <!-- END GENERATED PROJECT FEATURE: cloud-provisioning -->
 
-Two honest notes before you start. First, this costs money while it
-exists. The database is the steady cost, since the default `db-g1-small`
-tier runs a few tens of dollars a month, so tear down experiments with
-`terraform destroy`. Second, everything here is also doable by hand in the
-console. The Terraform is 300 readable lines, and reading it **is** the
-architecture documentation.
+This costs money while it exists. The database is the steady cost: the default `db-g1-small` tier runs a few tens of dollars a month. Tear down experiments with `terraform destroy`. Everything here is also doable by hand in the console. The Terraform is 300 readable lines, and reading it is the architecture documentation.
 
 ## Before you start
 
-* A Google Cloud project with billing, and `gcloud` authenticated
+* A Google Cloud project with billing enabled and `gcloud` authenticated
   (`gcloud auth login` plus `gcloud auth application-default login`).
 * APIs enabled once per project:
 
@@ -84,31 +74,13 @@ Rebuild and repush when package code, migrations, or your domain profile
 changes. Upload corpus changes to the bucket after deployment; they do not
 require a new image.
 
-!!! warning "The trailing dot is an upload"
+!!! warning "The trailing dot uploads your directory"
 
-    `gcloud builds submit ... .` uploads a copy of the current directory to
-    Google Cloud Build, and `docker build .` hands the same directory to your
-    local daemon. `.gcloudignore` and `.dockerignore` bound what that means.
-    Both exclude everything and then re-admit only the build inputs:
-    `pyproject.toml`, `uv.lock`, `README.md`, `alembic.ini`, `src/`,
-    `domain/`, `migrations/`, and the `Dockerfile` itself.
+    `gcloud builds submit ... .` uploads the current directory to Cloud Build. `.gcloudignore` and `.dockerignore` control what is uploaded. Both exclude everything except: `pyproject.toml`, `uv.lock`, `README.md`, `alembic.ini`, `src/`, `domain/`, `migrations/`, and `Dockerfile`.
 
-    So a credential, a `.env`, a Terraform state file, or a paper you may not
-    redistribute is safe where it normally lives, and is uploaded the moment
-    you move it inside one of those paths. Your corpus belongs in
-    `data/raw/`, which is excluded from both. If you add a `COPY` to the
-    Dockerfile, add its source to both manifests;
-    `tests/unit/test_build_context.py` fails if you forget.
+    Credentials, `.env` files, Terraform state, and restricted papers stay safe by default. Your corpus in `data/raw/` is excluded. If you add a `COPY` to the Dockerfile, add its source to both manifests; `tests/unit/test_build_context.py` enforces this.
 
-    Bytecode is the one exception both manifests spell out by name. It lives
-    inside `src/`, `domain/`, and `migrations/`, so the allowlist alone would
-    carry your local `.pyc` files into the image. With it excluded, building
-    from your working checkout and building from a clean `git archive` give
-    the same 145 file context.
-
-    Do not delete `.gcloudignore` to "get everything uploaded". Without it,
-    gcloud falls back to deriving the upload set from `.gitignore`, which
-    misses anything ignored only through `.git/info/exclude`.
+    Do not delete `.gcloudignore` to upload everything. Without it, gcloud falls back to `.gitignore`, which misses entries in `.git/info/exclude`.
 
 ## Step 2: terraform apply
 
@@ -127,17 +99,10 @@ automatic part of this deployment procedure.
 
 What you get, and the security posture you get it with:
 
-* The database is reachable only through the Cloud SQL connector (the
-  service and job mount it as a unix socket); no open TCP.
-* The runtime service account holds exactly `cloudsql.client`,
-  `aiplatform.user`, and read access to its two secrets.
-* Send API keys as `X-API-Key: <key>` against a deployed service.
-  Cloud Run's frontend consumes `Authorization: Bearer` for its own identity
-  tokens, so the kit's keys cannot travel in that header here even with
-  `allow_unauthenticated=true`.
-* The Cloud Run service is **not** public by default. Flip
-  `-var allow_unauthenticated=true` when you want the app's own API keys
-  to be the only gate.
+* The database is reachable only through the Cloud SQL connector (mounted as a unix socket); no open TCP.
+* The runtime service account holds exactly `cloudsql.client`, `aiplatform.user`, and read access to its two secrets.
+* Send API keys as `X-API-Key: <key>` to the deployed service. Cloud Run's frontend inspects `Authorization: Bearer` for its own identity tokens, so use the key header.
+* The Cloud Run service is private by default. Set `-var allow_unauthenticated=true` to make your API keys the only gate.
 
 ## Step 3: stage the corpus and populate the database
 
@@ -257,7 +222,7 @@ save a new reviewed plan, and resume from the recorded survivors.
 ## Operating notes
 
 * **Scale to zero** is on (`min_instance_count = 0`); the first request
-  after idle pays a cold start. Set it to 1 for a always-warm instance.
+  after idle pays a cold start. Set it to 1 for an always-warm instance.
 * **Schema changes**: rebuild the image, `terraform apply` (new
   revision), run the ops job once. Migrations are additive Alembic
   revisions; write them the way `migrations/versions/0001_initial.py`
@@ -279,6 +244,6 @@ apply either one.
 
 ## Next steps
 
-- Lock down what an external caller can reach: [Evidence and rights](evidence-and-rights.md)
+- Lock down what an external caller can reach: [Scope precedes ranking](methodology.md#7-scope-precedes-ranking)
 - Back up the Cloud SQL instance before the first migration: [Operate a live corpus](operations.md)
 - Wire a client to the deployed endpoints: [REST, MCP, and Python API](api.md)

@@ -5,10 +5,8 @@ description: See who decides what, how a proposal becomes a decision, and what a
 
 # Governance
 
-Lightweight on purpose: a small project pretending to be the Apache
-Software Foundation helps nobody. This page says who decides what, how
-decisions get recorded, and how those answers change as the project
-grows.
+Lightweight on purpose. This page says who decides what, how decisions
+get recorded, and how those answers change as the project grows.
 
 ## Roles
 
