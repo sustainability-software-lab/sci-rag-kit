@@ -5,7 +5,7 @@ description: Add a parser, corpus collector, reranker, model provider, or authen
 
 # Extend the kit
 
-Sci RAG Kit has no plug-in registry. It defines five small boundaries where projects vary. Extend the narrowest seam that fits, and keep its surrounding invariants visible in tests and evaluation.
+Sci RAG Kit has no plug-in registry. It defines five small boundaries where projects vary. Extend at the narrowest seam that fits, and keep its invariants visible in tests and evaluation.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A new parser, collector, reranker, provider, or auth backend</div>
@@ -36,15 +36,15 @@ Sci RAG Kit has no plug-in registry. It defines five small boundaries where proj
 
 `parse_file()` dispatches by suffix and returns one `ParsedDocument`. Structured parsers produce ordered `Block` values (`heading`, `text`, or `table`). The chunker owns normalization, token sizing, overlap, and section breadcrumbs.
 
-Keep these properties:
+Uphold these properties:
 
-- Report the route used when a fallback changes fidelity.
-- Keep tables as one block when feasible.
-- Do not duplicate the document title into every section path.
-- Fail with the supported list for unsupported suffixes. Blank text is not acceptable.
-- Add a fixture test demonstrating block order and metadata.
+- Report which route was used when a fallback changes fidelity.
+- Keep tables as one block when possible.
+- Do not repeat the document title in every section path.
+- Fail with the supported list when the suffix is unknown. Blank text is not acceptable.
+- Add a test with a fixture demonstrating block order and metadata.
 
-Add the suffix to `SUPPORTED_SUFFIXES`, add a branch in `parse_file()`, and let the existing ingester handle deduplication, embedding, and transactions.
+Add the suffix to `SUPPORTED_SUFFIXES`, add a branch in `parse_file()`, and let the ingester handle deduplication, embedding, and transactions.
 
 ## 2. Add a corpus collector
 
@@ -95,11 +95,11 @@ class EmbeddingProvider(ABC):
     ) -> list[list[float]]: ...
 ```
 
-Stamp a provider-specific version that changes when stored vectors become incompatible. Assert every returned dimension and distinguish document and query tasks where the model supports asymmetric embeddings. Normalize vectors if the provider's reduced dimensions require it.
+Stamp a provider-specific version that changes when stored vectors become incompatible. Assert every returned dimension. Distinguish document and query tasks where the model supports asymmetric embeddings. Normalize vectors if the provider's reduced dimensions require it.
 
-An LLM client implements full generation and streaming. JSON consumers use the shared `generate_json()` helper, which requests deterministic JSON mode and strips a surrounding code fence before parsing.
+An LLM client implements full generation and streaming. JSON consumers call the shared `generate_json()` helper, which requests deterministic JSON mode and strips a surrounding code fence.
 
-Provider additions need a deliberate selection path in `get_embedder()` or `get_llm()`. This factory keeps supported providers visible in one place.
+Provider additions need a deliberate selection path in `get_embedder()` or `get_llm()`. This factory keeps supported providers in one place.
 
 ### Generation providers that ship with the kit
 
@@ -111,7 +111,7 @@ Three adapters live in `src/sci_rag/llm/`, selected by a `provider:model` spec. 
 | `anthropic` | Claude, on Vertex or the direct API | `SCI_RAG_GCP_PROJECT` (ADC) or `SCI_RAG_ANTHROPIC_API_KEY` | `anthropic` |
 | `openai-compatible` | Vertex partner models (Grok, Llama, Mistral, DeepSeek), OpenAI, self-hosted vLLM/Ollama | `SCI_RAG_GCP_PROJECT` (ADC) or `SCI_RAG_OPENAI_API_KEY` (+ optional `SCI_RAG_OPENAI_BASE_URL`) | `openai` |
 
-On Google Cloud, the third row is the only route to non-Google partner models. Vertex serves them behind an OpenAI-compatible endpoint, so one adapter covers current and future partner models. Model ids keep their publisher prefix, as in `xai/grok-4.1-fast-reasoning`. Sending the bare id is rejected.
+On Google Cloud, the third row is the only path to non-Google partner models. Vertex serves them behind an OpenAI-compatible endpoint, so one adapter covers current and future models. Model ids keep their publisher prefix, like `xai/grok-4.1-fast-reasoning`. Sending the bare id is rejected.
 
 !!! warning "Partner models are not served from every region"
 
@@ -125,13 +125,13 @@ On Google Cloud, the third row is the only route to non-Google partner models. V
 
     Partner models come and go on a schedule this project does not control. Every id here and in `.env.example` last answered both ordinary generation and strict JSON calls on **2026-08-30**, from `global`. Google publishes each model's lifecycle on [Vertex AI partner-models](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/partner-models).
 
-    Ask again rather than trusting the date:
+    Verify your models before using them:
 
     ```console title="Terminal"
     $ make providers-check
     ```
 
-    It calls each model at its documented location and fails when one no longer answers. It needs `SCI_RAG_GCP_PROJECT` and application-default credentials. A model absent from your Model Garden also fails it.
+    It calls each model at its documented location and fails when one no longer works. It needs `SCI_RAG_GCP_PROJECT` and application-default credentials. A model absent from your Model Garden also fails it.
 
 ### What a new adapter has to normalize
 
@@ -144,21 +144,21 @@ On Google Cloud, the third row is the only route to non-Google partner models. V
 | `max_tokens` | `max_output_tokens` | `max_tokens` (required) | `max_tokens` |
 | `json_mode` | `response_mime_type` + `thinking_budget=0` | `output_config={"effort": "low"}` | `response_format` |
 
-Two cells are easy to get wrong:
+Two mappings are tricky:
 
-- **Current Claude models removed the sampling parameters.** Forwarding `temperature` returns a 400, so the Anthropic adapter drops it. The intent behind low temperature maps to `effort` instead.
-- **Lowering effort is not the same as disabling thinking.** Disabling it on current Claude models can leak reasoning tags into visible text, corrupting the parsed JSON.
+- **Current Claude models removed the sampling parameters.** Forwarding `temperature` returns a 400, so the Anthropic adapter drops it. Low temperature intent maps to `effort` instead.
+- **Lowering effort is not disabling thinking.** Disabling thinking on current Claude models can leak reasoning tags into visible text, corrupting the parsed JSON.
 - **Not every Claude model accepts the effort knob.** `claude-sonnet-5` takes it; `claude-haiku-4-5` rejects it. The adapter probes once per client and remembers the result.
 
 Where a provider may reject a knob, adapters retry once without it. Retry policy is shared: `retry_async()` in `llm/client.py` manages backoff. SDK clients are constructed with `max_retries=0` to prevent compounding retries.
 
 ### Embeddings are Google-only on purpose
 
-`SCI_RAG_EMBEDDING_PROVIDER` accepts `google` or `local-hash`. There is no third option by design. Anthropic ships no embedding API, and on Vertex the only managed text embeddings are Google's. Every alternative means deploying and paying for your own Model Garden endpoint.
+`SCI_RAG_EMBEDDING_PROVIDER` accepts `google` or `local-hash`. There is no third option by design. Anthropic ships no embedding API. On Vertex, the only managed text embeddings are Google's. Every alternative means deploying and paying for your own Model Garden endpoint.
 
-An embedder is not a runtime-swappable choice. A migration bakes `SCI_RAG_EMBEDDING_DIM` into the pgvector column (see [ADR 0002](adr/0002-embeddings-1536-hnsw.md)), and each chunk stores the `version` that produced it. Changing embedder means a migration, a full re-embed, and an index rebuild.
+An embedder is not runtime-swappable. A migration bakes `SCI_RAG_EMBEDDING_DIM` into the pgvector column (see [ADR 0002](adr/0002-embeddings-1536-hnsw.md)). Each chunk stores the `version` that produced it. Changing embedders means a migration, full re-embedding, and index rebuild.
 
-`sci-rag embed reindex` plans this work. It reports which rows a version change left behind and writes nothing by default. It refuses when the dimension you configured does not match the live column. `--apply` is the separate step that re-embeds. Point `SCI_RAG_EMBEDDING_MODEL` at a different Google embedding model freely. Treat anything beyond that as a data migration, not a configuration change.
+`sci-rag embed reindex` plans this work. It reports which rows a version change affects and writes nothing by default. It fails when the dimension you configured does not match the live column. `--apply` is the separate step that re-embeds. Point `SCI_RAG_EMBEDDING_MODEL` at a different Google embedding model freely. Treat anything beyond that as a data migration, not configuration.
 
 ## 5. Add an authentication backend
 
@@ -168,19 +168,19 @@ To add OAuth or institutional identity:
 
 1. Map external identity and claims to the existing scope vocabulary.
 2. Implement `authenticate()` and `check_rate()`.
-3. Wire the backend into the application factory to guard REST and the `/mcp` mount.
-4. Preserve stable `application/problem+json` error codes.
+3. Wire the backend into the application factory to guard REST and `/mcp`.
+4. Keep `application/problem+json` error codes stable.
 5. Test REST and MCP access together.
 
-The `create_app()` constructs the shipped backend from settings. Keep any factory change explicit. Do not import arbitrary authentication code from configuration.
+The `create_app()` builds the shipped backend from settings. Keep any factory change explicit. Never import arbitrary authentication code from configuration.
 
 ## The invariants around every seam
 
 - **Rights scope precedes ranking.** Apply all document conditions before the candidate limit.
-- **Degradation is visible.** An optional component may fail without killing a request, but its trace must say so.
+- **Degradation is visible.** Optional components may fail without killing a request, but the trace must name what failed.
 - **Stored model output is validated.** Drop or reject unknown ontology values and malformed JSON.
-- **REST and MCP share behavior.** Add domain logic to `RagService` before exposing it through either adapter.
-- **Tests run offline by default.** Mark credentialed smoke coverage with the `cloud` tag.
+- **REST and MCP share behavior.** Add domain logic to `RagService` before exposing it through either.
+- **Tests run offline by default.** Mark credentialed coverage with the `cloud` tag.
 - **Retrieval changes come with evidence.** Include ablation results in your pull request.
 
 See [Architecture](architecture.md#extension-points-in-order-of-likely-need) for ownership, [Contributing](contributing.md) for the change bar, and [Evaluate your pipeline](evaluation.md) for the measurement workflow.

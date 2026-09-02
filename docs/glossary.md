@@ -5,7 +5,7 @@ description: What each term means in this project.
 
 # Glossary
 
-These definitions describe how this project uses each term. Each is narrower than the term's general use in the literature.
+These definitions describe how this project uses each term. Each is narrower than the term's general use in the literature, capturing the specific meaning in this codebase.
 
 ## Retrieval and answers
 
@@ -19,7 +19,7 @@ These definitions describe how this project uses each term. Each is narrower tha
 : A vector (a list of numbers) that places texts with similar meaning near each other, so a question can find a passage that uses different words. The default Google embedding is cut to 1536 dimensions and normalized.
 
 **Retrieval layer**
-: One way of proposing candidate passages for a question. The five layers are vector, keyword, graph, community, and hypothetical answer (HyDE).
+: One method of proposing candidate passages for a question. The kit runs five: vector (embedding similarity), keyword (full-text search), graph (entity traversal), community (topic summaries), and hypothetical answer (HyDE).
 
 **HyDE (hypothetical document embeddings)**
 : A model writes a short guess at what an answering passage would say. The kit embeds that guess and searches near it. The guess is only used to aim the search; it is never shown or cited.
@@ -28,7 +28,7 @@ These definitions describe how this project uses each term. Each is narrower tha
 : Combining the five layers' ranked lists into a single ranking. The kit uses weighted reciprocal rank fusion, in which each layer contributes `weight / (60 + rank)` for each passage it returned. A passage several layers agree on therefore outranks one that a single layer scored highly.
 
 **Profile**
-: Which layers run for a request. `interactive` runs vector and keyword, for a person waiting at a prompt. `deep` runs all five, for agents, batch jobs, and evaluation. `auto` lets a router choose per question.
+: Which retrieval layers run for a request. `interactive` runs vector and keyword only, for a person waiting at a prompt. `deep` runs all five, for agents, batch jobs, and evaluation. `auto` lets a router choose per question.
 
 **Retrieval scope**
 : The limits a caller puts on a request before ranking: license classes, source labels, publication years, authors, journals, excluded DOIs, and retracted papers. Every layer applies the scope inside its own query.
@@ -42,7 +42,7 @@ These definitions describe how this project uses each term. Each is narrower tha
 ## Graph and corpus
 
 **Ontology**
-: The kinds of things in a field (entity types) and how they relate (relation types), declared in `domain/domain.yaml`. The graph builder extracts only what the ontology declares.
+: The kinds of things in a field (entity types) and how they relate (relation types), declared in `domain/domain.yaml`. The graph builder extracts only what the ontology declares; anything outside it is dropped, so the ontology controls what the knowledge graph contains.
 
 **Entity**
 : A named concept the builder found in the documents, of one of the entity types declared in the ontology, with the surface forms it appeared under and pointers to the chunks that mention it.

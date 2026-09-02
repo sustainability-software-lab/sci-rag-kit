@@ -5,7 +5,7 @@ description: Create a project, start the database, ingest the demo corpus, ask a
 
 # Quickstart
 
-This page reaches a working knowledge base over a small demo corpus in about 10 minutes: documents in a database, a question answered with citations, and one service answering REST clients and agents. Every step here repeats later with a real corpus.
+This page reaches a working knowledge base over a small demo corpus in about 10 minutes: documents in a database, a question answered with citations, and one service answering REST clients and agents. The demo corpus is a stand-in, but nothing else is; every step here is the same step a real corpus goes through later.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A served knowledge base over the demo corpus</div>
@@ -25,20 +25,20 @@ This page reaches a working knowledge base over a small demo corpus in about 10 
 | Docker, or a PostgreSQL 16 through 18 server with pgvector | The database everything lives in | `docker --version` |
 | A Google AI Studio key, optional | Real embeddings, the graph, and generated answers | [Create one](https://aistudio.google.com/apikey) |
 
-Without Docker, [Run Postgres your way](run-postgres.md) covers a conda-forge server, a system server such as Postgres.app, and the optional Cloud SQL development helper.
+Docker is the simplest way to get a database with the pgvector extension on a laptop, which is why the kit defaults to it. Without Docker, [Run Postgres your way](run-postgres.md) covers a conda-forge server, a system server such as Postgres.app, and the optional Cloud SQL development helper.
 
 ## 1. Create the project
 
 ### The wizard
 
-The wizard runs from whatever directory holds projects and writes a configured, git-initialized project directory there.
+The wizard runs from whatever directory holds projects and writes a configured, git-initialized project directory there, with the first commit already made.
 
 ```console title="Terminal"
 $ pipx install sci-rag-kit
 $ sci-rag new
 ```
 
-Choose **Quick**. It asks for six setup decisions: project name, a one-line description, contact email, environment manager, credential mode, and where your first documents will come from. It then asks for the credential value that mode needs and uses defaults for everything else. Choose **Offline** as the credential mode when you do not want a model credential yet. Choose **Advanced** only when you need to set models, parsing, reranking, infrastructure, or licensing yourself.
+Choose **Quick**. It asks for six setup decisions: project name, a one-line description, contact email, environment manager, credential mode, and where your first documents will come from. It then asks for the credential value that mode needs and uses defaults for everything else, defaults that were chosen to work on a laptop without further tuning. Choose **Offline** as the credential mode when you do not want a model credential yet; retrieval works without one, and the graph and generated answers switch on later. Choose **Advanced** only when you need to set models, parsing, reranking, infrastructure, or licensing yourself.
 
 The environment-manager menu preselects the first supported environment manager found on `PATH`. That preselection does not change what `--defaults` or an answers file would choose. If `SCI_RAG_GOOGLE_API_KEY` or `GOOGLE_API_KEY` is already set in your shell, the wizard offers to reuse it without displaying its value. Any key you type is masked. Pass `--no-tty` for plain numbered prompts.
 
@@ -108,7 +108,7 @@ Pick one mode. AI Studio is the right choice for almost everyone.
 $ make setup
 ```
 
-`make setup` starts the selected database backend, installs dependencies, and creates the tables. Docker is the template default and listens on host port `5433`. Projects generated with pixi or conda start a bundled server instead. Any project can point at a PostgreSQL 16 through 18 server you already run.
+`make setup` starts the selected database backend, installs the project's dependencies, and creates the tables, in that order. Docker is the template default and listens on host port `5433`, a port chosen so it does not collide with a system PostgreSQL on the usual 5432. Projects generated with pixi or conda start a bundled server instead, and any project can point at a PostgreSQL 16 through 18 server you already run.
 
 If port `5433` is already taken, often by another Sci RAG Kit project, change the `ports` entry in `docker-compose.yml` to `"5434:5432"` and set the same port in `SCI_RAG_DATABASE_URL`. [Troubleshooting](troubleshooting.md#docker) has the full recovery.
 
@@ -130,7 +130,7 @@ Run `uv run sci-rag doctor`. Configuration, domain, database, and schema report 
 $ make demo
 ```
 
-This ingests five short synthetic documents about agricultural residues, runs one retrieval to show what comes back, and scores retrieval against the bundled test questions. The numbers in the documents are plausible but fictional.
+This ingests five short synthetic documents about agricultural residues, runs one retrieval to show what comes back, and scores retrieval against the bundled test questions. The documents were written for the kit: their numbers are plausible but fictional, which keeps the demo free of any rights question while still exercising every part of the pipeline.
 
 **Expected output**
 
@@ -143,7 +143,7 @@ keyword    success     ...
 graph      disabled    ...
 ```
 
-`graph disabled` is expected here. The retrieval that `make demo` runs uses the fast profile, which leaves the model-dependent layers off.
+`graph disabled` is expected here, and it is not an error. The retrieval that `make demo` runs uses the fast profile, which leaves the model-dependent layers off; step 6 turns them on.
 
 <div class="srag-checkpoint" markdown>
 **Checkpoint: the evidence is visible**
@@ -159,9 +159,9 @@ With a credential:
 $ uv run sci-rag answer "How much rice straw was generated in the Colusa Basin in 2023?"
 ```
 
-The expected answer for the demo corpus is approximately 302,000 dry tons, citing the synthetic resource assessment. Read the cited passage as well as the number.
+The expected answer for the demo corpus is approximately 302,000 dry tons, citing the synthetic resource assessment. Read the cited passage as well as the number: the citation is the part that makes the answer checkable, and it is the habit worth forming before a real corpus arrives.
 
-In Offline mode this command retrieves normally, then declines to answer and names the credential to set. It does not invent an answer.
+In Offline mode this command retrieves normally, then declines to answer and names the credential to set. It does not invent an answer, which is the same behavior a credentialed run shows when the corpus holds nothing relevant.
 
 If the stage table shows `timeout` for vector, graph, or HyDE, the model call was slow. The corpus is not empty. Raise `SCI_RAG_PROVIDER_CALL_TIMEOUT_S` in `.env` (60 seconds by default) and run the command again.
 
@@ -173,7 +173,7 @@ With a credential:
 $ make demo-cloud
 ```
 
-This extracts the demo domain's concepts and relationships from every chunk and summarizes the clusters they form. It then asks a question whose answer spans several documents and scores retrieval with each layer switched off in turn. Reports land under `eval_results/`.
+This extracts the demo domain's concepts and relationships from every chunk and summarizes the clusters they form, which is the work the graph layer needs before it can contribute. It then asks a question whose answer spans several documents and scores retrieval with each layer switched off in turn, so the report shows what each one is worth on this corpus. Reports land under `eval_results/`.
 
 <div class="srag-checkpoint" markdown>
 **Checkpoint: the graph produced evidence**
@@ -207,7 +207,7 @@ Connect a local agent such as Claude Code:
 $ claude mcp add demo-corpus -- uv run --directory "$(pwd)" sci-rag mcp
 ```
 
-Ask the agent a question and tell it to use `demo-corpus`. A `search_corpus` or `answer_question` tool call should appear. An answer with no tool call came from the agent's own memory.
+Ask the agent a question and tell it to use `demo-corpus`. A `search_corpus` or `answer_question` tool call should appear in its transcript. An answer with no tool call came from the agent's own memory, not from the corpus, which is exactly the failure the tools exist to prevent.
 
 <div class="srag-checkpoint" markdown>
 **Checkpoint: one database, three front doors**

@@ -18,10 +18,12 @@ hide:
 
 <div class="srag-home-masthead__lede" markdown>
 
-A project template for question answering over scientific documents. The
-kit stores papers and reports in one database, answers questions about them
-in plain language, and cites the passages each answer came from. The
-pipeline comes assembled. A project supplies the documents and the questions.
+A project template for question answering over scientific documents. Give
+the kit a folder of papers and reports and it builds a knowledge base from
+them: every passage indexed three ways, a graph of the concepts they mention,
+and answers that quote the exact passages they rest on. The pipeline comes
+assembled and measured. What a project brings is the documents, the
+vocabulary of its field, and a handful of questions with known answers.
 
 </div>
 
@@ -47,27 +49,31 @@ pipeline comes assembled. A project supplies the documents and the questions.
 
 ## Start a project
 
-Two commands create a configured project. A third ingests the documents.
+Two commands create a configured project, and a third ingests the
+documents. There is no boilerplate to fill in afterward, because the
+generator writes the setup answers straight into the project's
+configuration files.
 
 ```console title="Terminal"
 $ pipx install sci-rag-kit
 $ sci-rag new
 ```
 
-The wizard asks a few questions and writes the answers into the project's
-configuration files. Quick mode asks for six setup decisions, plus the
-credential value required by the selected mode, and uses defaults for the
-rest. Offline mode needs no model credential at all, and Advanced mode
-exposes every option.
+The wizard asks about the project, the field, and how to reach a model,
+then writes the answers into place. Quick mode asks for six setup decisions,
+plus the credential value required by the selected mode, and uses sensible
+defaults for the rest. Offline mode needs no model credential at all, which
+makes it a good first pass on a laptop without one, and Advanced mode
+exposes every option for projects that already know what they want.
 
 <div id="srag-cast" class="srag-cast" data-cast="assets/casts/sci-rag-new.cast" data-autoplay="true" aria-label="Recorded sci-rag new session"></div>
 <small> (A full trace of this terminal session can be found [below](#example))</small>
 
-To read the kit before creating a project, [Other ways in](quickstart.md#other-ways-in) covers a clone, the GitHub template, `sci-rag init`, and the dev container.
+Prefer to read the code before creating a project? [Other ways in](quickstart.md#other-ways-in) covers a clone, the GitHub template, `sci-rag init`, and the dev container. Every route ends at the same tree.
 
 The [Quickstart](quickstart.md) goes from installation to a served knowledge
-base in about ten minutes. [How it works](learn.md) explains what happens
-along the way.
+base in about ten minutes, and [How it works](learn.md) explains what is
+happening at each step along the way.
 
 <!-- END KIT ONBOARDING -->
 
@@ -79,30 +85,35 @@ along the way.
 
 <div class="srag-defs" markdown>
 
-Document ingestion: the kit splits PDF, HTML, Markdown, and text files into
-passages that keep their section headings and whole tables. [Follow a
-document into storage](architecture.md#data-model).
+Document ingestion: PDF, HTML, Markdown, and text files become passages
+that keep their section headings and their tables intact, so a number
+retrieved from "Table 3" still knows which experiment it belongs to.
+[Follow a document into storage](architecture.md#data-model).
 
 Five kinds of search: by meaning, by exact words, through a graph of the
 field's concepts, through summaries of related concepts, and through a
-model-written hypothetical answer. The five result lists merge into one
-ranking. [See how a question is answered](learn.md#what-happens-to-a-question).
+model-written hypothetical answer. Each one finds evidence the others miss,
+and their result lists merge into a single ranking that says which layer
+found what. [See how a question is answered](learn.md#what-happens-to-a-question).
 
 One database: passages, vectors, the full-text index, and the concept graph
-all live in Postgres, so there is nothing else to run or back up.
+all live in Postgres. That leaves one thing to run, one thing to back up,
+and one place where a chunk and its graph entries commit together.
 [Read why](adr/0001-graph-in-postgres.md).
 
 Rights built in: every document carries a license class, and a request that
-restricts rights never sees passages outside it. [Read the rights
+restricts rights never sees passages outside it, because the filter runs
+inside each search before anything is ranked. [Read the rights
 rules](methodology.md#7-scope-precedes-ranking).
 
 Cited answers: every claim points at a numbered passage, and when the
-documents do not contain an answer, the kit says so. [Use REST or
-MCP](api.md).
+documents do not contain an answer, the kit says so rather than filling the
+gap from a model's memory. [Use REST or MCP](api.md).
 
-Measurement: the kit scores retrieval and grades answers against questions
-with known answers, and reports what each search layer contributes on a
-given corpus. [Evaluate your pipeline](evaluation.md).
+Measurement: a file of questions with known answers lets the kit score
+retrieval, grade generated answers, and report what each search layer
+contributes on the corpus at hand, so a change is judged by numbers rather
+than by impression. [Evaluate your pipeline](evaluation.md).
 
 </div>
 
@@ -112,7 +123,10 @@ given corpus. [Evaluate your pipeline](evaluation.md).
 
 ## Configure, do not code
 
-Pointing the kit at a new field means editing configuration files, never Python.
+Pointing the kit at a new field means editing configuration files, never
+Python. The concepts of the field, the wording of the prompts, and the
+questions used for scoring all live in plain text, and the pipeline reads
+them at run time.
 
 <!-- BEGIN KIT ONBOARDING -->
 `pipx install sci-rag-kit` installs the kit. `sci-rag new` then fills in the
@@ -121,7 +135,9 @@ configuration files from the answers given during setup.
 
 `domain/` holds everything specific to the field: the concepts the graph
 looks for, the prompt wording, and the test questions. `data/` holds the
-documents and a one-line-per-document manifest that records their rights.
+documents themselves and a one-line-per-document manifest that records who
+wrote each one and whether its text may be redistributed. Everything else
+is the pipeline, and most projects never open it.
 
 <pre class="srag-home-tree" aria-label="Annotated repository tree"><code>your-sci-rag/
 ├── domain/           the field: concepts, prompts, test questions

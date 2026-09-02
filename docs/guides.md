@@ -5,7 +5,7 @@ description: Complete a specific task, from measuring quality to deploying and o
 
 # Guides
 
-Each guide starts from an outcome and assumes a finished [quickstart](quickstart.md). The reference section holds the exact commands, fields, and contracts.
+Each guide starts from an outcome and assumes a finished [quickstart](quickstart.md), so it spends its words on the task rather than on orientation. The reference section holds the exact commands, fields, and contracts when a guide names one without spelling it out.
 
 <div class="srag-rows" markdown>
 
