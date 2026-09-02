@@ -179,7 +179,7 @@ adapter, and graph-output verification.
 - `scripts/graph_replay.py` - add artifact validation, canonical hashing,
   `require|refresh|off` orchestration, recording and replay `LLMClient` adapters,
   pristine-demo checks, and receipt output.
-- `tests/unit/test_graph_replay.py` - cover artifact shape, canonical hashes,
+- `tests/unit/test_graph_replay_contract.py` - cover artifact shape, canonical hashes,
   identity drift, immutable writes, mode failures, and zero-provider strict replay.
 - `tests/integration/test_graph_replay.py` - prove database ordering,
   record/replay persistence, evidence mapping, and cross-ID equivalence.
@@ -213,7 +213,7 @@ adapter, and graph-output verification.
 
 - Name: `test_require_rejects_identity_drift_without_building_a_model_client`
 - Tier: unit.
-- File: `tests/unit/test_graph_replay.py`
+- File: `tests/unit/test_graph_replay_contract.py`
 - Asserts: corpus, model, domain, contract, prompt, or generation-parameter drift
   exits visibly before any provider construction or fallback call.
 - Red trigger: no strict replay validator exists.
@@ -390,7 +390,7 @@ same merge.
 Run focused offline checks during development:
 
 ```bash
-uv run pytest tests/unit/test_graph_replay.py \
+uv run pytest tests/unit/test_graph_replay_contract.py \
   tests/unit/test_benchmark_provenance.py \
   tests/unit/test_benchmark_comparison.py \
   tests/unit/test_render_benchmarks.py \

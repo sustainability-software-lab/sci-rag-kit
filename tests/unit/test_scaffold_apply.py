@@ -59,6 +59,55 @@ def _answers(**overrides: object) -> ProjectAnswers:
     return ProjectAnswers.from_raw(raw)
 
 
+def _install_graph_replay_surfaces(root: Path) -> None:
+    """Copy the tracked replay surfaces a generated project will inherit."""
+    replay_files = (
+        "scripts/graph_replay.py",
+        "tests/unit/test_graph_replay_contract.py",
+        "tests/integration/test_graph_replay.py",
+        "tests/unit/test_graph_replay_makefile.py",
+        "docs/adr/0011-committed-benchmark-graph-replay.md",
+        "docs/STYLE.md",
+        "docs/faq.md",
+        "mkdocs.yml",
+    )
+    for relative in replay_files:
+        destination = root / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(REPO_ROOT / relative, destination)
+
+    replay_script = root / "scripts" / "graph_replay.py"
+    (replay_script.parent / "keep_me.py").write_text("# unrelated helper\n", encoding="utf-8")
+
+    artifact = root / "data" / "demo" / "graph-replay" / "reviewed.json"
+    artifact.parent.mkdir(parents=True, exist_ok=True)
+    artifact.write_text('{"schema_version": 1}\n', encoding="utf-8")
+
+    makefile = root / "Makefile"
+    text = makefile.read_text(encoding="utf-8")
+    text = text.replace(
+        "GRAPH_REPLAY_RECEIPT :=",
+        "BENCH_GRAPH_REPLAY := data/demo/graph-replay/reviewed.json\nGRAPH_REPLAY_RECEIPT :=",
+        1,
+    )
+    makefile.write_text(text, encoding="utf-8")
+
+
+def _graph_replay_references(root: Path) -> list[str]:
+    needles = ("graph_replay.py", "graph-replay", "BENCH_GRAPH_REPLAY")
+    references: list[str] = []
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        if any(needle in text for needle in needles):
+            references.append(str(path.relative_to(root)))
+    return sorted(references)
+
+
 # --- domain.yaml ------------------------------------------------------------
 
 
@@ -375,6 +424,60 @@ def test_declining_the_demo_corpus_removes_the_demo_and_the_examples(template: P
     apply.apply_pruning(_answers(include_demo_corpus="No"), template)
     assert not (template / "data" / "demo").exists()
     assert not (template / "examples").exists()
+
+
+def test_declining_demo_prunes_graph_replay_surfaces(template: Path) -> None:
+    """A project without the demo retains no demo-only replay entry point."""
+    _install_graph_replay_surfaces(template)
+
+    apply.apply_pruning(_answers(include_demo_corpus="No"), template)
+
+    assert not (template / "data" / "demo" / "graph-replay").exists()
+    assert not (template / "scripts" / "graph_replay.py").exists()
+    for relative in (
+        "tests/unit/test_graph_replay_contract.py",
+        "tests/integration/test_graph_replay.py",
+        "tests/unit/test_graph_replay_makefile.py",
+        "docs/adr/0011-committed-benchmark-graph-replay.md",
+    ):
+        assert not (template / relative).exists()
+    assert (template / "scripts" / "keep_me.py").exists()
+    makefile = (template / "Makefile").read_text(encoding="utf-8")
+    phony = next(line for line in makefile.splitlines() if line.startswith(".PHONY:"))
+    assert "benchmark-refresh-graph:" not in makefile
+    assert "benchmark-refresh-graph" not in phony
+    faq = (template / "docs" / "faq.md").read_text(encoding="utf-8")
+    assert "Why commit model output for the demo benchmark?" not in faq
+    for relative in ("docs/STYLE.md", "docs/faq.md", "mkdocs.yml"):
+        assert "0011-committed-benchmark-graph-replay.md" not in (template / relative).read_text(
+            encoding="utf-8"
+        )
+    assert _graph_replay_references(template) == []
+
+
+def test_demo_project_retains_graph_replay_surfaces(template: Path) -> None:
+    """Keeping the demo keeps its reviewed replay workflow intact."""
+    _install_graph_replay_surfaces(template)
+
+    apply.apply_pruning(_answers(include_demo_corpus="Yes"), template)
+
+    assert (template / "data" / "demo" / "graph-replay" / "reviewed.json").exists()
+    assert (template / "scripts" / "graph_replay.py").exists()
+    for relative in (
+        "tests/unit/test_graph_replay_contract.py",
+        "tests/integration/test_graph_replay.py",
+        "tests/unit/test_graph_replay_makefile.py",
+        "docs/adr/0011-committed-benchmark-graph-replay.md",
+    ):
+        assert (template / relative).exists()
+    makefile = (template / "Makefile").read_text(encoding="utf-8")
+    phony = next(line for line in makefile.splitlines() if line.startswith(".PHONY:"))
+    assert "benchmark-refresh-graph:" in makefile
+    assert "benchmark-refresh-graph" in phony
+    assert "BENCH_GRAPH_REPLAY := data/demo/graph-replay/reviewed.json" in makefile
+    faq = (template / "docs" / "faq.md").read_text(encoding="utf-8")
+    assert "Why commit model output for the demo benchmark?" in faq
+    assert "0011-committed-benchmark-graph-replay.md" in faq
 
 
 def test_pruned_paths_are_not_referenced_by_the_generated_build(template: Path) -> None:

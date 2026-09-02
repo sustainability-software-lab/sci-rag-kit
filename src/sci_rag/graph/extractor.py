@@ -30,7 +30,7 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.sql.sqltypes import Text as TextType
 
-from sci_rag.db.models import Chunk, KgEntity, KgRelationship
+from sci_rag.db.models import Chunk, Document, KgEntity, KgRelationship
 from sci_rag.domain import DomainProfile
 from sci_rag.llm import LLMClient
 
@@ -185,8 +185,10 @@ async def extract_graph(
 ) -> ExtractionStats:
     stats = ExtractionStats()
     async with session_factory() as session:
-        statement = select(Chunk.id, Chunk.document_id, Chunk.content).order_by(
-            Chunk.document_id, Chunk.chunk_index
+        statement = (
+            select(Chunk.id, Chunk.document_id, Chunk.content)
+            .join(Document, Document.id == Chunk.document_id)
+            .order_by(Document.content_hash, Chunk.chunk_index)
         )
         if not reprocess_all:
             statement = statement.where(Chunk.graph_extracted_at.is_(None))

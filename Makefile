@@ -1,7 +1,7 @@
 # Convenience targets. Everything here is just the underlying command,
 # spelled out; run `make <target>` or copy the command, whichever you like.
 
-.PHONY: setup db-up db-down db-upgrade demo demo-cloud test lint typecheck check serve mcp eval eval-ablation providers-check docs docs-geometry docs-serve docs-reference cast clean-demo
+.PHONY: setup db-up db-down db-upgrade demo demo-cloud test lint typecheck check serve mcp eval eval-ablation providers-check docs docs-geometry docs-serve docs-reference cast benchmark benchmark-check benchmark-refresh-graph clean-demo
 
 SCI_RAG_DB_BACKEND ?= docker
 
@@ -129,6 +129,18 @@ docs-serve:
 # calibration, then re-render the page from the report JSONs.
 # Needs the selected PostgreSQL backend and Google credentials (see .env.example).
 BENCH_SNAP := benchmark-$(shell date -u +%Y%m%d-%H%M%S)
+GRAPH_REPLAY_RECEIPT := eval_results/graph-replay-receipt.json
+
+## benchmark-refresh-graph: record a new immutable graph replay candidate.
+## This target never selects the candidate for the published benchmark.
+benchmark-refresh-graph: db-up
+	uv run sci-rag db upgrade
+	uv run sci-rag ingest --manifest data/demo/manifest.jsonl
+	uv run python scripts/graph_replay.py refresh \
+		--artifact-dir data/demo/graph-replay \
+		--receipt "$(GRAPH_REPLAY_RECEIPT)" \
+		--snapshot "$(BENCH_SNAP)"
+
 benchmark: db-up
 	uv run sci-rag db upgrade
 	uv run sci-rag ingest --manifest data/demo/manifest.jsonl
@@ -155,6 +167,7 @@ benchmark: db-up
 		--retrieval $$(ls -d eval_results/*-retrieval-ablation | sort | tail -1) \
 		--answers "$$uncompressed" \
 		--answers-compressed "$$compressed" \
+		--graph-receipt "$(GRAPH_REPLAY_RECEIPT)" \
 		--output docs/benchmarks.md \
 		--update
 	@echo "docs/benchmarks.md regenerated. Every number that moved is listed above;"
@@ -170,5 +183,6 @@ benchmark-check:
 		--retrieval $$(ls -d eval_results/*-retrieval-ablation | sort | tail -1) \
 		--answers "$$(printf '%s\n' "$$roles" | sed -n 1p)" \
 		--answers-compressed "$$(printf '%s\n' "$$roles" | sed -n 2p)" \
+		--graph-receipt "$(GRAPH_REPLAY_RECEIPT)" \
 		--output docs/benchmarks.md \
 		--check

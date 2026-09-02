@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -10,11 +11,82 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[2]))
 
 import pytest
-from scripts.render_benchmarks import (
-    ReportRoleError,
-    render_benchmarks,
-    select_answer_reports,
-)
+from scripts.render_benchmarks import ReportRoleError, select_answer_reports
+from scripts.render_benchmarks import render_benchmarks as _render_benchmarks
+
+CORPUS_DIGEST = "b" * 64
+GRAPH_DIGEST = "d" * 64
+
+
+def artifact_fixture() -> dict:
+    return {
+        "schema_version": 1,
+        "extractor_contract_version": 1,
+        "created_at": "2026-08-30T00:00:00+00:00",
+        "source_commit": "abc1234",
+        "corpus_digest": CORPUS_DIGEST,
+        "extraction_model": "google:gemini-2.5-flash",
+        "domain_digest": "a" * 64,
+        "batch_size": 5,
+        "generation_parameters": {
+            "temperature": 0.0,
+            "json_mode": True,
+            "max_tokens": 8192,
+        },
+        "calls": [
+            {
+                "order": order,
+                "input_digest": f"{order:064x}",
+                "raw_completion": "{}",
+            }
+            for order in range(7)
+        ],
+        "successful_batches": 1,
+        "split_batches": 0,
+        "failed_batches": 0,
+        "entity_count": 76,
+        "relationship_count": 72,
+        "graph_digest": GRAPH_DIGEST,
+    }
+
+
+def artifact_sha256() -> str:
+    canonical = json.dumps(
+        artifact_fixture(), ensure_ascii=False, separators=(",", ":"), sort_keys=True
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
+def graph_replay_fixture() -> dict:
+    digest = artifact_sha256()
+    return {
+        "mode": "require",
+        "artifact_path": f"data/demo/graph-replay/{digest}.json",
+        "artifact_sha256": digest,
+        "extraction_model": PROVENANCE["models"]["extraction"],
+        "domain_digest": PROVENANCE["domain_digest"],
+        "corpus_digest": CORPUS_DIGEST,
+        "snapshot": "v0.2-demo",
+        "counts": {"entities": 76, "relationships": 72},
+        "replayed_call_count": 7,
+        "extracted_call_count": 0,
+        "split_count": 0,
+        "graph_digest": GRAPH_DIGEST,
+    }
+
+
+def snapshot_fixture() -> dict:
+    return {
+        "name": "v0.2-demo",
+        "corpus_digest": CORPUS_DIGEST,
+        "counts": {
+            "documents": 5,
+            "chunks": 34,
+            "entities": 76,
+            "relationships": 72,
+            "communities": 10,
+        },
+    }
 
 
 def retrieval_fixture() -> dict:
@@ -93,6 +165,30 @@ def answers_fixture() -> dict:
     }
 
 
+def render_benchmarks(
+    retrieval_path: Path,
+    answers_path: Path | None,
+    compressed_path: Path | None = None,
+) -> str:
+    """Render through the external replay receipt contract used by Make."""
+    report_path = retrieval_path / "report.json" if retrieval_path.is_dir() else retrieval_path
+    snapshot_path = report_path.parent / "snapshot.json"
+    snapshot_path.write_text(json.dumps(snapshot_fixture()), encoding="utf-8")
+    replay = graph_replay_fixture()
+    artifact_root = report_path.parent
+    artifact_path = artifact_root / replay["artifact_path"]
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(json.dumps(artifact_fixture(), indent=2), encoding="utf-8")
+    return _render_benchmarks(
+        retrieval_path,
+        answers_path,
+        compressed_path,
+        graph_receipt=replay,
+        snapshot_path=snapshot_path,
+        artifact_root=artifact_root,
+    )
+
+
 def test_renders_full_page(tmp_path: Path) -> None:
     retrieval = tmp_path / "retrieval.json"
     answers = tmp_path / "answers.json"
@@ -107,6 +203,21 @@ def test_renders_full_page(tmp_path: Path) -> None:
     assert "make benchmark" in page  # reproduction command
     assert "groundedness" in page  # answers table present
     assert "small" in page.lower()  # small-sample honesty
+    assert "76 extracted entities" in page
+    assert "67 extracted entities" not in page
+    assert "10% on other counts" in page
+
+
+def test_the_renderer_names_the_committed_strict_graph_replay(tmp_path: Path) -> None:
+    """The page says which graph was replayed and that no live draw leaked in."""
+    page = render_benchmarks(
+        _write(tmp_path, "retrieval", retrieval_fixture()),
+        _write(tmp_path, "answers", answers_fixture()),
+    )
+
+    assert "strict replay" in page.lower()
+    assert artifact_sha256() in page
+    assert "0 live extraction calls" in page
 
 
 def test_renders_without_answers(tmp_path: Path) -> None:

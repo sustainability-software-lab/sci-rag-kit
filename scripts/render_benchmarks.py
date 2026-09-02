@@ -16,15 +16,17 @@ No number appears here that was not computed by the eval harness.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 METRICS = ("hit_at_5", "hit_at_10", "mrr", "ndcg_at_10")
 METRIC_LABELS = {"hit_at_5": "hit@5", "hit_at_10": "hit@10", "mrr": "MRR", "ndcg_at_10": "nDCG@10"}
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _ci_cell(ci: dict[str, float] | None) -> str:
@@ -51,29 +53,172 @@ REQUIRED_REPORT_FIELDS = ("git_commit", "snapshot", "provenance")
 #: run from one commit and an answers run from another describe neither.
 SHARED_REPORT_FIELDS = ("git_commit", "snapshot", "provenance")
 
-#: How far a published number may move before a re-render is a finding rather
-#: than noise. Metrics are absolute on a 0 to 1 scale; counts are relative,
-#: because a graph is built rather than measured. Both are deliberately loose:
-#: the demo corpus has single-digit questions and the intervals are wide, so a
-#: tighter bound would report weather.
+#: How far a still-stochastic published number may move before a re-render is
+#: a finding rather than noise. Metrics are absolute on a 0 to 1 scale, while
+#: document, chunk, and community counts are relative. Entity and relationship
+#: counts come from the reviewed graph replay and therefore have zero tolerance.
 TOLERANCES = {"metric": 0.10, "count": 0.10}
 
-#: The counterexample to the tolerance promise above, published next to it.
-#: Two reruns from identical recorded inputs moved the entity count 13.3% down
-#: and 12% up, both outside the 10% count tolerance. A reader who runs the
-#: command and gets a different entity count has reproduced the documented
-#: behavior, and telling them so is cheaper than letting them hunt for a
-#: mistake they did not make. A test holds the published page to this string,
-#: so a later re-render cannot keep the numbers and drop the caveat.
-GRAPH_COUNT_CAVEAT = (
-    "The graph counts are the known exception to that promise. Two reruns from "
-    "identical recorded inputs, the same corpus, the same models, and the same "
-    "ontology, moved the entity count 13% down and 12% up. Decoding at "
-    "`temperature: 0.0` does not make the extractor deterministic, and these "
-    "numbers are the evidence. Read `entities` and `relationships` as one draw "
-    "from a distribution. A different count on your machine is the documented "
-    "behavior, not a sign that you have broken something."
+GRAPH_REPLAY_FIELDS = (
+    "mode",
+    "artifact_path",
+    "artifact_sha256",
+    "extraction_model",
+    "domain_digest",
+    "corpus_digest",
+    "snapshot",
+    "counts",
+    "replayed_call_count",
+    "extracted_call_count",
+    "split_count",
+    "graph_digest",
 )
+_SHA256 = re.compile(r"[0-9a-f]{64}")
+GRAPH_REPLAY_ARTIFACT_FIELDS = {
+    "schema_version",
+    "extractor_contract_version",
+    "created_at",
+    "source_commit",
+    "corpus_digest",
+    "extraction_model",
+    "domain_digest",
+    "batch_size",
+    "generation_parameters",
+    "calls",
+    "successful_batches",
+    "split_batches",
+    "failed_batches",
+    "entity_count",
+    "relationship_count",
+    "graph_digest",
+}
+
+
+def _canonical_json(value: object) -> bytes:
+    """Encode replay evidence exactly as scripts/graph_replay.py hashes it."""
+    try:
+        return json.dumps(
+            value,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+    except (TypeError, ValueError) as exc:
+        raise ProvenanceError(f"graph replay artifact is not canonical JSON: {exc}") from exc
+
+
+def _verify_artifact(receipt: dict[str, Any], artifact_root: Path | None) -> None:
+    """Bind the receipt's replay claims to a complete content-addressed artifact."""
+    relative_path = PurePosixPath(receipt["artifact_path"])
+    root = artifact_root if artifact_root is not None else REPO_ROOT
+    path = root.joinpath(*relative_path.parts)
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ProvenanceError(f"cannot read graph replay artifact {path}: {exc}") from exc
+    if not isinstance(artifact, dict):
+        raise ProvenanceError(f"graph replay artifact {path} must contain one JSON object")
+    observed = hashlib.sha256(_canonical_json(artifact)).hexdigest()
+    if observed != receipt["artifact_sha256"]:
+        raise ProvenanceError(
+            f"graph replay artifact {path} has canonical SHA-256 {observed}, "
+            f"not receipt artifact_sha256 {receipt['artifact_sha256']}"
+        )
+
+    if set(artifact) != GRAPH_REPLAY_ARTIFACT_FIELDS:
+        missing = sorted(GRAPH_REPLAY_ARTIFACT_FIELDS - set(artifact))
+        unexpected = sorted(set(artifact) - GRAPH_REPLAY_ARTIFACT_FIELDS)
+        details = []
+        if missing:
+            details.append("missing " + ", ".join(missing))
+        if unexpected:
+            details.append("unexpected " + ", ".join(unexpected))
+        raise ProvenanceError(f"graph replay artifact shape mismatch: {'; '.join(details)}")
+
+    for field in ("schema_version", "extractor_contract_version"):
+        if artifact[field] != 1 or type(artifact[field]) is not int:
+            raise ProvenanceError(f"graph replay artifact {field} must be 1")
+    for field in ("created_at", "source_commit", "extraction_model"):
+        if not isinstance(artifact[field], str) or not artifact[field]:
+            raise ProvenanceError(f"graph replay artifact {field} must be a non-empty string")
+    try:
+        datetime.fromisoformat(artifact["created_at"])
+    except ValueError as exc:
+        raise ProvenanceError(
+            "graph replay artifact created_at must be an ISO-8601 timestamp"
+        ) from exc
+    for field in ("corpus_digest", "domain_digest", "graph_digest"):
+        value = artifact[field]
+        if not isinstance(value, str) or _SHA256.fullmatch(value) is None:
+            raise ProvenanceError(
+                f"graph replay artifact {field} must be a lowercase SHA-256 value"
+            )
+    for field, minimum in (
+        ("batch_size", 1),
+        ("successful_batches", 0),
+        ("split_batches", 0),
+        ("failed_batches", 0),
+        ("entity_count", 0),
+        ("relationship_count", 0),
+    ):
+        value = artifact[field]
+        if type(value) is not int or value < minimum:
+            raise ProvenanceError(
+                f"graph replay artifact {field} must be an integer of at least {minimum}"
+            )
+    if not isinstance(artifact["generation_parameters"], dict):
+        raise ProvenanceError("graph replay artifact generation_parameters must be an object")
+
+    calls = artifact["calls"]
+    if not isinstance(calls, list):
+        raise ProvenanceError("graph replay artifact calls must be a list")
+    for order, call in enumerate(calls):
+        if not isinstance(call, dict) or set(call) != {
+            "order",
+            "input_digest",
+            "raw_completion",
+        }:
+            raise ProvenanceError(
+                "each graph replay artifact call must contain exactly order, "
+                "input_digest, and raw_completion"
+            )
+        if type(call["order"]) is not int or call["order"] != order:
+            raise ProvenanceError("graph replay artifact call order must be contiguous from zero")
+        input_digest = call["input_digest"]
+        if not isinstance(input_digest, str) or _SHA256.fullmatch(input_digest) is None:
+            raise ProvenanceError(
+                "graph replay artifact call input_digest must be a lowercase SHA-256 value"
+            )
+        if not isinstance(call["raw_completion"], str):
+            raise ProvenanceError("graph replay artifact call raw_completion must be text")
+
+    expected = {
+        "extraction_model": receipt["extraction_model"],
+        "domain_digest": receipt["domain_digest"],
+        "corpus_digest": receipt["corpus_digest"],
+        "counts.entities/artifact entity_count": receipt["counts"]["entities"],
+        "counts.relationships/artifact relationship_count": receipt["counts"]["relationships"],
+        "graph_digest": receipt["graph_digest"],
+        "replayed_call_count": receipt["replayed_call_count"],
+        "split_count": receipt["split_count"],
+    }
+    observed_claims = {
+        "extraction_model": artifact["extraction_model"],
+        "domain_digest": artifact["domain_digest"],
+        "corpus_digest": artifact["corpus_digest"],
+        "counts.entities/artifact entity_count": artifact["entity_count"],
+        "counts.relationships/artifact relationship_count": artifact["relationship_count"],
+        "graph_digest": artifact["graph_digest"],
+        "replayed_call_count": len(calls),
+        "split_count": artifact["split_batches"],
+    }
+    disagree = [field for field, value in expected.items() if observed_claims[field] != value]
+    if disagree:
+        raise ProvenanceError(
+            "graph replay artifact and receipt disagree about " + ", ".join(disagree)
+        )
+    if artifact["failed_batches"] != 0:
+        raise ProvenanceError("graph replay artifact failed_batches must be 0 for strict replay")
 
 
 @dataclass(frozen=True)
@@ -122,7 +267,9 @@ def _is_material(label: str, before: str, after: str) -> bool:
         new_value = float(after.split()[0])
     except (TypeError, ValueError):
         return before != after
-    if label in {"documents", "chunks", "entities", "relationships", "communities"}:
+    if label in {"entities", "relationships"}:
+        return new_value != old_value
+    if label in {"documents", "chunks", "communities"}:
         if old_value == 0:
             return new_value != 0
         return abs(new_value - old_value) / old_value > TOLERANCES["count"]
@@ -157,7 +304,8 @@ def check_against_committed(rendered: str, committed_path: Path) -> None:
     if material:
         print(
             f"\n{len(material)} moved beyond the declared tolerance "
-            f"(metrics {TOLERANCES['metric']}, counts {TOLERANCES['count']:.0%}). "
+            f"(metrics {TOLERANCES['metric']}, non-graph counts "
+            f"{TOLERANCES['count']:.0%}, entity and relationship counts exact). "
             "Publishing these numbers needs a reviewed source report and an "
             "explanation of what changed; re-run with --update once you have both."
         )
@@ -181,6 +329,159 @@ def _require_agreement(first: dict[str, Any], second: dict[str, Any], where: str
             f"{where} disagree about {', '.join(disagree)}. One page cannot describe "
             "two runs; render from reports produced by a single benchmark."
         )
+
+
+def _load_graph_receipt(graph_receipt: Path | dict[str, Any] | None) -> dict[str, Any]:
+    if graph_receipt is None:
+        raise ProvenanceError(
+            "a graph receipt is required before benchmark graph counts can be published"
+        )
+    if isinstance(graph_receipt, Path):
+        try:
+            loaded = json.loads(graph_receipt.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ProvenanceError(f"cannot read graph receipt {graph_receipt}: {exc}") from exc
+    elif isinstance(graph_receipt, dict):
+        loaded = graph_receipt
+    else:
+        raise ProvenanceError("graph receipt must be a JSON file path or object")
+    if not isinstance(loaded, dict):
+        raise ProvenanceError("graph receipt must contain one JSON object")
+    return loaded
+
+
+def _load_snapshot(report: dict[str, Any], snapshot_path: Path | None) -> dict[str, Any]:
+    snapshot_name = report.get("snapshot")
+    path = snapshot_path or Path("data/snapshots") / f"{snapshot_name}.json"
+    try:
+        snapshot = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ProvenanceError(f"cannot read named snapshot {path}: {exc}") from exc
+    if not isinstance(snapshot, dict):
+        raise ProvenanceError(f"named snapshot {path} must contain one JSON object")
+    return snapshot
+
+
+def _require_graph_replay(
+    report: dict[str, Any],
+    report_path: Path,
+    *,
+    graph_receipt: Path | dict[str, Any] | None,
+    snapshot_path: Path | None,
+    artifact_root: Path | None,
+) -> dict[str, Any]:
+    receipt = _load_graph_receipt(graph_receipt)
+    missing = [field for field in GRAPH_REPLAY_FIELDS if field not in receipt]
+    if missing:
+        raise ProvenanceError(f"graph receipt is missing {', '.join(missing)}")
+
+    string_fields = (
+        "mode",
+        "artifact_path",
+        "artifact_sha256",
+        "extraction_model",
+        "domain_digest",
+        "corpus_digest",
+        "snapshot",
+        "graph_digest",
+    )
+    invalid_strings = [
+        field
+        for field in string_fields
+        if not isinstance(receipt[field], str) or not receipt[field]
+    ]
+    if invalid_strings:
+        raise ProvenanceError(
+            f"graph receipt fields must be non-empty strings: {', '.join(invalid_strings)}"
+        )
+
+    invalid_digests = [
+        field
+        for field in ("artifact_sha256", "domain_digest", "corpus_digest", "graph_digest")
+        if _SHA256.fullmatch(receipt[field]) is None
+    ]
+    if invalid_digests:
+        raise ProvenanceError(
+            f"graph receipt fields must be lowercase SHA-256 values: {', '.join(invalid_digests)}"
+        )
+
+    artifact_path = PurePosixPath(receipt["artifact_path"])
+    expected_parent = PurePosixPath("data/demo/graph-replay")
+    if (
+        artifact_path.is_absolute()
+        or artifact_path.parent != expected_parent
+        or artifact_path.suffix != ".json"
+    ):
+        raise ProvenanceError(
+            "graph receipt artifact_path must name one committed JSON file under "
+            "data/demo/graph-replay"
+        )
+    if artifact_path.stem != receipt["artifact_sha256"]:
+        raise ProvenanceError(
+            "graph receipt artifact_sha256 does not match the content-addressed artifact_path"
+        )
+
+    if receipt["mode"] != "require":
+        raise ProvenanceError("graph receipt mode must be require for a published strict replay")
+
+    for field in ("replayed_call_count", "extracted_call_count", "split_count"):
+        value = receipt[field]
+        if type(value) is not int or value < 0:
+            raise ProvenanceError(f"graph receipt {field} must be a non-negative integer")
+    if receipt["replayed_call_count"] == 0:
+        raise ProvenanceError("graph receipt replayed_call_count must be positive")
+    if receipt["extracted_call_count"] != 0:
+        raise ProvenanceError(
+            "graph receipt extracted_call_count must be 0; strict replay cannot mix in "
+            "a live extraction call"
+        )
+
+    counts = receipt["counts"]
+    if not isinstance(counts, dict) or set(counts) != {"entities", "relationships"}:
+        raise ProvenanceError(
+            "graph receipt counts must contain exactly entities and relationships"
+        )
+    invalid_counts = [
+        label for label, value in counts.items() if type(value) is not int or value < 0
+    ]
+    if invalid_counts:
+        raise ProvenanceError(
+            f"graph receipt counts must be non-negative integers: {', '.join(invalid_counts)}"
+        )
+    _verify_artifact(receipt, artifact_root)
+
+    provenance = report.get("provenance")
+    models = provenance.get("models") if isinstance(provenance, dict) else None
+    expected_model = models.get("extraction") if isinstance(models, dict) else None
+    expected_domain = provenance.get("domain_digest") if isinstance(provenance, dict) else None
+    snapshot = _load_snapshot(report, snapshot_path)
+    expected = {
+        "extraction_model": expected_model,
+        "domain_digest": expected_domain,
+        "snapshot": report.get("snapshot"),
+        "corpus_digest": snapshot.get("corpus_digest"),
+    }
+    disagree = [field for field, value in expected.items() if receipt[field] != value]
+    if disagree:
+        raise ProvenanceError(
+            f"graph receipt and {report_path} disagree about {', '.join(disagree)}"
+        )
+    if snapshot.get("name") != report.get("snapshot"):
+        raise ProvenanceError(f"named snapshot and {report_path} disagree about snapshot")
+
+    report_corpus = report.get("corpus")
+    snapshot_counts = snapshot.get("counts")
+    if not isinstance(report_corpus, dict) or not isinstance(snapshot_counts, dict):
+        raise ProvenanceError("graph receipt counts need corpus counts in the report and snapshot")
+    expected_counts = {label: report_corpus.get(label) for label in ("entities", "relationships")}
+    if counts != expected_counts:
+        raise ProvenanceError(f"graph receipt and {report_path} disagree about counts")
+    snapshot_graph_counts = {
+        label: snapshot_counts.get(label) for label in ("entities", "relationships")
+    }
+    if counts != snapshot_graph_counts:
+        raise ProvenanceError("graph receipt and named snapshot disagree about counts")
+    return receipt
 
 
 def _load(path: Path | None) -> dict[str, Any] | None:
@@ -284,12 +585,23 @@ def render_benchmarks(
     retrieval_path: Path,
     answers_path: Path | None,
     compressed_path: Path | None = None,
+    *,
+    graph_receipt: Path | dict[str, Any] | None = None,
+    snapshot_path: Path | None = None,
+    artifact_root: Path | None = None,
 ) -> str:
     retrieval = _load(retrieval_path)
     assert retrieval is not None
     answers = _load(answers_path)
     compressed = _load(compressed_path)
     _require_provenance(retrieval, retrieval_path)
+    replay = _require_graph_replay(
+        retrieval,
+        retrieval_path,
+        graph_receipt=graph_receipt,
+        snapshot_path=snapshot_path,
+        artifact_root=artifact_root,
+    )
     if answers is not None and answers_path is not None:
         _require_provenance(answers, answers_path)
         _require_agreement(retrieval, answers, f"{retrieval_path} and {answers_path}")
@@ -339,17 +651,21 @@ def render_benchmarks(
         "(see `data/snapshots/`; the digest pins the exact document set)",
         f"- Embedding: `{versions}`; models: {llm_model}",
         f"- Code: commit `{commit}`; domain and prompts: `{digest[:12]}`",
+        f"- Graph: strict replay from `{replay['artifact_path']}` "
+        f"(`{replay['artifact_sha256']}`); {replay['replayed_call_count']} recorded "
+        f"calls replayed, {replay['extracted_call_count']} live extraction calls; "
+        f"canonical graph `{replay['graph_digest']}`",
         f"- Rendered: {datetime.now(UTC).strftime('%Y-%m-%d')}",
         "",
-        "Graph construction and judged answers are stochastic. Repeating the "
-        "command below reproduces these numbers within a declared tolerance of "
+        "The reviewed graph replay makes entity and relationship counts exact. "
+        "Judged answers and other model-backed measurements remain stochastic. "
+        "Repeating the command below reproduces those measurements within a "
+        "declared tolerance of "
         f"{TOLERANCES['metric']} absolute on a metric and "
-        f"{TOLERANCES['count']:.0%} on a count, and `--check` fails visibly "
+        f"{TOLERANCES['count']:.0%} on other counts, and `--check` fails visibly "
         "when one moves further. A number that moves beyond it is a finding, "
         "not a refresh: publishing it needs a reviewed source report and an "
         "explanation of which recorded input changed.",
-        "",
-        GRAPH_COUNT_CAVEAT,
         "",
         "## Retrieval ablations",
         "",
@@ -378,7 +694,7 @@ def render_benchmarks(
             "--condition resolved_entities`) measured on a post-resolution",
             "snapshot, and it requires at least one persisted resolution audit",
             "row. On this corpus `sci-rag graph resolve-entities` finds no",
-            "automatic pairs and plans no merges: 67 extracted entities with",
+            f"automatic pairs and plans no merges: {corpus.get('entities')} extracted entities with",
             "nothing duplicated enough to merge. The command refuses to run the",
             "condition rather than report a number that would just be",
             "`full_deep` under another name. A corpus with real alias variation",
@@ -605,6 +921,12 @@ def main() -> None:
     parser.add_argument("--retrieval", type=Path, default=None)
     parser.add_argument("--answers", type=Path, default=None)
     parser.add_argument("--answers-compressed", type=Path, default=None)
+    parser.add_argument(
+        "--graph-receipt",
+        type=Path,
+        default=None,
+        help="Ignored graph replay receipt written by scripts/graph_replay.py.",
+    )
     parser.add_argument("--output", type=Path, default=Path("docs/benchmarks.md"))
     parser.add_argument(
         "--select-answer-roles",
@@ -643,9 +965,16 @@ def main() -> None:
 
     if args.retrieval is None:
         parser.error("--retrieval is required unless --select-answer-roles is given")
+    if args.graph_receipt is None:
+        parser.error("--graph-receipt is required when rendering benchmark numbers")
     if args.check and args.update:
         parser.error("--check and --update are mutually exclusive")
-    page = render_benchmarks(args.retrieval, args.answers, args.answers_compressed)
+    page = render_benchmarks(
+        args.retrieval,
+        args.answers,
+        args.answers_compressed,
+        graph_receipt=args.graph_receipt,
+    )
 
     if args.check:
         check_against_committed(page, args.output)

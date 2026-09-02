@@ -765,6 +765,19 @@ def _remove_yaml_job(text: str, name: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _remove_markdown_section(text: str, heading: str) -> str:
+    """Drop one H3 section while preserving the surrounding page structure."""
+    lines = text.splitlines()
+    start = next((index for index, line in enumerate(lines) if line == f"### {heading}"), None)
+    if start is None:
+        return text
+    end = start + 1
+    while end < len(lines) and not re.match(r"^#{1,3} ", lines[end]):
+        end += 1
+    del lines[start:end]
+    return "\n".join(lines) + "\n"
+
+
 def _drop_lint_path(text: str, path_name: str) -> str:
     """Remove a directory from every ruff invocation.
 
@@ -809,6 +822,33 @@ def apply_pruning(answers: ProjectAnswers, root: Path) -> list[str]:
         removed.extend(["scripts/cloud_postgres.py", "infra/terraform/dev-database/"])
 
     if not answers.include_demo_corpus:
+        replay_only_files = (
+            "scripts/graph_replay.py",
+            "tests/unit/test_graph_replay_contract.py",
+            "tests/integration/test_graph_replay.py",
+            "tests/unit/test_graph_replay_makefile.py",
+            "docs/adr/0011-committed-benchmark-graph-replay.md",
+        )
+        for relative in replay_only_files:
+            (root / relative).unlink(missing_ok=True)
+        for relative in ("docs/STYLE.md", "mkdocs.yml"):
+            path = root / relative
+            if path.exists():
+                text = "\n".join(
+                    line
+                    for line in path.read_text(encoding="utf-8").splitlines()
+                    if "0011-committed-benchmark-graph-replay.md" not in line
+                )
+                _write(path, text.rstrip("\n") + "\n")
+        faq = root / "docs" / "faq.md"
+        if faq.exists():
+            _write(
+                faq,
+                _remove_markdown_section(
+                    faq.read_text(encoding="utf-8"),
+                    "Why commit model output for the demo benchmark?",
+                ),
+            )
         shutil.rmtree(root / "data" / "demo", ignore_errors=True)
         shutil.rmtree(root / "examples", ignore_errors=True)
         makefile = root / "Makefile"
@@ -817,22 +857,47 @@ def apply_pruning(answers: ProjectAnswers, root: Path) -> list[str]:
             # benchmark-check before benchmark: the remover matches a target
             # name at the start of a line, and dropping `benchmark` first
             # would leave its check target pointing at reports nothing writes.
-            for target in ("demo", "demo-cloud", "benchmark-check", "benchmark"):
-                text = _remove_make_target(text, target)
+            for target in (
+                "demo",
+                "demo-cloud",
+                "benchmark-refresh-graph",
+                "benchmark-check",
+                "benchmark",
+            ):
+                while re.search(rf"(?m)^{re.escape(target)}:(?: |$)", text):
+                    text = _remove_make_target(text, target)
+            text = re.sub(
+                r"(?m)^(?:BENCH_GRAPH_REPLAY|GRAPH_REPLAY_RECEIPT)\s*:?=.*\n?",
+                "",
+                text,
+            )
             text = re.sub(r"(?m)^(\.PHONY:.*)$", lambda m: _drop_phony(m.group(1)), text, count=1)
             text = _drop_lint_path(text, "examples")
             _write(makefile, text)
         workflow = root / ".github" / "workflows" / "ci.yml"
         if workflow.exists():
             _write(workflow, _drop_lint_path(workflow.read_text(encoding="utf-8"), "examples"))
-        removed.extend(["data/demo/", "examples/"])
+        removed.extend(
+            [
+                "data/demo/",
+                "examples/",
+                *replay_only_files,
+            ]
+        )
 
     if not removed:
         return []
     return [_log("removed", ", ".join(removed))]
 
 
-_PRUNED_PHONY = {"demo", "demo-cloud", "benchmark", "benchmark-check", "clean-demo"}
+_PRUNED_PHONY = {
+    "demo",
+    "demo-cloud",
+    "benchmark",
+    "benchmark-check",
+    "benchmark-refresh-graph",
+    "clean-demo",
+}
 
 
 def _drop_phony(line: str) -> str:
