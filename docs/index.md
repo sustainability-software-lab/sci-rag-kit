@@ -18,9 +18,9 @@ hide:
 
 <div class="srag-home-masthead__lede" markdown>
 
-Sci RAG Kit provides the blueprint for custom RAG
-development grounded in scientific documents.
-Fully extensible, scalable and ready to serve over API and MCP.
+Put your papers and reports into one database, ask questions in plain
+language, and get answers that cite the passages they came from. Everything
+is set up for you; you supply the documents and the questions.
 
 </div>
 
@@ -46,31 +46,27 @@ Fully extensible, scalable and ready to serve over API and MCP.
 
 ## Start a project
 
-Get up and running with two terminal commands
+Two commands create a configured project; a third ingests your documents.
 
 ```console title="Terminal"
 $ pipx install sci-rag-kit
 $ sci-rag new
 ```
 
-The setup wizard will guide you through a series of
-questions to initialize your project and automatically populate configuration
-files for you
-
-Quick mode asks for six setup decisions, plus the credential value required by
-the selected mode, and supplies defaults for everything else. Choose Offline if
-you do not want a model credential, or Advanced to reach every applicable option.
+The setup wizard asks a few questions and writes the answers into the
+project's configuration files. Quick mode asks for six setup decisions, plus
+the credential value required by the selected mode, and supplies defaults for
+everything else. Choose Offline if you do not want a model credential yet, or
+Advanced to reach every applicable option.
 
 <div id="srag-cast" class="srag-cast" data-cast="assets/casts/sci-rag-new.cast" data-autoplay="true" aria-label="Recorded sci-rag new session"></div>
 <small> (A full trace of this terminal session can be found [below](#example))</small>
 
 Want to look first? [Other ways in](quickstart.md#other-ways-in) covers a clone, the GitHub template, `sci-rag init`, and the dev container.
 
-Want to follow a step-by-step tutorial to get started? Follow our
-[Quickstart](quickstart.md) guide.
-It will take you from installation and setup through document ingestion,
-retrieval, and
-benchmarking, all on your local machine.
+New to building retrieval systems? The [Quickstart](quickstart.md) takes
+you from installation to a served knowledge base in about ten minutes, and
+[How it works](learn.md) explains what happened in plain words.
 
 <!-- END KIT ONBOARDING -->
 
@@ -82,27 +78,29 @@ benchmarking, all on your local machine.
 
 <div class="srag-defs" markdown>
 
-Structure-aware ingestion: PDF, Markdown, and text become chunks that retain
-section paths and intact tables. [Follow ingestion into
-storage](architecture.md#data-model).
+Document ingestion: PDF, HTML, Markdown, and text files are split into
+passages that keep their section headings and whole tables. [Follow a
+document into storage](architecture.md#data-model).
 
-Five-layer retrieval: Vector, keyword, graph, community, and HyDE candidates
-meet in one weighted fusion. [See the retrieval design](methodology.md).
+Five ways to search: by meaning, by exact words, through a graph of your
+field's concepts, through cluster summaries, and by a model's guess at what
+an answering passage would say. The five lists merge into one ranking.
+[See how a question is answered](learn.md#what-happens-to-a-question).
 
-Postgres-native graph: Vectors, full-text search, concepts, relationships,
-and source records live together. [Read the decision
-record](adr/0001-graph-in-postgres.md).
+One database: passages, vectors, full-text index, and the concept graph all
+live in Postgres. Nothing else to run or back up. [Read why](adr/0001-graph-in-postgres.md).
 
-Rights-aware scope: License and metadata filters are enforced inside every
-eligible layer before ranking. [Trace the rights
+Rights built in: every document carries a license class, and a request that
+restricts rights never sees passages outside it. [Trace the rights
 contract](evidence-and-rights.md).
 
-Cited answers: Every answer is assembled from numbered evidence, with a
-refusal when nothing is in scope. [Use REST or MCP](api.md).
+Cited answers: each claim points at a numbered passage, and when the
+documents do not contain an answer the system says so. [Use REST or
+MCP](api.md).
 
-Evaluation: Ablations, confidence intervals, blind judging, calibration, and
-corpus fingerprints turn quality claims into artifacts. [Evaluate your
-pipeline](evaluation.md).
+Measurement: score retrieval and grade answers against questions with known
+answers, and see what each search layer contributes on your corpus.
+[Evaluate your pipeline](evaluation.md).
 
 </div>
 
@@ -110,9 +108,9 @@ pipeline](evaluation.md).
 
 <section class="srag-home-section" id="repository" markdown>
 
-## Config-first Customization
+## Configure, do not code
 
-Sci RAG Kit handles customization primarily through configuration files.
+Pointing the kit at your field never means editing Python.
 
 <!-- BEGIN KIT ONBOARDING -->
 First, install the kit on the command line with: `pipx install sci-rag-kit`.
@@ -120,20 +118,20 @@ Then running `sci-rag new` will update the config files in
 place based on your responses to the setup questions.
 <!-- END KIT ONBOARDING -->
 
-`domain/` is where your domain-definition files live:
-ontology, prompts, retrieval tuning, and
-evaluation questions.
+`domain/` holds everything specific to your field: the concepts the graph
+looks for, the prompt wording, and the test questions. `data/` holds your
+documents and the one-line-per-document manifest that records their rights.
 
 <pre class="srag-home-tree" aria-label="Annotated repository tree"><code>your-sci-rag/
-├── domain/           ontology, prompts, eval questions
-├── data/             your source documents and manifests
-├── src/sci_rag/      ingestion through serving
-├── migrations/       Postgres and pgvector schema
-├── tests/            offline unit and integration evidence
-├── infra/terraform/  optional Cloud SQL and Cloud Run
-└── docs/             methods, guides, API, decisions</code></pre>
+├── domain/           your field: concepts, prompts, test questions
+├── data/             your documents and their manifest
+├── src/sci_rag/      the pipeline, from ingestion to serving
+├── migrations/       database tables
+├── tests/            runs offline
+├── infra/terraform/  optional Google Cloud deployment
+└── docs/             this site</code></pre>
 
-[Tour the repository](tour.md) · [Bring your own domain](bring-your-own-domain.md)
+[Where things live](get-started.md#where-things-live) · [Bring your own domain](bring-your-own-domain.md)
 
 </section>
 
@@ -143,17 +141,17 @@ evaluation questions.
 
 <div class="srag-rows" markdown>
 
-[<span class="srag-row__title">Quickstart</span><span class="srag-row__copy">Set up Postgres, ingest the CC0 fixture corpus, inspect retrieval, and serve the same tools over REST and MCP.</span>](quickstart.md){ .srag-row }
+[<span class="srag-row__title">Quickstart</span><span class="srag-row__copy">Create a project, ingest the demo corpus, ask a question, and serve the result. About ten minutes.</span>](quickstart.md){ .srag-row }
 
-[<span class="srag-row__title">Architecture</span><span class="srag-row__copy">Read the software map first, then the methodology specification and the decision records.</span>](architecture.md){ .srag-row }
+[<span class="srag-row__title">Bring your own domain</span><span class="srag-row__copy">Seven commands from a folder of PDFs to a knowledge base that answers questions about them.</span>](bring-your-own-domain.md){ .srag-row }
 
-[<span class="srag-row__title">Bring your own domain</span><span class="srag-row__copy">Define your ontology, prompts, source manifest, and questions without inventing a second framework.</span>](bring-your-own-domain.md){ .srag-row }
+[<span class="srag-row__title">How it works</span><span class="srag-row__copy">What happens between a document and a cited answer, in plain words.</span>](learn.md){ .srag-row }
 
-[<span class="srag-row__title">Run a corpus campaign</span><span class="srag-row__copy">Discover DOI candidates, review fail-closed rights resolution, then download verified direct PDFs into an ingestible manifest.</span>](campaigns.md){ .srag-row }
+[<span class="srag-row__title">Evaluate your pipeline</span><span class="srag-row__copy">Measure retrieval and answers against questions with known answers, and see what each search layer contributes.</span>](evaluation.md){ .srag-row }
 
-[<span class="srag-row__title">Evaluate your pipeline</span><span class="srag-row__copy">Run layer ablations, compare reports, calibrate the judge, and keep the corpus fingerprint attached.</span>](evaluation.md){ .srag-row }
+[<span class="srag-row__title">Run a corpus campaign</span><span class="srag-row__copy">Find papers by topic or DOI list, check their rights, and download the open-access PDFs.</span>](campaigns.md){ .srag-row }
 
-[<span class="srag-row__title">FAQ</span><span class="srag-row__copy">Our most commonly asked questions and answers.</span>](faq.md){ .srag-row }
+[<span class="srag-row__title">FAQ</span><span class="srag-row__copy">Short answers to what this is, who it is for, and why it is built this way.</span>](faq.md){ .srag-row }
 
 [<span class="srag-row__title">Choosing Sci RAG Kit</span><span class="srag-row__copy">Compare the kit with LightRAG, PaperQA2, LlamaIndex, and Microsoft GraphRAG before you commit to it.</span>](choosing-sci-rag-kit.md){ .srag-row }
 
@@ -231,20 +229,22 @@ The recommended Quick session above, in full. `scripts/render_cast.py` builds it
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  README.md              rewritten opening</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  git                    initialized, 1 commit</span></span>
 <span class="srag-term__line srag-term__line--empty"></span>
-<span class="srag-term__line srag-term__line--done"><span class="srag-term__heading">Done. Membrane Materials KB is yours. Next:</span></span>
+<span class="srag-term__line srag-term__line--done"><span class="srag-term__heading">Done. Membrane Materials KB is set up. Next:</span></span>
 <span class="srag-term__line srag-term__line--empty"></span>
 <span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  cd membrane-materials-kb</span></span>
-<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  uv sync</span></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  make setup                # install, start Postgres, create the tables</span></span>
 <span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  uv run sci-rag doctor</span></span>
-<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  uv run sci-rag draft manifest --folder data/raw</span></span>
-<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  uv run sci-rag ingest --manifest data/corpus.jsonl</span></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  # copy your PDFs, HTML, Markdown, or text files into data/raw/</span></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  uv run sci-rag build data/raw</span></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  uv run sci-rag answer &quot;a question in your field&quot;</span></span>
 <span class="srag-term__line srag-term__line--empty"></span>
 <span class="srag-term__line srag-term__line--output">Then let a model draft the rest of your domain files:</span>
 <span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  uv run sci-rag draft manifest --folder data/raw</span></span>
 <span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  uv run sci-rag draft ontology --from-corpus</span></span>
 <span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  uv run sci-rag draft questions --count 10</span></span>
 <span class="srag-term__line srag-term__line--empty"></span>
-<span class="srag-term__line srag-term__line--output">Each one proposes a file for you to review rather than writing one, and each also prints its prompt (--print-prompt) if you would rather paste it into an assistant you already have. Guide: docs/llm-assisted-setup.md</span>
+<span class="srag-term__line srag-term__line--output">Each one proposes a file for you to review rather than writing one, and each also prints its prompt (--print-prompt) if you would rather paste it into an assistant you already have.</span>
 <span class="srag-term__line srag-term__line--empty"></span>
 <span class="srag-term__line srag-term__line--output">The walkthrough: docs/bring-your-own-domain.md</span>
 </code></pre>
@@ -372,19 +372,22 @@ The recommended Quick session above, in full. `scripts/render_cast.py` builds it
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  README.md              rewritten opening</span></span>
 <span class="srag-term__line srag-term__line--status"><span class="srag-term__status">  git                    initialized, 1 commit</span></span>
 <span class="srag-term__line srag-term__line--empty"></span>
-<span class="srag-term__line srag-term__line--done"><span class="srag-term__heading">Done. Membrane Materials KB is yours. Next:</span></span>
+<span class="srag-term__line srag-term__line--done"><span class="srag-term__heading">Done. Membrane Materials KB is set up. Next:</span></span>
 <span class="srag-term__line srag-term__line--empty"></span>
 <span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  cd membrane-materials-kb</span></span>
-<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  pixi install</span></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  make setup                # install, start Postgres, create the tables</span></span>
 <span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  pixi run sci-rag doctor</span></span>
-<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  make corpus</span></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  make corpus               # discover papers and write data/corpus.jsonl</span></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  pixi run sci-rag build --manifest data/corpus.jsonl</span></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  pixi run sci-rag answer &quot;a question in your field&quot;</span></span>
 <span class="srag-term__line srag-term__line--empty"></span>
 <span class="srag-term__line srag-term__line--output">Then let a model draft the rest of your domain files:</span>
 <span class="srag-term__line srag-term__line--empty"></span>
+<span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  pixi run sci-rag draft manifest --folder data/raw</span></span>
 <span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  pixi run sci-rag draft ontology --from-corpus</span></span>
 <span class="srag-term__line srag-term__line--next"><span class="srag-term__cmd">  pixi run sci-rag draft questions --count 10</span></span>
 <span class="srag-term__line srag-term__line--empty"></span>
-<span class="srag-term__line srag-term__line--output">Each one proposes a file for you to review rather than writing one, and each also prints its prompt (--print-prompt) if you would rather paste it into an assistant you already have. Guide: docs/llm-assisted-setup.md</span>
+<span class="srag-term__line srag-term__line--output">Each one proposes a file for you to review rather than writing one, and each also prints its prompt (--print-prompt) if you would rather paste it into an assistant you already have.</span>
 <span class="srag-term__line srag-term__line--empty"></span>
 <span class="srag-term__line srag-term__line--output">The walkthrough: docs/bring-your-own-domain.md</span>
 </code></pre>

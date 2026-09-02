@@ -19,7 +19,6 @@ Four types, from the [Diataxis](https://diataxis.fr/) framework. A page that can
 |---|---|
 | `get-started.md` | explanation |
 | `quickstart.md` | tutorial |
-| `tour.md` | tutorial |
 | `choosing-sci-rag-kit.md` | explanation |
 | `troubleshooting.md` | how-to |
 | `learn.md` | explanation |
@@ -29,7 +28,6 @@ Four types, from the [Diataxis](https://diataxis.fr/) framework. A page that can
 | `evidence-and-rights.md` | explanation |
 | `guides.md` | explanation |
 | `bring-your-own-domain.md` | tutorial |
-| `llm-assisted-setup.md` | how-to |
 | `campaigns.md` | how-to |
 | `evaluation.md` | how-to |
 | `extend.md` | how-to |
@@ -40,7 +38,6 @@ Four types, from the [Diataxis](https://diataxis.fr/) framework. A page that can
 | `cli.md` | reference |
 | `configuration.md` | reference |
 | `api.md` | reference |
-| `api-clients.md` | how-to |
 | `benchmarks.md` | reference |
 | `glossary.md` | reference |
 | `project.md` | explanation |
@@ -63,11 +60,9 @@ Four types, from the [Diataxis](https://diataxis.fr/) framework. A page that can
 | `adr/0009-cloud-dev-database.md` | explanation |
 | `adr/0010-template-copy-boundary.md` | explanation |
 
-Three assignments are worth defending, because a reasonable person would put them elsewhere.
+Two assignments are worth defending, because a reasonable person would put them elsewhere.
 
 **The five section hubs are explanations.** A hub exists so a reader can tell which page in the section is theirs. That is understanding, so a hub gets an explanation's job: describe the shape of the section and recommend a starting point.
-
-**The repository tour is a tutorial.** It looks like an explanation, and it reads like one in places. But it is a guided walk you take once, early, and it ends by asking whether you can now point at four files. That is a lesson.
 
 **Contributing is reference.** It sets the bar a change has to clear. You look up the rule that applies to you; you do not read it start to finish.
 

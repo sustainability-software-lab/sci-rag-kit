@@ -1,13 +1,19 @@
 """The sci-rag command line.
 
-Run everything from the repository root (paths in settings are resolved
-relative to where you run the command):
+Run everything from the project root (paths in settings are resolved
+relative to where you run the command). The short path from documents to
+answers:
 
-    sci-rag db upgrade            # create/upgrade the database schema
-    sci-rag ingest data/raw       # ingest a folder (or --manifest file.jsonl)
-    sci-rag retrieve "question"   # inspect retrieval: ranked chunks + traces
-    sci-rag answer "question"     # a grounded, cited answer
+    sci-rag doctor                # is the database up, is a model reachable?
+    sci-rag build data/raw        # ingest a folder, then build the graph
+    sci-rag answer "question"     # a cited answer from your documents
+    sci-rag retrieve "question"   # the evidence behind it, layer by layer
     sci-rag stats                 # what is in the knowledge base
+
+The commands are grouped in `--help` in the order a new project meets them:
+start here, build the knowledge base, ask questions, measure quality, serve,
+maintain. The grouping is presentation only; every command is reachable
+regardless of which panel lists it.
 """
 
 from __future__ import annotations
@@ -32,38 +38,61 @@ app = typer.Typer(
     no_args_is_help=True,
     pretty_exceptions_show_locals=False,
 )
-db_app = typer.Typer(help="Database schema management.", no_args_is_help=True)
-app.add_typer(db_app, name="db")
+
+# The panels `sci-rag --help` groups commands under, in the order a new
+# project meets them. Every top-level command names one of these.
+PANEL_START = "Start here"
+PANEL_BUILD = "Build your knowledge base"
+PANEL_ASK = "Ask questions"
+PANEL_MEASURE = "Measure quality"
+PANEL_SERVE = "Serve"
+PANEL_MAINTAIN = "Maintain"
+PANEL_ORDER = (PANEL_START, PANEL_BUILD, PANEL_ASK, PANEL_MEASURE, PANEL_SERVE, PANEL_MAINTAIN)
+
+db_app = typer.Typer(help="Create or upgrade the database tables.", no_args_is_help=True)
+app.add_typer(db_app, name="db", rich_help_panel=PANEL_START)
 graph_app = typer.Typer(
-    help="Build the knowledge graph: extract entities, then detect communities.",
+    help=(
+        "Build the knowledge graph: extract concepts and relationships from your documents, "
+        "then summarize the clusters they form."
+    ),
     no_args_is_help=True,
 )
-app.add_typer(graph_app, name="graph")
+app.add_typer(graph_app, name="graph", rich_help_panel=PANEL_BUILD)
 eval_app = typer.Typer(
-    help="Measure your RAG honestly: retrieval metrics, layer ablations, judged answers.",
+    help=(
+        "Measure quality against your seed questions: retrieval scores, what each "
+        "retrieval layer contributes, and graded answers."
+    ),
     no_args_is_help=True,
 )
-app.add_typer(eval_app, name="eval")
+app.add_typer(eval_app, name="eval", rich_help_panel=PANEL_MEASURE)
 embed_app = typer.Typer(
-    help="Embedding maintenance: find and re-embed rows left behind by a model upgrade.",
+    help="Re-embed rows left behind after an embedding model change.",
     no_args_is_help=True,
 )
-app.add_typer(embed_app, name="embed")
+app.add_typer(embed_app, name="embed", rich_help_panel=PANEL_MAINTAIN)
 corpus_app = typer.Typer(
-    help="Corpus lifecycle: delete documents cleanly, snapshot what you have.",
+    help=(
+        "Look after the corpus: rights report, publication metadata, snapshots, "
+        "export, and deletion."
+    ),
     no_args_is_help=True,
 )
-app.add_typer(corpus_app, name="corpus")
+app.add_typer(corpus_app, name="corpus", rich_help_panel=PANEL_MAINTAIN)
 campaign_app = typer.Typer(
-    help="Discover, build, and screen legal, resumable scientific-document campaigns.",
+    help=(
+        "Find papers to add: search by topic or DOI list, check each one's rights, "
+        "and download the open-access PDFs into a manifest you can ingest."
+    ),
     no_args_is_help=True,
 )
-app.add_typer(campaign_app, name="campaign")
+app.add_typer(campaign_app, name="campaign", rich_help_panel=PANEL_BUILD)
 manifest_app = typer.Typer(
-    help="Corpus manifests: check one before you ingest it.",
+    help="Check a corpus manifest (data/corpus.jsonl) before you ingest it.",
     no_args_is_help=True,
 )
-app.add_typer(manifest_app, name="manifest")
+app.add_typer(manifest_app, name="manifest", rich_help_panel=PANEL_BUILD)
 
 console = Console()
 
@@ -110,8 +139,8 @@ def find_repo_root() -> Path:
         if (candidate / "alembic.ini").exists():
             return candidate
     raise typer.BadParameter(
-        "Could not find alembic.ini above the current directory. "
-        "Run sci-rag commands from inside your sci-rag-kit repository."
+        "Could not find the project root (the directory holding alembic.ini). "
+        "Run sci-rag commands from inside your project directory."
     )
 
 
@@ -140,14 +169,20 @@ def run_async(coro):  # type: ignore[no-untyped-def]
                 "nodename nor servname",
             )
         ):
+            from sci_rag.cli.doctor import _database_start_hint
+
             console.print(
                 f"[red]Cannot reach Postgres[/red] at "
                 f"[bold]{get_settings().database_url.split('@')[-1]}[/bold].\n"
-                "Start it with [bold]docker compose up -d --wait[/bold] "
-                "(or point SCI_RAG_DATABASE_URL at your own Postgres), then retry.\n"
+                f"{_database_start_hint()}, or run [bold]make db-up[/bold]. "
+                "If the database lives elsewhere, point SCI_RAG_DATABASE_URL at it. "
+                "Then retry.\n"
                 "Run [bold]uv run sci-rag doctor[/bold] for a full checkup."
             )
-        elif "no google credentials configured" in lowered:
+        elif (
+            "no google credentials configured" in lowered
+            or "no model credentials configured" in lowered
+        ):
             console.print(f"[red]{exc}[/red]")
         else:
             raise
@@ -255,24 +290,25 @@ def db_upgrade() -> None:
     console.print("[green]Database schema is up to date.[/green]")
 
 
-@app.command()
-def ingest(
-    path: Path | None = typer.Argument(
-        None, help="Folder of documents to ingest (PDF, Markdown, or plain text)."
-    ),
-    manifest: Path | None = typer.Option(
-        None, "--manifest", "-m", help="A JSONL corpus manifest with per-document metadata."
-    ),
-    source: str = typer.Option(
-        "local", "--source", help="Source label recorded on documents ingested from a folder."
-    ),
-    no_docling: bool = typer.Option(
-        False, "--no-docling", help="Skip Docling even if installed (use the pypdf fallback)."
-    ),
-    chunk_tokens: int = typer.Option(800, help="Target tokens per chunk."),
-    overlap_tokens: int = typer.Option(150, help="Overlap tokens between chunks."),
-) -> None:
-    """Ingest documents: parse, chunk, embed, and store them."""
+def _has_model_credential(settings) -> bool:  # type: ignore[no-untyped-def]
+    """Whether any generation provider could be reached with the current settings."""
+    if settings.is_offline():
+        return False
+    if settings.credentials_mode() != "none":
+        return True
+    return bool(settings.anthropic_api_key or settings.openai_api_key or settings.openai_base_url)
+
+
+def _ingest_and_report(  # type: ignore[no-untyped-def]
+    path: Path | None,
+    manifest: Path | None,
+    *,
+    source: str,
+    no_docling: bool,
+    chunk_tokens: int,
+    overlap_tokens: int,
+):
+    """Load the documents, ingest them, print the report; shared by ingest and build."""
     from sci_rag.config import get_settings
     from sci_rag.embed import get_embedder
     from sci_rag.ingest import discover_folder, ingest_entries, load_manifest
@@ -281,20 +317,42 @@ def ingest(
         raise typer.BadParameter("Provide exactly one of: a folder PATH, or --manifest FILE.")
     entries = load_manifest(manifest) if manifest else discover_folder(path, source=source)  # type: ignore[arg-type]
     if not entries:
-        console.print("[yellow]Nothing to ingest: no supported files found.[/yellow]")
+        if manifest is not None:
+            hint = f"[yellow]Nothing to ingest: {manifest} lists no documents.[/yellow]"
+            proposed = manifest.with_name(manifest.name + ".proposed")
+            if proposed.exists():
+                hint += (
+                    f"\nA drafted manifest is waiting at [bold]{proposed}[/bold]. Review it, "
+                    f"set each row's license_class, then move it over {manifest.name}."
+                )
+            else:
+                hint += (
+                    "\nAdd one JSON line per document, or draft the file from a folder with "
+                    "[bold]sci-rag draft manifest --folder data/raw[/bold]."
+                )
+        else:
+            hint = (
+                f"[yellow]Nothing to ingest: no supported files under {path}.[/yellow]\n"
+                "Supported: PDF, HTML, Markdown, and plain text."
+            )
+        console.print(hint)
         raise typer.Exit(1)
     console.print(f"Ingesting [bold]{len(entries)}[/bold] document(s)...")
 
-    embedder = get_embedder(get_settings())
-    report = run_async(
-        ingest_entries(
+    async def run():  # type: ignore[no-untyped-def]
+        await _check_db()
+        # Built inside the coroutine so a missing credential reaches run_async's
+        # short message instead of surfacing as a traceback.
+        embedder = get_embedder(get_settings())
+        return await ingest_entries(
             entries,
             embedder=embedder,
             target_tokens=chunk_tokens,
             overlap_tokens=overlap_tokens,
             prefer_docling=not no_docling,
         )
-    )
+
+    report = run_async(run())
 
     table = Table(title="Ingestion report")
     table.add_column("Document")
@@ -317,7 +375,110 @@ def ingest(
         f"[yellow]{report.skipped} skipped[/yellow], "
         f"[red]{report.failed} failed[/red]."
     )
+    return report
+
+
+@app.command(rich_help_panel=PANEL_BUILD)
+def ingest(
+    path: Path | None = typer.Argument(
+        None, help="Folder of documents to ingest (PDF, HTML, Markdown, or plain text)."
+    ),
+    manifest: Path | None = typer.Option(
+        None,
+        "--manifest",
+        "-m",
+        help="A JSONL corpus manifest: one line per document with title, authors, and rights.",
+    ),
+    source: str = typer.Option(
+        "local", "--source", help="Source label recorded on documents ingested from a folder."
+    ),
+    no_docling: bool = typer.Option(
+        False, "--no-docling", help="Skip Docling even if installed (use the pypdf fallback)."
+    ),
+    chunk_tokens: int = typer.Option(800, help="Target tokens per chunk."),
+    overlap_tokens: int = typer.Option(150, help="Overlap tokens between chunks."),
+) -> None:
+    """Ingest documents: parse, chunk, embed, and store them.
+
+    Pass a folder for a first run (every document is recorded with
+    license_class "unknown"), or a manifest once you have declared each
+    document's rights. `sci-rag build` runs this and the graph steps together.
+    """
+    report = _ingest_and_report(
+        path,
+        manifest,
+        source=source,
+        no_docling=no_docling,
+        chunk_tokens=chunk_tokens,
+        overlap_tokens=overlap_tokens,
+    )
     if report.failed:
+        raise typer.Exit(1)
+
+
+@app.command(rich_help_panel=PANEL_BUILD)
+def build(
+    path: Path | None = typer.Argument(
+        None, help="Folder of documents to ingest (PDF, HTML, Markdown, or plain text)."
+    ),
+    manifest: Path | None = typer.Option(
+        None,
+        "--manifest",
+        "-m",
+        help="A JSONL corpus manifest: one line per document with title, authors, and rights.",
+    ),
+    source: str = typer.Option(
+        "local", "--source", help="Source label recorded on documents ingested from a folder."
+    ),
+    no_docling: bool = typer.Option(
+        False, "--no-docling", help="Skip Docling even if installed (use the pypdf fallback)."
+    ),
+    no_graph: bool = typer.Option(
+        False, "--no-graph", help="Stop after ingestion; skip the knowledge graph."
+    ),
+    batch_size: int = typer.Option(10, help="Chunks per graph-extraction model call."),
+) -> None:
+    """Build the knowledge base in one go: ingest, then extract the graph and its summaries.
+
+    Ingestion works with any embedding setup, including offline. The graph
+    steps need a model credential; without one, or with --no-graph, they are
+    skipped and the command says so. Re-running only processes new chunks.
+    """
+    from sci_rag.config import get_settings
+
+    report = _ingest_and_report(
+        path,
+        manifest,
+        source=source,
+        no_docling=no_docling,
+        chunk_tokens=800,
+        overlap_tokens=150,
+    )
+    failed = bool(report.failed)
+
+    settings = get_settings()
+    if no_graph:
+        console.print("[dim]Skipping the knowledge graph (--no-graph).[/dim]")
+    elif not _has_model_credential(settings):
+        console.print(
+            "[yellow]Skipping the knowledge graph: no model credential is configured.[/yellow] "
+            "Vector and keyword retrieval already work. To add the graph later, set "
+            "SCI_RAG_GOOGLE_API_KEY (or SCI_RAG_GCP_PROJECT) in .env and run "
+            "[bold]sci-rag graph extract[/bold] then [bold]sci-rag graph communities[/bold]."
+        )
+    else:
+        console.print("\nBuilding the knowledge graph (one model call per batch of chunks)...")
+        extraction = _run_graph_extract(batch_size=batch_size, reprocess_all=False, max_chunks=None)
+        if extraction.batches_failed:
+            failed = True
+        console.print("Summarizing entity clusters...")
+        _run_graph_communities(min_size=3)
+
+    console.print(
+        '\nDone. Ask a question with [bold]sci-rag answer "..."[/bold], or see what came back '
+        'with [bold]sci-rag retrieve "..."[/bold]. [bold]sci-rag stats[/bold] shows the counts.'
+    )
+    if failed:
         raise typer.Exit(1)
 
 
@@ -366,13 +527,17 @@ def manifest_lint(
     console.print(f"[green]{path.name} is ready to ingest.[/green]")
 
 
-@app.command()
+@app.command(rich_help_panel=PANEL_ASK)
 def retrieve(
     query: str = typer.Argument(..., help="The question to search for."),
     profile: str = typer.Option(
-        "deep", help="Retrieval profile: interactive, deep, or auto (router decides)."
+        "deep",
+        help=(
+            "Which retrieval layers run: interactive (vector and keyword, fast), "
+            "deep (all five), or auto (a router picks per question)."
+        ),
     ),
-    limit: int = typer.Option(8, help="How many fused results to return."),
+    limit: int = typer.Option(8, help="How many results to return after the layers are combined."),
     license_classes: str | None = typer.Option(
         None, "--license", help="Comma-separated license allowlist (e.g. public,open_commercial)."
     ),
@@ -398,7 +563,7 @@ def retrieve(
         help="Print what the auto router decides for this query (and why) before retrieving.",
     ),
 ) -> None:
-    """Inspect retrieval: see what each layer contributed and what won."""
+    """Search the corpus and show the evidence: which layer found each result, and why it ranked."""
     from sci_rag.retrieve import Retriever
 
     async def run():  # type: ignore[no-untyped-def]
@@ -484,13 +649,21 @@ def retrieve(
         console.print(f"   [dim]{preview[:220]}{'...' if len(preview) > 220 else ''}[/dim]")
 
 
-@app.command()
+@app.command(rich_help_panel=PANEL_ASK)
 def answer(
     query: str = typer.Argument(..., help="The question to answer."),
-    profile: str = typer.Option("deep", help="Retrieval profile: interactive or deep."),
+    profile: str = typer.Option(
+        "deep",
+        help=(
+            "Which retrieval layers run: interactive (vector and keyword, fast), "
+            "deep (all five), or auto (a router picks per question)."
+        ),
+    ),
     limit: int = typer.Option(8, help="How many sources to give the model."),
-    license_classes: str | None = typer.Option(None, "--license"),
-    sources: str | None = typer.Option(None, "--source"),
+    license_classes: str | None = typer.Option(
+        None, "--license", help="Comma-separated license allowlist (e.g. public,open_commercial)."
+    ),
+    sources: str | None = typer.Option(None, "--source", help="Comma-separated source allowlist."),
     year_min: int | None = typer.Option(
         None, "--year-min", help="Earliest publication year to include."
     ),
@@ -514,10 +687,13 @@ def answer(
     include_compression: bool | None = typer.Option(
         None,
         "--compression/--no-compression",
-        help="Override contextual source compression (domain default when omitted).",
+        help=(
+            "Summarize each retrieved source before answering, or send the full text. "
+            "Omit to use the domain profile's setting."
+        ),
     ),
 ) -> None:
-    """Generate a grounded answer with numbered citations."""
+    """Answer a question from your documents, with numbered citations. Needs a model credential."""
     from sci_rag.answer import AnswerEngine
 
     async def run() -> None:
@@ -569,15 +745,8 @@ def answer(
     run_async(run())
 
 
-@graph_app.command("extract")
-def graph_extract(
-    batch_size: int = typer.Option(10, help="Chunks per extraction call."),
-    reprocess_all: bool = typer.Option(
-        False, "--all", help="Re-read every chunk, not just unprocessed ones."
-    ),
-    max_chunks: int | None = typer.Option(None, help="Stop after this many chunks (for trials)."),
-) -> None:
-    """Extract entities and relationships from ingested chunks (needs an LLM)."""
+def _run_graph_extract(*, batch_size: int, reprocess_all: bool, max_chunks: int | None):  # type: ignore[no-untyped-def]
+    """Run extraction and print its report; shared by `graph extract` and `build`."""
     from sci_rag.config import get_settings
     from sci_rag.db import get_session_factory
     from sci_rag.domain import load_domain
@@ -585,8 +754,10 @@ def graph_extract(
     from sci_rag.llm import get_llm
 
     settings = get_settings()
-    stats_result = run_async(
-        extract_graph(
+
+    async def run():  # type: ignore[no-untyped-def]
+        await _check_db()
+        return await extract_graph(
             session_factory=get_session_factory(),
             llm=get_llm(settings, role="extraction"),
             domain=load_domain(settings.domain_dir),
@@ -594,7 +765,8 @@ def graph_extract(
             reprocess_all=reprocess_all,
             max_chunks=max_chunks,
         )
-    )
+
+    stats_result = run_async(run())
     console.print(
         f"Processed [bold]{stats_result.chunks_processed}[/bold] chunk(s): "
         f"[green]{stats_result.entities_created} entities created[/green], "
@@ -614,14 +786,31 @@ def graph_extract(
             "rerun fails the same way: the model could not produce usable output for that "
             "chunk. The log names each failed batch and the size that was attempted.[/yellow]"
         )
+    return stats_result
+
+
+@graph_app.command("extract")
+def graph_extract(
+    batch_size: int = typer.Option(10, help="Chunks per extraction call."),
+    reprocess_all: bool = typer.Option(
+        False, "--all", help="Re-read every chunk, not just unprocessed ones."
+    ),
+    max_chunks: int | None = typer.Option(None, help="Stop after this many chunks (for trials)."),
+) -> None:
+    """Extract concepts and relationships from ingested chunks. Needs a model credential.
+
+    Only chunks the extractor has not seen are processed, so re-running after
+    a new ingest picks up just the new documents.
+    """
+    stats_result = _run_graph_extract(
+        batch_size=batch_size, reprocess_all=reprocess_all, max_chunks=max_chunks
+    )
+    if stats_result.batches_failed:
         raise typer.Exit(1)
 
 
-@graph_app.command("communities")
-def graph_communities(
-    min_size: int = typer.Option(3, help="Smallest cluster worth summarizing."),
-) -> None:
-    """Cluster the graph and write LLM summaries (rebuilds all communities)."""
+def _run_graph_communities(*, min_size: int):  # type: ignore[no-untyped-def]
+    """Rebuild communities and print the result; shared by `graph communities` and `build`."""
     from sci_rag.config import get_settings
     from sci_rag.db import get_session_factory
     from sci_rag.domain import load_domain
@@ -630,15 +819,18 @@ def graph_communities(
     from sci_rag.llm import get_llm
 
     settings = get_settings()
-    stats_result = run_async(
-        build_communities(
+
+    async def run():  # type: ignore[no-untyped-def]
+        await _check_db()
+        return await build_communities(
             session_factory=get_session_factory(),
             llm=get_llm(settings),
             embedder=get_embedder(settings),
             domain=load_domain(settings.domain_dir),
             min_size=min_size,
         )
-    )
+
+    stats_result = run_async(run())
     console.print(
         f"[green]{stats_result.communities_created} communities[/green] covering "
         f"{stats_result.entities_clustered} entities."
@@ -648,6 +840,19 @@ def graph_communities(
             else ""
         )
     )
+    return stats_result
+
+
+@graph_app.command("communities")
+def graph_communities(
+    min_size: int = typer.Option(3, help="Smallest cluster worth summarizing."),
+) -> None:
+    """Group related entities into clusters and write a summary of each (rebuilds all).
+
+    Summaries answer big-picture questions no single passage covers. Needs a
+    model credential.
+    """
+    _run_graph_communities(min_size=min_size)
 
 
 @graph_app.command("citations")
@@ -658,7 +863,7 @@ def graph_citations(
         help="Preview by default; --apply reconciles cached Crossref references.",
     ),
 ) -> None:
-    """Build corpus-local citation pointers from cached Crossref metadata."""
+    """Link corpus documents that cite each other, from the reference lists `corpus enrich` fetched."""
     from sci_rag.citations import build_citation_edges
     from sci_rag.db import get_session_factory
 
@@ -687,7 +892,7 @@ def graph_resolve_entities(
     dry_run: bool = typer.Option(
         True,
         "--dry-run/--apply",
-        help="Preview merges by default; --apply writes tombstones and audit receipts.",
+        help="Preview merges by default; --apply merges duplicates and records each merge in an audit table.",
     ),
     no_llm: bool = typer.Option(
         False,
@@ -798,7 +1003,9 @@ def eval_retrieval(
     questions_path: Path | None = typer.Option(None, "--questions", help="Seed questions JSONL."),
     limit: int = typer.Option(10, help="Results retrieved per question."),
     ablation: bool = typer.Option(
-        False, "--ablation", help="Run every layer-ablation config, not just full_deep."
+        False,
+        "--ablation",
+        help="Also score each retrieval layer switched off in turn, to see what each contributes.",
     ),
     condition: str | None = typer.Option(
         None,
@@ -809,7 +1016,7 @@ def eval_retrieval(
         None, "--snapshot", help="Record this corpus snapshot name in the report."
     ),
 ) -> None:
-    """Score retrieval against your seed questions (and per-layer ablations)."""
+    """Score retrieval against your seed questions: did the right documents come back?"""
     if condition not in (None, "resolved_entities"):
         raise typer.BadParameter(
             "only resolved_entities is currently supported", param_hint="--condition"
@@ -901,10 +1108,14 @@ def eval_answers(
     compressed: bool = typer.Option(
         False,
         "--compressed",
-        help="Enable contextual source compression for this answers-eval condition.",
+        help="Summarize each retrieved source before answering, as a separate condition to compare.",
     ),
 ) -> None:
-    """Generate answers for every seed question and grade them with the blind judge."""
+    """Answer every seed question and grade each answer for grounding, citations, and correctness.
+
+    Needs a model credential. The grader scores grounding without seeing the
+    reference answer, then scores correctness against it in a separate pass.
+    """
     from sci_rag.answer import AnswerEngine
     from sci_rag.config import get_settings
     from sci_rag.db import get_session_factory
@@ -1055,7 +1266,7 @@ def eval_calibrate(
         None, "--output", help="Also write the calibration markdown to this path."
     ),
 ) -> None:
-    """Compare human labels against the judge's scores: Cohen's kappa per dimension.
+    """Compare a person's scores with the grader's, per dimension (reported as Cohen's kappa).
 
     Appends a calibration section to the report's markdown (report.md) and
     writes calibration.json next to it, so the kappa travels with the eval
@@ -1110,7 +1321,7 @@ def embed_reindex(
     ),
     batch_size: int = typer.Option(32, help="Rows re-embedded per batch (one commit per batch)."),
 ) -> None:
-    """Re-embed chunks and community summaries stamped with a retired embedder version.
+    """Re-embed chunks and community summaries that an older embedding model produced.
 
     A dimension change is refused outright: that is a schema migration
     plus a full re-ingest, never a reindex.
@@ -1299,7 +1510,7 @@ def campaign_build(
         help="Parent directory for campaign state, PDFs, and manifest.",
     ),
 ) -> None:
-    """Resolve rights, download direct OA PDFs, and write an ingest manifest."""
+    """Check each candidate's rights, download the open-access PDFs, and write a manifest to ingest."""
     if (topic is None) == (doi_file is None):
         raise typer.BadParameter("Provide exactly one of --topic or --doi-file.")
 
@@ -1554,7 +1765,10 @@ def campaign_review(
 @corpus_app.command("enrich")
 def corpus_enrich(
     mailto: str = typer.Option(
-        ..., "--mailto", help="Contact email sent to Crossref's polite API pool."
+        ...,
+        "--mailto",
+        envvar="SCI_RAG_CAMPAIGN_MAILTO",
+        help="Contact email sent with each Crossref request; identified callers get faster service.",
     ),
     dry_run: bool = typer.Option(
         False, "--dry-run", help="List eligible DOI records without network calls or writes."
@@ -1598,13 +1812,11 @@ def corpus_delete(
     document_ids: list[str] = typer.Argument(..., help="Document id(s) to delete."),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip the confirmation prompt."),
 ) -> None:
-    """Delete documents and every graph trace of their evidence.
+    """Delete documents, their chunks, and every graph entry that relied on them.
 
-    Chunks cascade, entity evidence arrays are scrubbed, relationships
-    evidenced by the documents go, and communities that aggregated that
-    evidence are dropped (rebuild them with `sci-rag graph communities`).
-    Run `sci-rag graph gc` afterwards to sweep entities left with no
-    evidence at all.
+    Communities built from that evidence are dropped too; rebuild them with
+    `sci-rag graph communities`. Run `sci-rag graph gc` afterwards to remove
+    entities left with no evidence at all.
     """
     from sci_rag.corpus import delete_documents
     from sci_rag.db import get_session_factory
@@ -1642,7 +1854,7 @@ def corpus_delete(
 def corpus_snapshot(
     name: str | None = typer.Argument(None, help="Snapshot name (default: UTC timestamp)."),
 ) -> None:
-    """Write a named corpus fingerprint manifest under data/snapshots/.
+    """Record exactly which documents the corpus holds right now, under data/snapshots/.
 
     Records counts, per-document content hashes, embedding versions, the
     git commit, and a single corpus digest. Reference it from eval runs
@@ -1678,11 +1890,10 @@ def corpus_license_report(
         help="Exit 1 when any document is still 'unknown'. For CI; the report itself never fails.",
     ),
 ) -> None:
-    """The corpus's rights posture: what is declared, and what is not.
+    """Count documents and chunks by license class, and name the ones still `unknown`.
 
-    License classes gate retrieval, but nothing summarized them. This counts
-    the corpus by class, by document and by chunk, and names every document
-    nobody has recorded rights for.
+    License classes decide what a scoped request may see, so this is the
+    report to read before you share the service.
     """
     import json as _json
 
@@ -1723,8 +1934,8 @@ def corpus_license_report(
     console.print(
         f"{report.total_documents} document(s), {report.total_chunks} chunk(s). "
         f"[green]{report.external_safe_documents} ({report.external_safe_share:.1f}%)[/green] "
-        f"are external-safe ({', '.join(EXTERNAL_SAFE_CLASSES)}): the classes you can expose "
-        "on a surface you do not fully control."
+        f"are safe to expose on a service you do not fully control "
+        f"({', '.join(EXTERNAL_SAFE_CLASSES)})."
     )
 
     if report.undeclared:
@@ -1745,7 +1956,7 @@ def corpus_license_report(
         )
         console.print(f"Undeclared documents come from: {by_source}.")
         console.print(
-            "[yellow]`unknown` is fail-closed, not neutral.[/yellow] Whenever a caller "
+            "[yellow]`unknown` is excluded, never assumed safe.[/yellow] Whenever a caller "
             "restricts the license scope, these documents are excluded unless the scope "
             "names `unknown` explicitly, so they are invisible to scoped retrieval and to "
             "a scoped export. Record their rights in the corpus manifest and re-ingest, "
@@ -1777,7 +1988,7 @@ def corpus_export(
 ) -> None:
     """Export documents, chunks, entities, and relationships to files.
 
-    Scoping is fail-closed and applies to the graph too: an entity is
+    A scope leaves out anything it cannot vouch for, and applies to the graph too: an entity is
     exported only when every document it was extracted from is in scope,
     because its description is written from all of them. Communities are
     never exported; they aggregate with no per-document attribution to check.
@@ -1833,8 +2044,8 @@ def graph_gc_command(
         help="--dry-run (default) reports what would go; --apply removes it.",
     ),
 ) -> None:
-    """Garbage-collect the graph: evidence-less entities, dangling
-    relationships, communities whose members no longer resolve."""
+    """Remove graph leftovers: entities with no evidence, relationships with a missing end,
+    and communities whose members are gone."""
     from sci_rag.corpus import graph_gc
     from sci_rag.db import get_session_factory
 
@@ -1863,7 +2074,7 @@ def graph_gc_command(
         )
 
 
-@app.command()
+@app.command(rich_help_panel=PANEL_MEASURE)
 def profile(
     questions_path: Path | None = typer.Option(
         None, "--questions", help="Seed questions JSONL. Defaults to the domain's."
@@ -1872,7 +2083,7 @@ def profile(
     limit: int = typer.Option(8, "--limit", help="Results per request."),
     as_json: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
-    """Where retrieval time goes: p50/p95 per stage, for each profile.
+    """Time each retrieval stage (median and 95th percentile) under each profile.
 
     Replays the seed questions against interactive, deep, and auto, and
     aggregates the per-stage timings every request already records. Stages run
@@ -1940,9 +2151,9 @@ def profile(
         )
 
 
-@app.command()
+@app.command(rich_help_panel=PANEL_ASK)
 def stats() -> None:
-    """What is in the knowledge base right now."""
+    """Show what is in the knowledge base: documents, chunks, graph size, licenses."""
     from sqlalchemy import func, select
 
     from sci_rag.db import (
@@ -1955,6 +2166,7 @@ def stats() -> None:
     )
 
     async def run():  # type: ignore[no-untyped-def]
+        await _check_db()
         async with get_session_factory()() as session:
             counts = {}
             for label, model in (
@@ -2013,14 +2225,14 @@ def stats() -> None:
         )
 
 
-@app.command()
+@app.command(rich_help_panel=PANEL_SERVE)
 def serve(
     host: str | None = typer.Option(None, help="Bind address (default from settings)."),
     port: int | None = typer.Option(
         None, help="Port (default from settings; Cloud Run sets PORT)."
     ),
 ) -> None:
-    """Serve the REST API (/v1, docs at /docs) and the MCP server (/mcp)."""
+    """Start the web service: REST API under /v1 (docs at /docs) and MCP tools at /mcp."""
     import os
 
     import uvicorn
@@ -2038,9 +2250,9 @@ def serve(
     uvicorn.run(create_app(settings=settings), host=resolved_host, port=resolved_port)
 
 
-@app.command("mcp")
+@app.command("mcp", rich_help_panel=PANEL_SERVE)
 def mcp_stdio() -> None:
-    """Run the MCP server over stdio (for local agents like Claude Code).
+    """Let a local agent such as Claude Code use the corpus as tools (MCP over stdio).
 
     Add it to an agent with, for example:
     claude mcp add sci-rag -- uv run --directory /path/to/your/repo sci-rag mcp
@@ -2068,10 +2280,23 @@ from sci_rag.cli.draft import draft_app as _draft_app  # noqa: E402 - registered
 from sci_rag.cli.init import init as _init  # noqa: E402 - registered after app exists
 from sci_rag.cli.new import new as _new  # noqa: E402 - registered after app exists
 
-app.command("doctor")(_doctor)
-app.command("init")(_init)
-app.command("new")(_new)
-app.add_typer(_draft_app, name="draft")
+app.command("new", rich_help_panel=PANEL_START)(_new)
+app.command("init", rich_help_panel=PANEL_START)(_init)
+app.command("doctor", rich_help_panel=PANEL_START)(_doctor)
+app.add_typer(_draft_app, name="draft", rich_help_panel=PANEL_BUILD)
+
+
+def _panel_rank(info) -> int:  # type: ignore[no-untyped-def]
+    panel = getattr(info, "rich_help_panel", None)
+    return PANEL_ORDER.index(panel) if panel in PANEL_ORDER else len(PANEL_ORDER)
+
+
+# `--help` lists panels in the order commands were registered. Registration
+# order follows the source file, so sort once here to present the panels in
+# the order a new project meets them. The sort is stable, which keeps the
+# in-panel order the source chose.
+app.registered_commands.sort(key=_panel_rank)
+app.registered_groups.sort(key=_panel_rank)
 
 
 def main() -> None:

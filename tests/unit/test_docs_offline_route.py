@@ -37,6 +37,11 @@ MODEL_ONLY = (
 # read what a reader reads, and a class nobody sees would drift from it.
 CREDENTIALED_TITLE = '!!! note "Needs a model credential"'
 
+# A single line inside a multi-command block may carry the same marker as a
+# trailing comment instead, so a recipe card can list the credentialed step
+# beside the offline ones without hiding it in a separate block.
+INLINE_MARKER = "needs a model credential"
+
 
 def _page() -> str:
     return TUTORIAL.read_text(encoding="utf-8")
@@ -88,7 +93,9 @@ def test_every_model_only_command_sits_inside_a_credentialed_block(command: str)
     offenders = [
         number
         for number, line in _fenced_lines(text)
-        if command in line and not any(start < number < end for start, end in regions)
+        if command in line
+        and INLINE_MARKER not in line.casefold()
+        and not any(start < number < end for start, end in regions)
     ]
 
     assert offenders == [], (

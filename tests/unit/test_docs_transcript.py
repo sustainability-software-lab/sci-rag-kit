@@ -62,7 +62,7 @@ def test_the_transcript_shows_the_result_not_just_the_questions() -> None:
     assert "Writing membrane-materials-kb/" in transcript
     assert "domain/domain.yaml" in transcript
     assert "LICENSE" in transcript
-    assert "Done. Membrane Materials KB is yours." in transcript
+    assert "Done. Membrane Materials KB is set up." in transcript
 
 
 def test_the_transcript_is_rendered_for_the_manager_it_selected() -> None:

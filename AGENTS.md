@@ -262,6 +262,19 @@ Three rules the drafters enforce, which apply to you as well:
 grounding against the ingested corpus, how many questions are still unreviewed, and
 manifest paths and rights. Run it after changing anything in `domain/`.
 
+`sci-rag build` is the documented path from documents to a queryable corpus: ingest,
+then graph extraction and communities when a credential exists. Keep it thin; it
+composes the same helpers `ingest`, `graph extract`, and `graph communities` use, and
+a new pipeline step belongs in those commands first.
+
+### Keep the command surface scannable
+
+Every top-level command and command group names one of the `rich_help_panel` values
+defined in `src/sci_rag/cli/main.py` (start here, build your knowledge base, ask
+questions, measure quality, serve, maintain). A one-line help string is read before
+any documentation: one action, present tense, and no term the glossary would have to
+define. Longer help belongs in the docstring body, where there is room to explain.
+
 ### Depend on facades and shared seams
 
 Application code should use public facades such as `Retriever.retrieve()`, `AnswerEngine`, and

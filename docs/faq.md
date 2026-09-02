@@ -344,7 +344,7 @@ Yes. Those are three of the five seams the kit is built to vary at.
 | New embedding or generation model | implement `EmbeddingProvider` or `LLMClient` | `src/sci_rag/embed/`, `src/sci_rag/llm/` |
 | New identity system | implement `AuthBackend` | `src/sci_rag/server/auth.py` |
 
-Each seam comes with the evidence it expects, and for anything that changes ranking that means an ablation. [Extend the seams](extend.md) is the walkthrough.
+Each seam comes with the evidence it expects, and for anything that changes ranking that means an ablation. [Extend the kit](extend.md) is the walkthrough.
 
 ### Is there a plugin system?
 

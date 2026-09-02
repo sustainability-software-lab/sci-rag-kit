@@ -149,20 +149,17 @@ def test_checkout_setup_documents_modes_and_preflight_boundary() -> None:
     assert "| Setup area | Where to review it |" in tutorial
     assert "| Setup area | Quick | Advanced | Where it went |" not in tutorial
 
-    assisted = _read("docs/llm-assisted-setup.md")
-    ontology = assisted.partition("## Drafting the ontology against your corpus")[2].partition(
-        "## Drafting the corpus manifest"
+    drafting = tutorial.partition("## Drafting with a model")[2].partition(
+        "## Offline: what you can prove without a model"
     )[0]
-    assert "`sci-rag new` and `sci-rag init`" in ontology
-    assert "Only `sci-rag new` checks the credential" in ontology
+    assert "`sci-rag new` and `sci-rag init`" in drafting
+    assert "Only `sci-rag new` checks the credential" in drafting
 
 
 def test_advanced_only_project_choices_are_labeled_as_advanced() -> None:
-    tour = _read("docs/tour.md")
     postgres = _read("docs/run-postgres.md")
     deploy = _read("docs/deploy-gcp.md")
 
-    assert "`sci-rag new --advanced`" in tour
     assert "`sci-rag new --advanced`" in postgres
     assert "`sci-rag new --advanced`" in deploy
     assert "Quick keeps the default" in postgres
