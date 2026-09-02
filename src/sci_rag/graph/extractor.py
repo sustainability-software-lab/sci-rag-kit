@@ -352,19 +352,29 @@ async def _upsert_entities(
     if not entities:
         return {}
     names_lower = [e.name.lower() for e in entities]
-    existing_rows = (
+    existing_rows = list(
         (
             await session.execute(
-                select(KgEntity)
-                .where(or_(func.lower(KgEntity.name).in_(names_lower), _ALIAS_MATCH))
-                # Alias matches can have equal priority. Resolve those ties by
-                # semantic identity so fresh database UUIDs cannot change the graph.
-                .order_by(func.lower(KgEntity.name), KgEntity.entity_type, KgEntity.id),
+                select(KgEntity).where(
+                    or_(func.lower(KgEntity.name).in_(names_lower), _ALIAS_MATCH)
+                ),
                 {"entity_names": names_lower},
             )
         )
         .scalars()
         .all()
+    )
+    # Alias matches can have equal priority. Resolve their candidate ordering with
+    # an application-defined total semantic key rather than database collation or
+    # fresh persistence UUIDs. Entity names are unique, so the raw name makes the
+    # key total after its case-insensitive prefix.
+    existing_rows.sort(
+        key=lambda row: (
+            row.name.casefold(),
+            row.name,
+            row.entity_type.casefold(),
+            row.entity_type,
+        )
     )
     existing: dict[tuple[str, str], KgEntity] = {}
     priorities: dict[tuple[str, str], int] = {}

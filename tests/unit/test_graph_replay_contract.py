@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parents[2]))
 
@@ -13,6 +15,7 @@ from scripts.graph_replay import (
     ReplayArtifact,
     ReplayCall,
     ReplayLLM,
+    _canonical_graph,
     artifact_sha256,
     call_input_digest,
     write_candidate,
@@ -98,3 +101,57 @@ async def test_replay_rejects_call_drift_and_requires_exact_consumption() -> Non
     exact.assert_consumed()
     with pytest.raises(GraphReplayError, match="missing recorded call"):
         await exact.generate_json("extract this graph", max_tokens=8192)
+
+
+async def test_canonical_entities_do_not_inherit_database_order_for_equal_semantic_keys() -> None:
+    """Casefold-equivalent rows use their complete ID-free payload as a tie-break."""
+
+    class Result:
+        def __init__(self, rows: list[Any]) -> None:
+            self.rows = rows
+
+        def all(self) -> list[Any]:
+            return self.rows
+
+        def scalars(self) -> Result:
+            return self
+
+    class Session:
+        def __init__(self, entities: list[Any]) -> None:
+            self.results = iter((Result([]), Result([]), Result(entities), Result([])))
+
+        async def __aenter__(self) -> Session:
+            return self
+
+        async def __aexit__(self, *args: object) -> None:
+            return None
+
+        async def execute(self, statement: object) -> Result:
+            return next(self.results)
+
+    first = SimpleNamespace(
+        id="database-id-first",
+        name="Straße",
+        entity_type="Feedstock",
+        description="zeta payload",
+        aliases=["beta"],
+        document_ids=[],
+        chunk_ids=[],
+    )
+    second = SimpleNamespace(
+        id="database-id-second",
+        name="STRASSE",
+        entity_type="Feedstock",
+        description="alpha payload",
+        aliases=["alpha"],
+        document_ids=[],
+        chunk_ids=[],
+    )
+
+    forward, _, _ = await _canonical_graph(lambda: Session([first, second]))  # type: ignore[arg-type]
+    reversed_rows, _, _ = await _canonical_graph(  # type: ignore[arg-type]
+        lambda: Session([second, first])
+    )
+
+    assert forward == reversed_rows
+    assert "database-id" not in repr(forward)

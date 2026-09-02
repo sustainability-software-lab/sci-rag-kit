@@ -67,6 +67,42 @@ EXTRACTION = json.dumps(
         ],
     }
 )
+AMBIGUOUS_ALIAS_EXTRACTIONS = (
+    json.dumps(
+        {
+            "entities": [
+                {
+                    "name": "almond prunings",
+                    "type": "Feedstock",
+                    "description": "a specific synthetic residue",
+                    "passages": [1],
+                    "aliases": ["prunings"],
+                },
+                {
+                    "name": "orchard prunings",
+                    "type": "Feedstock",
+                    "description": "a broader synthetic residue",
+                    "passages": [1],
+                    "aliases": ["prunings"],
+                },
+            ],
+            "relationships": [],
+        }
+    ),
+    json.dumps(
+        {
+            "entities": [
+                {
+                    "name": "prunings",
+                    "type": "Feedstock",
+                    "description": "an ambiguous surface form",
+                    "passages": [1],
+                }
+            ],
+            "relationships": [],
+        }
+    ),
+)
 
 
 class ScriptedExtractionLLM(LLMClient):
@@ -112,6 +148,24 @@ class InvalidExtractionLLM(ScriptedExtractionLLM):
         json_mode: bool = False,
     ) -> str:
         return "not valid JSON"
+
+
+class AmbiguousAliasLLM(ScriptedExtractionLLM):
+    async def generate(
+        self,
+        prompt: str,
+        *,
+        system: str | None = None,
+        temperature: float = 0.2,
+        max_tokens: int = 2048,
+        json_mode: bool = False,
+    ) -> str:
+        try:
+            response = AMBIGUOUS_ALIAS_EXTRACTIONS[self.call_count]
+        except IndexError as exc:
+            raise AssertionError("ambiguous alias fixture received an unexpected call") from exc
+        self.call_count += 1
+        return response
 
 
 async def _seed_demo(
@@ -318,23 +372,30 @@ async def _reset_database(database) -> None:  # type: ignore[no-untyped-def]
         )
 
 
-async def _ambiguous_alias_target(*, almond_id: str, orchard_id: str) -> str:
+async def _ambiguous_alias_target(
+    *,
+    first_id: str,
+    second_id: str,
+    first_name: str,
+    second_name: str,
+    alias: str,
+) -> str:
     async with get_session_factory()() as session:
         session.add_all(
             [
                 KgEntity(
-                    id=almond_id,
-                    name="almond prunings",
+                    id=first_id,
+                    name=first_name,
                     entity_type="Feedstock",
-                    aliases=["prunings"],
+                    aliases=[alias],
                     document_ids=[],
                     chunk_ids=[],
                 ),
                 KgEntity(
-                    id=orchard_id,
-                    name="orchard prunings",
+                    id=second_id,
+                    name=second_name,
                     entity_type="Feedstock",
-                    aliases=["prunings"],
+                    aliases=[alias],
                     document_ids=[],
                     chunk_ids=[],
                 ),
@@ -345,7 +406,7 @@ async def _ambiguous_alias_target(*, almond_id: str, orchard_id: str) -> str:
             session,
             [
                 ExtractedEntity(
-                    name="prunings",
+                    name=alias,
                     entity_type="Feedstock",
                     description="",
                     passages=[],
@@ -357,7 +418,7 @@ async def _ambiguous_alias_target(*, almond_id: str, orchard_id: str) -> str:
             fallback_document_ids=[],
             stats=ExtractionStats(),
         )
-        row = await session.get(KgEntity, selected["prunings"])
+        row = await session.get(KgEntity, selected[alias])
         assert row is not None
         return row.name
 
@@ -366,11 +427,32 @@ async def test_ambiguous_alias_tie_break_does_not_depend_on_database_ids(
     clean_tables, database
 ) -> None:  # type: ignore[no-untyped-def]
     """Fresh UUIDs cannot change which semantic entity an alias enriches."""
-    first = await _ambiguous_alias_target(almond_id="f" * 32, orchard_id="a" * 32)
+    inputs = {
+        "first_name": "almond prunings",
+        "second_name": "orchard prunings",
+        "alias": "prunings",
+    }
+    first = await _ambiguous_alias_target(first_id="f" * 32, second_id="a" * 32, **inputs)
     await _reset_database(database)
-    second = await _ambiguous_alias_target(almond_id="1" * 32, orchard_id="f" * 32)
+    second = await _ambiguous_alias_target(first_id="1" * 32, second_id="f" * 32, **inputs)
 
     assert first == second == "almond prunings"
+
+
+async def test_casefold_equivalent_alias_tie_break_does_not_depend_on_database_ids(
+    clean_tables, database
+) -> None:  # type: ignore[no-untyped-def]
+    """Application ordering, not database collation or UUIDs, breaks alias ties."""
+    inputs = {
+        "first_name": "Prunings",
+        "second_name": "prunings",
+        "alias": "crop residue",
+    }
+    first = await _ambiguous_alias_target(first_id="f" * 32, second_id="a" * 32, **inputs)
+    await _reset_database(database)
+    second = await _ambiguous_alias_target(first_id="1" * 32, second_id="f" * 32, **inputs)
+
+    assert first == second == "Prunings"
 
 
 async def test_refresh_rejects_an_extra_public_demo_document_before_provider_construction(
@@ -604,6 +686,62 @@ async def test_record_and_require_replay_survive_fresh_database_ids(
     assert replayed.entity_count == recorded.entity_count
     assert replayed.relationship_count == recorded.relationship_count
     assert replay_receipt.is_file()
+
+
+async def test_record_and_require_replay_resolve_ambiguous_aliases_identically(
+    clean_tables, database, tmp_path: Path
+) -> None:  # type: ignore[no-untyped-def]
+    """The incident path remains stable through the complete replay contract."""
+    manifest_path = _write_tracked_demo(tmp_path)
+    await _seed_tracked_demo(manifest_path)
+    recorded = await run_graph_replay(
+        mode="refresh",
+        artifact_dir=tmp_path / "artifacts",
+        receipt_path=tmp_path / "record-receipt.json",
+        session_factory=get_session_factory(),
+        domain=load_domain(DOMAIN_DIR),
+        extraction_model=EXTRACTION_MODEL,
+        llm_factory=AmbiguousAliasLLM,
+        source_commit=_source_commit(manifest_path),
+        manifest_path=manifest_path,
+        batch_size=1,
+        rate_limit_s=0,
+    )
+
+    await _reset_database(database)
+    await _seed_tracked_demo(manifest_path)
+    provider_constructions = 0
+
+    def forbidden_provider() -> LLMClient:
+        nonlocal provider_constructions
+        provider_constructions += 1
+        raise AssertionError("strict replay constructed a live provider")
+
+    replayed = await run_graph_replay(
+        mode="require",
+        artifact_path=recorded.artifact_path,
+        receipt_path=tmp_path / "replay-receipt.json",
+        session_factory=get_session_factory(),
+        domain=load_domain(DOMAIN_DIR),
+        extraction_model=EXTRACTION_MODEL,
+        llm_factory=forbidden_provider,
+        manifest_path=manifest_path,
+        batch_size=1,
+        rate_limit_s=0,
+    )
+
+    async with get_session_factory()() as session:
+        rows = (await session.execute(select(KgEntity).order_by(KgEntity.name))).scalars().all()
+
+    assert provider_constructions == 0
+    assert replayed.extracted_calls == 0
+    assert replayed.replayed_calls == 2
+    assert replayed.graph_digest == recorded.graph_digest
+    assert replayed.entity_count == recorded.entity_count == 2
+    assert [(row.name, len(row.document_ids)) for row in rows] == [
+        ("almond prunings", 2),
+        ("orchard prunings", 1),
+    ]
 
 
 @pytest.mark.parametrize(

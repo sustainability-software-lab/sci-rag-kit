@@ -951,7 +951,11 @@ async def _canonical_graph(
         for entity in entities
     ]
     canonical_entities.sort(
-        key=lambda item: (cast(str, item["name"]).casefold(), cast(str, item["entity_type"]))
+        key=lambda item: (
+            cast(str, item["name"]).casefold(),
+            cast(str, item["entity_type"]).casefold(),
+            _canonical_json(item),
+        )
     )
 
     canonical_relationships: list[dict[str, object]] = []
