@@ -136,9 +136,10 @@ different formula. Expert labels supersede this seed set.
 make benchmark
 ```
 
-Prerequisites: a named, disposable PostgreSQL database with pgvector, uv,
-and Google credentials in `.env` (`SCI_RAG_GOOGLE_API_KEY` or
-`SCI_RAG_GCP_PROJECT`; see `.env.example`). The target ingests the tracked
+Prerequisites: a selected PostgreSQL backend with pgvector, uv, and Google
+credentials in `.env` (`SCI_RAG_GOOGLE_API_KEY` or
+`SCI_RAG_GCP_PROJECT`; see `.env.example`). The backend must point to a
+named, disposable PostgreSQL database. The target ingests the tracked
 demo corpus into otherwise pristine graph state before strict replay.
 Do not clear an unrelated development corpus to satisfy that preflight; select
 a disposable database instead. It then creates communities, snapshots the
