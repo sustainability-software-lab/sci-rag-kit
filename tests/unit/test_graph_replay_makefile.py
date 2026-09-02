@@ -40,6 +40,8 @@ def test_benchmark_requires_one_explicit_reviewed_graph_replay() -> None:
     assert "sci-rag graph extract" not in benchmark, (
         "the published benchmark must require replay instead of sampling a new graph"
     )
+    assert "named, disposable PostgreSQL database" in text
+    assert "Do not clear an unrelated development corpus" in text
 
 
 def test_benchmark_refresh_graph_writes_a_separate_candidate() -> None:

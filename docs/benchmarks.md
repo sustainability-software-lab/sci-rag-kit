@@ -136,12 +136,13 @@ different formula. Expert labels supersede this seed set.
 make benchmark
 ```
 
-Prerequisites: a selected PostgreSQL backend with pgvector, uv, and Google
-credentials in `.env` (`SCI_RAG_GOOGLE_API_KEY` or
-`SCI_RAG_GCP_PROJECT`; see `.env.example`). The target ingests the
-demo corpus with real embeddings, builds the graph, snapshots the
-corpus, runs the full retrieval ablation plus the judged answers
-eval, and re-renders this page from the report JSONs. Without
-credentials the eval commands stop with a clear message; nothing
-on this page is reachable offline, by design: published numbers
-come from real models or not at all.
+Prerequisites: a named, disposable PostgreSQL database with pgvector, uv,
+and Google credentials in `.env` (`SCI_RAG_GOOGLE_API_KEY` or
+`SCI_RAG_GCP_PROJECT`; see `.env.example`). The target ingests the tracked
+demo corpus into otherwise pristine graph state before strict replay.
+Do not clear an unrelated development corpus to satisfy that preflight; select
+a disposable database instead. It then creates communities, snapshots the
+corpus, runs the full retrieval ablation plus the judged answers eval, and
+re-renders this page from the report JSONs. Without credentials the eval
+commands stop with a clear message; nothing on this page is reachable
+offline, by design: published numbers come from real models or not at all.

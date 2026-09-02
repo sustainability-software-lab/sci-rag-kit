@@ -128,6 +128,10 @@ docs-serve:
 # embeddings + graph + every ablation config + judged answers +
 # calibration, then re-render the page from the report JSONs.
 # Needs the selected PostgreSQL backend and Google credentials (see .env.example).
+# Use a named, disposable PostgreSQL database dedicated to this run. The target
+# ingests the tracked demo into otherwise pristine graph state.
+# Do not clear an unrelated development corpus to satisfy the replay preflight;
+# select a disposable database instead.
 BENCH_SNAP := benchmark-$(shell date -u +%Y%m%d-%H%M%S)
 BENCH_GRAPH_REPLAY := data/demo/graph-replay/a24c3fb88f163941048866b86fc494a3470337b0c24257f1d9235c8b00f19d15.json
 GRAPH_REPLAY_RECEIPT := eval_results/graph-replay-receipt.json

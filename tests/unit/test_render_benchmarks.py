@@ -78,6 +78,8 @@ def graph_replay_fixture() -> dict:
 def snapshot_fixture() -> dict:
     return {
         "name": "v0.2-demo",
+        "created_at": "2026-08-27T16:00:00+00:00",
+        "git_commit": "abc1234",
         "corpus_digest": CORPUS_DIGEST,
         "counts": {
             "documents": 5,
@@ -86,6 +88,15 @@ def snapshot_fixture() -> dict:
             "relationships": 72,
             "communities": 10,
         },
+        "embedding_versions": ["gemini-embedding-001@1536"],
+        "documents": [
+            {
+                "id": f"document-{index}",
+                "title": f"Document {index}",
+                "content_hash": f"{index:064x}",
+            }
+            for index in range(5)
+        ],
     }
 
 
@@ -206,6 +217,8 @@ def test_renders_full_page(tmp_path: Path) -> None:
     assert "76 extracted entities" in page
     assert "67 extracted entities" not in page
     assert "10% on other counts" in page
+    assert "named, disposable PostgreSQL database" in page
+    assert "Do not clear an unrelated development corpus" in page
 
 
 def test_the_renderer_names_the_committed_strict_graph_replay(tmp_path: Path) -> None:

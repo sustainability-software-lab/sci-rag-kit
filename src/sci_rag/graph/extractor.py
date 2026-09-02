@@ -219,8 +219,9 @@ def _batch_id(batch: Sequence[Row[tuple[str, str, str]]]) -> str:
     """A stable, content-free name for a batch, so logs can be followed.
 
     Derived from the chunk ids in order, which are identifiers rather than
-    text, so a batch keeps the same name across a split and across runs and
-    nothing about the documents reaches the log.
+    text, so a batch keeps the same name while one ingestion run retries or
+    splits it and nothing about the documents reaches the log. Fresh ingestion
+    assigns fresh chunk ids and therefore a fresh batch name.
     """
     digest = hashlib.sha256("|".join(row[0] for row in batch).encode("utf-8"))
     return digest.hexdigest()[:12]

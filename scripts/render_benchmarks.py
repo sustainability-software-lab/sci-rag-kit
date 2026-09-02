@@ -97,6 +97,17 @@ APPROVED_GRAPH_REPLAY_GENERATION_PARAMETERS = {
     "json_mode": True,
     "max_tokens": 8192,
 }
+SNAPSHOT_FIELDS = {
+    "name",
+    "created_at",
+    "git_commit",
+    "counts",
+    "embedding_versions",
+    "corpus_digest",
+    "documents",
+}
+SNAPSHOT_COUNT_FIELDS = ("documents", "chunks", "entities", "relationships", "communities")
+SNAPSHOT_DOCUMENT_FIELDS = {"id", "title", "content_hash"}
 
 
 def _canonical_json(value: object) -> bytes:
@@ -382,6 +393,70 @@ def _load_snapshot(report: dict[str, Any], snapshot_path: Path | None) -> dict[s
         raise ProvenanceError(f"cannot read named snapshot {path}: {exc}") from exc
     if not isinstance(snapshot, dict):
         raise ProvenanceError(f"named snapshot {path} must contain one JSON object")
+    if set(snapshot) != SNAPSHOT_FIELDS:
+        missing = sorted(SNAPSHOT_FIELDS - set(snapshot))
+        unexpected = sorted(set(snapshot) - SNAPSHOT_FIELDS)
+        details = []
+        if missing:
+            details.append("missing " + ", ".join(missing))
+        if unexpected:
+            details.append("unexpected " + ", ".join(unexpected))
+        raise ProvenanceError(f"named snapshot shape mismatch: {'; '.join(details)}")
+
+    for field in ("name", "created_at", "git_commit", "corpus_digest"):
+        if not isinstance(snapshot[field], str) or not snapshot[field]:
+            raise ProvenanceError(f"named snapshot {field} must be a non-empty string")
+    try:
+        datetime.fromisoformat(snapshot["created_at"])
+    except ValueError as exc:
+        raise ProvenanceError("named snapshot created_at must be an ISO-8601 timestamp") from exc
+    if _SHA256.fullmatch(snapshot["corpus_digest"]) is None:
+        raise ProvenanceError("named snapshot corpus_digest must be a lowercase SHA-256 value")
+
+    counts = snapshot["counts"]
+    if not isinstance(counts, dict) or set(counts) != set(SNAPSHOT_COUNT_FIELDS):
+        raise ProvenanceError(
+            "named snapshot counts must contain exactly " + ", ".join(SNAPSHOT_COUNT_FIELDS)
+        )
+    invalid_counts = [
+        label
+        for label in SNAPSHOT_COUNT_FIELDS
+        if type(counts[label]) is not int or counts[label] < 0
+    ]
+    if invalid_counts:
+        raise ProvenanceError(
+            "named snapshot counts must be non-negative integers: " + ", ".join(invalid_counts)
+        )
+
+    versions = snapshot["embedding_versions"]
+    if (
+        not isinstance(versions, list)
+        or any(not isinstance(version, str) or not version for version in versions)
+        or versions != sorted(set(versions))
+    ):
+        raise ProvenanceError(
+            "named snapshot embedding_versions must be a sorted list of unique non-empty strings"
+        )
+
+    documents = snapshot["documents"]
+    if not isinstance(documents, list) or len(documents) != counts["documents"]:
+        raise ProvenanceError("named snapshot documents must be a list matching counts.documents")
+    for index, document in enumerate(documents):
+        if not isinstance(document, dict) or set(document) != SNAPSHOT_DOCUMENT_FIELDS:
+            raise ProvenanceError(
+                f"named snapshot documents[{index}] must contain exactly id, title, content_hash"
+            )
+        if any(
+            not isinstance(document[field], str) or not document[field]
+            for field in ("id", "title", "content_hash")
+        ):
+            raise ProvenanceError(
+                f"named snapshot documents[{index}] fields must be non-empty strings"
+            )
+        if _SHA256.fullmatch(document["content_hash"]) is None:
+            raise ProvenanceError(
+                f"named snapshot documents[{index}].content_hash must be a lowercase SHA-256 value"
+            )
     return snapshot
 
 
@@ -491,19 +566,76 @@ def _require_graph_replay(
         )
     if snapshot.get("name") != report.get("snapshot"):
         raise ProvenanceError(f"named snapshot and {report_path} disagree about snapshot")
+    if snapshot["git_commit"] != report.get("git_commit"):
+        raise ProvenanceError(f"named snapshot and {report_path} disagree about git_commit")
 
     report_corpus = report.get("corpus")
-    snapshot_counts = snapshot.get("counts")
-    if not isinstance(report_corpus, dict) or not isinstance(snapshot_counts, dict):
-        raise ProvenanceError("graph receipt counts need corpus counts in the report and snapshot")
+    if not isinstance(report_corpus, dict):
+        raise ProvenanceError(f"{report_path} corpus must be an object")
+    invalid_report_counts = [
+        label
+        for label in SNAPSHOT_COUNT_FIELDS
+        if type(report_corpus.get(label)) is not int or report_corpus[label] < 0
+    ]
+    if invalid_report_counts:
+        raise ProvenanceError(
+            f"{report_path} corpus counts must be non-negative integers: "
+            + ", ".join(invalid_report_counts)
+        )
+    snapshot_counts = snapshot["counts"]
+    count_disagreements = [
+        label for label in SNAPSHOT_COUNT_FIELDS if report_corpus[label] != snapshot_counts[label]
+    ]
+    if count_disagreements:
+        raise ProvenanceError(
+            f"named snapshot and {report_path} disagree about counts: "
+            + ", ".join(count_disagreements)
+        )
+
+    report_versions = report_corpus.get("embedding_versions")
+    if (
+        not isinstance(report_versions, list)
+        or any(not isinstance(version, str) or not version for version in report_versions)
+        or report_versions != sorted(set(report_versions))
+    ):
+        raise ProvenanceError(
+            f"{report_path} corpus embedding_versions must be a sorted list of "
+            "unique non-empty strings"
+        )
+    if snapshot["embedding_versions"] != report_versions:
+        raise ProvenanceError(f"named snapshot and {report_path} disagree about embedding_versions")
+    provenance_embedding = provenance.get("embedding") if isinstance(provenance, dict) else None
+    if not isinstance(provenance_embedding, str) or not provenance_embedding:
+        raise ProvenanceError(f"{report_path} provenance.embedding must be a non-empty string")
+    if snapshot["embedding_versions"] != [provenance_embedding]:
+        raise ProvenanceError(
+            f"named snapshot and {report_path} provenance disagree about embedding identity"
+        )
+
     expected_counts = {label: report_corpus.get(label) for label in ("entities", "relationships")}
     if counts != expected_counts:
-        raise ProvenanceError(f"graph receipt and {report_path} disagree about counts")
+        disagreeing_graph_counts = [
+            label
+            for label in ("entities", "relationships")
+            if counts[label] != expected_counts[label]
+        ]
+        raise ProvenanceError(
+            f"graph receipt and {report_path} disagree about counts: "
+            + ", ".join(disagreeing_graph_counts)
+        )
     snapshot_graph_counts = {
         label: snapshot_counts.get(label) for label in ("entities", "relationships")
     }
     if counts != snapshot_graph_counts:
-        raise ProvenanceError("graph receipt and named snapshot disagree about counts")
+        disagreeing_graph_counts = [
+            label
+            for label in ("entities", "relationships")
+            if counts[label] != snapshot_graph_counts[label]
+        ]
+        raise ProvenanceError(
+            "graph receipt and named snapshot disagree about counts: "
+            + ", ".join(disagreeing_graph_counts)
+        )
     return receipt
 
 
@@ -793,15 +925,16 @@ def render_benchmarks(
         "make benchmark",
         "```",
         "",
-        "Prerequisites: a selected PostgreSQL backend with pgvector, uv, and Google",
-        "credentials in `.env` (`SCI_RAG_GOOGLE_API_KEY` or",
-        "`SCI_RAG_GCP_PROJECT`; see `.env.example`). The target ingests the",
-        "demo corpus with real embeddings, builds the graph, snapshots the",
-        "corpus, runs the full retrieval ablation plus the judged answers",
-        "eval, and re-renders this page from the report JSONs. Without",
-        "credentials the eval commands stop with a clear message; nothing",
-        "on this page is reachable offline, by design: published numbers",
-        "come from real models or not at all.",
+        "Prerequisites: a named, disposable PostgreSQL database with pgvector, uv,",
+        "and Google credentials in `.env` (`SCI_RAG_GOOGLE_API_KEY` or",
+        "`SCI_RAG_GCP_PROJECT`; see `.env.example`). The target ingests the tracked",
+        "demo corpus into otherwise pristine graph state before strict replay.",
+        "Do not clear an unrelated development corpus to satisfy that preflight; select",
+        "a disposable database instead. It then creates communities, snapshots the",
+        "corpus, runs the full retrieval ablation plus the judged answers eval, and",
+        "re-renders this page from the report JSONs. Without credentials the eval",
+        "commands stop with a clear message; nothing on this page is reachable",
+        "offline, by design: published numbers come from real models or not at all.",
         "",
     ]
     return "\n".join(lines)

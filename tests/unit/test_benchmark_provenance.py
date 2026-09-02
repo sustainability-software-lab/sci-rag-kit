@@ -108,6 +108,8 @@ def _graph_replay(**overrides: Any) -> dict[str, Any]:
 def _snapshot(**overrides: Any) -> dict[str, Any]:
     snapshot: dict[str, Any] = {
         "name": "benchmark-20260830-000000",
+        "created_at": "2026-08-30T00:00:00+00:00",
+        "git_commit": "abc1234",
         "corpus_digest": CORPUS_DIGEST,
         "counts": {
             "documents": 5,
@@ -116,6 +118,15 @@ def _snapshot(**overrides: Any) -> dict[str, Any]:
             "relationships": 72,
             "communities": 0,
         },
+        "embedding_versions": ["local-hash-v1@64"],
+        "documents": [
+            {
+                "id": f"document-{index}",
+                "title": f"Document {index}",
+                "content_hash": f"{index:064x}",
+            }
+            for index in range(5)
+        ],
     }
     snapshot.update(overrides)
     return snapshot
@@ -211,6 +222,7 @@ def _report(**overrides: Any) -> dict[str, Any]:
             "chunks": 34,
             "entities": 76,
             "relationships": 72,
+            "communities": 0,
             "embedding_versions": ["local-hash-v1@64"],
         },
         "provenance": {
@@ -488,6 +500,140 @@ def test_the_renderer_rejects_a_graph_receipt_with_mismatched_identity(
         )
 
     assert receipt_field in str(caught.value)
+
+
+@pytest.mark.parametrize(
+    ("snapshot_field", "bad_value"),
+    [
+        ("git_commit", "def5678"),
+        ("embedding_versions", ["other-embedding@64"]),
+    ],
+)
+def test_the_renderer_rejects_a_snapshot_with_mismatched_identity(
+    tmp_path: Path, snapshot_field: str, bad_value: object
+) -> None:
+    """The named snapshot must identify the same code and embeddings as the report."""
+    ProvenanceError = _renderer()["ProvenanceError"]
+    render_benchmarks = _renderer()["render_benchmarks"]
+    report_path = tmp_path / "report.json"
+    report_path.write_text(json.dumps(_report()), encoding="utf-8")
+    receipt_path, snapshot_path = _evidence_paths(
+        tmp_path, snapshot_overrides={snapshot_field: bad_value}
+    )
+
+    with pytest.raises(ProvenanceError, match=snapshot_field):
+        render_benchmarks(
+            report_path,
+            None,
+            graph_receipt=receipt_path,
+            snapshot_path=snapshot_path,
+            artifact_root=tmp_path,
+        )
+
+
+@pytest.mark.parametrize(
+    "count", ["documents", "chunks", "entities", "relationships", "communities"]
+)
+def test_the_renderer_rejects_a_snapshot_with_mismatched_corpus_counts(
+    tmp_path: Path, count: str
+) -> None:
+    """Every reported corpus count belongs to the exact named snapshot."""
+    ProvenanceError = _renderer()["ProvenanceError"]
+    render_benchmarks = _renderer()["render_benchmarks"]
+    report_path = tmp_path / "report.json"
+    report_path.write_text(json.dumps(_report()), encoding="utf-8")
+    snapshot_counts = dict(_snapshot()["counts"])
+    snapshot_counts[count] += 1
+    receipt_path, snapshot_path = _evidence_paths(
+        tmp_path, snapshot_overrides={"counts": snapshot_counts}
+    )
+
+    with pytest.raises(ProvenanceError, match=count):
+        render_benchmarks(
+            report_path,
+            None,
+            graph_receipt=receipt_path,
+            snapshot_path=snapshot_path,
+            artifact_root=tmp_path,
+        )
+
+
+def test_the_renderer_rejects_a_snapshot_embedding_that_disagrees_with_provenance(
+    tmp_path: Path,
+) -> None:
+    """Configured and persisted embedding identities must describe one benchmark."""
+    ProvenanceError = _renderer()["ProvenanceError"]
+    render_benchmarks = _renderer()["render_benchmarks"]
+    report = _report()
+    report["provenance"] = {**report["provenance"], "embedding": "other-embedding@64"}
+    report_path = tmp_path / "report.json"
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+    receipt_path, snapshot_path = _evidence_paths(tmp_path)
+
+    with pytest.raises(ProvenanceError, match="embedding"):
+        render_benchmarks(
+            report_path,
+            None,
+            graph_receipt=receipt_path,
+            snapshot_path=snapshot_path,
+            artifact_root=tmp_path,
+        )
+
+
+@pytest.mark.parametrize("malformation", ["missing", "unexpected"])
+def test_the_renderer_validates_the_complete_snapshot_shape(
+    tmp_path: Path, malformation: str
+) -> None:
+    """Published evidence accepts only the versioned snapshot shape the CLI writes."""
+    ProvenanceError = _renderer()["ProvenanceError"]
+    render_benchmarks = _renderer()["render_benchmarks"]
+    report_path = tmp_path / "report.json"
+    report_path.write_text(json.dumps(_report()), encoding="utf-8")
+    receipt_path, snapshot_path = _evidence_paths(tmp_path)
+    snapshot = _snapshot()
+    if malformation == "missing":
+        snapshot.pop("created_at")
+    else:
+        snapshot["unexpected"] = True
+    snapshot_path.write_text(json.dumps(snapshot), encoding="utf-8")
+
+    with pytest.raises(ProvenanceError, match="snapshot shape"):
+        render_benchmarks(
+            report_path,
+            None,
+            graph_receipt=receipt_path,
+            snapshot_path=snapshot_path,
+            artifact_root=tmp_path,
+        )
+
+
+@pytest.mark.parametrize("malformation", ["missing_count", "boolean_count", "versions_not_list"])
+def test_the_renderer_validates_snapshot_field_types_before_comparing_evidence(
+    tmp_path: Path, malformation: str
+) -> None:
+    """Malformed snapshot values fail as provenance rather than raw indexing errors."""
+    ProvenanceError = _renderer()["ProvenanceError"]
+    render_benchmarks = _renderer()["render_benchmarks"]
+    report_path = tmp_path / "report.json"
+    report_path.write_text(json.dumps(_report()), encoding="utf-8")
+    receipt_path, snapshot_path = _evidence_paths(tmp_path)
+    snapshot = _snapshot()
+    if malformation == "missing_count":
+        snapshot["counts"].pop("communities")
+    elif malformation == "boolean_count":
+        snapshot["counts"]["communities"] = False
+    else:
+        snapshot["embedding_versions"] = "local-hash-v1@64"
+    snapshot_path.write_text(json.dumps(snapshot), encoding="utf-8")
+
+    with pytest.raises(ProvenanceError, match=r"counts|embedding_versions"):
+        render_benchmarks(
+            report_path,
+            None,
+            graph_receipt=receipt_path,
+            snapshot_path=snapshot_path,
+            artifact_root=tmp_path,
+        )
 
 
 @pytest.mark.parametrize(
