@@ -75,7 +75,6 @@ nav:
       - Choosing Sci RAG Kit: choosing-sci-rag-kit.md
       - Architecture: architecture.md
       - Methodology: methodology.md
-      - Evidence and rights: evidence-and-rights.md
   - Guides:
       - guides.md
       - Evaluate your pipeline: evaluation.md
@@ -179,6 +178,7 @@ extra:
     tour.md: get-started.md#where-things-live
     llm-assisted-setup.md: bring-your-own-domain.md#drafting-with-a-model
     api-clients.md: api.md#generated-clients
+    evidence-and-rights.md: methodology.md#7-scope-precedes-ranking
   # Pinned to pyproject by tests/unit/test_release_version_claims.py.
   package_version: "0.4.1"
   social:

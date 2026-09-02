@@ -1,43 +1,43 @@
 ---
 title: How it works
-description: What happens between a document and a cited answer, in plain words, with links to the full reasoning behind each part.
+description: What happens between a document and a cited answer, with links to the full reasoning behind each part.
 ---
 
 # How it works
 
-This page is the ten-minute version of the design, for someone who has not built a retrieval system before. The pages linked from it hold the full reasoning, the measurements, and the decisions we would reverse and under what conditions.
+This page is the ten-minute version of the design, written for a reader who has not built a retrieval system before. It follows one document into the database and one question back out, and it stops at the point where a design decision would need a page of its own. The pages linked at the end hold the full reasoning, the measurements, and the decisions the maintainers would reverse and under what conditions.
 
-## The idea in one paragraph
+## The idea
 
-A language model on its own answers from memory, and memory is where scientific questions go wrong: it invents a number, cites a paper that does not exist, or answers from a field's textbook consensus when your documents say otherwise. Retrieval-augmented generation (RAG) fixes the order of operations. First find the passages in your documents that bear on the question. Then hand exactly those passages to the model and ask it to answer from them, citing each one by number. If nothing relevant was found, say so. The model still writes the prose; your documents supply the facts.
+A language model on its own answers from memory, and for scientific questions that fails in predictable ways: an invented number, a citation to a paper that does not exist, or a textbook consensus repeated when the documents at hand say otherwise. Retrieval-augmented generation (RAG) changes the order of operations. The system first finds the passages in the documents that bear on the question, then gives the model exactly those passages and asks it to answer from them, citing each one by number. When nothing relevant is found, the answer says so. The model writes the prose; the documents supply the facts.
 
 ## What happens to a document
 
-1. **Parse.** A PDF, HTML page, Markdown, or text file becomes headings, paragraphs, and tables. Tables stay whole, because in scientific writing the answer is often a table row.
-2. **Chunk.** The text is cut into pieces of about 800 words' worth of tokens. Each chunk remembers its section heading, so "Table 3" still knows it lives under "Results".
-3. **Embed.** Each chunk is turned into a vector, a list of numbers that places similar meanings near each other. That is what lets a question find a passage that uses different words.
-4. **Store.** Chunks, vectors, a full-text index, and the document's metadata and license class all go into one Postgres database. There is no second database to run.
-5. **Build the graph.** With a model credential, the kit reads each chunk and pulls out the concepts your field cares about (the entity types you declared) and how they relate. Related concepts are clustered and each cluster gets a short summary. This is optional, and it is what makes questions that span several documents work.
+1. **Parse.** A PDF, HTML page, Markdown file, or text file becomes headings, paragraphs, and tables. Tables stay whole, because in scientific writing the answer is often a table row, and a table split across three chunks answers nothing.
+2. **Chunk.** The text is cut into pieces of about 800 tokens, with a little overlap so a sentence at a boundary is not lost. Each chunk keeps its section heading, so a table from "Results" is still labeled as such when it is retrieved on its own, months later, with no surrounding page to explain it.
+3. **Embed.** Each chunk becomes a vector, a list of numbers that places similar meanings near each other. This is what lets a question about "straw yield per county" find a passage that talks about "harvested acres and a straw-to-grain ratio" without sharing a single word.
+4. **Store.** Chunks, vectors, a full-text index, and the document's metadata and license class go into one Postgres database. A document and all of its chunks are written in one transaction, so a failure part-way leaves nothing behind.
+5. **Build the graph.** With a model credential, the kit reads each chunk and extracts the concepts the field cares about (the declared entity types) and how they relate, keeping the quoted phrase that stated each relationship. Related concepts are clustered, and each cluster gets a short summary. This step is optional, and it is what makes questions that span several documents work: the connecting concept brings its evidence along even when the question never names it.
 
 ## What happens to a question
 
-Five searches run at once, each finding candidates a different way:
+Five searches run at once, each finding candidate passages a different way.
 
 | Layer | Finds passages by | Good at |
 |---|---|---|
 | Vector | closeness of meaning | questions phrased differently from the documents |
 | Keyword | exact words and phrases | identifiers, chemical names, units |
-| Graph | walking from the concepts in the question to the passages that mention related concepts | questions whose answer spans documents |
+| Graph | walking from the concepts in the question to passages that mention related concepts | answers that span documents |
 | Community | matching against the cluster summaries | big-picture questions no single passage covers |
 | Hypothetical answer | writing a guess at what an answering passage would say, then searching near it | bridging question wording and document wording |
 
-Their ranked lists are merged by rank (a passage several layers agree on beats one a single layer loved), the top passages are numbered, and the model writes an answer that cites those numbers. Two profiles decide how many layers run: `interactive` uses vector and keyword only, for a person waiting at a prompt; `deep` runs all five, for agents, batch jobs, and evaluation. A layer that is slow or fails contributes nothing and is reported as such, and the request still completes.
+The five ranked lists merge by rank rather than by score, because a cosine distance and a full-text rank are not comparable numbers but positions in a list are. The effect is that a passage several layers agree on outranks one that a single layer scored highly. The top passages are numbered, and the model writes an answer that cites those numbers. Two profiles control how many layers run: `interactive` uses vector and keyword only, for a person waiting at a prompt, and `deep` runs all five, for agents, batch jobs, and evaluation. A layer that is slow or fails contributes nothing and is reported as such, and the request still completes with whatever the other layers found.
 
-Rights are enforced inside every search, before ranking. Each document carries a license class, and a request that restricts rights never sees passages outside its scope, so a shared endpoint cannot leak a paywalled PDF you hold internally.
+Rights are enforced inside every search, before ranking. Each document carries a license class, and a request that restricts rights never sees passages outside its scope, because filtering after ranking would let an ineligible passage crowd an eligible one out of the results before disappearing. A shared endpoint therefore cannot leak a paywalled PDF held internally, and an internal caller with wider rights still sees everything.
 
-## How you know it works
+## How the results are measured
 
-Every project keeps a file of test questions with known answers. Two commands measure the system against them: one scores whether the right passages came back, layer by layer, and the other has a model grade the generated answers for grounding, citation accuracy, and correctness. The grader never sees the reference answer when it judges grounding, so it cannot reward an answer for agreeing with the reference while citing sources that say no such thing. Every report records exactly which documents and models produced its numbers.
+Every project keeps a file of test questions with known answers, and two commands measure the system against them. One scores whether the right passages came back, layer by layer, which shows what each layer is contributing on this particular corpus and whether a change helped or hurt. The other has a model grade the generated answers for grounding, citation accuracy, and correctness. The grader never sees the reference answer while it judges grounding, so it cannot reward an answer for matching the reference while citing passages that say something else; correctness is judged in a separate pass. Every report records the documents and models that produced its numbers, so a result can be reproduced or questioned later.
 
 ## Read next
 
@@ -45,14 +45,12 @@ Every project keeps a file of test questions with known answers. Two commands me
 
 [<span class="srag-row__title">FAQ</span><span class="srag-row__copy">Short answers to what this is, who it is for, and why each design decision went the way it did.</span>](faq.md){ .srag-row }
 
-[<span class="srag-row__title">Choosing Sci RAG Kit</span><span class="srag-row__copy">An honest comparison with LightRAG, PaperQA2, LlamaIndex, and Microsoft GraphRAG.</span>](choosing-sci-rag-kit.md){ .srag-row }
+[<span class="srag-row__title">Choosing Sci RAG Kit</span><span class="srag-row__copy">How the kit compares with LightRAG, PaperQA2, LlamaIndex, and Microsoft GraphRAG.</span>](choosing-sci-rag-kit.md){ .srag-row }
 
 [<span class="srag-row__title">Architecture</span><span class="srag-row__copy">What each package owns, how storage and concurrency work, and the five places built to be extended.</span>](architecture.md){ .srag-row }
 
-[<span class="srag-row__title">Methodology</span><span class="srag-row__copy">The full specification: chunking, graph extraction, fusion, answering, and evaluation, with the reasoning for each choice.</span>](methodology.md){ .srag-row }
-
-[<span class="srag-row__title">Evidence and rights</span><span class="srag-row__copy">How provenance, citations, and license classes stay attached from the manifest to the answer.</span>](evidence-and-rights.md){ .srag-row }
+[<span class="srag-row__title">Methodology</span><span class="srag-row__copy">The full specification: chunking, graph extraction, fusion, rights, answering, and evaluation, with the reasoning for each choice.</span>](methodology.md){ .srag-row }
 
 </div>
 
-A word you do not recognize is probably in the [glossary](glossary.md). Start with the [FAQ](faq.md) if you are still deciding whether the kit fits, [Architecture](architecture.md) if you want to modify code, and [Methodology](methodology.md) if you need to defend the approach in a review.
+Unfamiliar words are in the [glossary](glossary.md). The [FAQ](faq.md) is the place to start when deciding whether the kit fits, [Architecture](architecture.md) when modifying code, and [Methodology](methodology.md) when the approach has to be defended in a review.

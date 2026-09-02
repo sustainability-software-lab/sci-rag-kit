@@ -96,13 +96,48 @@ each entry.
 | `compression.relevance_floor` | float | 0.0 | Drop a model-scored chunk below this relevance score. The default 0.0 drops nothing, because summarizing a source is safe and discarding one is not: a v0.3 sweep found groundedness and citation accuracy both fall off their ceiling at 0.15 and above. Raise it only behind a paired judged-answer run that holds. See docs/evaluation.md. |
 | `compression.max_tokens_per_chunk` | int | 160 | Maximum accepted tokens per summary; over-budget output falls back to full text. |
 
+## `data/corpus.jsonl`
+
+The corpus manifest: one JSON object per document. `sci-rag ingest
+--manifest` and `sci-rag build --manifest` read it; `sci-rag draft
+manifest` writes a first version from the files in a folder; `sci-rag
+manifest lint` checks it. Paths resolve relative to the manifest file.
+
+| Field | Type | Default | Purpose |
+|---|---|---|---|
+| `path` | Path | required | Where the file is, relative to the manifest. The only required field. |
+| `title` | str \| NoneType | unset | The document title, used in citations. Drafted from the first pages when missing. |
+| `authors` | list[str] | [] | Author names, as a list. |
+| `year` | int \| NoneType | unset | Publication year. |
+| `doi` | str \| NoneType | unset | Digital object identifier. Enables Crossref enrichment and retraction checks. |
+| `journal` | str \| NoneType | unset | Journal or venue. Becomes a retrieval filter. |
+| `url` | str \| NoneType | unset | Where the document came from, for the citation. |
+| `license_class` | str | unknown | Redistribution rights: `public`, `open_commercial`, `open_noncommercial`, `restricted`, or `unknown`. Never drafted; `unknown` is excluded from any request that restricts rights. |
+| `license_source` | str \| NoneType | unset | The sentence or signal the license class was based on, kept as evidence. |
+| `source` | str | local | Your own grouping label, such as `journal_papers` or `agency_reports`. Becomes a retrieval filter. |
+
+## `domain/eval_seed_questions.jsonl`
+
+The test questions: one JSON object per question, with the evidence a
+correct answer rests on. `sci-rag eval retrieval` and `sci-rag eval
+answers` score against them; `sci-rag draft questions` writes a first
+version from your corpus. Lines starting with `#` are comments.
+
+| Field | Type | Default | Purpose |
+|---|---|---|---|
+| `id` | str | required | A short stable identifier, used in reports. |
+| `question` | str | required | The question as a user would ask it. |
+| `reference_answer` | str \| NoneType | unset | What a correct answer must say. Used by the correctness grader; optional for retrieval scoring. |
+| `reference_titles` | list[str] | [] | Titles of the documents that contain the answer. A retrieved chunk from one of them counts as relevant. |
+| `evidence_phrases` | list[str] | [] | Distinctive strings from the answering passages; numbers with units work best. A retrieved chunk containing one counts as relevant. |
+| `tags` | list[str] | [] | Your own labels, plus two with meaning: `unanswerable` marks a question the corpus cannot answer, and `drafted` marks a model-written question no expert has reviewed. |
+
 ## Files beside the YAML profile
 
 | Path | Contract |
 |---|---|
 | `domain/prompts/*.md` | `string.Template` prompt files. Preserve every required `$UPPER_CASE` slot. |
-| `domain/eval_seed_questions.jsonl` | Retrieval ground truth and optional expert answers for the target corpus. |
-| `domain/eval_calibration_labels.jsonl` | Independent human labels used to calibrate the model judge. |
+| `domain/eval_calibration_labels.jsonl` | Human scores for a set of graded answers, used to check the model grader. Never drafted. |
 
 [Bring your own domain](bring-your-own-domain.md) explains how to change
 these together. [Evaluate your pipeline](evaluation.md) explains why a

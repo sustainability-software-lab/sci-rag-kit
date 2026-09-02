@@ -5,8 +5,7 @@ description: Choose and operate a supported PostgreSQL server with pgvector for 
 
 # Run Postgres your way
 
-Choose one supported PostgreSQL path, start it through the same Make targets,
-and keep destructive tests pointed at a disposable database.
+Choose a supported PostgreSQL path and point destructive tests at a database you can discard.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A running PostgreSQL 16 to 18 with pgvector</div>
@@ -20,42 +19,27 @@ and keep destructive tests pointed at a disposable database.
 | Requirement | Why | Check |
 |---|---|---|
 | A Sci RAG Kit checkout or generated project | `make setup` and the helper scripts live in it | `ls Makefile` |
-| One supported environment manager | It supplies the command runner | You chose uv, pixi, conda, or venv + pip during setup |
+| One supported environment manager | It supplies the command runner | uv, pixi, conda, or venv + pip was selected during setup |
 | PostgreSQL 16 through 18 with pgvector | The application, migrations, and tests all need it | `psql --version` and `CREATE EXTENSION vector` |
 
-`SCI_RAG_DB_BACKEND` controls which backend `make db-up`, `make db-down`, and
-`make setup` dispatch to. It takes `docker` for the Compose service and
-`local` for `scripts/local_postgres.py`.
+`SCI_RAG_DB_BACKEND` chooses which backend `make db-up`, `make db-down`, and `make setup` use. It accepts `docker` for the Compose service and `local` for `scripts/local_postgres.py`.
 <!-- BEGIN GENERATED PROJECT FEATURE: cloud-helper -->
-It also takes `cloud` for the optional `scripts/cloud_postgres.py`.
+It also accepts `cloud` for the optional `scripts/cloud_postgres.py`.
 <!-- END GENERATED PROJECT FEATURE: cloud-helper -->
-Every project keeps all of its retained backends selectable, and your
-environment manager decides only which one you get when you set nothing.
-`SCI_RAG_DATABASE_URL` controls the application
-connection. `SCI_RAG_TEST_DATABASE_URL` separately controls the destructive
-integration and server suites. Selecting a backend never rewrites either URL.
+Every project retains all its backends. Your environment manager defaults to one when you set nothing. `SCI_RAG_DATABASE_URL` controls the application; `SCI_RAG_TEST_DATABASE_URL` controls the destructive test suite. Selecting a backend does not rewrite either URL.
 
 ## Recommended defaults
 
-Docker is the template default and the closest local match to the PostgreSQL 16
-service in CI. Generated pixi and conda projects default to `local`, because
-their manifests already bundle a PostgreSQL server and pgvector from
-conda-forge. Every manager can select `local` when a supported system
-PostgreSQL and pgvector are on `PATH`, including Postgres.app. Every manager can
-also retain the optional Cloud helper through Advanced setup. Quick setup
-removes that helper from generated projects.
+Docker is the template default and matches the PostgreSQL 16 service in CI. Generated pixi and conda projects default to `local` because their manifests bundle PostgreSQL and pgvector from conda-forge. Any environment manager can select `local` when a supported system PostgreSQL and pgvector are on `PATH`, including Postgres.app. Advanced setup retains the optional Cloud helper; Quick keeps the default and removes it.
 
-A default is a starting point. Set any value your project retained and
-`make db-up` dispatches to that backend.
-
-| Environment manager | Default value | What the default starts | Also selectable |
+| Environment manager | Default value | What launches | Also selectable |
 |---|---|---|---|
 | uv | `docker` | the Compose service | `local`, `cloud` |
 | pixi | `local` | the bundled conda-forge server | `docker`, `cloud` |
 | conda | `local` | the bundled conda-forge server | `docker`, `cloud` |
 | venv + pip | `docker` | the Compose service | `local`, `cloud` |
 
-`cloud` is selectable only in a project that retained the Cloud helper.
+`cloud` is selectable only in projects that retained the Cloud helper.
 
 ## Run Postgres in Docker
 
@@ -65,18 +49,15 @@ If you use the template checkout with no backend override, run:
 $ make setup
 ```
 
-That synchronizes dependencies, starts the selected database backend, and
-applies every migration. Docker is the template default, so this checkout
-starts the compose service on host port `5433`.
+This synchronizes dependencies, starts the selected backend, and applies migrations. Docker is the default, so it starts Compose on port `5433`.
 
-A generated pixi or conda project defaults to its bundled server, so ask for
-the compose service by name there:
+Generated pixi or conda projects default to the bundled server. To use Compose instead:
 
 ```console title="Terminal"
 $ SCI_RAG_DB_BACKEND=docker make setup
 ```
 
-Stop the selected backend when you are done:
+Stop the backend when finished:
 
 ```console title="Terminal"
 $ make db-down
@@ -91,18 +72,13 @@ healthy. An empty corpus is fine at this point.
 
 ## Run Postgres from conda-forge
 
-Generated pixi and conda projects declare `postgresql` and `pgvector` in their
-manifest, so their Makefile defaults to `SCI_RAG_DB_BACKEND=local` and
-`make setup` starts `scripts/local_postgres.py`:
+Generated pixi and conda projects declare `postgresql` and `pgvector` in the manifest, so their Makefile defaults to `SCI_RAG_DB_BACKEND=local`. Running `make setup` starts `scripts/local_postgres.py`:
 
 ```console title="Terminal"
 $ make setup
 ```
 
-The helper keeps data under `.pgdata/`, listens on loopback, and uses trust
-authentication. This is the machine-local development server that `local`
-selects. It is never a deployment path, and it is never what an explicit
-`SCI_RAG_DB_BACKEND=docker` starts.
+The helper keeps data under `.pgdata/`, listens on loopback, and uses trust authentication. This is the machine-local development server. Do not use it for deployment.
 
 ```console title="Terminal"
 $ make db-down
@@ -117,21 +93,13 @@ report a healthy database and current schema.
 
 ## Point at a system PostgreSQL
 
-`local` is one backend with two server sources. It runs
-`scripts/local_postgres.py`, which drives whichever PostgreSQL is on `PATH`:
-the bundled conda-forge build in a pixi or conda project, and a system install
-everywhere else. Any environment manager can use it when `initdb`, `pg_ctl`,
-and `psql` from PostgreSQL 16 through 18 are on `PATH`. Postgres.app is one
-supported source on macOS. Add its versioned `bin` directory to `PATH`, then
-run:
+`local` runs `scripts/local_postgres.py`, which uses whichever PostgreSQL is on `PATH`: the bundled conda-forge build, or a system install. Any environment manager can use it when `initdb`, `pg_ctl`, and `psql` from PostgreSQL 16–18 are on `PATH`. Postgres.app is supported on macOS. Add its versioned `bin` to `PATH`, then run:
 
 ```console title="Terminal"
 $ SCI_RAG_DB_BACKEND=local make setup
 ```
 
-The helper creates the `sci_rag` development database and enables pgvector.
-You may also operate an existing compatible server yourself. In that case, set
-the application URL and run only dependency synchronization plus migrations:
+The helper creates the `sci_rag` database and enables pgvector. Alternatively, point at an existing compatible server. Set the application URL and apply migrations:
 
 ```dotenv title="~/.env"
 SCI_RAG_DATABASE_URL=postgresql+asyncpg://user:password@host:5432/sci_rag
@@ -152,22 +120,13 @@ An exported URL takes precedence over the value in `.env`.
 <!-- BEGIN GENERATED PROJECT FEATURE: cloud-helper -->
 ## Share a Cloud SQL development instance
 
-The optional Cloud helper gives each workspace a development database, a
-disposable test database, a proxy process, and a dynamic loopback port on one
-shared instance. Quick keeps the default and removes it. For a new generated project, choose
-`sci-rag new --advanced`; for a checkout, choose `sci-rag init --advanced`.
-The helper is a development path and not the production deployment module.
+The optional Cloud helper gives each workspace its own development database, a disposable test database, a proxy process, and a dynamic loopback port on one shared instance. For a new project, choose `sci-rag new --advanced`; for a checkout, `sci-rag init --advanced`. Quick keeps Terraform and removes the helper. The helper is a development path, not the production deployment.
 <!-- END GENERATED PROJECT FEATURE: cloud-helper -->
 
 <!-- BEGIN GENERATED PROJECT FEATURE: cloud-provisioning -->
 ## One-time Cloud SQL provisioning
 
-An operator performs this stage once. You need billing, `gcloud`, Application
-Default Credentials, Terraform, the Cloud SQL Auth Proxy, and `psql`. The
-operator also needs permission to create and update the Cloud SQL instance,
-create databases, connect through the proxy, read the generated password
-secret, and manage the scoped IAM bindings. Cloud SQL Editor plus access to the
-one Secret Manager secret covers the helper's current operations.
+An operator performs this once. You need billing, `gcloud`, Application Default Credentials, Terraform, the Cloud SQL Auth Proxy, and `psql`. The operator needs permission to create and update the Cloud SQL instance, create databases, connect through the proxy, read the password secret, and manage IAM bindings. Cloud SQL Editor plus access to one Secret Manager secret covers this.
 
 Authenticate, then apply the development-only module with an explicit project:
 
@@ -186,10 +145,7 @@ $ terraform output -raw sci_rag_cloud_pg_config
 $ cd ../../..
 ```
 
-Replace all three placeholders. `project_id` and `instance_name` have no
-defaults, so Terraform stops at input validation if you omit either one,
-before it reads state or plans a change. That is deliberate: a module that
-guessed either value could aim a change at an instance you never named.
+Replace all three placeholders. `project_id` and `instance_name` have no defaults, so Terraform stops at input validation if you omit either, before reading state. That is deliberate: a module that guessed could aim changes at an instance you never named.
 
 Read the saved plan before applying it. Every line should be a create. A
 change or a destroy on an instance you did not expect means the inputs point
@@ -255,12 +211,7 @@ per-checkout step. Without a project and an instance the helper prints what to
 set and exits nonzero, for every verb, rather than resolving to an instance
 nobody named.
 
-The helper normalizes the workspace name into
-`sci_rag_<workspace>` and `sci_rag_test_<workspace>`. Override
-`SCI_RAG_CLOUD_PG_WORKSPACE` when two checkouts have the same basename. The
-database pair and local proxy state prevent accidental URL and destructive-test
-collisions. Every database uses the same PostgreSQL role, so that separation is
-not an authorization boundary.
+The helper normalizes the workspace name into `sci_rag_<workspace>` and `sci_rag_test_<workspace>`. Override `SCI_RAG_CLOUD_PG_WORKSPACE` when two checkouts have the same basename. The database pair and local proxy state prevent accidental URL and destructive-test collisions. Every database shares the same PostgreSQL role, so separation is not an authorization boundary.
 
 Start the backend and print both secret-free URLs:
 
@@ -269,10 +220,7 @@ $ SCI_RAG_DB_BACKEND=cloud make db-up
 $ uv run python scripts/cloud_postgres.py config
 ```
 
-`start` resumes a paused instance, creates the development and test databases,
-starts the proxy on a free port at or above `5433`, and enables pgvector in
-both databases. A paused first start can take several minutes while Cloud SQL
-activates. Put both printed URLs in an owner-only `.env`, then run migrations:
+`start` resumes a paused instance, creates development and test databases, starts the proxy on a free port at or above `5433`, and enables pgvector. A first start can take several minutes while Cloud SQL activates. Record both printed URLs in an owner-only `.env`, then run migrations:
 
 ```console title="Terminal"
 $ chmod 600 .env
@@ -282,9 +230,7 @@ $ uv run sci-rag db upgrade
 <div class="srag-checkpoint" markdown>
 **Checkpoint: this workspace owns its proxy state**
 
-`uv run python scripts/cloud_postgres.py status` should name the normalized
-database, dynamic port, and running proxy. `uv run sci-rag doctor` should report
-a healthy database and schema.
+`uv run python scripts/cloud_postgres.py status` names the normalized database, dynamic port, and running proxy. `uv run sci-rag doctor` reports a healthy database and schema.
 </div>
 
 ## Manage the Cloud SQL lifecycle
@@ -298,23 +244,13 @@ a healthy database and schema.
 | `pause` | Stops this proxy and pauses the shared instance; it affects every workspace |
 | `resume` | Changes the shared instance activation policy to running; `start` is still the workspace startup command |
 
-`stop` and Conductor archive do not delete a database. `pause` and `resume`
-affect every workspace, so only the shared-instance operator should use them.
-Normal workspace cleanup runs `make db-down` and stops only the current
-workspace proxy.
+`stop` and Conductor archive do not delete a database. `pause` and `resume` affect every workspace, so only the shared-instance operator should use them. Normal cleanup runs `make db-down`, which stops only the current workspace proxy.
 
-The instance has public IPv4 enabled with no authorized networks. Connections
-use IAM authorization and TLS through the Cloud SQL Auth Proxy. Backups and
-deletion protection are disabled by default. This development instance must not
-hold the only copy of a valuable corpus.
+The instance has public IPv4 enabled with no authorized networks. Connections use IAM authorization and TLS through the Cloud SQL Auth Proxy. Backups and deletion protection are disabled by default. This development instance must not hold the only copy of a valuable corpus.
 
 ## Use Cloud SQL in Conductor workspaces
 
-This optional recipe is user-installed, machine-local configuration. Sci RAG
-Kit does not ship it, and Conductor does not enable or write it for you. Store
-`.conductor/settings.local.toml` and the wrapper scripts in the Conductor root
-clone, not in each worktree. The settings call them through
-`$CONDUCTOR_ROOT_PATH`:
+This is user-installed, machine-local configuration that the kit does not ship and Conductor does not enable. Store `.conductor/settings.local.toml` and the wrapper scripts in the Conductor root clone, not in each worktree. The settings call them through `$CONDUCTOR_ROOT_PATH`:
 
 ```toml title="~/.conductor/settings.local.toml"
 "$schema" = "https://conductor.build/schemas/settings.repo.schema.json"
@@ -340,10 +276,7 @@ available_in = ["local"]
 icon = "test-tube"
 ```
 
-The setup wrapper synchronizes dependencies, starts or verifies the proxy
-through public helper commands, writes both secret-free URLs into an owner-only
-`.env`, and applies migrations. Use placeholders for the non-secret Cloud
-settings in your shell or settings file:
+The setup wrapper synchronizes dependencies, starts or verifies the proxy, writes both secret-free URLs into an owner-only `.env`, and applies migrations. Replace placeholders with non-secret Cloud settings:
 
 ```bash title="~/.conductor/setup-cloud-workspace.sh"
 #!/bin/bash
@@ -397,18 +330,13 @@ make db-down
 <div class="srag-checkpoint" markdown>
 **Checkpoint: parallel workspaces stay isolated**
 
-Each workspace `.env` should contain a different normalized development/test
-database pair and may use a different proxy port. Archiving one workspace must
-leave every other proxy and the shared instance running.
+Each workspace `.env` contains a different normalized development/test database pair and may use a different proxy port. Archiving one workspace leaves every other proxy and the shared instance running.
 </div>
 <!-- END GENERATED PROJECT FEATURE: cloud-helper -->
 
 ## Use a disposable test database
 
-The integration and server fixtures drop and recreate application tables in
-`SCI_RAG_TEST_DATABASE_URL`, then truncate them between tests. Point that URL
-at a disposable database and nothing else. A skipped database suite is not
-passing evidence.
+The integration and server fixtures drop and recreate application tables in `SCI_RAG_TEST_DATABASE_URL`, then truncate them between tests. Point that URL at a disposable database. A skipped database suite does not pass.
 
 ```dotenv title="~/.env"
 SCI_RAG_TEST_DATABASE_URL=postgresql+asyncpg://sci_rag:sci_rag@localhost:5433/sci_rag_test

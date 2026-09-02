@@ -5,192 +5,97 @@ description: Short answers to what Sci RAG Kit is, who it is for, and why each d
 
 # Frequently asked questions
 
-The reasoning behind this kit is written down at length, in ten decision records and a methodology specification. This page is the short version: the answer first, the reason after it, and a link to the long argument when you want it.
+The reasoning behind the kit is written down at length in ten decision records and a methodology page. This page gives the answer first, the reason second, and a link to the long version.
 
 ## What this is
 
 ### What is Sci RAG Kit?
 
-A template repository for retrieval-augmented generation over a collection of scientific documents, running on one Postgres database. You copy it, point it at your literature, and get a knowledge base that answers questions with numbered citations back to the passages it used.
+A project template for retrieval-augmented generation over scientific documents, on one Postgres database. Copy it and point it at documents; it becomes a knowledge base that answers questions with numbered citations to the passages it used.
 
-Concretely, that means structure-aware ingestion for PDF, Markdown, and text, and a knowledge graph built from an ontology you declare. Five retrieval layers run in parallel and fuse into one ranking. Answers are generated from that evidence, an evaluation harness measures them, and one service exposes the whole thing over REST and MCP. Everything is stored in Postgres with the pgvector extension. There is no second database.
+It parses PDF, HTML, Markdown, and text, builds a knowledge graph from concepts you declare in the domain ontology, and searches with five retrieval layers that merge into one ranking. It includes an evaluation harness and one service that answers REST clients and agents. Everything is stored in Postgres with the pgvector extension.
 
 ### Who is it for?
 
-A small scientific group that needs a defensible knowledge base over its own literature, and has no retrieval engineer to spare.
+A scientific group that needs a defensible knowledge base over its own literature and has no retrieval engineer to spare. The architectural decisions are made and written down with their reasons, so they can be defended in a review. The operational surface is one database, because a group without a platform team pays for every extra system you add.
 
-That shapes two things. The architectural decisions are made for you and written down with their reasoning, so you can defend them in a review without re-deriving them. And the operational surface is one database, because a group with no platform team pays the cost of a second one every week.
-
-If you are building a bespoke retrieval application and want to own every architectural call, a library is a better fit than a template. [Choosing Sci RAG Kit](choosing-sci-rag-kit.md) names the alternatives.
+A group building a bespoke retrieval application and wanting to make every architectural call itself is better served by a library. [Choosing Sci RAG Kit](choosing-sci-rag-kit.md) names the alternatives.
 
 ### Is this a library, a framework, or a template?
 
-A template, and specifically a GitHub template repository that is itself a working application: real code, a real demo corpus, green CI, and a "Use this template" button.
-
-That matters for how you adapt it. You edit data and configuration: the `domain/` folder, the corpus manifest, and `.env`. Nothing renames a Python package, and there are no placeholders to fill in. The thing you read is the thing you run, before and after. [Why a template repository and not a cookiecutter](#why-a-template-repository-and-not-a-cookiecutter) has the reasoning.
+A template: a GitHub template repository that is itself a working application, with real code, a demo corpus, and green CI. You adapt it by editing data and configuration (the `domain/` folder, the corpus manifest, and `.env`). Nothing renames a Python package; there are no placeholders to fill in. [Why a template repository and not a cookiecutter](#why-a-template-repository-and-not-a-cookiecutter) has the reasoning.
 
 ### What does "scientific" buy me over a general RAG framework?
 
-Three things a general framework leaves to you, because scientific question answering breaks naive retrieval in three specific ways.
-
-The evidence is numeric and tabular, so the chunker keeps each table intact as its own chunk; a fixed-window splitter would shred it across three. Questions and documents use different words, so retrieval fuses keyword search and a hypothetical-document probe alongside the vector layer. And corpora mix redistribution rights, so a license class is a fail-closed property that every layer applies inside its own SQL, before ordering and limiting.
-
-[The methodology](methodology.md) traces every other choice back to one of those three.
+Three things that break naive retrieval on scientific text. The evidence is numeric and tabular, so the chunker keeps each table intact. Questions and documents use different words, so retrieval combines keyword search and a hypothetical-answer search with the vector search. Corpora mix redistribution rights, so every document carries a license class that every layer enforces before ranking. [The methodology](methodology.md) traces each design choice back to one of the three.
 
 ### How does it compare to LightRAG, PaperQA2, or LlamaIndex?
 
-They are different shapes, and the comparison is about fit. LightRAG and LlamaIndex are libraries you build an application around, and they win when you want to make the architectural calls yourself. PaperQA2 is an agent that spends multi-step reasoning per query, and it wins when the question is hard enough to be worth that cost and latency.
-
-This kit is infrastructure with the decisions already made and measured. [Choosing Sci RAG Kit](choosing-sci-rag-kit.md) is the honest comparison, on axes other than benchmark scores.
+They are different shapes. LightRAG and LlamaIndex are libraries to build an application around, and they win when architectural calls must be made by the builder. PaperQA2 is an agent that reasons over papers in several steps per question, and it wins when a question is hard enough to justify that cost and latency. This kit is infrastructure with the decisions already made and measured. [Choosing Sci RAG Kit](choosing-sci-rag-kit.md) is the comparison.
 
 ## Getting started
 
 ### What is the fastest way to try it?
 
-Clone the repository and run the demo. Ten minutes, no credentials: it ingests five synthetic CC0 documents about agricultural residues, retrieves evidence for one question, and scores that retrieval against the bundled seed questions.
-
-To start a project of your own instead, `pipx install sci-rag-kit` then
-`sci-rag new` runs the wizard. The [quickstart](quickstart.md) has the commands
-for both.
+Clone the repository and run the demo. In about ten minutes, with no credentials, it ingests five synthetic documents about agricultural residues, retrieves evidence for one question, and scores retrieval against the bundled test questions. To start a new project, run `pipx install sci-rag-kit` and then `sci-rag new`. The [quickstart](quickstart.md) covers both routes.
 
 ### Do I need Google credentials?
 
-Not to try it. Not to run retrieval. Yes for anything that calls a model.
-
-With `SCI_RAG_EMBEDDING_PROVIDER=local-hash` the kit uses a deterministic offline embedder, and parsing, chunking, storage, ranking, and retrieval evaluation all work. Similarity is lexical, which is a real quality drop, and the docs say so everywhere it matters.
-
-Graph extraction, HyDE, community summaries, generated answers, and model-based judging need a credential. Generation can be Gemini, Claude, or any OpenAI-compatible endpoint. Embeddings are Google-only, for the reasons under [why you can change the LLM but not the embedding provider](#why-can-i-change-the-llm-but-not-the-embedding-provider).
+Not to try it, and not to run retrieval. Yes for anything that calls a model. With `SCI_RAG_EMBEDDING_PROVIDER=local-hash` the kit uses an offline embedder that matches on words, and parsing, chunking, storage, retrieval, and retrieval scoring work. The graph, the hypothetical-answer search, community summaries, generated answers, and graded answers need a credential. Generation can use Gemini, Claude, or any OpenAI-compatible endpoint. Embeddings are Google-only, because changing the embedder means re-embedding every chunk in the database; see [why the LLM can be changed but not the embedding provider](#why-can-i-change-the-llm-but-not-the-embedding-provider).
 
 ### Do I need Docker?
 
-It depends on your environment manager, and the answer changed recently.
-
-With pixi or conda, no. Those managers bundle `postgresql` and `pgvector`
-from conda-forge, keep their data in `.pgdata/`, and default to
-`SCI_RAG_DB_BACKEND=local`. Docker stays selectable in those projects for
-anyone who sets `SCI_RAG_DB_BACKEND=docker`.
-
-With uv or venv + pip, Docker is the easiest default, not a requirement. Every
-manager can use `SCI_RAG_DB_BACKEND=local` when PostgreSQL 16 through 18 and
-pgvector are already on the machine, including Postgres.app. Every manager can
-also retain the optional Cloud SQL helper through Advanced setup.
-
-[ADR 0008](adr/0008-supported-postgresql-versions.md) records the supported
-server range. [ADR 0009](adr/0009-cloud-dev-database.md) records the system-local
-and Cloud helper expansion.
+With pixi or conda, no. Those managers install PostgreSQL and pgvector from conda-forge, keep the data in `.pgdata/`, and default to `SCI_RAG_DB_BACKEND=local`. With uv or venv + pip, Docker is the default and the easiest option, not a requirement. Every project can use `SCI_RAG_DB_BACKEND=local` when PostgreSQL 16 through 18 and pgvector are already installed (including Postgres.app), and every project can keep the optional Cloud SQL helper through Advanced setup. [ADR 0008](adr/0008-supported-postgresql-versions.md) records the supported range and [ADR 0009](adr/0009-cloud-dev-database.md) the Cloud helper.
 
 ### Do I have to clone the repository?
 
-No. `pipx install sci-rag-kit` then `sci-rag new` fetches the template at a
-pinned tag and writes a configured, git-initialized project directory. Quick
-asks for six setup decisions and the credential value required by the selected
-mode; Advanced exposes every applicable option. Choose Offline explicitly when
-you do not want a model credential.
+No. `pipx install sci-rag-kit` then `sci-rag new` fetches the template at a pinned tag and writes a configured, git-initialized project directory. Quick asks for six setup decisions and the credential value the selected mode needs. Advanced asks every applicable question. Choose Offline when no model credential is desired.
 
-Clicking **Use this template** or cloning works too. Run `sci-rag init` inside
-that checkout; it configures the same files without downloading a template or
-running the new-project credential check. Both routes start from the same live
-tree and use the same appliers.
+**Use this template** or cloning works too. Run `sci-rag init` inside that checkout. It configures the same files without downloading a template or running the credential check. Both routes start from the same tree and use the same appliers.
 
 ### Can I run it completely offline?
 
-Ingestion, retrieval, and retrieval evaluation, yes. Answers, no.
-
-Set `SCI_RAG_EMBEDDING_PROVIDER=local-hash` and the whole test suite and the demo run without a network call. What you lose is everything that needs a model: the knowledge graph, community summaries, HyDE, generated answers, and the judge. Asking for an answer in that state reports that no LLM is configured. That is the same refusal the kit gives when retrieval finds nothing.
+Ingestion, retrieval, and retrieval scoring, yes. Answers, no. Set `SCI_RAG_EMBEDDING_PROVIDER=local-hash` and the demo and the whole test suite run without a network call. Asking for an answer in that state reports that no model is configured; it never invents one.
 
 ## Why it is built this way
 
-Each answer here gives the decision and the reason it went that way. The [decision record](adr/0001-graph-in-postgres.md) behind it carries the alternatives we weighed, the consequences we accepted, and the conditions that would make us reverse it. Reach for the record when you are about to change the decision.
+Each answer gives the decision and its reason. The decision record behind it lists the alternatives, the consequences, and the conditions that would make us reverse it.
 
 ### Why is the knowledge graph in Postgres and not Neo4j?
 
-Because this workload never issues the query a graph engine is for, and a second database costs more than it saves.
-
-The only traversal here is a two-hop walk from a handful of seed entities back to their evidence chunks. That is a recursive query over indexed foreign keys, comfortably fast at the scale a domain corpus reaches. A graph engine would buy you that and charge a second backup story, a second migration story, a second access-control model, and a consistency seam between the graph and the chunks it points at. One database also lets a chunk and its graph rows commit together. The cost is deep path queries and centrality, which are out of scope; export the two tables when you want them.
-
-Full argument and reversal conditions: [ADR 0001](adr/0001-graph-in-postgres.md).
+This workload never issues the query a graph engine is built for. The only traversal is a two-hop walk from a few seed entities to their evidence chunks, which is a recursive query over indexed foreign keys. A graph engine would add a second backup, migration, and access-control story for no query it needs. One database also lets a chunk and its graph rows commit together, keeping them transactionally consistent. Deep path queries and centrality are out of scope; export the two tables when they're needed. [ADR 0001](adr/0001-graph-in-postgres.md).
 
 ### Why 1536-dimension embeddings when models offer 3072?
 
-Because pgvector's HNSW index tops out at 2000 dimensions. A 3072-dimension column silently falls back to exact scans, where every vector query reads every row.
-
-At ten thousand chunks you would not notice. Past that it hurts, and it is the kind of slowdown that arrives only once the corpus is too big to re-embed casually. The default model is trained with Matryoshka representation learning, so the first 1536 dimensions carry most of the signal at a small, published cost in quality. Truncation breaks the unit norm that cosine ranking assumes, so every vector is re-normalized, and the dimension is asserted twice: once by the provider, once by the database column. Full 3072 dimensions would retrieve slightly better. Measure that gap before paying the exact-scan price.
-
-Full argument and reversal conditions: [ADR 0002](adr/0002-embeddings-1536-hnsw.md).
+pgvector's HNSW index stops at 2000 dimensions. A 3072-dimension column falls back to exact scans, which read every row on every query. The default model supports truncation, so the first 1536 dimensions carry most of the signal at a small published cost. Every truncated vector is re-normalized to preserve the unit norm that cosine ranking assumes. [ADR 0002](adr/0002-embeddings-1536-hnsw.md).
 
 ### Why is Docling an optional extra?
 
-Because it pulls several gigabytes of machine-learning stack, and a hard dependency that size would tax everyone who never opens a PDF.
-
-Docling is still the route we recommend. Run `uv sync --extra docling` and the parser picks it up automatically, because it does real layout analysis and table-structure recognition, and tables are where cheap parsers fail on scientific PDFs. Without it, pypdf is always there. Both routes and native Markdown converge on one block model, so nothing downstream knows which one ran. A corpus ingested with pypdf does have worse table fidelity, which is why the parser records the route it took.
-
-Full argument and reversal conditions: [ADR 0003](adr/0003-docling-with-pypdf-fallback.md).
+Because it installs several gigabytes of machine-learning dependencies. It is still the recommended PDF parser: run `uv sync --extra docling` and the parser uses it, because it recognizes table structure, which is where cheap parsers fail on scientific PDFs. Without it, pypdf is always available, at reduced table fidelity, and the parser records which route it took. [ADR 0003](adr/0003-docling-with-pypdf-fallback.md).
 
 ### Why a template repository and not a cookiecutter?
 
-Because a cookiecutter template is dead code, and this one has to be inspectable to be trusted.
-
-Cookiecutter parameterizes everything, and the price is a tree of placeholders you cannot browse comfortably, cannot run, and cannot test as itself. You find template bugs by generating a project and looking. A runnable template inverts all three: a newcomer evaluates the kit by reading and running it before committing, the demo documents the behavior, and the CI that gates any application gates template quality. What you give up is deep parameterization, license choice and layout variants among it. This template has opinions, and disagreeing with one costs you a normal code change in a repository you own.
-
-Full argument and reversal conditions: [ADR 0004](adr/0004-template-repo-not-cookiecutter.md).
+Because a cookiecutter template is code that cannot run. Its placeholders make the tree hard to browse, impossible to execute, and testable only by generating a project and looking. A runnable template inverts all three: the kit is evaluated by running it, the demo documents the behavior, and the CI that gates the application gates the template. The cost is less parameterization; disagreeing with an opinion is a normal code change in a repository that's owned. [ADR 0004](adr/0004-template-repo-not-cookiecutter.md).
 
 ### Why do citations get their own table?
 
-Because a citation is not the kind of edge the knowledge graph stores, and forcing it in would corrupt the graph.
-
-`kg_relationships` is entity-to-entity by contract: both endpoints are foreign keys into `kg_entities`, the type has to be one the ontology declares, and every row carries the chunk and the quoted phrase that stated it. A citation has none of those. It runs document to document, its type never varies, and its evidence is a DOI match in a reference list. The workaround that would preserve the table, one synthetic entity per document, makes entity search return paper titles alongside concepts and has community detection summarize the mixture. So `document_citations` holds them, and only where both documents are in the corpus.
-
-Full argument and reversal conditions: [ADR 0005](adr/0005-citation-edges-as-a-document-table.md).
+Because a citation is not the kind of edge the knowledge graph stores. Graph edges run entity to entity, carry a type from the ontology, and quote the phrase that stated them. A citation runs document to document, has one type, and its evidence is a DOI match in a reference list. Forcing citations into the graph would put paper titles among concepts and have community detection summarize the mixture. So `document_citations` holds them. [ADR 0005](adr/0005-citation-edges-as-a-document-table.md).
 
 ### Why hand-written provider adapters?
 
-Because the provider differences that matter here are the exact ones a translation layer smooths over.
-
-JSON-mode calls set `thinking_budget=0` on Gemini for a documented reason: without it, extraction and judging spend the whole output budget thinking and return empty. Claude's nearest knob is `output_config={"effort": "low"}`, which has different semantics, because disabling thinking on current Claude models can leak reasoning tags into the JSON those call sites parse. Those models also dropped the sampling parameters, so the adapter omits `temperature` entirely. Three adapters ship: `google`, `anthropic`, and `openai-compatible`. The third covers Grok, Llama, Mistral, DeepSeek, OpenAI, and a self-hosted vLLM or Ollama server, since Vertex serves its partner models behind an OpenAI-compatible endpoint.
-
-Full argument and reversal conditions: [ADR 0006](adr/0006-multi-provider-llms.md).
+Because the provider differences that matter are the ones a translation layer hides. Gemini's structured-output calls need thinking disabled or they return empty. Claude's nearest control is an effort setting with different semantics, and current Claude models reject the sampling parameters. Three adapters ship: `google`, `anthropic`, and `openai-compatible`, and the third covers Grok, Llama, Mistral, DeepSeek, OpenAI, and self-hosted servers. [ADR 0006](adr/0006-multi-provider-llms.md).
 
 ### Why can I change the LLM but not the embedding provider?
 
-Because switching embedder is a data migration wearing a configuration flag's clothes.
-
-A migration bakes `SCI_RAG_EMBEDDING_DIM` into the pgvector column, and every chunk records the version that produced it. Changing the embedder means a migration, a full re-embed, and an index rebuild. A provider setting would advertise all of that as a one-line config change. There is also little to switch to: Anthropic ships no embedding API, and Vertex's only managed text embeddings are Google's, so the alternatives mean deploying and paying for a GPU endpoint. You can point `SCI_RAG_EMBEDDING_MODEL` at a different Google model freely. `sci-rag embed reindex` scopes the re-embedding work when you need more: it plans by default and writes nothing until you pass `--apply`.
-
-Full argument and reversal conditions: [ADR 0006](adr/0006-multi-provider-llms.md).
+Because switching the embedder is a data migration. A migration fixes the vector dimension in the database column, and every chunk records the model that embedded it. Changing the embedder means a migration, a full re-embed, and an index rebuild, and a provider setting would present that as a one-line change. There is also little to switch to: Anthropic has no embedding API, and Vertex's managed text embeddings are Google's. You can point `SCI_RAG_EMBEDDING_MODEL` at another Google model, and `sci-rag embed reindex` plans the re-embedding. [ADR 0006](adr/0006-multi-provider-llms.md).
 
 ### Why does the generator configure files in place?
 
-Because a generator that rendered placeholders would drag back everything the template decision refused.
-
-`sci-rag new` downloads this repository at a pinned tag and rewrites its
-configuration files in place. Nothing in the tree is a placeholder waiting to be
-rendered, and no directory name is one either. A test generates a project for
-every environment manager and fails on any placeholder-looking token it cannot
-account for, allowing only three by content: a GitHub Actions expression, BibTeX
-brace protection, and the illustration in ADR 0004 of the syntax this project
-refuses. The generator fetches this repository
-byte for byte, so the template stays browsable, runnable, and tested as itself. The
-wizard is ordinary tested code under `src/sci_rag/scaffold/`, and the appliers
-round-trip their output through the same models the application loads, so a
-generated profile cannot be something `load_domain()` would reject.
-
-Full argument and reversal conditions: [ADR 0007](adr/0007-interactive-project-generator.md).
+Because rendering placeholders would reintroduce everything the template decision avoids. `sci-rag new` downloads this repository at a pinned tag and rewrites its configuration files. Nothing in the tree is a placeholder, so the template stays browsable, runnable, and tested as itself. The wizard is ordinary tested code, and its outputs are loaded through the same models the application uses. [ADR 0007](adr/0007-interactive-project-generator.md).
 
 ### Will `--template-path` copy my credentials into a new project?
 
-No. Generating from a local checkout copies the files that checkout tracks, and
-nothing else.
-
-That matters because a checkout is not a template. Yours also holds a filled in
-`.env`, cached proxy credentials, a virtualenv, Terraform state that contains a
-generated database password, and whatever corpus you last ingested. Asking git
-which paths are tracked draws the boundary from the repository itself, so an
-ignored file is never even considered for copying, and the offline route ends up
-with the same content the download route produces. A directory git knows nothing
-about, such as an extracted archive, falls back to a fail closed rule: nothing
-hidden crosses unless the template genuinely ships it.
-
-Full argument and reversal conditions: [ADR 0010](adr/0010-template-copy-boundary.md).
+No. Generating from a local checkout copies the files git tracks and nothing else, so an ignored `.env`, proxy credentials, virtual environment, or Terraform state is never considered. A directory git knows nothing about falls back to a rule that lets nothing hidden through. [ADR 0010](adr/0010-template-copy-boundary.md).
 
 ### Why commit model output for the demo benchmark?
 
@@ -208,147 +113,75 @@ Full argument and reversal conditions: [ADR 0011](adr/0011-committed-benchmark-g
 
 ### When should I use local PostgreSQL, Cloud SQL, or Docker?
 
-Use local PostgreSQL for the fastest Docker-free feedback loop, Cloud SQL when
-separate workspaces should share a managed instance without sharing database
-names or ports, and Docker when you want the unchanged default with the fewest
-host prerequisites. Postgres.app and the conda-forge server both drive the
-same project-local helper. The cloud backend assigns each workspace its own
-development database, destructive-test database, proxy process, and loopback
-port, but its WAN round trips make the integration suite materially slower.
-
-The cloud instance is development-only. Its public endpoint has no authorized
-networks, and developers reach it through the IAM-authorized, TLS-encrypted
-Cloud SQL Auth Proxy. [ADR 0009](adr/0009-cloud-dev-database.md) records the
-security revision, scoped IAM permissions, measured latency, and cost-control
-tradeoffs.
+Use Docker for the unchanged default with the fewest host prerequisites. Use local PostgreSQL for the fastest feedback loop without Docker. Use the Cloud SQL helper when several workspaces should share a managed instance without sharing database names or ports; its round trips make the integration suite slower. The cloud instance is development-only and reached through the IAM-authorized Cloud SQL Auth Proxy. [ADR 0009](adr/0009-cloud-dev-database.md).
 
 ### Why support three PostgreSQL majors?
 
-Because nothing in the schema needs a particular major, and pinning one would have cost an audience the project had just invited.
-
-pixi and conda landed because scientific and national-lab users asked for them, and those users often cannot install Docker on a managed laptop or a cluster login node. conda-forge ships PostgreSQL and pgvector together, but it builds the extension against whatever server it currently carries, which is 18 today, while compose and CI run 16. The project could have moved everyone to 18, pinned those users to a two-year-old extension, or let the two diverge untested. It supports PostgreSQL 16 through 18 and tests both ends. Nothing in the schema objects: one HNSW index, no pgvector feature newer than 0.5, no version-specific SQL.
-
-Full argument and reversal conditions: [ADR 0008](adr/0008-supported-postgresql-versions.md).
+Because nothing in the schema needs a particular major, and pixi and conda users often cannot install Docker. conda-forge builds pgvector against whatever server it currently ships, which is 18, while compose and CI run 16. The kit supports PostgreSQL 16 through 18 and tests both ends. [ADR 0008](adr/0008-supported-postgresql-versions.md).
 
 ## Retrieval and answers
 
 ### Why five retrieval layers? Is vector search not enough?
 
-Because each layer finds evidence the others miss, and on scientific text those gaps are large.
+Each layer finds evidence the others miss, and on scientific text the gaps are large. Vector search carries the highest weight but blurs exact terms and chemical names. Keyword search catches those. Graph traversal walks up to two hops from the concepts in the question, bringing in evidence whose words never appear in the question. Community summaries answer big-picture questions. Hypothetical-answer search bridges question wording and document wording. Not every layer runs every time: `interactive` uses vector and keyword only, and `deep` runs all five.
 
-Dense vector search over chunk embeddings is the workhorse and carries the highest fusion weight. Keyword full-text search catches exact terms, identifiers, and chemical names that embeddings blur. Knowledge-graph traversal walks up to two hops from the entities in your question, so the connecting entity brings its evidence along even when the question's words never appear in that text. Community summaries answer big-picture questions no single chunk covers. HyDE writes the passage a real document would contain if it answered the question, then searches near that, which bridges the gap between how questions and documents are phrased.
+### Why merge by rank and not by score?
 
-Not all five run every time. Two profiles set the defaults: `interactive` uses vector and keyword only, with short timeouts, for humans waiting on a spinner, and `deep` runs all five for agents, batch jobs, and evaluation.
-
-### Why fuse by rank and not by score?
-
-Because the native scores are incomparable across layers and the ranks are not.
-
-Cosine distance, `ts_rank`, and hop counts have different ranges and different meanings, so no amount of scaling makes them a shared currency. Weighted reciprocal rank fusion sidesteps the problem: each layer contributes `weight / (k + rank)` with rank starting at 1 and `k = 60`, so a candidate that several layers agree on beats a candidate one layer loved.
-
-| Layer | Default weight |
-|-------|---------------:|
-| vector | 1.5 |
-| keyword | 1.0 |
-| graph | 0.8 |
-| community | 0.6 |
-| HyDE | 1.2 |
-
-Those weights are defaults, not findings about your corpus. The evaluation harness's [ablation mode](evaluation.md) reports what each layer actually contributes to hit rate before you touch one.
+Because the layers' native scores are incomparable and their ranks are not. Each layer contributes `weight / (60 + rank)` per passage, so a passage several layers agree on beats one a single layer scored highly. The default weights are vector 1.5, keyword 1.0, graph 0.8, community 0.6, and hypothetical answer 1.2. They are defaults, not findings about a specific corpus; the [evaluation](evaluation.md) reports what each layer contributes before changing one.
 
 ### What is HyDE, and why is it never cited?
 
-HyDE stands for hypothetical document embeddings. A fast model writes the short passage a real document would contain if it answered your question, that passage embeds as a document, and vector search runs near it.
-
-It is never cited because it is not evidence. Nothing in it was retrieved from your corpus; it is a model's guess about what an answer might look like, used only to aim the search. Showing it or citing it would put unsourced model output in front of a reader wearing the same numbered-citation formatting as a real passage. So the generated passage is a search probe, never displayed and never cited, and the domain profile can steer its style per query class.
+HyDE (hypothetical document embeddings) has a model write a short passage describing what a real document would say if it answered a question. The kit then searches near that passage. It is never cited because it is not evidence; it is a guess used only to aim the search. The domain profile can steer its style per question class.
 
 ### Why is the reranker off by default?
 
-Because it has not earned the default on your corpus, and the project will not turn something on from intuition.
-
-A `Reranker` protocol ships with two adapters: an LLM one that needs no new dependencies, and a local cross-encoder behind the `rerank` extra. Both stay off until the `with_rerank` against `no_rerank` ablation justifies the latency on the corpus you actually have.
-
-Contextual compression is held to the same rule, and it passed. The v0.3 gate swept the relevance floor: at 0.15 and 0.3 the floor discarded evidence the answer then could not ground itself in, and groundedness fell. At 0.0, where every source is summarized and none dropped, three paired runs held every judged dimension while median prompt tokens fell about a quarter. So compression ships on, at floor 0.0, and reranking is still waiting. [Benchmarks](benchmarks.md) publishes all of it, including the two floors that failed.
+Because it has not earned the default on a specific corpus. Two adapters ship, one using the configured model and one using a local cross-encoder behind the `rerank` extra. Either stays off until the `with_rerank` against `no_rerank` comparison justifies the latency on the corpus. Answer compression is held to the same rule and passed it at a relevance floor of 0.0, so it ships on. [Benchmarks](benchmarks.md) publishes the runs.
 
 ### Why does the community layer skip my query when I filter?
 
-Because a community summary was written before anyone's scope was known, and it cannot be unmixed afterwards.
-
-The layer clusters tightly connected entities, has a model write a short summary of each cluster, and embeds those summaries. A summary therefore aggregates evidence from several documents into one piece of prose. Say your request restricts license classes, sources, excluded documents, or known retractions. There is no reliable way to separate the allowed contributions from the disallowed ones inside that prose. So the stage disables itself, because the alternative is returning a summary partly built from documents you are not entitled to see.
-
-That is a visible recall tradeoff, reported as `skipped` in the trace, not a silent one. Vector, keyword, graph, and HyDE still run and still apply your scope inside their own SQL.
+Because a community summary was written from several documents before anyone's scope was known, and the prose cannot be separated afterward. When a request restricts license classes, sources, documents, or retractions, the layer reports `skipped` and the other four layers apply the scope inside their own queries.
 
 ### Why does it sometimes refuse to answer?
 
-Because the alternative is a confident answer built from model priors, which is the failure this kit exists to avoid.
-
-The answer prompt carries three standing orders: cite every claim inline by number, prefer the sources' numbers and units over summary, and say so when the sources do not contain the answer. A refusal means retrieval found nothing in scope, and it is more useful than a plausible paragraph you would have to go and check. The evaluation harness keeps at least one question tagged `unanswerable` in every real seed set for exactly this reason, so the honesty behavior is measured.
+Because the alternative is an answer built from the model's memory. The answer prompt requires a numbered citation for every claim, prefers the sources' numbers and units, and says so when the sources do not contain the answer. Every real seed set keeps at least one `unanswerable` question so that behavior is measured.
 
 ## Rights and evidence
 
 ### Can I use this on papers I hold but may not redistribute?
 
-Yes. That case is exactly why rights are a first-class property here.
-
-Every document carries a redistribution class declared in the corpus manifest: `public`, `open_commercial`, `open_noncommercial`, `restricted`, or `unknown`. A paper you hold under a subscription is `restricted`. It can sit in the corpus and be retrieved by an internal caller whose scope allows that class, while staying unreachable from a surface you do not fully control. A retrieval scope is the caller's rights, not a display preference.
-
-The distinction that makes this work is where the filter runs. Every layer applies its license, source, year, author, journal, document, and DOI conditions inside its own SQL, before ordering and limiting. Filtering afterwards would be wrong twice: an ineligible row could crowd an eligible one out of a bounded candidate pool, then vanish, leaving excluded content shaping what survived.
-
-[Evidence and rights](evidence-and-rights.md) has the full contract.
+Yes. Every document carries a license class from the manifest: `public`, `open_commercial`, `open_noncommercial`, `restricted`, or `unknown`. A paper held under a subscription is `restricted`. It can sit in the corpus and be retrieved by an internal caller whose scope allows that class, and it stays unreachable from publicly accessible surfaces. Every layer applies the scope inside its own query, before ranking, so an ineligible document can never displace an eligible one. [Scope precedes ranking](methodology.md#7-scope-precedes-ranking) in the methodology has the full contract.
 
 ### Why does an empty license allowlist return nothing?
 
-Because "I allow nothing" and "I did not restrict by license" are different requests, and conflating them fails open.
-
-`license_classes=None` means the caller did not restrict by license. `license_classes=()` means the caller explicitly allows nothing, and retrieval returns nothing, before any embedding call or database query. Reading an empty allowlist as "no restriction" is the classic fail-open bug, and it would be invisible: the caller would get results and have no reason to suspect the filter never applied.
+Because "allow nothing" and "no restriction" are different requests. `license_classes=None` means the caller did not restrict by license. `license_classes=()` means the caller allows nothing, and retrieval returns nothing before any embedding call or database query. Reading an empty list as "no restriction" would be an invisible failure.
 
 ### Why is `unknown` treated as unsafe?
 
-Because "nobody has established the rights" is not the same as "the rights are permissive", and only one of those is safe to get wrong.
+Because "nobody has established the rights" is not "the rights are permissive". Missing or unrecognized license metadata normalizes to `unknown`, and `unknown` never enters a requested allowlist unless named. Only `public` and `open_commercial` are treated as safe for publicly accessible services. Campaign discovery follows the same rule: a missing or unrecognized license signal stays `unknown`.
 
-Missing or unrecognized license metadata normalizes to `unknown`, which never silently enters a requested safe allowlist. Only `public` and `open_commercial` are treated as safe for surfaces you do not fully control. A caller who genuinely wants unestablished-rights material has to ask for `unknown` by name, which turns an accident into a decision.
+### Why does the grader never see the reference answer?
 
-The same reasoning runs through the corpus campaign path. Discovery produces candidate metadata only, and a missing or unrecognized license signal stays `unknown`. Nothing infers it from a title or a failed request.
-
-### Why does the judge never see the reference answer?
-
-Because a judge that sees the expected answer rewards agreement with it, including agreement the retrieved sources do not support.
-
-Grading runs as two independent passes. The grounding pass sees the question, the generated answer, and exactly the sources the system retrieved, and it scores groundedness, citation accuracy, and completeness against those sources only. The correctness pass compares the answer to the expert reference in a separate call, without the sources. Keeping the views apart stops agreement with a reference from masking an unsupported claim.
-
-Both run at temperature 0, scores clamp to a 0 to 2 rubric, and a malformed judge response is recorded as a failure. It is never coerced into a zero.
+Because a grader that sees the expected answer rewards agreement with it, including agreement the cited sources do not support. Grading runs in two passes. The first sees the question, the answer, and the retrieved sources, and scores grounding, citation accuracy, and completeness. The second compares the answer to the reference without the sources and scores correctness. Both run at temperature 0, and a malformed grader response is recorded as a failure, never coerced into a score.
 
 ## Scale, cost, and operations
 
 ### How large a corpus can this handle?
 
-The graph is sized for the hundreds to low tens of thousands of entities a domain corpus produces, and the methodology names millions of chunks as the scale at which you would outgrow one database.
-
-Two things hold that up. Vector search stays indexed because the default dimension sits inside pgvector's HNSW limit, so it does not degrade into a full scan as the corpus grows. And graph traversal is a two-hop walk over indexed foreign keys, which is bounded work. The decision record's own revisit condition is a corpus reaching millions of entities, or a product that needs three or more hops at query time.
-
-If you get there, the seam is clean: the graph layer is one stage behind the retrieval facade, so swapping in a graph engine means reimplementing that one stage.
+The graph is sized for the hundreds to low tens of thousands of entities a domain corpus produces. Vector search stays indexed because the default dimension sits inside pgvector's limit. Graph traversal is a two-hop walk over indexed keys, so it stays fast. The decision record's own revisit condition is a corpus reaching millions of entities or a product needing three or more hops per query. At that point the graph layer is one stage behind the retrieval facade, so a graph engine replaces that one stage.
 
 ### What does it cost to run?
 
-Locally, nothing beyond your own machine and whatever model calls you make. Deployed, the database is the steady cost.
-
-The Google Cloud deployment is one Cloud SQL instance with pgvector, one Cloud Run service for REST and MCP, and one Cloud Run job for migrations and ingestion. The database is what runs continuously, and the default `db-g1-small` tier is a few tens of dollars a month, so tear down experiments with `terraform destroy` when you are done.
-
-Model cost is yours to control, and the profiles are the lever. `interactive` runs vector and keyword only, so the retrieval path costs one query embedding and caches it briefly. `deep` adds graph traversal and HyDE, which each call a generation model per query. There is no per-query agentic loop either way, so cost per question is predictable, and not a function of how hard the model decided the question was.
+Locally, nothing beyond the machine and the model calls made. Deployed, the database is the steady cost: the default `db-g1-small` Cloud SQL tier is a few tens of dollars a month, so destroy experiments with `terraform destroy`. Model cost follows the profile. `interactive` costs one query embedding; `deep` adds a generation call each for the graph and hypothetical-answer layers. There is no per-question agent loop, so cost per question is predictable.
 
 ### What happens when a retrieval layer times out?
 
-It contributes no candidates, the request continues, and the trace says what happened.
-
-Each stage runs as its own task with its own database session and its own timeout. A slow or failing one records `timeout`, `error`, `empty`, `skipped`, or `disabled` in a per-stage trace, and the caller sees exactly what ran. Catching the exception and pretending the stage succeeded is the thing the design forbids, because a quietly weaker answer looks exactly like a strong one.
-
-Traces are content-free by design. They carry stage, status, duration, and candidate counts, never query text, chunk text, or API keys, so they are always safe to log.
+It contributes no candidates, the request continues, and the trace says `timeout`. Each layer runs as its own task with its own database session and timeout. Traces carry stage, status, duration, and counts, never query or passage text, so they are safe to log.
 
 ## Extending and adapting
 
 ### Can I add my own parser, reranker, or model provider?
 
-Yes. Those are three of the five seams the kit is built to vary at.
+Yes. Those are three of the five boundaries the kit is built to vary at:
 
 | Need | Contract | Primary file |
 |---|---|---|
@@ -358,48 +191,30 @@ Yes. Those are three of the five seams the kit is built to vary at.
 | New embedding or generation model | implement `EmbeddingProvider` or `LLMClient` | `src/sci_rag/embed/`, `src/sci_rag/llm/` |
 | New identity system | implement `AuthBackend` | `src/sci_rag/server/auth.py` |
 
-Each seam comes with the evidence it expects, and for anything that changes ranking that means an ablation. [Extend the kit](extend.md) is the walkthrough.
+Anything that changes ranking owes a before-and-after evaluation. [Extend the kit](extend.md) is the walkthrough.
 
 ### Is there a plugin system?
 
-No, and that is deliberate. There is also no task queue, no cache service, no vector-store sidecar, and no graph database.
-
-A small factory selects providers, so the supported set stays visible in one file. Adding a fourth generation provider means writing an adapter next to the three that ship, not registering anything. The cost is that you cannot drop in someone else's package without editing code; the benefit is that reading `get_llm()` tells you the whole truth about what this deployment can reach.
+No, on purpose. There is also no task queue, cache service, vector-store sidecar, or graph database. A small factory selects providers, so the supported set is visible in one file. Adding a fourth generation provider means writing an adapter next to the three that ship.
 
 ### Can I rename the Python package?
 
-You can, but the kit deliberately does not, and derived projects keep the `sci_rag` import path.
-
-Renaming buys nothing functional and costs you the ability to diff your project against the upstream template and pull improvements from it. That benefit is live: the generator fetches this repository byte for byte, so your tree and upstream's stay comparable. `scripts/init_domain.py` handles the cosmetic rebranding, meaning project name, description, and a seed-question reset, without touching the import path. `sci-rag init` includes the same operation in its broader setup flow.
+It's possible, but derived projects keep the `sci_rag` import path. Renaming buys nothing functional and costs the ability to diff a project against the upstream template and pull improvements. `sci-rag init` and `scripts/init_domain.py` set the project name and description without touching the import path.
 
 ### How much of this should I change?
 
-As much as you need to. It is your copy.
-
-The parts built to be replaced are `domain/` (ontology, prompts, retrieval tuning, evaluation questions), the corpus manifest, and `.env`. Most projects never need more than those. Beyond them, the five seams above are where real projects vary, and changing something outside them is a normal code change in a repository you own.
-
-Two things are worth keeping if you can. Run an evaluation before and after a retrieval change, because the ablation is what turns a hunch into a decision. And keep the rights scope inside every layer's SQL, because that boundary is a correctness property, and it is the easiest thing here to break by accident.
+As much as needed. The parts built to be replaced are `domain/`, the corpus manifest, and `.env`, and most projects never need more. Beyond them, the five boundaries above are where real projects vary. Keep two things if possible: run an evaluation before and after a retrieval change, and keep the rights scope inside every layer's query.
 
 ## The project
 
 ### Is this production ready? What does 0.x mean?
 
-It is alpha, and 0.x here promises something specific.
-
-Minor releases may break APIs, and the changelog says so under a "Breaking" heading with a migration note. Patch releases do not break anything. Database schema changes ship as Alembic migrations that run forward from any prior release. Evaluation report JSON is additive, and domain profiles written for an older 0.x keep working.
-
-The compatibility promise covers five surfaces: the documented top-level Python exports, the CLI command surface, the REST contract under `/v1` plus the MCP tool names and schemas, the `domain/` directory format, and evaluation report JSON keys. Internal module paths may move in any minor release. [Versioning](VERSIONING.md) lists what 1.0 waits for, including two production deployments outside the maintainers' own.
+It is alpha, and 0.x promises something specific. Minor releases may break APIs, and the changelog says so under a "Breaking" heading with a migration note. Patch releases break nothing. Schema changes ship as migrations that run forward from any prior release. Evaluation report JSON only gains keys, and domain profiles written for an older 0.x keep working. The promise covers five surfaces: the documented Python exports, the CLI, the REST contract and MCP tools, the `domain/` format, and the report keys. [Versioning](VERSIONING.md) lists what 1.0 waits for.
 
 ### How do I cite it?
 
-Cite the software title, version or exact Git commit, repository URL, and access date. There is no archival DOI yet, and you should not cite a placeholder as though an archive exists.
-
-Pinning the commit matters especially during 0.x, because minor releases may break public interfaces. A software citation alone also does not identify a retrieval experiment, so report the corpus snapshot and digest, the license-scope rules, the model identifiers, the domain profile, the enabled layers, and the evaluation question set alongside it. [How to cite](citation.md) has the BibTeX and the full methods-section list.
+Cite the software title, the version or exact Git commit, the repository URL, and the access date. There is no archival DOI yet. A software citation alone does not identify a retrieval experiment, so also report the corpus snapshot and digest, the license scope, the model identifiers, the domain profile, the enabled layers, and the question set. [How to cite](citation.md) has the BibTeX.
 
 ### Who maintains it, and how are decisions made?
 
-The Sustainability Software Lab team at Berkeley Lab maintains it, and decisions are made in the open at three levels.
-
-Code-level decisions happen in pull requests and resolve by evidence: an ablation, a benchmark, or a failing test. Architecture decisions get a decision record. Direction-level proposals, meaning new subsystems and anything touching the five public surfaces, start as an RFC in GitHub Discussions and become a record plus issues when they converge.
-
-What the project optimizes for is stated plainly: correct over clever, honest over impressive, evidence over authority. Reviewers are explicitly empowered to block anything that publishes an unmeasured claim. [Governance](GOVERNANCE.md) has the roles and the tie-break rule.
+The Sustainability Software Lab at Berkeley Lab maintains it. Code-level decisions happen in pull requests and resolve by evidence. Architecture decisions get a decision record. Direction-level proposals start as a GitHub Discussion and become a record plus issues when they converge. [Governance](GOVERNANCE.md) has the roles.

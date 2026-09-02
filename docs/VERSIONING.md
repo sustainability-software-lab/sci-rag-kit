@@ -5,29 +5,17 @@ description: Learn which five public surfaces hold stable inside 0.x, and what e
 
 # Versioning
 
-sci-rag-kit follows [Semantic Versioning](https://semver.org/) with the
-0.x rules spelled out, because "semver" alone promises nothing before
-1.0 and users deserve to know what actually holds.
+sci-rag-kit follows [Semantic Versioning](https://semver.org/). This
+page spells out the 0.x rules: "semver" alone does not promise anything
+before 1.0, and users deserve clarity on what holds.
 
 ## While we are 0.x
 
-- **Minor releases (0.2 -> 0.3) may break APIs**, and the CHANGELOG
-  says so explicitly under a "Breaking" heading with a migration note.
-  We break deliberately and loudly, never silently.
-- **Patch releases (0.2.0 -> 0.2.1) do not break anything**: fixes,
-  docs, and additive features only.
-- **The database schema is versioned by Alembic migrations**
-  (`migrations/versions/`), and every release's migrations run forward
-  from any prior release's schema. Skipping releases is fine;
-  downgrades are best-effort.
-- **Eval report JSON is additive**: new keys may appear in
-  `report.json`/`calibration.json`; existing keys do not change meaning
-  or type within 0.x. External tooling (the UW SSEC evaluation platform
-  seam) can rely on that.
-- **Domain profiles are forward-compatible.** A `domain/` directory
-  written for an older 0.x keeps working. New capabilities arrive as
-  optional keys with safe defaults; the reranker block is the model, where
-  absent means off.
+- **Minor releases (0.2 -> 0.3) may break APIs.** The CHANGELOG says so explicitly under a "Breaking" heading with a migration note. We break deliberately and loudly, never silently.
+- **Patch releases (0.2.0 -> 0.2.1) do not break anything**: fixes, docs, and additive features only.
+- **The database schema is versioned by Alembic migrations** (`migrations/versions/`). Every release's migrations run forward from any prior release's schema. Skipping releases is fine; downgrades are best-effort.
+- **Eval report JSON is additive**: new keys may appear in `report.json`/`calibration.json`; existing keys do not change meaning or type within 0.x. External tooling (the UW SSEC evaluation platform seam) can rely on that.
+- **Domain profiles are forward-compatible.** A `domain/` directory written for an older 0.x keeps working. New capabilities arrive as optional keys with safe defaults. The reranker block is the model: absent means off.
 
 ## What is public API
 
@@ -46,8 +34,8 @@ minor release.
 ## Deprecation
 
 Within 0.x: deprecated surface keeps working for one minor release with
-a visible warning, then goes. The CHANGELOG lists every deprecation the
-release it starts and the release it lands.
+a visible warning, then goes. The CHANGELOG lists every deprecation, the
+release it starts in, and the release it lands in.
 
 ## Criteria for 1.0
 
@@ -68,12 +56,9 @@ guides.
 
 ## Release mechanics
 
-Releases are tagged `vX.Y.Z` from `main` with CI green, a CHANGELOG
-entry, and (once the maintainer enables it; see the launch-gated list in
-[ROADMAP.md](ROADMAP.md)) an archival DOI per release.
+Releases are tagged `vX.Y.Z` from `main` with CI green, a CHANGELOG entry, and (once the maintainer enables it; see the launch-gated list in [ROADMAP.md](ROADMAP.md)) an archival DOI per release.
 
-Pushing the tag runs [`.github/workflows/release.yml`](https://github.com/sustainability-software-lab/sci-rag-kit/blob/main/.github/workflows/release.yml),
-which verifies, publishes to TestPyPI, then publishes to PyPI:
+Pushing the tag runs [`.github/workflows/release.yml`](https://github.com/sustainability-software-lab/sci-rag-kit/blob/main/.github/workflows/release.yml), which verifies, publishes to TestPyPI, then publishes to PyPI.
 
 1. `verify` runs four checks. It confirms the `ci` workflow already
    passed for the tagged commit, confirms the tag matches
@@ -93,8 +78,8 @@ generate projects from the wrong commit.
 ### One-time setup, by a maintainer
 
 The workflow uses [Trusted Publishing](https://docs.pypi.org/trusted-publishers/)
-(OIDC), so the repository stores no API token to leak or rotate. You
-establish that trust once per index, by hand. CI cannot do it for you:
+(OIDC), so the repository stores no API token to leak or rotate. Trust is
+established once per index, by hand. CI cannot do this automatically:
 
 1. Reserve `sci-rag-kit` on [PyPI](https://pypi.org/) and on
    [TestPyPI](https://test.pypi.org/). They are separate accounts and
@@ -106,8 +91,8 @@ establish that trust once per index, by hand. CI cannot do it for you:
    - Environment: `pypi` on PyPI, `testpypi` on TestPyPI
 3. Create the matching GitHub environments (`pypi`, `testpypi`) in the
    repository settings. Put a required reviewer on `pypi` for the first
-   release; that turns the final publish into a decision you make rather
-   than one a tag push makes for you.
+   release; that turns the final publish into a maintainer decision rather
+   than an automatic one triggered by a tag push.
 4. Verify end to end before approving the PyPI publish, from a clean
    directory. Install the TestPyPI **artifact by URL** and let dependencies
    resolve from real PyPI:
@@ -122,14 +107,14 @@ establish that trust once per index, by hand. CI cannot do it for you:
 
    Do not point the installer at both indexes at once. TestPyPI is full of
    placeholder and name-squatted packages, and any resolver told to consider
-   both will happily prefer a fake `fastapi 1.0` from TestPyPI over the real
+   both may prefer a fake `fastapi 1.0` from TestPyPI over the real
    one. Installing the single artifact by URL sidesteps that entirely: it
-   tests the thing you built, with the dependencies your users will get.
+   tests the built artifact, with the dependencies end users will get.
 
    What to check before approving: both entry points run,
    `sci_rag.__version__` matches the tag, and `sci-rag new --defaults` produces
    a project. The generation command is the only check that exercises the
-   GitHub tag fetch, which is the part a PyPI upload cannot tell you about. The
+   GitHub tag fetch, which is what a PyPI upload cannot verify. The
    separate help command confirms the legacy executable remains available as a
    compatibility alias.
 

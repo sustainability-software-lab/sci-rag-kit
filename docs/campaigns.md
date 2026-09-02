@@ -5,11 +5,7 @@ description: Discover a resumable DOI list, resolve explicit open-access rights,
 
 # Run a corpus campaign
 
-A campaign turns a research topic or a seed DOI file into a reproducible list
-of scientific works, with an explicit rights answer attached to every one.
-Discovery stays separate from ingestion on purpose, so you can inspect the
-candidates and resume interrupted network work before anything lands in the
-corpus.
+A campaign turns a research topic or a seed DOI file into a reproducible list of scientific works, with an explicit rights answer attached to each. Discovery stays separate from ingestion by design, which means you can inspect candidates, interrupt if needed, and resume network work without restarting ingestion.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A screened, rights-resolved corpus manifest</div>
@@ -28,9 +24,7 @@ corpus.
 | A topic phrase or a file of DOIs | The two ways to start a campaign | |
 | Network access | Every step here talks to an external index | |
 
-Campaigns never decide rights for you. Discovery produces candidates and an
-explicit open-access signal; anything unestablished stays `unknown`, which
-retrieval treats as unsafe.
+Campaigns never make rights decisions for you. Discovery produces candidates and an explicit open-access signal from Unpaywall. Anything unestablished stays `unknown`, and retrieval treats unknown as unsafe, which is correct.
 
 ## Discover from a topic
 
@@ -44,10 +38,7 @@ uv run sci-rag campaign discover \
   --max-results 100
 ```
 
-Topic discovery searches OpenAlex and follows cursor pagination. Casual use
-works without a key. For a larger API budget, set `OPENALEX_API_KEY` in the
-environment. The kit never prints that key and never writes it to campaign
-state.
+Topic discovery searches OpenAlex with cursor pagination. Casual use works without a key. For higher limits, set `OPENALEX_API_KEY` in the environment. The kit never prints that key or writes it to campaign state.
 
 ## Discover from DOI seeds
 
@@ -74,18 +65,11 @@ malformed upstream records, so none of them disappears silently.
 
 ## Resume behavior
 
-The default state path is `data/campaigns/<name>/state.jsonl`. The run appends
-each completed DOI step and flushes it to disk. Repeating the command skips
-DOI records already present in state. If a process dies during the final write,
-the next run ignores only the truncated tail and safely continues appending.
+Campaign state lives in `data/campaigns/<name>/state.jsonl`. The run appends each completed DOI step to disk. Repeat the command and it skips records already present, so you can resume. If the process dies mid-write, the next run ignores only the truncated tail and continues appending safely.
 
-OpenAlex and Crossref calls are rate limited and identify the contact address
-in both the query and User-Agent. The client retries HTTP 429 and server
-errors with bounded backoff. Exhausted retries fail visibly; they never become an empty
-success report.
+OpenAlex and Crossref calls are rate-limited. The client sends your contact address in both the query and User-Agent, retries 429 and 5xx with bounded backoff, and fails visibly when retries exhaust. An empty success report never happens.
 
-Discovery metadata is not proof that a document may be redistributed. Resolve
-rights without downloading first:
+Discovery metadata tells you the document exists, not whether you can redistribute it. Resolve rights before you download:
 
 ```bash
 uv run sci-rag campaign build \
@@ -96,25 +80,13 @@ uv run sci-rag campaign build \
   --dry-run
 ```
 
-The dry run queries Unpaywall for each DOI, prints direct-PDF counts and the
-license-class distribution, and writes only resumable state. It does not
-create `pdfs/` or `corpus.jsonl`.
+The dry run queries Unpaywall for each DOI, prints direct-PDF counts and the license-class breakdown, and writes only resumable state. It does not create `pdfs/` or `corpus.jsonl`.
 
-`--max-results` bounds the work this invocation does, not only what discovery
-adds. The campaign above retains 100 candidates, so `--max-results 20` resolves
-the first 20 of them and leaves the rest untouched, in dry run and in download
-mode alike. The report says both numbers, `retained` and `candidates`, so a
-bounded trial cannot read as a full run. Campaign state is append-only and the
-bound takes a prefix of it, so a retry works on the same 20 rather than
-sampling a new set. Pass `--all-candidates` when you want every retained
-candidate regardless of the maximum.
+`--max-results` bounds this invocation, not only what discovery finds. If your campaign retained 100 candidates, then `--max-results 20` resolves the first 20 and leaves the rest untouched in both dry run and download mode. The report shows both `retained` and `candidates`, so a bounded trial cannot look like a full run. Campaign state is append-only, so the bound takes a prefix. Retry the command and it works on the same 20 rather than sampling a new set. Pass `--all-candidates` when you want every retained candidate regardless of the maximum.
 
 ## Fail-closed rights mapping
 
-Availability and redistribution rights are different signals. Unpaywall
-marking a work green or gold is not enough on its own. A work earns an open
-license class only when its selected location also carries an explicit,
-recognized license:
+Availability and redistribution rights are different signals. Unpaywall marking a work green or gold means the document is reachable, not that you can share it. A work earns an open license class only when its selected location carries an explicit, recognized license:
 
 | Explicit location license | Corpus class |
 | --- | --- |
@@ -123,23 +95,15 @@ recognized license:
 | CC BY-NC family | `open_noncommercial` |
 | Missing, `implied-oa`, publisher-specific, or unrecognized | `unknown` |
 
-The mapping never infers a license from `oa_status`, a reachable URL, or a PDF
-response. `unknown` is the intentional safe result when rights are unclear.
+The mapping never infers a license from `oa_status`, a working URL, or a PDF response. `unknown` is the intentional safe default when rights are unclear.
 
 ## Download and ingest
 
-After reviewing the dry-run distribution, repeat the command without
-`--dry-run`. The builder fetches only Unpaywall's direct `url_for_pdf` for a
-record marked open access. It never visits a landing page to scrape through a
-paywall.
+Review the dry-run distribution, then repeat without `--dry-run`. The builder fetches only Unpaywall's direct `url_for_pdf` for records marked open access. It never scrapes landing pages.
 
-Each response must declare `application/pdf`, stay within `--max-pdf-mb`, and
-begin with a PDF signature. The builder writes files through a temporary path
-and renames them only after validation. After an interruption it reuses files
-it has already verified, so a resumed run downloads nothing twice.
+Each response must declare `application/pdf`, stay within `--max-pdf-mb`, and start with a PDF signature. The builder writes to a temporary path and renames only after validation. After an interruption it reuses verified files, so resumed runs never download twice.
 
-Successful downloads produce `data/campaigns/<name>/corpus.jsonl`, in the same
-format `sci-rag ingest` reads:
+Successful downloads produce `data/campaigns/<name>/corpus.jsonl` in the format `sci-rag ingest` reads:
 
 ```bash
 uv run sci-rag ingest --manifest data/campaigns/rice-straw/corpus.jsonl
@@ -170,25 +134,14 @@ uv run sci-rag campaign screen \
   --confidence-threshold 0.8
 ```
 
-The model receives abstracts in bounded batches and must return one strict
-`include` or `exclude` decision, confidence, and reason per work. The command
-does not trust that output blindly:
+The model receives abstracts in bounded batches and returns one strict `include` or `exclude` decision, confidence, and reason per work. The command does not trust that output blindly:
 
-* confidence below the threshold becomes `review`;
-* a missing abstract becomes `review` without a model call;
-* malformed JSON, missing rows, duplicate indexes, and provider failures make
-  the affected batch `review`;
-* no failure path silently excludes a work.
+* Confidence below the threshold becomes `review`.
+* A missing abstract becomes `review` without calling the model.
+* Malformed JSON, missing rows, duplicate indexes, and provider failures mark the affected batch `review`.
+* No failure path silently excludes a work.
 
-Decisions append to `state.jsonl`. `screening-report.json` records the current
-protocol, its SHA-256 digest, the confidence floor, every per-work reason,
-failure counts, and the current PRISMA-aligned totals. PRISMA is the
-Preferred Reporting Items for Systematic Reviews and Meta-Analyses. It is
-the reporting standard systematic reviews are held to, so aligning with it
-means the counts are the ones a reviewer expects. Repeating the same
-protocol resumes without calling the model again. Changing the criteria
-or confidence floor starts a new set of decisions while preserving the old
-append-only history.
+Decisions append to `state.jsonl`. `screening-report.json` records the current protocol, its SHA-256 digest, the confidence floor, every per-work reason, failure counts, and the current PRISMA-aligned totals. PRISMA (Preferred Reporting Items for Systematic Reviews and Meta-Analyses) is the reporting standard for systematic reviews. Aligning with it means the counts match what reviewers expect. Repeat the same protocol and it resumes without calling the model. Change the criteria or floor and it starts fresh while preserving the old history.
 
 The screening report begins at the deduplicated campaign-state boundary.
 `identified`, `screened`, and the sum of `included`, `excluded`, and
@@ -205,25 +158,22 @@ Walk the queue interactively:
 uv run sci-rag campaign review --name rice-straw
 ```
 
-For each row, choose `include`, `exclude`, or `skip`, then record a reason.
-Human decisions append after the model suggestion instead of overwriting it,
-and the report regenerates from the latest decision under that protocol.
-Skipping leaves the row in `awaiting_review`, so the totals continue to
-reconcile without pretending the campaign is complete.
+For each row, choose `include`, `exclude`, or `skip` and record a reason. Human decisions append after the model's suggestion instead of replacing it, and the report regenerates from your latest choice. Skip a row and it stays `awaiting_review`, so totals reconcile without claiming you finished.
 
 <div class="srag-checkpoint" markdown>
-**Checkpoint: every row has a decision or a reason**
+**Checkpoint: every row has a decision**
 
-`sci-rag campaign review --name rice-straw` ends by printing the
-PRISMA-aligned counts and the path to
-`data/campaigns/rice-straw/screening-report.json`, which it rewrites from the
-latest decisions. In that table `included` plus `excluded` plus
-`awaiting review` equals `screened`. No row is missing, and no row is included
-without a rights answer you can point at.
+`sci-rag campaign review --name rice-straw` ends by printing the PRISMA-aligned
+counts and the path to `data/campaigns/rice-straw/screening-report.json`, which
+it rewrites from the latest decisions. In that table `included` plus `excluded`
+plus `awaiting review` equals `screened`. No row is missing, and no row is
+included without a rights answer you can point at.
 </div>
+
+**Verify the manifest is ready to ingest.** Open `data/campaigns/rice-straw/screening-report.json`. Confirm that `included` plus `excluded` plus `awaiting_review` equals `screened`. Check that `corpus.jsonl` exists and holds one JSON object per included row.
 
 ## Next steps
 
 - Ingest the manifest this produced: [Bring your own domain](bring-your-own-domain.md#step-5-ingest-and-build)
-- Understand what a license class does to retrieval: [Evidence and rights](evidence-and-rights.md)
+- Understand what a license class does to retrieval: [Scope precedes ranking](methodology.md#7-scope-precedes-ranking)
 - Enrich the DOIs and check for retractions: [Operate a live corpus](operations.md)

@@ -7,15 +7,9 @@ description: See what has shipped, what comes next, and which calls the project 
 
 Where the kit is going, in the order the evidence supports.
 
-Wave 1, v0.2 "Credibility", has shipped. Waves 2 and 3 are committed
-directions, and each one gets its own planning pass before anyone writes
-code. Anything that touches retrieval lands the same way: behind an
-ablation config, with before and after numbers on a benchmark page. If
-the numbers do not hold up, it does not land.
+Wave 1, v0.2 "Credibility", has shipped. Waves 2 and 3 are committed directions, and each one gets its own planning pass before anyone writes code. Anything that touches retrieval lands the same way: behind an ablation config, with before and after numbers on a benchmark page. If the numbers do not hold up, it does not land.
 
-You will not find dates here. That is deliberate. Development happens in
-the open, so the milestones on the issue tracker say what comes next.
-This page says why.
+Development happens in the open, so the issue tracker milestones say what comes next. This page explains why.
 
 ## Shipped: v0.2 "Credibility"
 
@@ -76,18 +70,7 @@ on the gated work, and the reasons are the interesting part:
 Two of those are ablation-gated, and the follow-up evidence reached a
 different answer for each:
 
-- **Compression defaults on at `relevance_floor: 0.0`.** The original
-  paired judged-answer gate, at floor 0.3, cut median
-  prompt tokens 1280 to 378, but all four judged dimensions moved down.
-  At n=10 no single drop separates from noise, and that is exactly why
-  that run remains a rejection: the gate asks for evidence that quality
-  holds, and overlapping intervals are not that evidence. The follow-up
-  floor sweep in [#90](https://github.com/sustainability-software-lab/sci-rag-kit/issues/90)
-  found the setting where the gate holds. At 0.0, three independent
-  paired runs kept every judged dimension at or above baseline while
-  median prompt tokens fell 25% to 28%. The shipped profile therefore
-  enables compression at floor 0.0. Raising the floor needs another
-  paired run.
+- **Compression defaults on at `relevance_floor: 0.0`.** The original paired judged-answer gate, at floor 0.3, cut median prompt tokens from 1280 to 378. But all four judged dimensions moved down. At n=10 no single drop separates from noise, which is exactly why that run was rejected: the gate asks for evidence that quality holds, and overlapping intervals are not that evidence. The follow-up floor sweep in [#90](https://github.com/sustainability-software-lab/sci-rag-kit/issues/90) found the setting where the gate holds. At 0.0, three independent paired runs kept every judged dimension at or above baseline while median prompt tokens fell 25% to 28%. The shipped profile therefore enables compression at floor 0.0. Raising the floor needs another paired run.
 - **Entity resolution is unexercised by the demo corpus.** Resolution
   finds no automatic pairs and plans no merges across 67 extracted
   entities, so the `resolved_entities` condition cannot be measured here

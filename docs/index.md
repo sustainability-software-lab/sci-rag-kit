@@ -18,9 +18,12 @@ hide:
 
 <div class="srag-home-masthead__lede" markdown>
 
-Put your papers and reports into one database, ask questions in plain
-language, and get answers that cite the passages they came from. Everything
-is set up for you; you supply the documents and the questions.
+A project template for question answering over scientific documents. Give
+the kit a folder of papers and reports and it builds a knowledge base from
+them: every passage indexed three ways, a graph of the concepts they mention,
+and answers that quote the exact passages they rest on. The pipeline comes
+assembled and measured. What a project brings is the documents, the
+vocabulary of its field, and a handful of questions with known answers.
 
 </div>
 
@@ -46,27 +49,31 @@ is set up for you; you supply the documents and the questions.
 
 ## Start a project
 
-Two commands create a configured project; a third ingests your documents.
+Two commands create a configured project, and a third ingests the
+documents. There is no boilerplate to fill in afterward, because the
+generator writes the setup answers straight into the project's
+configuration files.
 
 ```console title="Terminal"
 $ pipx install sci-rag-kit
 $ sci-rag new
 ```
 
-The setup wizard asks a few questions and writes the answers into the
-project's configuration files. Quick mode asks for six setup decisions, plus
-the credential value required by the selected mode, and supplies defaults for
-everything else. Choose Offline if you do not want a model credential yet, or
-Advanced to reach every applicable option.
+The wizard asks about the project, the field, and how to reach a model,
+then writes the answers into place. Quick mode asks for six setup decisions,
+plus the credential value required by the selected mode, and uses sensible
+defaults for the rest. Offline mode needs no model credential at all, which
+makes it a good first pass on a laptop without one, and Advanced mode
+exposes every option for projects that already know what they want.
 
 <div id="srag-cast" class="srag-cast" data-cast="assets/casts/sci-rag-new.cast" data-autoplay="true" aria-label="Recorded sci-rag new session"></div>
 <small> (A full trace of this terminal session can be found [below](#example))</small>
 
-Want to look first? [Other ways in](quickstart.md#other-ways-in) covers a clone, the GitHub template, `sci-rag init`, and the dev container.
+Prefer to read the code before creating a project? [Other ways in](quickstart.md#other-ways-in) covers a clone, the GitHub template, `sci-rag init`, and the dev container. Every route ends at the same tree.
 
-New to building retrieval systems? The [Quickstart](quickstart.md) takes
-you from installation to a served knowledge base in about ten minutes, and
-[How it works](learn.md) explains what happened in plain words.
+The [Quickstart](quickstart.md) goes from installation to a served knowledge
+base in about ten minutes, and [How it works](learn.md) explains what is
+happening at each step along the way.
 
 <!-- END KIT ONBOARDING -->
 
@@ -78,29 +85,35 @@ you from installation to a served knowledge base in about ten minutes, and
 
 <div class="srag-defs" markdown>
 
-Document ingestion: PDF, HTML, Markdown, and text files are split into
-passages that keep their section headings and whole tables. [Follow a
-document into storage](architecture.md#data-model).
+Document ingestion: PDF, HTML, Markdown, and text files become passages
+that keep their section headings and their tables intact, so a number
+retrieved from "Table 3" still knows which experiment it belongs to.
+[Follow a document into storage](architecture.md#data-model).
 
-Five ways to search: by meaning, by exact words, through a graph of your
-field's concepts, through cluster summaries, and by a model's guess at what
-an answering passage would say. The five lists merge into one ranking.
-[See how a question is answered](learn.md#what-happens-to-a-question).
+Five kinds of search: by meaning, by exact words, through a graph of the
+field's concepts, through summaries of related concepts, and through a
+model-written hypothetical answer. Each one finds evidence the others miss,
+and their result lists merge into a single ranking that says which layer
+found what. [See how a question is answered](learn.md#what-happens-to-a-question).
 
-One database: passages, vectors, full-text index, and the concept graph all
-live in Postgres. Nothing else to run or back up. [Read why](adr/0001-graph-in-postgres.md).
+One database: passages, vectors, the full-text index, and the concept graph
+all live in Postgres. That leaves one thing to run, one thing to back up,
+and one place where a chunk and its graph entries commit together.
+[Read why](adr/0001-graph-in-postgres.md).
 
 Rights built in: every document carries a license class, and a request that
-restricts rights never sees passages outside it. [Trace the rights
-contract](evidence-and-rights.md).
+restricts rights never sees passages outside it, because the filter runs
+inside each search before anything is ranked. [Read the rights
+rules](methodology.md#7-scope-precedes-ranking).
 
-Cited answers: each claim points at a numbered passage, and when the
-documents do not contain an answer the system says so. [Use REST or
-MCP](api.md).
+Cited answers: every claim points at a numbered passage, and when the
+documents do not contain an answer, the kit says so rather than filling the
+gap from a model's memory. [Use REST or MCP](api.md).
 
-Measurement: score retrieval and grade answers against questions with known
-answers, and see what each search layer contributes on your corpus.
-[Evaluate your pipeline](evaluation.md).
+Measurement: a file of questions with known answers lets the kit score
+retrieval, grade generated answers, and report what each search layer
+contributes on the corpus at hand, so a change is judged by numbers rather
+than by impression. [Evaluate your pipeline](evaluation.md).
 
 </div>
 
@@ -110,21 +123,25 @@ answers, and see what each search layer contributes on your corpus.
 
 ## Configure, do not code
 
-Pointing the kit at your field never means editing Python.
+Pointing the kit at a new field means editing configuration files, never
+Python. The concepts of the field, the wording of the prompts, and the
+questions used for scoring all live in plain text, and the pipeline reads
+them at run time.
 
 <!-- BEGIN KIT ONBOARDING -->
-First, install the kit on the command line with: `pipx install sci-rag-kit`.
-Then running `sci-rag new` will update the config files in
-place based on your responses to the setup questions.
+`pipx install sci-rag-kit` installs the kit. `sci-rag new` then fills in the
+configuration files from the answers given during setup.
 <!-- END KIT ONBOARDING -->
 
-`domain/` holds everything specific to your field: the concepts the graph
-looks for, the prompt wording, and the test questions. `data/` holds your
-documents and the one-line-per-document manifest that records their rights.
+`domain/` holds everything specific to the field: the concepts the graph
+looks for, the prompt wording, and the test questions. `data/` holds the
+documents themselves and a one-line-per-document manifest that records who
+wrote each one and whether its text may be redistributed. Everything else
+is the pipeline, and most projects never open it.
 
 <pre class="srag-home-tree" aria-label="Annotated repository tree"><code>your-sci-rag/
-├── domain/           your field: concepts, prompts, test questions
-├── data/             your documents and their manifest
+├── domain/           the field: concepts, prompts, test questions
+├── data/             the documents and their manifest
 ├── src/sci_rag/      the pipeline, from ingestion to serving
 ├── migrations/       database tables
 ├── tests/            runs offline
@@ -143,9 +160,9 @@ documents and the one-line-per-document manifest that records their rights.
 
 [<span class="srag-row__title">Quickstart</span><span class="srag-row__copy">Create a project, ingest the demo corpus, ask a question, and serve the result. About ten minutes.</span>](quickstart.md){ .srag-row }
 
-[<span class="srag-row__title">Bring your own domain</span><span class="srag-row__copy">Seven commands from a folder of PDFs to a knowledge base that answers questions about them.</span>](bring-your-own-domain.md){ .srag-row }
+[<span class="srag-row__title">Bring your own domain</span><span class="srag-row__copy">Seven commands from a folder of documents to a knowledge base that answers questions about them.</span>](bring-your-own-domain.md){ .srag-row }
 
-[<span class="srag-row__title">How it works</span><span class="srag-row__copy">What happens between a document and a cited answer, in plain words.</span>](learn.md){ .srag-row }
+[<span class="srag-row__title">How it works</span><span class="srag-row__copy">What happens between a document and a cited answer.</span>](learn.md){ .srag-row }
 
 [<span class="srag-row__title">Evaluate your pipeline</span><span class="srag-row__copy">Measure retrieval and answers against questions with known answers, and see what each search layer contributes.</span>](evaluation.md){ .srag-row }
 
@@ -153,7 +170,7 @@ documents and the one-line-per-document manifest that records their rights.
 
 [<span class="srag-row__title">FAQ</span><span class="srag-row__copy">Short answers to what this is, who it is for, and why it is built this way.</span>](faq.md){ .srag-row }
 
-[<span class="srag-row__title">Choosing Sci RAG Kit</span><span class="srag-row__copy">Compare the kit with LightRAG, PaperQA2, LlamaIndex, and Microsoft GraphRAG before you commit to it.</span>](choosing-sci-rag-kit.md){ .srag-row }
+[<span class="srag-row__title">Choosing Sci RAG Kit</span><span class="srag-row__copy">How the kit compares with LightRAG, PaperQA2, LlamaIndex, and Microsoft GraphRAG.</span>](choosing-sci-rag-kit.md){ .srag-row }
 
 </div>
 
@@ -165,7 +182,7 @@ documents and the one-line-per-document manifest that records their rights.
 
 ## Example CLI Setup Wizard Session
 
-The recommended Quick session above, in full. `scripts/render_cast.py` builds it by driving the real wizard, so it cannot drift from what `sci-rag new` actually asks. Regenerate with `make cast`. `make docs` fails if you forget.
+The Quick session above, in full. `scripts/render_cast.py` builds it by driving the real wizard, so it cannot drift from what `sci-rag new` asks. `make cast` regenerates it, and `make docs` fails when it is stale.
 
 <!-- BEGIN GENERATED TRANSCRIPT: scripts/render_cast.py -->
 

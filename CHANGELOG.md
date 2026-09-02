@@ -41,6 +41,18 @@ Notable changes to sci-rag-kit. The format follows
   the database connection before querying.
 - **`sci-rag corpus enrich --mailto`** reads `SCI_RAG_CAMPAIGN_MAILTO` like
   the campaign commands do, so the address the wizard wrote is used.
+- **Documentation rewritten for readability and trimmed to essentials.** Every
+  reader-facing page was line-edited or rewritten in a plain, direct register:
+  shorter sentences, terms defined where they are used, no aphorisms, each
+  rule stated once on its home page, prose centered on what the kit does
+  rather than on the reader, with the imperative kept for the steps, and a
+  final pass that elaborates each concept with what it means for a project
+  and varies sentence rhythm, in the register of Stripe's and
+  cookiecutter-data-science's documentation. The rights page folded into the
+  methodology (section 7) with a redirect; the FAQ answers at decision-plus-
+  reason length; the domain tutorial leads with the recipe and moved its field
+  semantics to the generated configuration reference, which now documents the
+  corpus manifest and seed-question row formats from the source models.
 - **Documentation restructured for people new to retrieval systems.** The
   README opens with what the kit does and a seven-command recipe. The site's
   Get started section is now Quickstart, Bring your own domain, and

@@ -23,7 +23,7 @@ For work performed with the current release, cite the software title, version or
 }
 ```
 
-Add `note = {Git commit ...; accessed YYYY-MM-DD}` when the exact code state matters. If you modified the template substantially, cite both Sci RAG Kit and your derived repository or archived release so readers can reproduce the deployed method.
+Add `note = {Git commit ...; accessed YYYY-MM-DD}` when the exact code state matters. If the template was substantially modified, cite both Sci RAG Kit and the derived repository or archived release so readers can reproduce the deployed method.
 
 ## What else to report in a methods section
 
@@ -37,4 +37,4 @@ A software citation alone does not identify a RAG experiment. Also report:
 - enabled layers, routing profile, and reranker state;
 - evaluation question-set version and judge calibration evidence.
 
-Evaluation reports and named corpus snapshots already record most of this provenance. See [Evaluate your pipeline](evaluation.md) and [Evidence and rights](evidence-and-rights.md).
+Evaluation reports and named corpus snapshots already record most of this provenance. See [Evaluate your pipeline](evaluation.md) and the [methodology](methodology.md).
