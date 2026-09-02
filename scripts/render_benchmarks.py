@@ -92,6 +92,11 @@ GRAPH_REPLAY_ARTIFACT_FIELDS = {
     "relationship_count",
     "graph_digest",
 }
+APPROVED_GRAPH_REPLAY_GENERATION_PARAMETERS = {
+    "temperature": 0.0,
+    "json_mode": True,
+    "max_tokens": 8192,
+}
 
 
 def _canonical_json(value: object) -> bytes:
@@ -166,8 +171,16 @@ def _verify_artifact(receipt: dict[str, Any], artifact_root: Path | None) -> Non
             raise ProvenanceError(
                 f"graph replay artifact {field} must be an integer of at least {minimum}"
             )
-    if not isinstance(artifact["generation_parameters"], dict):
+    generation_parameters = artifact["generation_parameters"]
+    if not isinstance(generation_parameters, dict):
         raise ProvenanceError("graph replay artifact generation_parameters must be an object")
+    if _canonical_json(generation_parameters) != _canonical_json(
+        APPROVED_GRAPH_REPLAY_GENERATION_PARAMETERS
+    ):
+        raise ProvenanceError(
+            "graph replay artifact generation_parameters do not match the approved "
+            "graph extraction contract"
+        )
 
     calls = artifact["calls"]
     if not isinstance(calls, list):
@@ -219,6 +232,16 @@ def _verify_artifact(receipt: dict[str, Any], artifact_root: Path | None) -> Non
         )
     if artifact["failed_batches"] != 0:
         raise ProvenanceError("graph replay artifact failed_batches must be 0 for strict replay")
+    accounted_batches = (
+        artifact["successful_batches"] + artifact["split_batches"] + artifact["failed_batches"]
+    )
+    if accounted_batches != len(calls):
+        raise ProvenanceError(
+            "graph replay artifact batch accounting is inconsistent: "
+            f"successful_batches={artifact['successful_batches']}, "
+            f"split_batches={artifact['split_batches']}, "
+            f"failed_batches={artifact['failed_batches']}, calls={len(calls)}"
+        )
 
 
 @dataclass(frozen=True)

@@ -13,6 +13,7 @@ import asyncio
 import hashlib
 import json
 import os
+import subprocess
 import sys
 import tempfile
 from collections.abc import AsyncIterator, Callable, Mapping, Sequence
@@ -35,6 +36,8 @@ from sci_rag.db import (
 from sci_rag.domain import DomainProfile, load_domain
 from sci_rag.evals.report import domain_digest, git_commit
 from sci_rag.graph import ExtractionStats, extract_graph
+from sci_rag.ingest import chunk_document, load_manifest, parse_file
+from sci_rag.ingest.ingester import content_hash_for
 from sci_rag.llm import LLMClient, get_llm, parse_json_loosely
 
 SCHEMA_VERSION = 1
@@ -575,8 +578,26 @@ class ReplayReceipt:
 
 
 @dataclass(frozen=True)
+class _DocumentIdentity:
+    content_hash: str
+    title: str
+    source: str
+    license_class: str
+    authors: tuple[str, ...]
+    publication_year: int | None
+    doi: str | None
+    journal: str | None
+    license_source: str | None
+    page_count: int | None
+    chunk_count: int
+
+
+@dataclass(frozen=True)
 class _CorpusState:
     digest: str
+    document_hashes: tuple[str, ...]
+    documents: tuple[_DocumentIdentity, ...]
+    chunk_identities: tuple[tuple[str, int, str, int, str | None, bool], ...]
     document_count: int
     chunk_count: int
     non_demo_count: int
@@ -596,9 +617,31 @@ async def _corpus_state(
             await session.execute(
                 select(
                     Document.content_hash,
+                    Document.title,
                     Document.source,
                     Document.license_class,
+                    Document.authors,
+                    Document.publication_year,
+                    Document.doi,
+                    Document.journal,
+                    Document.license_source,
+                    Document.page_count,
+                    Document.chunk_count,
                 ).order_by(Document.content_hash)
+            )
+        ).all()
+        chunks = (
+            await session.execute(
+                select(
+                    Document.content_hash,
+                    Chunk.chunk_index,
+                    Chunk.content,
+                    Chunk.token_count,
+                    Chunk.section_path,
+                    Chunk.is_table,
+                )
+                .join(Document, Document.id == Chunk.document_id)
+                .order_by(Document.content_hash, Chunk.chunk_index)
             )
         ).all()
         stamped = (
@@ -618,6 +661,34 @@ async def _corpus_state(
     ).hexdigest()
     return _CorpusState(
         digest=digest,
+        document_hashes=tuple(document.content_hash for document in documents),
+        documents=tuple(
+            _DocumentIdentity(
+                content_hash=document.content_hash,
+                title=document.title,
+                source=document.source,
+                license_class=document.license_class,
+                authors=tuple(document.authors),
+                publication_year=document.publication_year,
+                doi=document.doi,
+                journal=document.journal,
+                license_source=document.license_source,
+                page_count=document.page_count,
+                chunk_count=document.chunk_count,
+            )
+            for document in documents
+        ),
+        chunk_identities=tuple(
+            (
+                chunk.content_hash,
+                chunk.chunk_index,
+                hashlib.sha256(chunk.content.encode("utf-8")).hexdigest(),
+                chunk.token_count,
+                chunk.section_path,
+                chunk.is_table,
+            )
+            for chunk in chunks
+        ),
         document_count=len(documents),
         chunk_count=chunk_count,
         non_demo_count=sum(document.source != "demo_fixture" for document in documents),
@@ -628,6 +699,157 @@ async def _corpus_state(
         community_count=community_count,
         resolution_audit_count=resolution_audit_count,
     )
+
+
+@dataclass(frozen=True)
+class _TrackedDemoIdentity:
+    document_hashes: tuple[str, ...]
+    documents: tuple[_DocumentIdentity, ...]
+    chunk_identities: tuple[tuple[str, int, str, int, str | None, bool], ...]
+
+
+def _tracked_demo_identity(manifest_path: Path) -> _TrackedDemoIdentity:
+    """Return the exact document and chunk identity produced by the demo sources."""
+    try:
+        entries = load_manifest(manifest_path)
+    except (OSError, ValueError) as exc:
+        raise GraphReplayError(
+            f"cannot validate tracked demo manifest: {type(exc).__name__}"
+        ) from exc
+    if not entries:
+        raise GraphReplayError("tracked demo manifest contains no documents")
+
+    hashes: list[str] = []
+    documents: list[_DocumentIdentity] = []
+    chunk_identities: list[tuple[str, int, str, int, str | None, bool]] = []
+    for entry in entries:
+        if entry.source != "demo_fixture" or entry.license_class != "public":
+            raise GraphReplayError(
+                "tracked demo manifest must contain only public demo_fixture documents"
+            )
+        try:
+            parsed = parse_file(entry.path)
+            drafts = chunk_document(parsed)
+        except (OSError, ValueError) as exc:
+            raise GraphReplayError(
+                f"cannot validate a tracked demo document: {type(exc).__name__}"
+            ) from exc
+        if not drafts:
+            raise GraphReplayError("tracked demo document produced no chunks")
+        content_hash = content_hash_for(drafts)
+        hashes.append(content_hash)
+        documents.append(
+            _DocumentIdentity(
+                content_hash=content_hash,
+                title=entry.title or parsed.title,
+                source=entry.source,
+                license_class=entry.license_class,
+                authors=tuple(entry.authors),
+                publication_year=entry.year,
+                doi=entry.doi,
+                journal=entry.journal,
+                license_source=entry.license_source
+                or ("manifest" if entry.license_class != "unknown" else None),
+                page_count=parsed.page_count,
+                chunk_count=len(drafts),
+            )
+        )
+        chunk_identities.extend(
+            (
+                content_hash,
+                index,
+                hashlib.sha256(draft.content.encode("utf-8")).hexdigest(),
+                draft.token_count,
+                draft.section_path,
+                draft.is_table,
+            )
+            for index, draft in enumerate(drafts)
+        )
+    if len(set(hashes)) != len(hashes):
+        raise GraphReplayError("tracked demo manifest contains duplicate document content")
+    return _TrackedDemoIdentity(
+        document_hashes=tuple(sorted(hashes)),
+        documents=tuple(sorted(documents, key=lambda document: document.content_hash)),
+        chunk_identities=tuple(sorted(chunk_identities)),
+    )
+
+
+def _require_clean_tracked_demo_source(manifest_path: Path, source_commit: str) -> None:
+    """Bind a refresh to clean, tracked demo inputs at its declared commit."""
+    try:
+        entries = load_manifest(manifest_path)
+        repository = Path(
+            subprocess.run(
+                ["git", "-C", str(manifest_path.parent), "rev-parse", "--show-toplevel"],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=5,
+            ).stdout.strip()
+        ).resolve()
+        paths = [
+            manifest_path.resolve(),
+            *(entry.path.resolve() for entry in entries),
+            repository / "scripts" / "graph_replay.py",
+            repository / "src" / "sci_rag" / "graph" / "extractor.py",
+        ]
+        relative_paths = [str(path.relative_to(repository)) for path in paths]
+        tracked = subprocess.run(
+            ["git", "-C", str(repository), "ls-files", "--error-unmatch", "--", *relative_paths],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if tracked.returncode != 0:
+            raise GraphReplayError("graph refresh requires every demo source input to be tracked")
+        dirty = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repository),
+                "status",
+                "--porcelain=v1",
+                "--untracked-files=all",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        ).stdout
+        if dirty:
+            raise GraphReplayError(
+                "graph refresh refuses a dirty graph replay source checkout or "
+                "dirty tracked demo source input"
+            )
+        actual_commit = subprocess.run(
+            ["git", "-C", str(repository), "rev-parse", "--short", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        ).stdout.strip()
+    except GraphReplayError:
+        raise
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        raise GraphReplayError(
+            f"cannot bind graph refresh to tracked demo sources: {type(exc).__name__}"
+        ) from exc
+    if actual_commit != source_commit:
+        raise GraphReplayError(
+            "graph refresh source commit does not match the tracked demo checkout"
+        )
+
+
+def _require_tracked_demo(state: _CorpusState, manifest_path: Path) -> None:
+    expected = _tracked_demo_identity(manifest_path)
+    if (
+        state.document_hashes != expected.document_hashes
+        or state.documents != expected.documents
+        or state.chunk_identities != expected.chunk_identities
+    ):
+        raise GraphReplayError(
+            "graph replay database must exactly match the tracked demo manifest, documents, and chunks"
+        )
 
 
 def _require_pristine_demo(state: _CorpusState) -> None:
@@ -831,6 +1053,7 @@ async def run_graph_replay(
     artifact_path: Path | None = None,
     artifact_dir: Path | None = None,
     source_commit: str | None = None,
+    manifest_path: Path | None = None,
     snapshot: str | None = None,
     batch_size: int = 10,
     rate_limit_s: float = 0.2,
@@ -842,6 +1065,12 @@ async def run_graph_replay(
         raise GraphReplayError("batch size must be at least one")
     if mode == "refresh" and not source_commit:
         raise GraphReplayError("refresh mode needs a nonempty source commit")
+    if mode in {"require", "refresh"} and manifest_path is None:
+        raise GraphReplayError(f"{mode} mode needs the explicit tracked demo manifest")
+    if mode == "refresh":
+        assert source_commit is not None
+        assert manifest_path is not None
+        _require_clean_tracked_demo_source(manifest_path, source_commit)
     state = await _corpus_state(session_factory)
     current_domain_digest = domain_digest(domain.directory)
 
@@ -853,6 +1082,8 @@ async def run_graph_replay(
 
     if mode in {"require", "refresh"}:
         _require_pristine_demo(state)
+        assert manifest_path is not None
+        _require_tracked_demo(state, manifest_path)
 
     if mode == "require":
         if artifact_path is None:
@@ -1033,6 +1264,7 @@ async def _run_cli(args: argparse.Namespace) -> ReplayReceipt:
         extraction_model=extraction_model,
         llm_factory=lambda: get_llm(settings, role="extraction"),
         source_commit=git_commit(),
+        manifest_path=Path("data/demo/manifest.jsonl"),
         snapshot=cast(str | None, args.snapshot),
         batch_size=cast(int, args.batch_size),
         rate_limit_s=cast(float, args.rate_limit_s),

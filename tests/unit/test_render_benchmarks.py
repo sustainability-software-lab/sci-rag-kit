@@ -41,7 +41,7 @@ def artifact_fixture() -> dict:
             }
             for order in range(7)
         ],
-        "successful_batches": 1,
+        "successful_batches": 7,
         "split_batches": 0,
         "failed_batches": 0,
         "entity_count": 76,

@@ -69,7 +69,7 @@ def _artifact() -> dict[str, Any]:
             }
             for order in range(7)
         ],
-        "successful_batches": 1,
+        "successful_batches": 7,
         "split_batches": 0,
         "failed_batches": 0,
         "entity_count": 76,
@@ -306,6 +306,23 @@ def test_the_renderer_verifies_the_named_artifact_content(
         ("entity_count", 77, "entity_count"),
         ("relationship_count", 73, "relationship_count"),
         ("graph_digest", "3" * 64, "graph_digest"),
+        (
+            "generation_parameters",
+            {"temperature": 0.4, "json_mode": True, "max_tokens": 8192},
+            "generation_parameters",
+        ),
+        (
+            "generation_parameters",
+            {
+                "temperature": 0.0,
+                "json_mode": True,
+                "max_tokens": 8192,
+                "seed": 7,
+            },
+            "generation_parameters",
+        ),
+        ("split_batches", 1, "split_count"),
+        ("failed_batches", 1, "failed_batches"),
         ("calls", [], "replayed_call_count"),
     ],
 )
@@ -344,6 +361,60 @@ def test_the_renderer_binds_receipt_claims_to_the_hashed_artifact(
             snapshot_path=snapshot_path,
             artifact_root=tmp_path,
         )
+
+
+@pytest.mark.parametrize("mismatch", ["successful", "split", "calls"])
+def test_the_renderer_rejects_inconsistent_artifact_batch_accounting(
+    tmp_path: Path, mismatch: str
+) -> None:
+    """Every recorded call must be classified as successful, split, or failed."""
+    ProvenanceError = _renderer()["ProvenanceError"]
+    render_benchmarks = _renderer()["render_benchmarks"]
+    report_path = tmp_path / "report.json"
+    report_path.write_text(json.dumps(_report()), encoding="utf-8")
+
+    artifact = _artifact()
+    receipt_overrides: dict[str, object] = {}
+    if mismatch == "successful":
+        artifact["successful_batches"] = 6
+    elif mismatch == "split":
+        artifact["split_batches"] = 1
+        receipt_overrides["split_count"] = 1
+    else:
+        artifact["calls"].append(
+            {
+                "order": 7,
+                "input_digest": f"{7:064x}",
+                "raw_completion": "{}",
+            }
+        )
+        receipt_overrides["replayed_call_count"] = 8
+    artifact_sha256 = _artifact_sha256(artifact)
+    receipt = _graph_replay(
+        artifact_path=f"data/demo/graph-replay/{artifact_sha256}.json",
+        artifact_sha256=artifact_sha256,
+        **receipt_overrides,
+    )
+    receipt_path = tmp_path / "graph-receipt.json"
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+    snapshot_path = tmp_path / "snapshot.json"
+    snapshot_path.write_text(json.dumps(_snapshot()), encoding="utf-8")
+    artifact_path = tmp_path / receipt["artifact_path"]
+    artifact_path.parent.mkdir(parents=True)
+    artifact_path.write_text(json.dumps(artifact), encoding="utf-8")
+
+    with pytest.raises(ProvenanceError, match="batch accounting") as caught:
+        render_benchmarks(
+            report_path,
+            None,
+            graph_receipt=receipt_path,
+            snapshot_path=snapshot_path,
+            artifact_root=tmp_path,
+        )
+
+    message = str(caught.value)
+    for field in ("successful_batches", "split_batches", "failed_batches", "calls"):
+        assert field in message
 
 
 def test_the_renderer_refuses_reports_that_disagree_about_their_inputs(tmp_path: Path) -> None:

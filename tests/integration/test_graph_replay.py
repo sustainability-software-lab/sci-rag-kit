@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 import sys
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
@@ -29,6 +30,8 @@ from sci_rag.db import (
     get_session_factory,
 )
 from sci_rag.domain import load_domain
+from sci_rag.ingest import chunk_document, load_manifest, parse_file
+from sci_rag.ingest.ingester import content_hash_for
 from sci_rag.llm import LLMClient
 
 pytestmark = pytest.mark.integration
@@ -174,6 +177,136 @@ async def _seed_demo(
         await session.commit()
 
 
+def _write_tracked_demo(tmp_path: Path) -> Path:
+    fixture = tmp_path / "fixture"
+    fixture.mkdir()
+    documents = (
+        ("alpha.md", "Alpha fixture", "Alpha is a synthetic agricultural residue."),
+        ("beta.md", "Beta fixture", "Beta is a synthetic agricultural region."),
+    )
+    rows: list[str] = []
+    for filename, title, content in documents:
+        (fixture / filename).write_text(f"# {title}\n\n{content}\n", encoding="utf-8")
+        rows.append(
+            json.dumps(
+                {
+                    "path": f"fixture/{filename}",
+                    "title": title,
+                    "authors": ["Demo Author"],
+                    "year": 2026,
+                    "license_class": "public",
+                    "source": "demo_fixture",
+                }
+            )
+        )
+    manifest = tmp_path / "manifest.jsonl"
+    manifest.write_text("\n".join(rows) + "\n", encoding="utf-8")
+    replay_script = tmp_path / "scripts" / "graph_replay.py"
+    extractor_source = tmp_path / "src" / "sci_rag" / "graph" / "extractor.py"
+    replay_script.parent.mkdir(parents=True)
+    extractor_source.parent.mkdir(parents=True)
+    replay_script.write_text("# tracked replay contract\n", encoding="utf-8")
+    extractor_source.write_text("# tracked extractor contract\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    subprocess.run(
+        ["git", "-C", str(tmp_path), "add", "manifest.jsonl", "fixture", "scripts", "src"],
+        check=True,
+    )
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(tmp_path),
+            "-c",
+            "user.name=Graph Replay Test",
+            "-c",
+            "user.email=graph-replay@example.invalid",
+            "commit",
+            "-qm",
+            "track demo",
+        ],
+        check=True,
+    )
+    return manifest
+
+
+def _source_commit(manifest_path: Path) -> str:
+    return subprocess.run(
+        ["git", "-C", str(manifest_path.parent), "rev-parse", "--short", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+async def _seed_tracked_demo(
+    manifest_path: Path,
+    *,
+    source: str | None = None,
+    license_class: str | None = None,
+    stamped: bool = False,
+    graph_row: bool = False,
+    with_chunks: bool = True,
+    audit_row: bool = False,
+) -> None:
+    async with get_session_factory()() as session:
+        for entry in load_manifest(manifest_path):
+            parsed = parse_file(entry.path)
+            drafts = chunk_document(parsed)
+            document = Document(
+                title=entry.title or parsed.title,
+                source=source or entry.source,
+                source_ref=str(entry.path),
+                authors=entry.authors,
+                publication_year=entry.year,
+                doi=entry.doi,
+                journal=entry.journal,
+                license_class=license_class or entry.license_class,
+                license_source="manifest",
+                content_hash=content_hash_for(drafts),
+                page_count=parsed.page_count,
+                chunk_count=len(drafts) if with_chunks else 0,
+            )
+            session.add(document)
+            await session.flush()
+            for index, draft in enumerate(drafts if with_chunks else []):
+                session.add(
+                    Chunk(
+                        document_id=document.id,
+                        chunk_index=index,
+                        content=draft.content,
+                        token_count=draft.token_count,
+                        section_path=draft.section_path,
+                        is_table=draft.is_table,
+                        graph_extracted_at=datetime.now(UTC) if stamped else None,
+                    )
+                )
+        if graph_row:
+            session.add(
+                KgEntity(
+                    id="e" * 32,
+                    name="preexisting graph state",
+                    entity_type="Feedstock",
+                    aliases=[],
+                    document_ids=[],
+                    chunk_ids=[],
+                )
+            )
+        if audit_row:
+            session.add(
+                EntityResolutionAudit(
+                    id="a" * 32,
+                    merged_entity_id="b" * 32,
+                    merged_entity_name="merged",
+                    surviving_entity_id="c" * 32,
+                    surviving_entity_name="survivor",
+                    method="test",
+                    confidence=1.0,
+                )
+            )
+        await session.commit()
+
+
 async def _reset_database(database) -> None:  # type: ignore[no-untyped-def]
     async with database.begin() as connection:
         await connection.execute(
@@ -184,13 +317,179 @@ async def _reset_database(database) -> None:  # type: ignore[no-untyped-def]
         )
 
 
-async def test_record_and_require_replay_survive_fresh_database_ids(
-    clean_tables, database, tmp_path: Path
+async def test_refresh_rejects_an_extra_public_demo_document_before_provider_construction(
+    clean_tables, tmp_path: Path
 ) -> None:  # type: ignore[no-untyped-def]
+    manifest_path = _write_tracked_demo(tmp_path)
+    await _seed_tracked_demo(manifest_path)
     await _seed_demo(
         first_ids=("1" * 32, "3" * 32),
         second_ids=("2" * 32, "4" * 32),
     )
+    provider_constructions = 0
+
+    def provider() -> LLMClient:
+        nonlocal provider_constructions
+        provider_constructions += 1
+        return ScriptedExtractionLLM()
+
+    with pytest.raises(GraphReplayError, match="exactly match the tracked demo"):
+        await run_graph_replay(
+            mode="refresh",
+            artifact_dir=tmp_path / "artifacts",
+            receipt_path=tmp_path / "receipt.json",
+            session_factory=get_session_factory(),
+            domain=load_domain(DOMAIN_DIR),
+            extraction_model=EXTRACTION_MODEL,
+            llm_factory=provider,
+            source_commit=_source_commit(manifest_path),
+            manifest_path=manifest_path,
+            batch_size=2,
+            rate_limit_s=0,
+        )
+
+    assert provider_constructions == 0
+
+
+async def test_refresh_rejects_modified_demo_chunk_before_provider_construction(
+    clean_tables, tmp_path: Path
+) -> None:  # type: ignore[no-untyped-def]
+    manifest_path = _write_tracked_demo(tmp_path)
+    await _seed_tracked_demo(manifest_path)
+    async with get_session_factory()() as session:
+        chunk = await session.scalar(select(Chunk).order_by(Chunk.id).limit(1))
+        assert chunk is not None
+        chunk.content = "modified after ingestion"
+        await session.commit()
+    provider_constructions = 0
+
+    def provider() -> LLMClient:
+        nonlocal provider_constructions
+        provider_constructions += 1
+        return ScriptedExtractionLLM()
+
+    with pytest.raises(GraphReplayError, match="exactly match the tracked demo"):
+        await run_graph_replay(
+            mode="refresh",
+            artifact_dir=tmp_path / "artifacts",
+            receipt_path=tmp_path / "receipt.json",
+            session_factory=get_session_factory(),
+            domain=load_domain(DOMAIN_DIR),
+            extraction_model=EXTRACTION_MODEL,
+            llm_factory=provider,
+            source_commit=_source_commit(manifest_path),
+            manifest_path=manifest_path,
+            batch_size=2,
+            rate_limit_s=0,
+        )
+
+    assert provider_constructions == 0
+
+
+async def test_refresh_rejects_modified_demo_manifest_metadata_before_provider_construction(
+    clean_tables, tmp_path: Path
+) -> None:  # type: ignore[no-untyped-def]
+    manifest_path = _write_tracked_demo(tmp_path)
+    await _seed_tracked_demo(manifest_path)
+    async with get_session_factory()() as session:
+        document = await session.scalar(select(Document).order_by(Document.id).limit(1))
+        assert document is not None
+        document.title = "Different public demo title"
+        await session.commit()
+    provider_constructions = 0
+
+    def provider() -> LLMClient:
+        nonlocal provider_constructions
+        provider_constructions += 1
+        return ScriptedExtractionLLM()
+
+    with pytest.raises(GraphReplayError, match="exactly match the tracked demo"):
+        await run_graph_replay(
+            mode="refresh",
+            artifact_dir=tmp_path / "artifacts",
+            receipt_path=tmp_path / "receipt.json",
+            session_factory=get_session_factory(),
+            domain=load_domain(DOMAIN_DIR),
+            extraction_model=EXTRACTION_MODEL,
+            llm_factory=provider,
+            source_commit=_source_commit(manifest_path),
+            manifest_path=manifest_path,
+            batch_size=2,
+            rate_limit_s=0,
+        )
+
+    assert provider_constructions == 0
+
+
+async def test_refresh_rejects_dirty_tracked_demo_source_before_provider_construction(
+    clean_tables, tmp_path: Path
+) -> None:  # type: ignore[no-untyped-def]
+    manifest_path = _write_tracked_demo(tmp_path)
+    await _seed_tracked_demo(manifest_path)
+    source_path = tmp_path / "fixture" / "alpha.md"
+    source_path.write_text(source_path.read_text(encoding="utf-8") + "changed\n", encoding="utf-8")
+    provider_constructions = 0
+
+    def provider() -> LLMClient:
+        nonlocal provider_constructions
+        provider_constructions += 1
+        return ScriptedExtractionLLM()
+
+    with pytest.raises(GraphReplayError, match="dirty tracked demo source"):
+        await run_graph_replay(
+            mode="refresh",
+            artifact_dir=tmp_path / "artifacts",
+            receipt_path=tmp_path / "receipt.json",
+            session_factory=get_session_factory(),
+            domain=load_domain(DOMAIN_DIR),
+            extraction_model=EXTRACTION_MODEL,
+            llm_factory=provider,
+            source_commit=_source_commit(manifest_path),
+            manifest_path=manifest_path,
+            batch_size=2,
+            rate_limit_s=0,
+        )
+
+    assert provider_constructions == 0
+
+
+async def test_refresh_rejects_dirty_graph_contract_source_before_provider_construction(
+    clean_tables, tmp_path: Path
+) -> None:  # type: ignore[no-untyped-def]
+    manifest_path = _write_tracked_demo(tmp_path)
+    await _seed_tracked_demo(manifest_path)
+    replay_source = tmp_path / "scripts" / "graph_replay.py"
+    replay_source.write_text("# dirty replay contract\n", encoding="utf-8")
+    provider_constructions = 0
+
+    def provider() -> LLMClient:
+        nonlocal provider_constructions
+        provider_constructions += 1
+        return ScriptedExtractionLLM()
+
+    with pytest.raises(GraphReplayError, match="dirty graph replay source checkout"):
+        await run_graph_replay(
+            mode="refresh",
+            artifact_dir=tmp_path / "artifacts",
+            receipt_path=tmp_path / "receipt.json",
+            session_factory=get_session_factory(),
+            domain=load_domain(DOMAIN_DIR),
+            extraction_model=EXTRACTION_MODEL,
+            llm_factory=provider,
+            source_commit=_source_commit(manifest_path),
+            manifest_path=manifest_path,
+            batch_size=2,
+            rate_limit_s=0,
+        )
+
+    assert provider_constructions == 0
+
+
+async def test_record_and_require_replay_survive_fresh_database_ids(
+    clean_tables, database, tmp_path: Path
+) -> None:  # type: ignore[no-untyped-def]
+    manifest_path = _write_tracked_demo(tmp_path)
+    await _seed_tracked_demo(manifest_path)
     artifact_dir = tmp_path / "artifacts"
     record_receipt = tmp_path / "record-receipt.json"
 
@@ -202,7 +501,8 @@ async def test_record_and_require_replay_survive_fresh_database_ids(
         domain=load_domain(DOMAIN_DIR),
         extraction_model=EXTRACTION_MODEL,
         llm_factory=ScriptedExtractionLLM,
-        source_commit="record-commit",
+        source_commit=_source_commit(manifest_path),
+        manifest_path=manifest_path,
         batch_size=2,
         rate_limit_s=0,
     )
@@ -214,11 +514,8 @@ async def test_record_and_require_replay_survive_fresh_database_ids(
     assert record_receipt.is_file()
 
     await _reset_database(database)
-    # The same content now has fresh persistence ids whose lexical order is reversed.
-    await _seed_demo(
-        first_ids=("9" * 32, "7" * 32),
-        second_ids=("8" * 32, "6" * 32),
-    )
+    # The same tracked content now has fresh persistence ids.
+    await _seed_tracked_demo(manifest_path)
     provider_constructions = 0
 
     def forbidden_provider() -> LLMClient:
@@ -235,6 +532,7 @@ async def test_record_and_require_replay_survive_fresh_database_ids(
         domain=load_domain(DOMAIN_DIR),
         extraction_model=EXTRACTION_MODEL,
         llm_factory=forbidden_provider,
+        manifest_path=manifest_path,
         batch_size=2,
         rate_limit_s=0,
     )
@@ -282,9 +580,9 @@ async def test_refresh_refuses_a_target_outside_the_pristine_public_demo_boundar
     audit_row: bool,
     reason: str,
 ) -> None:  # type: ignore[no-untyped-def]
-    await _seed_demo(
-        first_ids=("1" * 32, "3" * 32),
-        second_ids=("2" * 32, "4" * 32),
+    manifest_path = _write_tracked_demo(tmp_path)
+    await _seed_tracked_demo(
+        manifest_path,
         source=source,
         license_class=license_class,
         stamped=stamped,
@@ -310,7 +608,8 @@ async def test_refresh_refuses_a_target_outside_the_pristine_public_demo_boundar
             domain=load_domain(DOMAIN_DIR),
             extraction_model=EXTRACTION_MODEL,
             llm_factory=provider,
-            source_commit="record-commit",
+            source_commit=_source_commit(manifest_path),
+            manifest_path=manifest_path,
             batch_size=2,
             rate_limit_s=0,
         )
@@ -328,10 +627,8 @@ async def test_refresh_refuses_a_target_outside_the_pristine_public_demo_boundar
 async def test_require_rejects_identity_drift_without_constructing_a_provider(
     clean_tables, database, tmp_path: Path
 ) -> None:  # type: ignore[no-untyped-def]
-    await _seed_demo(
-        first_ids=("1" * 32, "3" * 32),
-        second_ids=("2" * 32, "4" * 32),
-    )
+    manifest_path = _write_tracked_demo(tmp_path)
+    await _seed_tracked_demo(manifest_path)
     recorded = await run_graph_replay(
         mode="refresh",
         artifact_dir=tmp_path / "artifacts",
@@ -340,15 +637,13 @@ async def test_require_rejects_identity_drift_without_constructing_a_provider(
         domain=load_domain(DOMAIN_DIR),
         extraction_model=EXTRACTION_MODEL,
         llm_factory=ScriptedExtractionLLM,
-        source_commit="record-commit",
+        source_commit=_source_commit(manifest_path),
+        manifest_path=manifest_path,
         batch_size=2,
         rate_limit_s=0,
     )
     await _reset_database(database)
-    await _seed_demo(
-        first_ids=("9" * 32, "7" * 32),
-        second_ids=("8" * 32, "6" * 32),
-    )
+    await _seed_tracked_demo(manifest_path)
     provider_constructions = 0
 
     def forbidden_provider() -> LLMClient:
@@ -365,6 +660,7 @@ async def test_require_rejects_identity_drift_without_constructing_a_provider(
             domain=load_domain(DOMAIN_DIR),
             extraction_model="test:a-different-model",
             llm_factory=forbidden_provider,
+            manifest_path=manifest_path,
             batch_size=2,
             rate_limit_s=0,
         )
@@ -380,10 +676,8 @@ async def test_require_rejects_identity_drift_without_constructing_a_provider(
 async def test_failed_refresh_writes_neither_candidate_nor_receipt(
     clean_tables, tmp_path: Path
 ) -> None:  # type: ignore[no-untyped-def]
-    await _seed_demo(
-        first_ids=("1" * 32, "3" * 32),
-        second_ids=("2" * 32, "4" * 32),
-    )
+    manifest_path = _write_tracked_demo(tmp_path)
+    await _seed_tracked_demo(manifest_path)
     artifact_dir = tmp_path / "artifacts"
     receipt_path = tmp_path / "receipt.json"
 
@@ -396,7 +690,8 @@ async def test_failed_refresh_writes_neither_candidate_nor_receipt(
             domain=load_domain(DOMAIN_DIR),
             extraction_model=EXTRACTION_MODEL,
             llm_factory=InvalidExtractionLLM,
-            source_commit="record-commit",
+            source_commit=_source_commit(manifest_path),
+            manifest_path=manifest_path,
             batch_size=2,
             rate_limit_s=0,
         )
@@ -436,10 +731,8 @@ async def test_off_mode_counts_live_calls_without_writing_an_artifact(
 async def test_require_rejects_an_artifact_that_declares_failed_batches(
     clean_tables, database, tmp_path: Path
 ) -> None:  # type: ignore[no-untyped-def]
-    await _seed_demo(
-        first_ids=("1" * 32, "3" * 32),
-        second_ids=("2" * 32, "4" * 32),
-    )
+    manifest_path = _write_tracked_demo(tmp_path)
+    await _seed_tracked_demo(manifest_path)
     recorded = await run_graph_replay(
         mode="refresh",
         artifact_dir=tmp_path / "recorded",
@@ -448,7 +741,8 @@ async def test_require_rejects_an_artifact_that_declares_failed_batches(
         domain=load_domain(DOMAIN_DIR),
         extraction_model=EXTRACTION_MODEL,
         llm_factory=ScriptedExtractionLLM,
-        source_commit="record-commit",
+        source_commit=_source_commit(manifest_path),
+        manifest_path=manifest_path,
         batch_size=2,
         rate_limit_s=0,
     )
@@ -457,10 +751,7 @@ async def test_require_rejects_an_artifact_that_declares_failed_batches(
     incomplete_path = write_candidate(ReplayArtifact.from_dict(raw), tmp_path / "incomplete")
 
     await _reset_database(database)
-    await _seed_demo(
-        first_ids=("9" * 32, "7" * 32),
-        second_ids=("8" * 32, "6" * 32),
-    )
+    await _seed_tracked_demo(manifest_path)
     provider_constructions = 0
 
     def forbidden_provider() -> LLMClient:
@@ -477,6 +768,7 @@ async def test_require_rejects_an_artifact_that_declares_failed_batches(
             domain=load_domain(DOMAIN_DIR),
             extraction_model=EXTRACTION_MODEL,
             llm_factory=forbidden_provider,
+            manifest_path=manifest_path,
             batch_size=2,
             rate_limit_s=0,
         )
@@ -488,10 +780,8 @@ async def test_require_rejects_an_artifact_that_declares_failed_batches(
 async def test_refresh_rejects_a_mislabeled_provider_before_its_first_call(
     clean_tables, tmp_path: Path
 ) -> None:  # type: ignore[no-untyped-def]
-    await _seed_demo(
-        first_ids=("1" * 32, "3" * 32),
-        second_ids=("2" * 32, "4" * 32),
-    )
+    manifest_path = _write_tracked_demo(tmp_path)
+    await _seed_tracked_demo(manifest_path)
     provider = ScriptedExtractionLLM()
     artifact_dir = tmp_path / "artifacts"
     receipt_path = tmp_path / "receipt.json"
@@ -505,7 +795,8 @@ async def test_refresh_rejects_a_mislabeled_provider_before_its_first_call(
             domain=load_domain(DOMAIN_DIR),
             extraction_model="test:mislabeled-model",
             llm_factory=lambda: provider,
-            source_commit="record-commit",
+            source_commit=_source_commit(manifest_path),
+            manifest_path=manifest_path,
             batch_size=2,
             rate_limit_s=0,
         )

@@ -827,6 +827,7 @@ def apply_pruning(answers: ProjectAnswers, root: Path) -> list[str]:
             "tests/unit/test_graph_replay_contract.py",
             "tests/integration/test_graph_replay.py",
             "tests/unit/test_graph_replay_makefile.py",
+            "tests/unit/test_graph_replay_scaffold.py",
             "docs/adr/0011-committed-benchmark-graph-replay.md",
         )
         for relative in replay_only_files:
