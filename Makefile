@@ -129,6 +129,7 @@ docs-serve:
 # calibration, then re-render the page from the report JSONs.
 # Needs the selected PostgreSQL backend and Google credentials (see .env.example).
 BENCH_SNAP := benchmark-$(shell date -u +%Y%m%d-%H%M%S)
+BENCH_GRAPH_REPLAY := data/demo/graph-replay/a24c3fb88f163941048866b86fc494a3470337b0c24257f1d9235c8b00f19d15.json
 GRAPH_REPLAY_RECEIPT := eval_results/graph-replay-receipt.json
 
 ## benchmark-refresh-graph: record a new immutable graph replay candidate.
@@ -144,7 +145,10 @@ benchmark-refresh-graph: db-up
 benchmark: db-up
 	uv run sci-rag db upgrade
 	uv run sci-rag ingest --manifest data/demo/manifest.jsonl
-	uv run sci-rag graph extract
+	uv run python scripts/graph_replay.py require \
+		--artifact "$(BENCH_GRAPH_REPLAY)" \
+		--receipt "$(GRAPH_REPLAY_RECEIPT)" \
+		--snapshot "$(BENCH_SNAP)"
 	uv run sci-rag graph communities
 	uv run sci-rag corpus snapshot $(BENCH_SNAP)
 	uv run sci-rag eval retrieval --ablation --snapshot $(BENCH_SNAP)
