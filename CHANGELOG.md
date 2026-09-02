@@ -16,6 +16,17 @@ Notable changes to sci-rag-kit. The format follows
 
 ### Changed
 
+- **The three documentation pages retired in this release keep answering at
+  their old addresses.** `tour/`, `llm-assisted-setup/`, and `api-clients/`
+  forward to the sections that absorbed them. The map lives in `mkdocs.yml`
+  under `extra.redirects` and is applied by a small build hook, with no new
+  dependency; a target that the build did not produce fails `make docs`.
+- **Plain-mode wizard prompts show the question in words.** With `--no-tty`,
+  piped input, or a dumb terminal, the wizard printed only the field name
+  (`project_name (My Scientific KB):`). It now prints the same question the
+  arrow-key menus ask above that line, and each menu choice carries its
+  one-line explanation. The field line itself is unchanged, so scripts and
+  the homepage transcript still parse it.
 - **`sci-rag --help` groups commands by stage** (start here, build your
   knowledge base, ask questions, measure quality, serve, maintain) so the six
   commands a new project needs are not lost among the maintenance ones. Help

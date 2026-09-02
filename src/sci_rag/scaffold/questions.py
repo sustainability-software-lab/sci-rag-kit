@@ -107,11 +107,14 @@ QUESTIONS: tuple[Question, ...] = (
     Question(
         "contact_email",
         "contact_email",
-        "Sent to OpenAlex, Crossref, and Unpaywall",
+        "",
         label="Contact email",
         quick=True,
         validator=_validate_email,
-        help="Polite-pool identification for the metadata APIs. Blank is allowed.",
+        help=(
+            "Sent with each request to OpenAlex, Crossref, and Unpaywall, which serve "
+            "identified callers faster. Blank is allowed."
+        ),
     ),
     Question(
         "python_version",

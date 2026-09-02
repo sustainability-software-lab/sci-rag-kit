@@ -45,6 +45,23 @@ class PromptAborted(RuntimeError):
     """The user cancelled an interactive prompt."""
 
 
+def describe(question: Question) -> str:
+    """The question in words, as the arrow-key menus show it.
+
+    The plain adapter keeps its byte-stable ``field (default):`` line, because
+    scripts and the homepage transcript parse it, and writes this above it so
+    a person at a pipe or in CI reads the same question a terminal user does.
+    Empty when a question carries neither a label nor help.
+    """
+    text = question.label
+    if question.help:
+        if not text:
+            return question.help
+        separator = " " if text.endswith(("?", ".", "!", ":")) else ". "
+        text = f"{text}{separator}{question.help}"
+    return text
+
+
 class PlainPrompter:
     """The stable line-oriented adapter used by scripts and non-TTY sessions."""
 
@@ -52,7 +69,13 @@ class PlainPrompter:
         self.stdin = stdin
         self.stdout = stdout
 
+    def _describe(self, question: Question) -> None:
+        description = describe(question)
+        if description:
+            self.stdout.write(f"{description}\n")
+
     def text(self, question: Question, default: str) -> str:
+        self._describe(question)
         for _ in range(_MAX_ATTEMPTS):
             self.stdout.write(f"{question.prompt} ({default}): ")
             raw = _read(self.stdin)
@@ -70,6 +93,7 @@ class PlainPrompter:
         return default
 
     def secret(self, question: Question, default: str) -> str:
+        self._describe(question)
         for _ in range(_MAX_ATTEMPTS):
             self.stdout.write(f"{question.prompt} ({default}): ")
             raw = _read(self.stdin)
@@ -95,11 +119,16 @@ class PlainPrompter:
         choices = list(question.choices or ())
         default_index = choices.index(default) + 1 if default in choices else 1
         menu = "/".join(str(i) for i in range(1, len(choices) + 1))
+        description = describe(question)
+        heading = f"Select {question.prompt}" + (f": {description}" if description else "")
 
         for _ in range(_MAX_ATTEMPTS):
-            self.stdout.write(f"Select {question.prompt}\n")
+            self.stdout.write(f"{heading}\n")
             for index, choice in enumerate(choices, start=1):
-                self.stdout.write(f"{index} - {choice}\n")
+                explanation = question.choice_help.get(choice, "")
+                self.stdout.write(
+                    f"{index} - {choice}" + (f": {explanation}\n" if explanation else "\n")
+                )
             self.stdout.write(f"Choose from [{menu}] ({default_index}): ")
             raw = _read(self.stdin)
             if raw is None:
