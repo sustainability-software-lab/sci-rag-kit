@@ -5,12 +5,13 @@ description: Diagnose Sci RAG Kit setup, database, credential, parsing, retrieva
 
 # Troubleshooting
 
-Every entry starts from a visible symptom and ends at the command that fixes it. Work from the symptom map and the kit tells you which layer needs attention.
+Start with the visible symptom. Run `doctor`, then use the symptom map to
+choose the next check or recovery command.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A diagnosis, from a symptom to its cause</div>
   <div><strong>You'll need</strong>The failing command and its output</div>
-  <div><strong>Time</strong>Usually under 5 minutes</div>
+  <div><strong>Time</strong>Depends on the symptom</div>
   <div><strong>Tested with</strong>v0.4</div>
 </div>
 
@@ -22,12 +23,18 @@ Run the kit's own diagnosis first.
 $ uv run sci-rag doctor
 ```
 
-`doctor` checks configuration, domain validation, database connectivity, migrations, corpus state, graph state, and credentials. It spends no model tokens. Add `--probe` for one live embedding and generation round trip on top.
+`doctor` checks configuration, domain validation, database connectivity,
+migrations, corpus state, graph state, and credentials. The default check
+spends no model tokens. Add `--probe` for one live embedding and generation
+round trip.
 
 <div class="srag-checkpoint" markdown>
 **Checkpoint: identify the failing layer**
 
-`doctor` names the failing check. Take that name to the symptom map below. If every check is healthy and the behavior is still wrong, the problem is in the domain profile, not in the plumbing.
+`doctor` names the setup checks it can evaluate. Take any failure to the
+symptom map below. If none explains the symptom, continue with the failing
+command's trace or the closest symptom. A healthy report does not exercise a
+complete ingest, retrieval, answer, REST, or MCP route.
 </div>
 
 ## Fast symptom map
@@ -152,15 +159,31 @@ Run `uv run sci-rag doctor --probe` after configuring a credential. The probe sp
 2. **Switch to an AI Studio key** to leave the Vertex path and enter a key from [Google AI Studio](https://aistudio.google.com/apikey).
 3. **Continue without a model** to finish with the worked example ontology.
 
-The third option keeps your chosen credential mode and writes the entered key or project to `.env`. It skips only the ontology draft. Fix the credential or run `gcloud auth application-default login` later without rebuilding. Run `uv run sci-rag doctor --probe` after the fix.
+The third option keeps your chosen credential mode and writes the entered key
+or project to `.env`. It skips only the ontology draft. Fix the credential or
+run `gcloud auth application-default login` later without rebuilding. Then
+run `uv run sci-rag doctor --probe`.
 
-The `--no-preflight` flag skips the preliminary model request. It is only available on `sci-rag new`. This escape hatch does not validate the credential. An ontology draft can still call the provider later when a value was entered. Use it only when the preliminary probe itself is the problem, then run `uv run sci-rag doctor --probe` from the generated project.
+The `--no-preflight` flag skips the preliminary model request and is only
+available on `sci-rag new`. It does not validate the credential. An ontology draft
+can still call the provider later when a value was entered. Use the flag only
+when the preliminary probe itself is the problem, then run
+`uv run sci-rag doctor --probe` from the generated project.
 
 ### Running offline on purpose
 
-A project that sets `SCI_RAG_EMBEDDING_PROVIDER=local-hash` and leaves `SCI_RAG_LLM_MODEL` at its shipped default is a supported mode, not a half-finished setup. The setup wizard writes exactly that for `credentials: offline`. `doctor` reports unavailable generation features as warnings and exits `0`. A passing run means the offline pipeline is healthy.
+A project that sets `SCI_RAG_EMBEDDING_PROVIDER=local-hash` and leaves
+`SCI_RAG_LLM_MODEL` at its shipped default is a supported mode. The setup
+wizard writes exactly that for `credentials: offline`. `doctor` reports
+unavailable generation features as warnings and exits `0`. A passing run
+means its offline setup checks are healthy; it does not execute the full
+pipeline.
 
-Retrieval in an offline project reports model-only layers as `disabled`, not `error`. Graph and HyDE ask a model about every query, so a project with no credential cannot run them. `disabled` is the status for a layer this project does not have. `error` is reserved for a layer that should have worked. Vector, keyword, and community retrieval run normally.
+Retrieval in an offline project reports model-only layers as `disabled`, not
+`error`. Graph and HyDE ask a model about every query, so a project with no
+credential cannot run them. `disabled` means the project does not have that
+layer; `error` means an enabled layer failed. Vector, keyword, and community
+retrieval run normally.
 
 Reaching for a model with no credential is still a failure. `doctor` reports `FAIL` when the Google embedding provider is selected without credentials, or when a generation model is named explicitly (such as `SCI_RAG_LLM_MODEL=anthropic:claude-opus-5`) with no key or project. Writing a model id signals intent to generate. The diagnosis follows the configuration.
 

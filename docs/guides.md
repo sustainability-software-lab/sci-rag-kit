@@ -5,7 +5,7 @@ description: Complete a specific task, from measuring quality to deploying and o
 
 # Guides
 
-Each guide starts from an outcome and assumes a finished [quickstart](quickstart.md), so it spends its words on the task rather than on orientation. The reference section holds the exact commands, fields, and contracts when a guide names one without spelling it out.
+Start with [Evaluate your pipeline](evaluation.md) before changing retrieval settings. The other guides cover corpus discovery, database choices, live operations, deployment, and extension after you have finished the [quickstart](quickstart.md).
 
 <div class="srag-rows" markdown>
 
@@ -23,4 +23,4 @@ Each guide starts from an outcome and assumes a finished [quickstart](quickstart
 
 </div>
 
-Most readers arrive here with a corpus of their own already in the database, from [Bring your own domain](bring-your-own-domain.md). [Evaluate your pipeline](evaluation.md) comes first, before any retrieval setting changes. The other guides apply when the need arises.
+If your own corpus is not in the database yet, begin with [Bring your own domain](bring-your-own-domain.md). Use the [reference section](reference.md) when a guide names a command, field, or contract without listing every detail.

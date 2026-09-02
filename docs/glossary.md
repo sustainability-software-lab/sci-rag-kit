@@ -5,44 +5,44 @@ description: What each term means in this project.
 
 # Glossary
 
-These definitions describe how this project uses each term. Each is narrower than the term's general use in the literature, capturing the specific meaning in this codebase.
+These are the terms used by Sci RAG Kit. Definitions follow their specific meaning in this codebase, which may be narrower than their use in the literature.
 
 ## Retrieval and answers
 
 **RAG (retrieval-augmented generation)**
-: Find the passages that bear on a question first, then have a model answer from those passages only, citing them. The model writes the prose; the documents supply the facts.
+: Retrieve passages that bear on a question, then have a model answer only from those passages and cite them. The model writes the prose; the documents supply the facts.
 
 **Chunk**
-: A passage of roughly 800 tokens, the unit the kit stores, embeds, ranks, and cites. A chunk keeps its document, its position, its section heading, a flag for tables, its vector, and the version of the embedding model that produced the vector.
+: A passage of roughly 800 tokens that the kit stores, embeds, ranks, and cites. It retains its document, position, section heading, table flag, vector, and embedding-model version.
 
 **Embedding**
-: A vector (a list of numbers) that places texts with similar meaning near each other, so a question can find a passage that uses different words. The default Google embedding is cut to 1536 dimensions and normalized.
+: A vector that places texts with similar meaning near each other, allowing a question to find a passage that uses different words. The default Google embedding is cut to 1536 dimensions and normalized.
 
 **Retrieval layer**
 : One method of proposing candidate passages for a question. The kit runs five: vector (embedding similarity), keyword (full-text search), graph (entity traversal), community (topic summaries), and hypothetical answer (HyDE).
 
 **HyDE (hypothetical document embeddings)**
-: A model writes a short guess at what an answering passage would say. The kit embeds that guess and searches near it. The guess is only used to aim the search; it is never shown or cited.
+: A short model-written guess at what an answering passage would say. The kit embeds the guess to aim the search but never shows or cites it.
 
 **Fusion**
-: Combining the five layers' ranked lists into a single ranking. The kit uses weighted reciprocal rank fusion, in which each layer contributes `weight / (60 + rank)` for each passage it returned. A passage several layers agree on therefore outranks one that a single layer scored highly.
+: The combination of five ranked lists into one. Weighted reciprocal rank fusion adds `weight / (60 + rank)` from each layer that returned a passage, so agreement across layers raises its rank.
 
 **Profile**
 : Which retrieval layers run for a request. `interactive` runs vector and keyword only, for a person waiting at a prompt. `deep` runs all five, for agents, batch jobs, and evaluation. `auto` lets a router choose per question.
 
 **Retrieval scope**
-: The limits a caller puts on a request before ranking: license classes, source labels, publication years, authors, journals, excluded DOIs, and retracted papers. Every layer applies the scope inside its own query.
+: Request limits applied before ranking: license classes, source labels, publication years, authors, journals, excluded DOIs, and retracted papers. Every layer applies the scope inside its own query.
 
 **Reranker**
 : An optional second pass that reads the question and the candidate passages and reorders them. Off by default until an evaluation on the corpus shows it helps.
 
 **Stage trace**
-: What each layer reported for a request: its status (success, empty, disabled, skipped, timeout, or error), its duration, and how many candidates it returned. Traces carry no query or passage text, so they are safe to log.
+: A layer's status (`success`, `empty`, `disabled`, `skipped`, `timeout`, or `error`), duration, and candidate count for one request. Traces contain no query or passage text, so they are safe to log.
 
 ## Graph and corpus
 
 **Ontology**
-: The kinds of things in a field (entity types) and how they relate (relation types), declared in `domain/domain.yaml`. The graph builder extracts only what the ontology declares; anything outside it is dropped, so the ontology controls what the knowledge graph contains.
+: The entity and relation types declared for a field in `domain/domain.yaml`. The graph builder drops anything outside those declarations, so the ontology controls what the knowledge graph contains.
 
 **Entity**
 : A named concept the builder found in the documents, of one of the entity types declared in the ontology, with the surface forms it appeared under and pointers to the chunks that mention it.
@@ -69,7 +69,7 @@ These definitions describe how this project uses each term. Each is narrower tha
 : The `sci-rag campaign` workflow: find papers by topic or DOI list, resolve their open-access rights, download the PDFs that can be redistributed, and write a manifest.
 
 **Corpus snapshot**
-: A named record of exactly which documents the corpus held at a moment: per-document content hashes, one digest over all of them, counts, model versions, and the Git commit. A snapshot records identity; a backup holds the data.
+: A named record of the documents held at a moment, including per-document content hashes, one combined digest, counts, model versions, and the Git commit. A snapshot records identity; a backup holds the data.
 
 **Known retraction**
 : A document that Crossref reports as retracted, found by `sci-rag corpus enrich`. Answers exclude known retractions by default.
@@ -77,7 +77,7 @@ These definitions describe how this project uses each term. Each is narrower tha
 ## Evaluation
 
 **Seed question**
-: A test question with known answers in `domain/eval_seed_questions.jsonl`: the question, the documents that answer it, a few distinctive phrases from those passages, and optionally a reference answer.
+: A test question in `domain/eval_seed_questions.jsonl`, with the documents that answer it, distinctive phrases from those passages, and an optional reference answer.
 
 **Drafted tag**
 : The `drafted` tag on a seed question a model wrote and nobody has reviewed. Reports say how many questions still carry it.
@@ -89,7 +89,7 @@ These definitions describe how this project uses each term. Each is narrower tha
 : Scoring retrieval with one layer switched off at a time, to measure what each layer contributes on the corpus.
 
 **hit@k and MRR**
-: hit@k is the share of questions with at least one relevant passage in the top k results. MRR (mean reciprocal rank) averages 1 divided by the rank of the first relevant passage.
+: hit@k is the share of questions with a relevant passage among the top k results. MRR (mean reciprocal rank) averages 1 divided by the rank of the first relevant passage.
 
 **Grader (judge)**
 : The model that scores generated answers. It grades grounding, citation accuracy, and completeness without seeing the reference answer, then grades correctness against the reference in a separate pass.

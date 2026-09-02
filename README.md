@@ -12,15 +12,12 @@
 Retrieval-augmented generation, built around your scientific domain.
 
 Sci RAG Kit is a project template for question answering over scientific
-documents. Give it a folder of papers and reports and it builds a knowledge
-base from them, one that answers questions in plain language and quotes the
-exact passages each answer rests on. It is a template repository for
-retrieval-augmented generation with the whole pipeline assembled and
-measured: parsing, chunking, embeddings, a concept graph, five kinds of
-search, an evaluation harness, and a REST and MCP server. What a project
-brings is the documents, the vocabulary of its field, and a handful of
-questions with known answers so the result can be scored rather than
-admired.
+documents. It parses papers and reports, indexes their passages, runs five
+kinds of search, and measures retrieval against questions with known answers.
+With a model credential, it also builds a concept graph and writes answers
+that cite the passages they use. REST and MCP clients share the same service.
+Your project supplies the documents, the vocabulary of its field, and the
+questions used to score the result.
 
 Start a project with two commands. `sci-rag new` asks a few questions and
 writes a configured, git-initialized project directory:
@@ -51,8 +48,8 @@ minutes.
 - **A concept graph.** With a model credential, the kit reads every passage
   and extracts the concepts and relationships declared in
   `domain/domain.yaml`, then clusters related concepts and writes a summary
-  of each cluster. This is what lets a question whose answer is spread across
-  several documents come back with all of them.
+  of each cluster. The graph helps retrieve evidence when an answer spans
+  several documents.
 - **Five kinds of search.** By meaning, by exact words, through the concept
   graph, through the cluster summaries, and through a model-written
   hypothetical answer. Each finds evidence the others miss: keyword search
@@ -77,7 +74,7 @@ minutes.
   and similar tools use to call external systems. All three go through the
   same service, so they cannot drift apart. API keys carry scopes and rate
   limits.
-- **Models.** Gemini by default, through a free Google AI Studio key or a
+- **Models.** Gemini by default, through a Google AI Studio key or a
   Vertex AI project. Claude and any OpenAI-compatible endpoint are one
   setting away for generation, and the model that grades answers can differ
   from the one that writes them. An offline mode runs everything except the
@@ -86,7 +83,7 @@ minutes.
 ## Set up
 
 Setup needs [uv](https://docs.astral.sh/uv/), Docker or a PostgreSQL 16
-through 18 server with pgvector, and optionally a
+through 18 server with pgvector, and optionally a model credential such as a
 [Google AI Studio API key](https://aistudio.google.com/apikey).
 
 Create the local configuration file. The second command matters: the file is
@@ -102,9 +99,9 @@ In `.env`, set one of these:
 
 | Setting | When to use it |
 |---|---|
-| `SCI_RAG_GOOGLE_API_KEY=...` | A free AI Studio key. The right choice for almost everyone. |
-| `SCI_RAG_GCP_PROJECT=...` | The lab already runs on Google Cloud. Run `gcloud auth application-default login` first. |
-| `SCI_RAG_EMBEDDING_PROVIDER=local-hash` | No credential yet. Retrieval works; the graph and generated answers wait. |
+| `SCI_RAG_GOOGLE_API_KEY=...` | The shortest credentialed local setup, with no manual Google Cloud setup. |
+| `SCI_RAG_GCP_PROJECT=...` | The project already uses Google Cloud IAM, billing, location, or security controls. Run `gcloud auth application-default login` first. |
+| `SCI_RAG_EMBEDDING_PROVIDER=local-hash` | A credential-free retrieval pass. The graph and generated answers wait. |
 
 Then install, start the database, and run the demo:
 
@@ -147,9 +144,12 @@ uv run sci-rag answer "a question in your field"      # 7. ask
 ```
 
 The three `draft` commands write a file to review, and each works without
-a model credential: `--print-prompt` prints the prompt for any assistant, and
-`--from-file` reads the reply back. Two things are never drafted: a
-document's rights, and the human labels that check the answer grader.
+a model credential: `--print-prompt` prints the prompt, and `--from-file`
+reads the reply back. Printed prompts can contain sampled passages from your
+corpus. Before sending one to an assistant, confirm that the documents'
+rights, privacy requirements, provider terms, and institutional policy allow
+that disclosure. Two things are never drafted: a document's rights, and the
+human labels that check the answer grader.
 
 For a first pass with no manifest, `uv run sci-rag build data/raw` ingests a
 folder directly and builds the graph when a credential is present.

@@ -5,7 +5,9 @@ description: Create a project, start the database, ingest the demo corpus, ask a
 
 # Quickstart
 
-This page reaches a working knowledge base over a small demo corpus in about 10 minutes: documents in a database, a question answered with citations, and one service answering REST clients and agents. The demo corpus is a stand-in, but nothing else is; every step here is the same step a real corpus goes through later.
+In about 10 minutes, you will load the demo documents into a database and
+serve them to REST clients and agents. With a model credential, you will also
+generate a cited answer. A real corpus follows the same path.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A served knowledge base over the demo corpus</div>
@@ -23,7 +25,7 @@ This page reaches a working knowledge base over a small demo corpus in about 10 
 | [pipx](https://pipx.pypa.io/) | Installs the project wizard in its own environment | `pipx --version` |
 | [uv](https://docs.astral.sh/uv/) | Installs the project's dependencies and runs its commands | `uv --version` |
 | Docker, or a PostgreSQL 16 through 18 server with pgvector | The database everything lives in | `docker --version` |
-| A Google AI Studio key, optional | Real embeddings, the graph, and generated answers | [Create one](https://aistudio.google.com/apikey) |
+| A model credential, optional | Real embeddings, the graph, and generated answers | [Create an AI Studio key](https://aistudio.google.com/apikey), or use Vertex AI |
 
 Docker is the simplest way to get a database with the pgvector extension on a laptop, which is why the kit defaults to it. Without Docker, [Run Postgres your way](run-postgres.md) covers a conda-forge server, a system server such as Postgres.app, and the optional Cloud SQL development helper.
 
@@ -38,7 +40,15 @@ $ pipx install sci-rag-kit
 $ sci-rag new
 ```
 
-Choose **Quick**. It asks for six setup decisions: project name, a one-line description, contact email, environment manager, credential mode, and where your first documents will come from. It then asks for the credential value that mode needs and uses defaults for everything else, defaults that were chosen to work on a laptop without further tuning. Choose **Offline** as the credential mode when you do not want a model credential yet; retrieval works without one, and the graph and generated answers switch on later. Choose **Advanced** only when you need to set models, parsing, reranking, infrastructure, or licensing yourself.
+Choose **Quick**. It asks for six setup decisions: the project name, a one-line
+description, contact email, environment manager, credential mode, and source
+of the first documents. It then asks for the credential value that mode needs
+and uses the shipped defaults for the remaining settings.
+
+Choose **Offline** when you do not want a model credential yet. Retrieval
+works without one; add a credential later for the graph and generated
+answers. Choose **Advanced** when you need to set models, parsing, reranking,
+infrastructure, or licensing yourself.
 
 The environment-manager menu preselects the first supported environment manager found on `PATH`. That preselection does not change what `--defaults` or an answers file would choose. If `SCI_RAG_GOOGLE_API_KEY` or `GOOGLE_API_KEY` is already set in your shell, the wizard offers to reuse it without displaying its value. Any key you type is masked. Pass `--no-tty` for plain numbered prompts.
 
@@ -70,11 +80,16 @@ $ cp .env.example .env
 $ chmod 600 .env
 ```
 
-Pick one mode. AI Studio is the right choice for almost everyone.
+Pick the mode that matches this project. For the shortest credentialed local
+setup, choose AI Studio. Choose Vertex AI when the project already runs in
+Google Cloud or needs Cloud IAM, billing, location, or security controls.
+Choose Offline for a credential-free retrieval pass.
 
 === "AI Studio"
 
-    One key, no cloud project, real embeddings and real answers. Create a key at [Google AI Studio](https://aistudio.google.com/apikey), then set:
+    One key with no manual Google Cloud setup, plus real embeddings and
+    answers. Create a key at [Google AI Studio](https://aistudio.google.com/apikey),
+    then set:
 
     ```dotenv title="~/.env"
     SCI_RAG_GOOGLE_API_KEY=your-key-here
@@ -143,7 +158,9 @@ keyword    success     ...
 graph      disabled    ...
 ```
 
-`graph disabled` is expected here, and it is not an error. The retrieval that `make demo` runs uses the fast profile, which leaves the model-dependent layers off; step 6 turns them on.
+`graph disabled` is expected here. The retrieval that `make demo` runs uses
+the fast profile, which leaves the model-dependent layers off. Step 6 turns
+them on.
 
 <div class="srag-checkpoint" markdown>
 **Checkpoint: the evidence is visible**
@@ -178,7 +195,10 @@ This extracts the demo domain's concepts and relationships from every chunk and 
 <div class="srag-checkpoint" markdown>
 **Checkpoint: the graph produced evidence**
 
-Open the newest report under `eval_results/`. It names the corpus, the models, the enabled layers, and a score per layer configuration. On five documents most rows score the same. The spread appears as the corpus grows.
+Open the newest report under `eval_results/`. It names the corpus, the models,
+the enabled layers, and a score per layer configuration. On this five-document
+demo, most rows score the same. Use your own evaluation set to measure how the
+layers behave on your corpus.
 </div>
 
 ## 7. Serve it to people and agents
@@ -210,7 +230,7 @@ $ claude mcp add demo-corpus -- uv run --directory "$(pwd)" sci-rag mcp
 Ask the agent a question and tell it to use `demo-corpus`. A `search_corpus` or `answer_question` tool call should appear in its transcript. An answer with no tool call came from the agent's own memory, not from the corpus, which is exactly the failure the tools exist to prevent.
 
 <div class="srag-checkpoint" markdown>
-**Checkpoint: one database, three front doors**
+**Checkpoint: each interface reaches the same service**
 
 One Postgres database holds the documents, their chunks and vectors, the full-text index, and, after step 6, the concept graph. One service answers the command line, REST clients, and agents the same way. The reports under `eval_results/` record how it did on known questions.
 </div>

@@ -5,7 +5,7 @@ description: Look up the exact command, configuration field, file format, API co
 
 # Reference
 
-Three pages are generated from the source and checked by the build: the CLI page from the command definitions, the configuration page from the settings and domain models, and the benchmarks page from the evaluation reports. The others are hand-written.
+Choose the reference by surface: commands, configuration, interfaces, measured results, or project terms.
 
 <div class="srag-rows" markdown>
 
@@ -21,4 +21,4 @@ Three pages are generated from the source and checked by the build: the CLI page
 
 </div>
 
-Commands are in [CLI](cli.md). Anything with an `SCI_RAG_` prefix, a `domain.yaml` key, or a field in `data/corpus.jsonl` or `domain/eval_seed_questions.jsonl` is in [Configuration](configuration.md). Request and response shapes are in [REST, MCP, and Python API](api.md).
+The CLI, Configuration, and Benchmarks pages are generated from command definitions, settings and domain models, and evaluation reports. The build checks them against those sources. Use Configuration for an `SCI_RAG_` setting, a `domain.yaml` key, or a field in `data/corpus.jsonl` or `domain/eval_seed_questions.jsonl`.

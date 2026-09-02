@@ -477,7 +477,7 @@ $ sci-rag manifest lint [OPTIONS] PATH
 
 ## `sci-rag draft`
 
-Draft the domain files you would otherwise hand-write. Every drafter can also print its prompt for any assistant (--print-prompt) and read the reply back (--from-file), so no API key is required.
+Draft the domain files you would otherwise hand-write. Every drafter can also print its corpus-bearing prompt for local use or an approved assistant (--print-prompt), then read the reply back (--from-file).
 
 ```console
 $ sci-rag draft [OPTIONS] COMMAND [ARGS]...
@@ -497,7 +497,7 @@ $ sci-rag draft questions [OPTIONS]
 |---|---|---|---|
 | `--count` | integer | 10 | How many questions to ask for. |
 | `--folder` | path | unset | Draft from documents in this folder, before anything is ingested. |
-| `--print-prompt` | boolean | false | Print the rendered prompt and exit. Paste it into any assistant. |
+| `--print-prompt` | boolean | false | Print the rendered prompt and exit. It may contain corpus text; send it only to an approved destination. |
 | `--from-file` | path | unset | Read the model's reply from this file, with no model call. |
 | `--output` | path | unset | Where to write the proposal. Defaults to <seed file>.proposed. |
 | `--apply` | boolean | false | Append the verified questions to the seed file. |
@@ -541,7 +541,7 @@ $ sci-rag draft manifest [OPTIONS]
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `--folder` | path | unset | Documents to describe. Defaults to <data_dir>/raw. |
-| `--print-prompt` | boolean | false | Print the rendered prompt and exit. Paste it into any assistant. |
+| `--print-prompt` | boolean | false | Print the rendered prompt and exit. It may contain corpus text; send it only to an approved destination. |
 | `--from-file` | path | unset | Read the model's reply from this file, with no model call. |
 | `--output` | path | unset | Where to write the proposal. Defaults to <manifest>.proposed. |
 | `--manifest` | path | unset | The manifest being drafted. Defaults to <data_dir>/corpus.jsonl. |
@@ -565,7 +565,7 @@ $ sci-rag draft ontology [OPTIONS]
 | `--refine` | boolean | false | Show the model your ontology and ask only what it would add and remove. |
 | `--cold` | boolean | false | Draft from the description alone, without reading any document. |
 | `--folder` | path | unset | Draft from documents in this folder, before anything is ingested. |
-| `--print-prompt` | boolean | false | Print the rendered prompt and exit. Paste it into any assistant. |
+| `--print-prompt` | boolean | false | Print the rendered prompt and exit. It may contain corpus text; send it only to an approved destination. |
 | `--from-file` | path | unset | Read the model's reply from this file, with no model call. |
 | `--output` | path | unset | Where to write the proposal. Defaults to <domain.yaml>.proposed. |
 | `--apply` | boolean | false | Write domain.yaml directly, with no .proposed file to review. |
@@ -589,7 +589,7 @@ $ sci-rag draft prompts [OPTIONS] NAME
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `--print-prompt` | boolean | false | Print the rendered prompt and exit. Paste it into any assistant. |
+| `--print-prompt` | boolean | false | Print the rendered prompt and exit. It may contain corpus text; send it only to an approved destination. |
 | `--from-file` | path | unset | Read the model's reply from this file, with no model call. |
 | `--output` | path | unset | Where to write the proposal. Defaults to <prompt>.md.proposed. |
 | `--apply` | boolean | false | Write the prompt file directly, with no .proposed file to review. |

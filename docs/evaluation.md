@@ -5,7 +5,10 @@ description: Run retrieval ablations and judged-answer evaluation, compare two r
 
 # Evaluate your pipeline
 
-This page shows how to tell, with evidence, whether a change to the pipeline helped. The harness makes cheating difficult, even by accident. It uses mechanical retrieval metrics against expert ground truth, compares performance layer by layer so you see what each component contributes, and grades in two separate passes: one checking whether the kit's sources actually support its claims, the other checking whether those claims are right.
+Measure a pipeline change against the same corpus and question set before you keep it.
+The harness reports retrieval by layer, then grades generated answers in two separate
+passes: one checks whether the sources support the answer, and the other checks whether
+the answer is correct.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>A reproducible before-and-after on your own corpus</div>
@@ -21,8 +24,8 @@ This page shows how to tell, with evidence, whether a change to the pipeline hel
 |---|---|---|
 | An ingested corpus | Every metric is computed against real chunks | `uv run sci-rag stats` |
 | `domain/eval_seed_questions.jsonl`, reviewed | This file is the ground truth. Drafted rows still tagged `drafted` make every number provisional | `uv run sci-rag doctor` |
-| A model credential | Retrieval metrics run offline; judged answers do not | `grep SCI_RAG_GOOGLE .env` |
-| A corpus snapshot, for anything you will cite | A number without a corpus identity is not reproducible | `uv run sci-rag corpus snapshot` |
+| A model credential | Retrieval metrics run offline; judged answers do not | `uv run sci-rag doctor` |
+| A corpus snapshot, for anything you will cite | A number without a corpus identity cannot be traced to its inputs | `uv run sci-rag corpus snapshot` |
 
 ## The two commands
 
@@ -31,9 +34,13 @@ sci-rag eval retrieval --ablation   # did the right evidence come back, per laye
 sci-rag eval answers                # are the generated answers grounded, cited, correct?
 ```
 
-Both read `domain/eval_seed_questions.jsonl`, compute the metrics, print a summary table, and write a JSON and Markdown report to `eval_results/`. Every report carries a corpus fingerprint (documents, chunks, graph size, embedding versions, latest ingestion time) and the git commit, which means the numbers are repeatable. Keep the reports so you can cite the fingerprint when you publish.
+Both read `domain/eval_seed_questions.jsonl`, print a summary table, and write JSON and
+Markdown reports to `eval_results/`. Each report records a corpus fingerprint, the git
+commit, and the model configuration. Those fields identify the run; they do not make a
+model-backed score deterministic. Keep the reports so you can state exactly what a
+published number measured.
 
-Real example output from the shipped demo corpus:
+These historical example reports show the output shape from an earlier demo run:
 [examples/demo-eval/retrieval-ablation.md](examples/demo-eval/retrieval-ablation.md)
 and [examples/demo-eval/answers.md](examples/demo-eval/answers.md).
 
@@ -61,7 +68,9 @@ One JSON object per line:
   marks an honesty probe (see below), and `drafted` marks a question a
   model wrote that no expert has checked yet (see below).
 
-Three recommendations for writing seed questions: ten excellent questions outclass a hundred vague ones. Include one or two multi-hop questions where evidence spans documents, because that tests whether the kit can chain reasoning across chunks. Grow the set from real user questions, starting with the ones your system got wrong.
+Start with 10 to 20 questions a domain expert can defend. Include a multi-document
+question when the corpus supports one, and add real user questions as the system misses
+them. A small reviewed set is more useful than a large set of vague or unchecked rows.
 
 For help drafting seed questions from scratch,
 [`sci-rag draft questions`](bring-your-own-domain.md#step-5-write-seed-questions-then-measure) writes a first pass
@@ -123,9 +132,9 @@ unchanged corpus from being mislabeled. Read every layer-ablation row against
   relates to your documents' phrasing. On the demo corpus, keyword-only
   scores 0.33 where vector scores 1.00; that gap is the reason hybrid
   retrieval exists.
-* Small corpora saturate: with five demo documents, most configs hit
-  1.00 and only the differences matter. Expect real spread as the corpus
-  grows.
+* Small corpora can saturate. In the five-document demo, most configurations
+  reach 1.00, so only the observed differences support a conclusion. A larger
+  corpus may behave differently; measure it rather than extrapolating from the demo.
 
 <div class="srag-checkpoint" markdown>
 **Checkpoint: measure each layer's contribution**
@@ -148,8 +157,8 @@ Both passes run at temperature 0. Malformed judge responses fail rather than get
 Contextual snippet compression is an answer-generation decision, not a retrieval ablation. Test it against your corpus by running the same question set twice on the same corpus snapshot, with the same models, and comparing the judged results:
 
 ```bash
-uv run sci-rag eval answers --snapshot uncompressed
-uv run sci-rag eval answers --compressed --snapshot compressed
+uv run sci-rag eval answers --snapshot comparison-corpus
+uv run sci-rag eval answers --compressed --snapshot comparison-corpus
 uv run sci-rag eval diff eval_results/<uncompressed>/report.json \
   eval_results/<compressed>/report.json
 ```
@@ -211,13 +220,13 @@ It writes `report.html` next to the report, or wherever `--output` points. The p
 
 It leads with the provenance receipt so a reader who cannot run commands can see which model produced what they are reading. The small-sample and drafted-ground-truth warnings sit next to the metrics in the same places `report.md` puts them. `calibration.json` is included automatically when it sits beside the report.
 
-In an ablation table, cells whose confidence intervals overlap the baseline are shaded; cells that clear the interval are bold. Overlapping intervals are how these tables get misread most often, and on a tiny corpus most cells will be shaded. That is the honest reading, not a rendering bug.
+In an ablation table, cells whose confidence intervals overlap the baseline are shaded; cells that clear the interval are bold. On a small corpus, many cells may be shaded because the data does not establish a difference from the baseline.
 
 ## Honesty probes
 
 Include at least one question your corpus cannot answer, tagged `unanswerable`. Retrieval metrics skip it; the answer eval runs it. A healthy system responds "the corpus does not cover this" and the grounding judge scores that honesty a 2. If your probe comes back with a confident invented answer, stop tuning retrieval and fix your answer prompt first. A system that hallucinates confidently is worse than one that retrieves wrong evidence.
 
-## CI keeps the demo honest
+## CI checks demo retrieval
 
 `tests/integration/test_eval_smoke.py` runs the retrieval eval on the shipped demo corpus with the offline embedder on every CI run. It uses conservative thresholds (hit@10 at least 0.65) to catch a broken chunker, layer, or seed file before it ships. Copy that pattern for your own corpus: freeze a small fixture, pin thresholds at your current numbers, and fail loudly if anything regresses.
 
@@ -239,7 +248,8 @@ Include at least one question your corpus cannot answer, tagged `unanswerable`. 
 4. Keep the change only if the numbers (and your reading of the judged
    answers) agree it helped.
 
-When two people disagree about whether a change helped, the reports settle it.
+When two people disagree about a change, the reports give them the same evidence to
+inspect: the per-question movement, the uncertainty, and the generated answers.
 
 <div class="srag-checkpoint" markdown>
 **Checkpoint: the numbers are citable**

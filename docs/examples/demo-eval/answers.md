@@ -1,5 +1,12 @@
 # Answer evaluation (blind judge)
 
+This historical report shows the output shape of a completed answer evaluation.
+
+> **Historical example.** This report was committed from the demo run at
+> `959595e20eacfef752afa30f8bfb6dd1333c6938` on 2026-08-26. Its values describe
+> that run, not the current published benchmark. See [Benchmarks](../../benchmarks.md)
+> for the current reviewed reports and provenance.
+
 Corpus: 5 documents, 34 chunks.
 
 Scores are 0 to 2 per dimension. The grounding judge never sees the

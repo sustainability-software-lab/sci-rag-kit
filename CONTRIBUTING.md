@@ -1,13 +1,11 @@
 # Contributing
 
-Contributions are welcome! Thanks for helping us improve sci-rag-kit. These may take one of two forms:
+Contributions take one of two forms:
 
 * **Improvements to the kit itself**: the pipeline, retrieval layers,
-  evaluation harness, server, docs. Very welcome.
-* **Your own domain profile**: that belongs in **your** copy of the
-  template, not here. If you built something reusable while
-  configuring yours (a parser, a collector, an eval pattern), extract the
-  reusable part and bring that.
+  evaluation harness, server, or documentation.
+* **Reusable work from a domain project**: a domain profile stays in your copy of the template,
+  while a general parser, collector, or evaluation pattern can be extracted and contributed here.
 
 ## Development setup
 
@@ -30,13 +28,11 @@ tests destroy data in `SCI_RAG_TEST_DATABASE_URL`, so create a disposable test
 database for the selected backend. If PostgreSQL is unreachable, integration
 tests skip with instructions. A skipped database suite is not passing evidence.
 
-`make docs-geometry` is the same idea for the documentation site. Some
-presentation bugs are only visible as numbers from a rendered page, such as
-two code blocks with no gap between them, so those tests drive a real
-browser over `site/`. They need `make docs` to have run and they pull a
-browser, which is why they are a separate target and a separate dependency
-group. Without either they skip with instructions, so `make check` is
-unaffected. CI runs them in the job that already builds the site.
+`make docs-geometry` drives a real browser over `site/` to catch presentation
+bugs that Markdown checks cannot see, such as adjacent code blocks with no
+gap. Run `make docs` first. The geometry target installs its separate browser
+dependency; without the site or browser, the tests skip with instructions.
+CI runs them in the job that builds the site.
 
 ## The bar for changes
 
@@ -58,10 +54,10 @@ unaffected. CI runs them in the job that already builds the site.
 
 ## Style notes
 
-Follow what is already here (ruff enforces most of it). Docstrings
-explain **why** a module is shaped the way it is, in plain language; write
-for the scientist reading this codebase for the first time. No em
-dashes in prose. Keep prompts and docs free of unexplained jargon.
+Follow the existing style; ruff enforces most of it. Explain **why** a module
+has its shape in docstrings, using plain language for a scientist reading the
+codebase for the first time. Do not use em dashes in prose. Keep prompts and
+documentation free of unexplained jargon.
 
 ## Decision records
 
