@@ -54,12 +54,37 @@ resource "google_sql_database_instance" "db" {
   deletion_protection = var.deletion_protection
 }
 
+# ABANDON, not DELETE, and this is the fix for issue #284 rather than a
+# loosening of it.
+#
+# A `terraform destroy` that had served traffic failed here:
+#   Error 400: failed to delete database sci_rag.
+#   Detail: pq: database "sci_rag" is being accessed by other users.
+# Deleting a Cloud Run service returns before its instances stop dialling
+# Postgres, so the DROP DATABASE that followed raced them and lost. Terraform
+# had already removed the service, job, bucket, secrets, and service account,
+# leaving the operator holding a running instance the error never named.
+#
+# A destroy-time wait was tried first and is not sufficient: any fixed window
+# is a guess, and a service stuck in a startup-probe retry loop keeps opening
+# new sessions for as long as it exists. A 90 second window survived a healthy
+# deployment and still lost to a crash-looping one.
+#
+# Deleting the instance deletes the databases and roles inside it, so during a
+# full destroy the separate DROP is redundant work whose only contribution is
+# a failure mode. ABANDON drops these from Terraform's state and lets the
+# instance deletion, which is still Terraform's, remove the data. Removing
+# only this block from a configuration now leaves the database in place rather
+# than dropping it, which for a database is the safer default.
 resource "google_sql_database" "sci_rag" {
   name     = "sci_rag"
   instance = google_sql_database_instance.db.name
 
+  deletion_policy = "ABANDON"
+
   depends_on = [google_sql_user.sci_rag]
 }
+
 
 resource "random_password" "db" {
   length  = 24
@@ -70,6 +95,11 @@ resource "google_sql_user" "sci_rag" {
   name     = "sci_rag"
   instance = google_sql_database_instance.db.name
   password = random_password.db.result
+
+  # Same reasoning as the database above: dropping a role that still owns
+  # migrated objects, while sessions may still hold them, is the other half of
+  # the same race. The instance deletion removes it.
+  deletion_policy = "ABANDON"
 }
 
 # The async driver reaches Cloud SQL over the mounted unix socket.

@@ -223,6 +223,19 @@ terraform show destroy.tfplan
 terraform apply destroy.tfplan
 ```
 
+The update plan is not optional, and not only for review. Terraform reads
+`deletion_protection`, `force_destroy`, and the database `deletion_policy` from
+the state it already has, not from the variables you pass to a destroy. Passing
+them for the first time on the destroy leaves the stored values in force and the
+destroy stops partway. The update plan is what writes them into state.
+
+The database and its role use `deletion_policy = "ABANDON"`, so a destroy does
+not issue its own `DROP DATABASE`. Deleting the instance removes the databases
+and roles inside it, and the separate drop raced Cloud Run instances that were
+still closing their Postgres sessions. Removing only the database block from
+your configuration therefore leaves the database in place rather than dropping
+it.
+
 If either apply fails, keep the Terraform state and saved plans, then inventory
 every surviving resource. Do not delete the Cloud SQL instance directly or
 discard state to make the next plan look clean. Correct the configuration,
