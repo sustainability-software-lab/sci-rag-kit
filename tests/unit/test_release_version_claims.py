@@ -120,3 +120,35 @@ def test_release_validation_runs_the_public_two_command_route() -> None:
     # own symptom and does not depend on how anything is drawn.
     assert "sci-rag new --help" in scripts, "probe the command, not its help table"
     assert "grep -q  new " not in scripts
+
+
+def test_release_downloaders_have_nonpublishing_pull_request_evidence() -> None:
+    """The tag-only release downloaders need an equivalent PR smoke path."""
+    import yaml
+
+    ci = yaml.load(
+        (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"),
+        Loader=yaml.BaseLoader,
+    )
+    release = yaml.load(
+        (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8"),
+        Loader=yaml.BaseLoader,
+    )
+
+    ci_downloaders = [
+        step["uses"]
+        for step in ci["jobs"]["docs"]["steps"]
+        if step.get("uses", "").startswith("actions/download-artifact@")
+    ]
+    release_downloaders = [
+        step["uses"]
+        for job_name in ("testpypi", "pypi")
+        for step in release["jobs"][job_name]["steps"]
+        if step.get("uses", "").startswith("actions/download-artifact@")
+    ]
+
+    assert ci_downloaders == ["actions/download-artifact@v8"]
+    assert release_downloaders == [
+        "actions/download-artifact@v8",
+        "actions/download-artifact@v8",
+    ]

@@ -225,3 +225,12 @@ jobs:
           path: site/
           if-no-files-found: error
           retention-days: 7
+      - name: Download the documentation preview without publishing
+        if: github.event_name == 'pull_request'
+        uses: actions/download-artifact@v8
+        with:
+          name: docs-preview
+          path: ${{ runner.temp }}/docs-preview-roundtrip
+      - name: The documentation preview survives the artifact round trip
+        if: github.event_name == 'pull_request'
+        run: diff -qr site/ "$RUNNER_TEMP/docs-preview-roundtrip/"
