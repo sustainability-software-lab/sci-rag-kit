@@ -4,6 +4,14 @@ Notable changes to sci-rag-kit. The format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [Semantic Versioning](https://semver.org/) once past 1.0.
 
+## [Unreleased]
+
+### Changed
+
+- **Generated conda projects and their compatibility harness now use
+  setup-miniconda v4.** Both surfaces use the action's canonical
+  `auto-activate` input.
+
 ## [0.5.0] - 2026-09-03
 
 ### Added
