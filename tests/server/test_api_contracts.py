@@ -273,16 +273,26 @@ async def test_an_api_key_is_accepted_from_a_header_cloud_run_does_not_eat(secur
     assert response.json()["items"]
 
 
-async def test_the_authorization_header_still_wins_when_both_are_sent(secured_client) -> None:  # type: ignore[no-untyped-def]
-    """Precedence is explicit so local behavior is unchanged.
+async def test_the_explicit_key_header_wins_when_both_are_sent(secured_client) -> None:  # type: ignore[no-untyped-def]
+    """Precedence is explicit, and it now favours the caller's own header.
 
-    A caller sending both should get the documented header honoured, not a
-    silent preference for the fallback.
+    This test previously asserted the opposite, on the reasoning that
+    `Authorization` was the documented header and local behavior should not
+    change. That premise does not survive a deployment. A private Cloud Run
+    service requires a Google identity token in `Authorization`, so preferring
+    it meant the identity token shadowed the kit key and every authenticated
+    request returned 401 `invalid_key`. The issue #189 live qualification
+    reproduced that against a real service and found no header combination
+    that worked.
+
+    `X-API-Key` is the caller naming the credential it means. `Authorization`
+    may have been set by infrastructure the caller does not control, so it is
+    the weaker claim when both arrive.
     """
     response = await secured_client.post(
         "/v1/query",
         json={"query": "rice straw"},
-        headers={"Authorization": "Bearer query-key", "X-API-Key": "not-a-real-key"},
+        headers={"Authorization": "Bearer not-a-real-key", "X-API-Key": "query-key"},
     )
 
     assert response.status_code == 200
