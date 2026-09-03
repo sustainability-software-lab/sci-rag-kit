@@ -58,7 +58,7 @@ guides.
 
 Releases are tagged `vX.Y.Z` from `main` with CI green, a CHANGELOG entry, and (once the maintainer enables it; see the launch-gated list in [ROADMAP.md](ROADMAP.md)) an archival DOI per release.
 
-Pushing the tag runs [`.github/workflows/release.yml`](https://github.com/sustainability-software-lab/sci-rag-kit/blob/main/.github/workflows/release.yml), which verifies, publishes to TestPyPI, then publishes to PyPI.
+Pushing the tag runs [`.github/workflows/release.yml`](https://github.com/sustainability-software-lab/sci-rag-kit/blob/main/.github/workflows/release.yml), which verifies, publishes to TestPyPI, publishes to PyPI, then opens the GitHub Release.
 
 1. `verify` runs four checks. It confirms the `ci` workflow already
    passed for the tagged commit, confirms the tag matches
@@ -69,6 +69,19 @@ Pushing the tag runs [`.github/workflows/release.yml`](https://github.com/sustai
    because PyPI does not allow re-uploading a version, even a broken one,
    so a packaging mistake found on PyPI costs a version number.
 3. `pypi` publishes to PyPI.
+4. `github_release` creates the GitHub Release from the changelog section
+   matching the tag, and attaches the same sdist and wheel that were
+   published. It runs last, and only if `pypi` succeeded, because a release
+   page announcing an artifact that never published is worse than no page.
+
+Write the changelog entry before tagging. `github_release` reads the
+`## [X.Y.Z]` section through `scripts/changelog_release_notes.py` and fails
+when that section is missing or empty, rather than publishing a blank page.
+A tag whose entries are still under `## [Unreleased]` will fail there.
+
+The Releases page previously fell three versions behind PyPI, because the
+workflow published the package and nothing created the page. Nothing failed
+while that drifted, which is why it is now part of the same run.
 
 The tag is the source of truth for the version, and the verify job enforces
 that. The project generator fetches the template at the tag matching its own
