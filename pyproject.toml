@@ -1,6 +1,6 @@
 [project]
 name = "sci-rag-kit"
-version = "0.4.1"
+version = "0.5.0"
 description = "Retrieval-augmented generation, built around your scientific domain."
 readme = "README.md"
 requires-python = ">=3.11"

@@ -12,7 +12,7 @@ database backup preserves the stored data. Rehearse the restore before you need 
   <div><strong>You'll build</strong>A backup, a restore drill, and a snapshot protocol</div>
   <div><strong>You'll need</strong>Database access and `pg_dump`</div>
   <div><strong>Time</strong>About 30 minutes for the first pass</div>
-  <div><strong>Tested with</strong>v0.4</div>
+  <div><strong>Tested with</strong>v0.5</div>
 </div>
 
 ## Before you start

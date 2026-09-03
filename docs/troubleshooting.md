@@ -12,7 +12,7 @@ choose the next check or recovery command.
   <div><strong>You'll build</strong>A diagnosis, from a symptom to its cause</div>
   <div><strong>You'll need</strong>The failing command and its output</div>
   <div><strong>Time</strong>Depends on the symptom</div>
-  <div><strong>Tested with</strong>v0.4</div>
+  <div><strong>Tested with</strong>v0.5</div>
 </div>
 
 ## Before you start

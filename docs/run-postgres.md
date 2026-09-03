@@ -12,7 +12,7 @@ Use a disposable database for destructive tests.
   <div><strong>You'll build</strong>A running PostgreSQL 16 to 18 with pgvector</div>
   <div><strong>You'll need</strong>A project checkout and one server source</div>
   <div><strong>Time</strong>About 5 minutes locally, longer for first Cloud startup</div>
-  <div><strong>Tested with</strong>v0.4</div>
+  <div><strong>Tested with</strong>v0.5</div>
 </div>
 
 ## Before you start
