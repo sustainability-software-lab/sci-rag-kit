@@ -219,7 +219,7 @@ resource "google_cloud_run_v2_service" "api" {
       }
       env {
         name  = "SCI_RAG_GCP_LOCATION"
-        value = var.region
+        value = var.model_location
       }
 
       volume_mounts {
@@ -306,7 +306,7 @@ resource "google_cloud_run_v2_job" "ops" {
         }
         env {
           name  = "SCI_RAG_GCP_LOCATION"
-          value = var.region
+          value = var.model_location
         }
 
         volume_mounts {

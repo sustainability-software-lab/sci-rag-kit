@@ -385,3 +385,39 @@ def test_cloud_run_examples_use_the_platform_safe_api_key_header() -> None:
         "Cloud Run consumes Authorization before the request reaches the kit"
     )
     assert "same bearer key" not in guide, "remote MCP clients use the same application key"
+
+
+def test_model_calls_do_not_inherit_the_infrastructure_region() -> None:
+    """Where resources live and where models are served are different questions.
+
+    The module set `SCI_RAG_GCP_LOCATION` to `var.region`, so a deployment in
+    `us-central1` asked Vertex for the default generation model there. That
+    model is served from `global`, so every graph extraction batch failed:
+
+        404 NOT_FOUND. Publisher model `.../locations/us-central1/publishers/
+        google/models/gemini-3.6-flash` was not found
+
+    The job still exited before the failure surfaced as a stats change, so a
+    deployed graph build reported success and wrote nothing. Reproduced live
+    in the issue #189 qualification: the same model id answered 200 from
+    `global` and 404 from `us-central1` in the same project.
+    """
+    text = MAIN.read_text(encoding="utf-8")
+
+    for match in re.finditer(
+        r'name\s*=\s*"SCI_RAG_GCP_LOCATION"\s*\n\s*value\s*=\s*([^\s]+)', text
+    ):
+        assert match.group(1) != "var.region", (
+            "model calls must not inherit var.region; a region does not serve "
+            "every model, and the default generation model is served from global"
+        )
+
+    default = re.search(
+        r'variable "model_location".*?default\s*=\s*"([^"]+)"',
+        VARIABLES.read_text(encoding="utf-8"),
+        re.S,
+    )
+    assert default, "the module must expose a model_location input"
+    assert default.group(1) == "global", (
+        "default to the location that serves the kit's default model"
+    )

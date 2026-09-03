@@ -20,6 +20,12 @@ variable "image" {
   type        = string
 }
 
+variable "model_location" {
+  description = "Vertex AI location for model calls (SCI_RAG_GCP_LOCATION). Separate from var.region, which places infrastructure. The default Gemini model is served from global, not from a region."
+  type        = string
+  default     = "global"
+}
+
 variable "db_tier" {
   description = "Cloud SQL machine tier. db-g1-small is the smallest sensible dev tier; size up for real load."
   type        = string

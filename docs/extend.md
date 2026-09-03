@@ -115,9 +115,9 @@ Three adapters live in `src/sci_rag/llm/`, selected by a `provider:model` spec. 
 
 On Google Cloud, the third row is the path to non-Google partner models. Vertex serves them behind an OpenAI-compatible endpoint, so the same adapter covers each supported model. Model ids keep their publisher prefix, such as `xai/grok-4.1-fast-reasoning`; the adapter rejects a bare id.
 
-!!! warning "Check partner-model regions"
+!!! warning "Check model regions, including for Gemini"
 
-    `SCI_RAG_GCP_LOCATION` defaults to `us-central1`, which serves Gemini. Claude and Grok require `global`, and Grok is available only there. Set `SCI_RAG_GCP_LOCATION=global` when generating with a partner model. Google embeddings work from `global` too, though slower than from a region.
+    `SCI_RAG_GCP_LOCATION` defaults to `us-central1`, but a regional location does not serve every model. The default generation model is served from `global`, and a deployed job calling it from `us-central1` gets a `404` on every batch. Claude and Grok also require `global`, and Grok is available only there. Set `SCI_RAG_GCP_LOCATION=global` unless you have confirmed your chosen model in your chosen region. Google embeddings work from `global` too, though slower than from a region.
 
     An unsupported location returns a `400`; a missing or unavailable model returns a `404`. `sci-rag doctor --probe` catches these before a pipeline run and recommends `SCI_RAG_GCP_LOCATION=global` for the location error. A `404` can also mean the model id is wrong or the project has not enabled that offering.
 
