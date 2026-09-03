@@ -170,7 +170,7 @@ extra:
     citation.md: project.md#how-to-cite
     evidence-and-rights.md: methodology.md#7-scope-precedes-ranking
   # Pinned to pyproject by tests/unit/test_release_version_claims.py.
-  package_version: "0.4.1"
+  package_version: "0.5.0"
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/sustainability-software-lab/sci-rag-kit
