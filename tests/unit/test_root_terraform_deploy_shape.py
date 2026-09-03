@@ -340,11 +340,15 @@ def test_populated_database_destroy_order_is_deterministic() -> None:
     ):
         consumer = re.search(rf'resource "{kind}" "{label}"\s*\{{(.*?)\n\}}', text, re.S)
         assert consumer, f"the module must define {kind}.{label}"
-        assert re.search(
-            r"depends_on\s*=\s*\[\s*google_secret_manager_secret_version\.database_url\s*\]",
-            consumer.group(1),
-            re.S,
-        ), f"{kind}.{label} must close before the database URL secret version is removed"
+        # Membership, not an exact list. This asserted a single-element
+        # `depends_on` and so failed when the #284 drain window was added
+        # alongside it, even though the ordering it cares about was unchanged.
+        # The contract is that this edge exists, not that it is the only one.
+        depends_on = re.search(r"depends_on\s*=\s*\[(.*?)\]", consumer.group(1), re.S)
+        assert depends_on, f"{kind}.{label} must declare its destroy-order edges"
+        assert "google_secret_manager_secret_version.database_url" in depends_on.group(1), (
+            f"{kind}.{label} must close before the database URL secret version is removed"
+        )
 
 
 def test_the_deploy_guide_stages_the_path_its_ingest_command_reads() -> None:
@@ -421,3 +425,48 @@ def test_model_calls_do_not_inherit_the_infrastructure_region() -> None:
     assert default.group(1) == "global", (
         "default to the location that serves the kit's default model"
     )
+
+
+def test_a_full_destroy_does_not_issue_a_racing_drop_database() -> None:
+    """The DROP was the only thing standing between a destroy and success.
+
+    A `terraform destroy` on a deployment that had served traffic failed:
+
+        Error 400: failed to delete database sci_rag.
+        Detail: pq: database "sci_rag" is being accessed by other users.
+
+    Deleting a Cloud Run service returns before its instances stop dialling
+    Postgres, so the DROP that followed raced them. Terraform had already
+    removed the service, job, bucket, secrets, and service account, leaving a
+    running Cloud SQL instance the error never mentions. Filed as #284.
+
+    A destroy-time wait was tried first and rejected on evidence. Any fixed
+    window is a guess, and a service stuck in a startup-probe retry loop keeps
+    opening sessions for as long as it exists: a 90 second window cleared a
+    healthy deployment and then lost to a crash-looping one on the very next
+    destroy.
+
+    Deleting the instance deletes the databases and roles it contains, so the
+    separate DROP is redundant during a full destroy and contributes only a
+    failure mode. ABANDON removes the call, and with it the race, by
+    construction rather than by timing. The instance deletion is still
+    Terraform's, so nothing here bypasses Terraform to reach the data.
+    """
+    text = MAIN.read_text(encoding="utf-8")
+
+    for kind, label in (
+        ("google_sql_database", "sci_rag"),
+        ("google_sql_user", "sci_rag"),
+    ):
+        block = re.search(rf'resource "{kind}" "{label}"\s*\{{(.*?)\n\}}', text, re.S)
+        assert block, f"the module must define {kind}.{label}"
+        assert re.search(r'deletion_policy\s*=\s*"ABANDON"', block.group(1)), (
+            f"{kind}.{label} must not issue its own delete during a full destroy; "
+            "the instance deletion removes it, and the separate call races "
+            "draining consumers"
+        )
+
+    assert re.search(
+        r'resource "google_sql_database_instance" "db"[\s\S]*?deletion_protection\s*=\s*var\.deletion_protection',
+        text,
+    ), "the instance deletion is what actually removes the data, so it stays guarded"
