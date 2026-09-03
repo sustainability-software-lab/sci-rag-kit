@@ -1,13 +1,13 @@
 ---
 title: Deploy on Google Cloud
-description: Provision Cloud SQL and Cloud Run from the included Terraform, then verify infrastructure and schema readiness.
+description: Provision Cloud SQL and Cloud Run from the included Terraform, stage a corpus through a read-only bucket mount, then verify the deployed service and remove it.
 ---
 
 # Deploy on Google Cloud
 
-Provision a Cloud Run service backed by Cloud SQL with pgvector, then verify service health and
-database migrations. The shipped container image does not include corpus data, so this guide stops
-at infrastructure and database readiness.
+Provision a Cloud Run service backed by Cloud SQL with pgvector, stage a corpus
+outside the image through a read-only bucket mount, verify the deployed service,
+and remove it through reviewed protection-update and destroy plans.
 
 <div class="srag-meta-strip">
   <div><strong>You'll build</strong>One Cloud Run service and one Cloud SQL instance</div>
@@ -42,7 +42,7 @@ least-privilege service account.
 <!-- END GENERATED PROJECT FEATURE: cloud-provisioning -->
 
 These resources accrue charges while they run. Review the selected tiers and region in the saved
-Terraform plan, and tear down experiments with `terraform destroy`.
+Terraform plan, and tear down experiments through the reviewed teardown in Step 5.
 
 ## Before you start
 
@@ -54,10 +54,12 @@ Terraform plan, and tear down experiments with `terraform destroy`.
 gcloud services enable run.googleapis.com sqladmin.googleapis.com \
   secretmanager.googleapis.com artifactregistry.googleapis.com \
   aiplatform.googleapis.com cloudbuild.googleapis.com \
-  iam.googleapis.com --project=YOUR_PROJECT
+  storage.googleapis.com iam.googleapis.com --project=YOUR_PROJECT
 ```
 
-* Terraform 1.5+.
+* Terraform 1.5+ and Google provider 7.0 or newer. Provider 7 is the first
+  supported major where the Cloud Run job GCS volume is generally available,
+  so the module does not need a preview launch stage.
 
 ## Step 1: build and push the image
 
@@ -69,8 +71,11 @@ gcloud builds submit --project=YOUR_PROJECT \
   --tag us-central1-docker.pkg.dev/YOUR_PROJECT/sci-rag/sci-rag:v1 .
 ```
 
-The Dockerfile packages the kit, the `domain/` folder, and migrations. The same image
-serves the API and runs schema upgrades. Rebuild whenever the domain changes.
+The Dockerfile packages the kit, the `domain/` folder, and migrations, so the
+same image serves the API and runs schema upgrades.
+Rebuild and repush when package code, migrations, or your domain profile
+changes. Upload corpus changes to the bucket after deployment; they do not
+require a new image.
 
 !!! warning "The trailing dot uploads the directory"
 
@@ -90,31 +95,63 @@ terraform apply \
   -var image=us-central1-docker.pkg.dev/YOUR_PROJECT/sci-rag/sci-rag:v1
 ```
 
-What you get:
+The tracked lockfile already pins a provider that satisfies the declared range,
+so plain `terraform init` is enough. Run `terraform init -upgrade` only if your
+local lock still points at provider 5 or 6, and review the provider selection
+before applying. Treat a lockfile update as its own dependency change, not as an
+automatic part of this deployment procedure.
+
+What you get, and the security posture you get it with:
 
 * The database is reachable only through the Cloud SQL connector (mounted as a Unix socket), never via open TCP.
-* The runtime service account holds `cloudsql.client`, `aiplatform.user`, and read access to two secrets.
+* The runtime service account holds the project roles `roles/cloudsql.client` and
+  `roles/aiplatform.user`, read access to two secrets, and bucket-scoped
+  `roles/storage.objectViewer` for the corpus.
 * Send API keys as `X-API-Key: <key>`. Cloud Run's frontend claims `Authorization: Bearer` for its own identity tokens, so use the alternate header.
 * The Cloud Run service is private by default. Pass `-var allow_unauthenticated=true` to make API keys the only gate.
 
-## Step 3: migrate the database
+## Step 3: stage the corpus and populate the database
 
 ```bash
-# Create the schema. Terraform output prints this exact command.
+CORPUS_BUCKET="$(terraform output -raw corpus_bucket)"
+
+# Preview an additive upload of the tracked, synthetic CC0 demo:
+gcloud storage rsync --recursive --dry-run \
+  data/demo "gs://${CORPUS_BUCKET}" --project=YOUR_PROJECT
+
+# Apply the same additive upload after reviewing the preview:
+gcloud storage rsync --recursive \
+  data/demo "gs://${CORPUS_BUCKET}" --project=YOUR_PROJECT
+
+# Create the schema (terraform output prints this exact command):
 gcloud run jobs execute sci-rag-ops --region=us-central1 --project=YOUR_PROJECT --wait
+
+# Ingest through the bucket mounted read-only in the ops job:
+gcloud run jobs execute sci-rag-ops --region=us-central1 --project=YOUR_PROJECT \
+  --args='ingest,--manifest,/corpus/manifest.jsonl' --wait
+
+# Build the graph:
+gcloud run jobs execute sci-rag-ops --region=us-central1 --project=YOUR_PROJECT \
+  --args='graph,extract' --wait
+gcloud run jobs execute sci-rag-ops --region=us-central1 --project=YOUR_PROJECT \
+  --args='graph,communities' --wait
+gcloud run jobs execute sci-rag-ops --region=us-central1 --project=YOUR_PROJECT \
+  --args='stats' --wait
 ```
 
-The current image deliberately excludes `data/`, including the demo manifest and any
-private corpus. It therefore does not yet provide an image-baked ingestion path. Issue
-[#189](https://github.com/sustainability-software-lab/sci-rag-kit/issues/189) tracks the
-corpus-delivery and teardown qualification. Do not add corpus files to the image or
-remove the ignore rules as a workaround; that can publish restricted documents in an
-image layer.
+The upload copies everything under `data/demo` to the bucket root, so
+`manifest.jsonl`, `fixture/`, and the `graph-replay/` evaluation fixture all
+land there. Ingest reads only the manifest and the paths it names. Every
+document path stays relative to `manifest.jsonl`, so `fixture/example.md`
+appears as `/corpus/fixture/example.md` in the ops job. The command is additive:
+it copies new and changed objects without deleting unmatched objects already in
+the bucket. Do not add `--delete-unmatched-destination-objects` unless a separate
+review has approved those deletions.
 
-Until a delivery path is qualified, this guide proves infrastructure and schema setup.
-The deployed corpus remains incomplete. Keep ingestion on a separately reviewed path
-that does not expose source documents, and do not call the deployment complete from
-the checks below.
+Cloud Run supplies the read-only `/corpus` mount. The runtime service account
+can view objects but cannot create or delete them, and the REST/MCP service has
+no corpus mount. Keep the build-context exclusions above; a private corpus never
+needs to enter the image or writable container storage.
 
 ## Step 4: set API keys and verify
 
@@ -130,22 +167,87 @@ curl -s -X POST $URL/v1/query -H "X-API-Key: team-key" \
   -H 'Content-Type: application/json' -d '{"query": "rice straw availability"}'
 ```
 
-Run the query only after a reviewed corpus-delivery path has populated the database.
-Remote agents connect to `$URL/mcp/` with the same API key in the `X-API-Key` header.
+Run the query only after the corpus upload and operations jobs have succeeded.
+Remote agents connect to `$URL/mcp/` with the same application key in
+`X-API-Key`.
+
+## Step 5: review and apply teardown
+
+Three independent controls protect data and running resources:
+
+* `deletion_protection` defaults to `true` for the database, service, and ops
+  job.
+* `force_destroy_corpus` defaults to `false`, so Terraform refuses to remove a
+  bucket that still has live or noncurrent object generations.
+* `corpus_soft_delete_retention_seconds` defaults to `604800`, which keeps
+  deleted objects recoverable for seven days. It accepts `0` only as an
+  explicit choice, or a value from 7 through 90 days.
+
+!!! danger "Permanent corpus deletion needs its own review"
+
+    Have a verified backup before changing either corpus protection to its
+    destructive value. A disposable run that requires final, unrecoverable
+    absence sets soft delete to `0` before its first upload. Disabling soft
+    delete later does not purge objects already soft-deleted under the earlier
+    policy.
+
+Save and inspect an update plan before changing the protections. The image
+value must match the deployed revision even though this plan does not replace
+it.
+
+```bash
+terraform plan -out=teardown-update.tfplan \
+  -var project_id=YOUR_PROJECT \
+  -var image=us-central1-docker.pkg.dev/YOUR_PROJECT/sci-rag/sci-rag:v1 \
+  -var deletion_protection=false \
+  -var force_destroy_corpus=true \
+  -var corpus_soft_delete_retention_seconds=0
+terraform show teardown-update.tfplan
+
+# Apply only after the update plan has been reviewed:
+terraform apply teardown-update.tfplan
+```
+
+Then save and inspect a separate destroy plan with the same explicit inputs.
+
+```bash
+terraform plan -destroy -out=destroy.tfplan \
+  -var project_id=YOUR_PROJECT \
+  -var image=us-central1-docker.pkg.dev/YOUR_PROJECT/sci-rag/sci-rag:v1 \
+  -var deletion_protection=false \
+  -var force_destroy_corpus=true \
+  -var corpus_soft_delete_retention_seconds=0
+terraform show destroy.tfplan
+
+# Apply only after the destroy plan has been reviewed separately:
+terraform apply destroy.tfplan
+```
+
+If either apply fails, keep the Terraform state and saved plans, then inventory
+every surviving resource. Do not delete the Cloud SQL instance directly or
+discard state to make the next plan look clean. Correct the configuration,
+save a new reviewed plan, and resume from the recorded survivors.
 
 ## Operating notes
 
-* **Scale to zero** is on (`min_instance_count = 0`). The first request after idle pays a cold start. Set to 1 for an always-warm instance.
-* **Schema changes**: rebuild the image, run `terraform apply` (new revision), then run the ops job once. Migrations are additive Alembic revisions following `migrations/versions/0001_initial.py`.
-* **External license posture**: if the service is public-facing, require clients to pin `license_classes` to `["public", "open_commercial"]`. Create keys with `corpus:read` omitted for outsiders.
-* **Teardown**: `terraform destroy`. Deletion protection is on by default. Pass `-var deletion_protection=false` first.
+* **Scale to zero** is on (`min_instance_count = 0`). The first request after
+  idle pays a cold start. Set to 1 for an always-warm instance.
+* **Schema changes**: rebuild the image, run `terraform apply` for the new
+  revision, then run the ops job once. Migrations are additive Alembic
+  revisions; follow the pattern in `migrations/versions/0001_initial.py`.
+* **External license posture**: if the service is public-facing, require
+  clients to pin `license_classes` to `["public", "open_commercial"]`. Create
+  keys whose scope omits `corpus:read` for outsiders.
+* **Teardown**: use the two reviewed saved plans in Step 5. A bare
+  `terraform destroy` cannot show whether every protection change was reviewed.
 
 <div class="srag-checkpoint" markdown>
-**Checkpoint: the infrastructure and schema are ready**
+**Checkpoint: the deployed service answers**
 
-`/health` reports a healthy service and `/v1/corpus-manifest` answers with the
-configured API key. A cited answer and a nonempty manifest remain unverified until the
-corpus-delivery route in issue #189 is qualified.
+A `POST /v1/query` against the Cloud Run URL returns scoped results with
+citations, `/v1/corpus-manifest` lists the documents you ingested, and
+the update and destroy plans account for every protected resource before you
+apply either one.
 </div>
 
 ## Next steps

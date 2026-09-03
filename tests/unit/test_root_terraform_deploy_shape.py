@@ -27,6 +27,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).parents[2]
 MAIN = REPO_ROOT / "infra" / "terraform" / "main.tf"
 VARIABLES = REPO_ROOT / "infra" / "terraform" / "variables.tf"
+OUTPUTS = REPO_ROOT / "infra" / "terraform" / "outputs.tf"
+GUIDE = REPO_ROOT / "docs" / "deploy-gcp.md"
 
 # Tiers Cloud SQL will not accept under ENTERPRISE_PLUS. Named from the
 # provider's own rejection rather than from a docs page.
@@ -148,6 +150,7 @@ REQUIRED_DEPLOY_APIS = (
     "artifactregistry.googleapis.com",
     "aiplatform.googleapis.com",
     "cloudbuild.googleapis.com",
+    "storage.googleapis.com",
     "iam.googleapis.com",
 )
 
@@ -170,7 +173,7 @@ def test_the_deploy_guide_enables_every_api_its_own_steps_need() -> None:
 
 
 def test_the_ops_job_example_names_a_path_the_image_contains() -> None:
-    """An example that always fails is worse than no example.
+    """An ops example must not name a path excluded from every image.
 
     `run_ingest_example` printed
     `--args='ingest,--manifest,data/demo/manifest.jsonl'`, and `data/` is
@@ -179,12 +182,9 @@ def test_the_ops_job_example_names_a_path_the_image_contains() -> None:
 
         FileNotFoundError: 'data/demo/manifest.jsonl'
 
-    `load_manifest` takes a `Path` and calls `read_text`, so pointing the
-    example at the corpus bucket is not available either without teaching
-    ingest to read `gs://`, which is a feature rather than a fix.
-
-    So the example has to be a command the shipped image can actually run,
-    and the corpus precondition has to be stated rather than implied.
+    `load_manifest` takes a `Path` and calls `read_text`. The supported deployed
+    path is therefore the read-only bucket mount, not an image path or a
+    product-level `gs://` URI.
     """
     raw = (REPO_ROOT / "infra" / "terraform" / "outputs.tf").read_text(encoding="utf-8")
     # Comments may name the bad path while explaining it. What Terraform
@@ -195,3 +195,229 @@ def test_the_ops_job_example_names_a_path_the_image_contains() -> None:
         "the image has no data/ directory; an example naming it always fails"
     )
     assert "corpus" in emitted.lower(), "the corpus bucket's purpose must be documented somewhere"
+
+
+def test_the_ops_job_mounts_the_corpus_bucket_read_only() -> None:
+    """The ops job can read a staged corpus without widening runtime access."""
+    text = MAIN.read_text(encoding="utf-8")
+    job = re.search(r'resource "google_cloud_run_v2_job" "ops"\s*\{(.*?)\n\}', text, re.S)
+    service = re.search(r'resource "google_cloud_run_v2_service" "api"\s*\{(.*?)\n\}', text, re.S)
+
+    assert job, "the module must define google_cloud_run_v2_job.ops"
+    assert service, "the module must define google_cloud_run_v2_service.api"
+    assert re.search(
+        r'volume_mounts\s*\{\s*name\s*=\s*"corpus"\s*mount_path\s*=\s*"/corpus"\s*\}',
+        job.group(1),
+        re.S,
+    ), "the ops container must mount the corpus volume at /corpus"
+    assert re.search(
+        r'volumes\s*\{\s*name\s*=\s*"corpus"\s*gcs\s*\{\s*'
+        r"bucket\s*=\s*google_storage_bucket\.corpus\.name\s*"
+        r"read_only\s*=\s*true\s*\}\s*\}",
+        job.group(1),
+        re.S,
+    ), "the ops job must mount the Terraform corpus bucket read-only"
+    assert "/corpus" not in service.group(1), "the REST and MCP service must not mount the corpus"
+    assert re.search(r'google\s*=\s*\{.*?version\s*=\s*">= 7\.0"', text, re.S), (
+        "the GA Cloud Run job GCS volume needs Google provider 7 or newer"
+    )
+    assert "launch_stage" not in job.group(1), "the GA volume must not use a preview launch stage"
+
+    storage_roles = set(re.findall(r'role\s*=\s*"(roles/storage\.[^"]+)"', text))
+    assert storage_roles == {"roles/storage.objectViewer"}, (
+        "the runtime identity may only read corpus objects; "
+        f"found storage roles: {sorted(storage_roles)}"
+    )
+
+    guide = GUIDE.read_text(encoding="utf-8")
+    assert "Google provider 7.0 or newer" in guide
+    assert "terraform init -upgrade" in guide, (
+        "operators with an older local lock must be told how to select the GA volume schema"
+    )
+    assert "bucket-scoped\n  `roles/storage.objectViewer` for the corpus" in guide, (
+        "the guide must include the runtime identity's read-only bucket grant"
+    )
+
+
+def test_the_ingest_example_uses_the_mounted_manifest() -> None:
+    """The emitted ops command points at the path Cloud Run now mounts."""
+    text = OUTPUTS.read_text(encoding="utf-8")
+    output = re.search(r'output "run_ops_job_example"\s*\{(.*?)\n\}', text, re.S)
+
+    assert output, "infra/terraform/outputs.tf must keep run_ops_job_example"
+    value = output.group(1)
+    assert "--args='ingest,--manifest,/corpus/manifest.jsonl'" in value, (
+        "run_ops_job_example must ingest the manifest mounted at /corpus"
+    )
+    assert "data/demo" not in value, "the emitted command must not name an image-only path"
+    assert "gs://" not in value, "the package contract remains a local filesystem path"
+
+    purpose = re.search(r'output "corpus_bucket_purpose"\s*\{(.*?)\n\}', text, re.S)
+    assert purpose, "infra/terraform/outputs.tf must describe the corpus bucket"
+    assert "mounted read-only at /corpus in the ops job" in purpose.group(1), (
+        "the bucket output must describe the path and its read-only runtime boundary"
+    )
+
+
+def test_corpus_deletion_is_explicit_and_safe_by_default() -> None:
+    """Deleting live or recoverable corpus objects requires explicit inputs."""
+    variables = VARIABLES.read_text(encoding="utf-8")
+    main = MAIN.read_text(encoding="utf-8")
+    force = re.search(r'variable "force_destroy_corpus"\s*\{(.*?)\n\}', variables, re.S)
+    retention = re.search(
+        r'variable "corpus_soft_delete_retention_seconds"\s*\{(.*?)\n\}',
+        variables,
+        re.S,
+    )
+
+    assert force, "force_destroy_corpus must be an explicit module input"
+    assert re.search(r"default\s*=\s*false", force.group(1)), (
+        "a normal destroy must refuse to erase a populated corpus bucket"
+    )
+    assert retention, "corpus_soft_delete_retention_seconds must be an explicit input"
+    assert re.search(r"default\s*=\s*604800", retention.group(1)), (
+        "normal deployments must retain seven days of soft-delete recovery"
+    )
+    assert re.search(
+        r"condition\s*=\s*var\.corpus_soft_delete_retention_seconds\s*==\s*0\s*"
+        r"\|\|\s*\(\s*var\.corpus_soft_delete_retention_seconds\s*>=\s*604800\s*"
+        r"&&\s*var\.corpus_soft_delete_retention_seconds\s*<=\s*7776000\s*\)",
+        retention.group(1),
+        re.S,
+    ), "soft delete must allow only disabled or the supported 7-to-90-day range"
+
+    bucket = re.search(r'resource "google_storage_bucket" "corpus"\s*\{(.*?)\n\}', main, re.S)
+    assert bucket, "the module must define google_storage_bucket.corpus"
+    assert re.search(r"force_destroy\s*=\s*var\.force_destroy_corpus", bucket.group(1))
+    assert re.search(
+        r"soft_delete_policy\s*\{\s*retention_duration_seconds\s*=\s*"
+        r"var\.corpus_soft_delete_retention_seconds\s*\}",
+        bucket.group(1),
+        re.S,
+    )
+    assert re.search(r"versioning\s*\{\s*enabled\s*=\s*true\s*\}", bucket.group(1), re.S)
+
+    guide = GUIDE.read_text(encoding="utf-8")
+    bash_blocks = "\n".join(re.findall(r"```bash\n(.*?)```", guide, re.S))
+    for setting in (
+        "deletion_protection=false",
+        "force_destroy_corpus=true",
+        "corpus_soft_delete_retention_seconds=0",
+    ):
+        assert setting in bash_blocks, f"the reviewed teardown update must set {setting}"
+    update_plan = guide.index("terraform plan -out=teardown-update.tfplan")
+    update_apply = guide.index("terraform apply teardown-update.tfplan")
+    destroy_plan = guide.index("terraform plan -destroy -out=destroy.tfplan")
+    destroy_apply = guide.index("terraform apply destroy.tfplan")
+    assert update_plan < update_apply < destroy_plan < destroy_apply, (
+        "protection changes and destruction need separate reviewed saved plans"
+    )
+    assert "verified backup" in guide.lower()
+    assert "does not purge objects already soft-deleted" in guide
+
+
+def test_populated_database_destroy_order_is_deterministic() -> None:
+    """Terraform removes active consumers, the database, and then its owner."""
+    text = MAIN.read_text(encoding="utf-8")
+    database = re.search(r'resource "google_sql_database" "sci_rag"\s*\{(.*?)\n\}', text, re.S)
+    database_url = re.search(r'database_url\s*=\s*"([^"]+)"', text)
+
+    assert database, "the module must define google_sql_database.sci_rag"
+    assert re.search(
+        r"depends_on\s*=\s*\[\s*google_sql_user\.sci_rag\s*\]", database.group(1), re.S
+    ), "the database must be destroyed before the role that owns its migrated objects"
+    assert database_url, "the module must construct the async database URL"
+    assert "${google_sql_user.sci_rag.name}" in database_url.group(1), (
+        "the URL must depend on the concrete Terraform user resource"
+    )
+    assert "${google_sql_database.sci_rag.name}" in database_url.group(1), (
+        "the URL must depend on the concrete Terraform database resource"
+    )
+
+    for kind, label in (
+        ("google_cloud_run_v2_service", "api"),
+        ("google_cloud_run_v2_job", "ops"),
+    ):
+        consumer = re.search(rf'resource "{kind}" "{label}"\s*\{{(.*?)\n\}}', text, re.S)
+        assert consumer, f"the module must define {kind}.{label}"
+        assert re.search(
+            r"depends_on\s*=\s*\[\s*google_secret_manager_secret_version\.database_url\s*\]",
+            consumer.group(1),
+            re.S,
+        ), f"{kind}.{label} must close before the database URL secret version is removed"
+
+
+def test_the_deploy_guide_stages_the_path_its_ingest_command_reads() -> None:
+    """The upload layout and mounted manifest path form one executable procedure."""
+    guide = GUIDE.read_text(encoding="utf-8")
+    bash_blocks = "\n".join(re.findall(r"```bash\n(.*?)```", guide, re.S))
+
+    assert 'CORPUS_BUCKET="$(terraform output -raw corpus_bucket)"' in bash_blocks
+    assert re.search(
+        r"gcloud storage rsync --recursive --dry-run\s*\\?\s*data/demo\s+"
+        r'"gs://\$\{CORPUS_BUCKET\}"',
+        bash_blocks,
+    ), "the guide must preview the additive demo-corpus upload"
+    assert re.search(
+        r"gcloud storage rsync --recursive\s*\\?\s*data/demo\s+"
+        r'"gs://\$\{CORPUS_BUCKET\}"',
+        bash_blocks,
+    ), "the guide must preserve manifest.jsonl and fixture/ at the bucket root"
+    assert "--delete-unmatched-destination-objects" not in bash_blocks, (
+        "the upload procedure must not delete unmatched corpus objects"
+    )
+    assert "--args='ingest,--manifest,/corpus/manifest.jsonl'" in bash_blocks
+    assert "--args='ingest,--manifest,data/demo/manifest.jsonl'" not in bash_blocks
+    assert "relative to `manifest.jsonl`" in guide
+    assert ".gcloudignore" in guide and ".dockerignore" in guide and "data/raw/" in guide
+    assert "Rebuild and repush whenever your domain or corpus manifest changes." not in guide
+
+
+def test_cloud_run_examples_use_the_platform_safe_api_key_header() -> None:
+    """Application keys reach the kit without Cloud Run consuming them."""
+    guide = GUIDE.read_text(encoding="utf-8")
+    bash_blocks = "\n".join(re.findall(r"```bash\n(.*?)```", guide, re.S))
+
+    assert '-H "X-API-Key: team-key"' in bash_blocks, (
+        "the deployed authenticated request must use the application-key header"
+    )
+    assert "Authorization: Bearer team-key" not in bash_blocks, (
+        "Cloud Run consumes Authorization before the request reaches the kit"
+    )
+    assert "same bearer key" not in guide, "remote MCP clients use the same application key"
+
+
+def test_model_calls_do_not_inherit_the_infrastructure_region() -> None:
+    """Where resources live and where models are served are different questions.
+
+    The module set `SCI_RAG_GCP_LOCATION` to `var.region`, so a deployment in
+    `us-central1` asked Vertex for the default generation model there. That
+    model is served from `global`, so every graph extraction batch failed:
+
+        404 NOT_FOUND. Publisher model `.../locations/us-central1/publishers/
+        google/models/gemini-3.6-flash` was not found
+
+    The job still exited before the failure surfaced as a stats change, so a
+    deployed graph build reported success and wrote nothing. Reproduced live
+    in the issue #189 qualification: the same model id answered 200 from
+    `global` and 404 from `us-central1` in the same project.
+    """
+    text = MAIN.read_text(encoding="utf-8")
+
+    for match in re.finditer(
+        r'name\s*=\s*"SCI_RAG_GCP_LOCATION"\s*\n\s*value\s*=\s*([^\s]+)', text
+    ):
+        assert match.group(1) != "var.region", (
+            "model calls must not inherit var.region; a region does not serve "
+            "every model, and the default generation model is served from global"
+        )
+
+    default = re.search(
+        r'variable "model_location".*?default\s*=\s*"([^"]+)"',
+        VARIABLES.read_text(encoding="utf-8"),
+        re.S,
+    )
+    assert default, "the module must expose a model_location input"
+    assert default.group(1) == "global", (
+        "default to the location that serves the kit's default model"
+    )

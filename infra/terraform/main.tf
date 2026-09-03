@@ -3,14 +3,15 @@
 # a Cloud Run job for migrations and ingestion, and a corpus bucket.
 #
 # Costs money while it exists (the database is the steady cost; pick the
-# smallest tier that fits). Tear down with `terraform destroy`.
+# smallest tier that fits). Follow the reviewed update and destroy procedure
+# in docs/deploy-gcp.md when you tear it down.
 
 terraform {
   required_version = ">= 1.5"
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = ">= 5.30"
+      version = ">= 7.0"
     }
     random = {
       source  = "hashicorp/random"
@@ -56,6 +57,8 @@ resource "google_sql_database_instance" "db" {
 resource "google_sql_database" "sci_rag" {
   name     = "sci_rag"
   instance = google_sql_database_instance.db.name
+
+  depends_on = [google_sql_user.sci_rag]
 }
 
 resource "random_password" "db" {
@@ -71,7 +74,7 @@ resource "google_sql_user" "sci_rag" {
 
 # The async driver reaches Cloud SQL over the mounted unix socket.
 locals {
-  database_url = "postgresql+asyncpg://sci_rag:${random_password.db.result}@/sci_rag?host=/cloudsql/${google_sql_database_instance.db.connection_name}"
+  database_url = "postgresql+asyncpg://${google_sql_user.sci_rag.name}:${random_password.db.result}@/${google_sql_database.sci_rag.name}?host=/cloudsql/${google_sql_database_instance.db.connection_name}"
 }
 
 # --- Secrets ----------------------------------------------------------------
@@ -158,8 +161,12 @@ resource "google_storage_bucket" "corpus" {
   name                        = "${var.project_id}-${var.name}-corpus"
   location                    = var.region
   uniform_bucket_level_access = true
+  force_destroy               = var.force_destroy_corpus
   versioning {
     enabled = true
+  }
+  soft_delete_policy {
+    retention_duration_seconds = var.corpus_soft_delete_retention_seconds
   }
 }
 
@@ -212,7 +219,7 @@ resource "google_cloud_run_v2_service" "api" {
       }
       env {
         name  = "SCI_RAG_GCP_LOCATION"
-        value = var.region
+        value = var.model_location
       }
 
       volume_mounts {
@@ -299,12 +306,17 @@ resource "google_cloud_run_v2_job" "ops" {
         }
         env {
           name  = "SCI_RAG_GCP_LOCATION"
-          value = var.region
+          value = var.model_location
         }
 
         volume_mounts {
           name       = "cloudsql"
           mount_path = "/cloudsql"
+        }
+
+        volume_mounts {
+          name       = "corpus"
+          mount_path = "/corpus"
         }
       }
 
@@ -314,6 +326,16 @@ resource "google_cloud_run_v2_job" "ops" {
           instances = [google_sql_database_instance.db.connection_name]
         }
       }
+
+      volumes {
+        name = "corpus"
+        gcs {
+          bucket    = google_storage_bucket.corpus.name
+          read_only = true
+        }
+      }
     }
   }
+
+  depends_on = [google_secret_manager_secret_version.database_url]
 }

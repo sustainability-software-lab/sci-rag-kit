@@ -59,5 +59,10 @@ infra/terraform/**/*.tfvars
 # Workspace-scoped Cloud SQL proxy state and cached credentials.
 .cloudsql/
 
+# Agent scratch space. Holds working notes and captured infrastructure
+# inventories, so it must never be committed. A local .git/info/exclude does
+# not survive a fresh clone; this rule does.
+.context/
+
 # OS noise
 .DS_Store
