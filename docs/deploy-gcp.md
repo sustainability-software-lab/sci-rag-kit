@@ -1,6 +1,6 @@
 ---
 title: Deploy on Google Cloud
-description: Provision Cloud SQL and Cloud Run from the included Terraform, then verify infrastructure and schema readiness.
+description: Provision Cloud SQL and Cloud Run from the included Terraform, stage a corpus through a read-only bucket mount, then verify the deployed service and remove it.
 ---
 
 # Deploy on Google Cloud
@@ -42,7 +42,7 @@ least-privilege service account.
 <!-- END GENERATED PROJECT FEATURE: cloud-provisioning -->
 
 These resources accrue charges while they run. Review the selected tiers and region in the saved
-Terraform plan, and tear down experiments with `terraform destroy`.
+Terraform plan, and tear down experiments through the reviewed teardown in Step 5.
 
 ## Before you start
 
@@ -54,7 +54,7 @@ Terraform plan, and tear down experiments with `terraform destroy`.
 gcloud services enable run.googleapis.com sqladmin.googleapis.com \
   secretmanager.googleapis.com artifactregistry.googleapis.com \
   aiplatform.googleapis.com cloudbuild.googleapis.com \
-  iam.googleapis.com --project=YOUR_PROJECT
+  storage.googleapis.com iam.googleapis.com --project=YOUR_PROJECT
 ```
 
 * Terraform 1.5+ and Google provider 7.0 or newer. Provider 7 is the first
@@ -89,15 +89,16 @@ require a new image.
 
 ```bash
 cd infra/terraform
-terraform init -upgrade
+terraform init
 terraform apply \
   -var project_id=YOUR_PROJECT \
   -var image=us-central1-docker.pkg.dev/YOUR_PROJECT/sci-rag/sci-rag:v1
 ```
 
-`terraform init -upgrade` selects the declared provider range when an older
-local lock still points at provider 5 or 6. Review the provider selection before
-applying. Treat a lockfile update as its own dependency change, not as an
+The tracked lockfile already pins a provider that satisfies the declared range,
+so plain `terraform init` is enough. Run `terraform init -upgrade` only if your
+local lock still points at provider 5 or 6, and review the provider selection
+before applying. Treat a lockfile update as its own dependency change, not as an
 automatic part of this deployment procedure.
 
 What you get, and the security posture you get it with:
@@ -138,7 +139,9 @@ gcloud run jobs execute sci-rag-ops --region=us-central1 --project=YOUR_PROJECT 
   --args='stats' --wait
 ```
 
-The upload preserves `manifest.jsonl` and `fixture/` at the bucket root. Every
+The upload copies everything under `data/demo` to the bucket root, so
+`manifest.jsonl`, `fixture/`, and the `graph-replay/` evaluation fixture all
+land there. Ingest reads only the manifest and the paths it names. Every
 document path stays relative to `manifest.jsonl`, so `fixture/example.md`
 appears as `/corpus/fixture/example.md` in the ops job. The command is additive:
 it copies new and changed objects without deleting unmatched objects already in

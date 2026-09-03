@@ -150,6 +150,7 @@ REQUIRED_DEPLOY_APIS = (
     "artifactregistry.googleapis.com",
     "aiplatform.googleapis.com",
     "cloudbuild.googleapis.com",
+    "storage.googleapis.com",
     "iam.googleapis.com",
 )
 
