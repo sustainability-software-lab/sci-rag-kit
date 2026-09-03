@@ -225,8 +225,11 @@ def test_codeql_has_security_permissions_and_all_three_triggers() -> None:
     assert workflow["permissions"]["security-events"] == "write"
 
     uses = [step.get("uses", "") for step in workflow["jobs"]["analyze"]["steps"]]
-    assert "github/codeql-action/init@v3" in uses
-    assert "github/codeql-action/analyze@v3" in uses
+    codeql_uses = [use for use in uses if use.startswith("github/codeql-action/")]
+    assert codeql_uses == [
+        "github/codeql-action/init@v4",
+        "github/codeql-action/analyze@v4",
+    ]
 
 
 def test_external_link_checks_never_run_on_pull_requests() -> None:
