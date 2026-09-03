@@ -14,6 +14,16 @@ Notable changes to sci-rag-kit. The format follows
 
 ## [0.5.0] - 2026-09-03
 
+The release where the documented Google Cloud deployment was run end to end for
+the first time, and `sci-rag build` takes a folder of documents to a queryable
+knowledge base in one command.
+
+Qualifying that deployment is what produced the fixes below. Four defects had
+already shipped, and none of them was reachable by an offline test: a private
+Cloud Run service could not authenticate at all, a deployed graph build
+reported success and wrote nothing, `terraform destroy` left the Cloud SQL
+instance running, and the prerequisite list omitted an API its own steps call.
+
 ### Added
 
 - **`sci-rag build`** takes a folder or a manifest to a queryable knowledge

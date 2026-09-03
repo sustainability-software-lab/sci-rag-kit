@@ -74,6 +74,24 @@ Pushing the tag runs [`.github/workflows/release.yml`](https://github.com/sustai
    published. It runs last, and only if `pypi` succeeded, because a release
    page announcing an artifact that never published is worse than no page.
 
+### What a release page looks like
+
+The release is titled with its tag and nothing else: `v0.5.0`, not
+`v0.5.0: some name`. Earlier releases went both ways, which left a reader
+unable to tell whether a bare `v0.2.0` meant a smaller release or just a
+release nobody named.
+
+The descriptive line has not gone anywhere. It is the changelog lede, which
+the release page shows directly under the tag, so the name is the first
+sentence rather than the heading. Keeping it there means the automation can
+produce the whole page from the changelog with no manual step, and a
+convention with a manual step is the kind that drifts.
+
+Every released section opens with that lede, a sentence or two saying what the
+release is for before any `###` category. `test_every_released_section_opens_with_a_lede`
+enforces it. `## [Unreleased]` is exempt: the lede is written when the release
+is cut, which is when its headline is finally known.
+
 Write the changelog entry before tagging. `github_release` reads the
 `## [X.Y.Z]` section through `scripts/changelog_release_notes.py` and fails
 when that section is missing or empty, rather than publishing a blank page.

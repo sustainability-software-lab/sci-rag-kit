@@ -9,6 +9,7 @@ must never be published as if it were a release.
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -146,3 +147,38 @@ def test_every_released_version_in_this_repository_has_notes() -> None:
 
     for version in ("0.5.0", "0.4.1", "0.4.0", "0.3.0"):
         assert release_notes(text, version).strip(), f"[{version}] produced no notes"
+
+
+def test_every_released_section_opens_with_a_lede() -> None:
+    """The release page shows this paragraph directly under the tag.
+
+    Six of the seven released sections already did this; 0.5.0 shipped without
+    one because it was cut straight from `## [Unreleased]`, which accumulates
+    entries and has no summary to inherit. Its release page opened on a bare
+    `### Added`, so the first thing a reader saw was a category rather than
+    what the release was for.
+
+    `[Unreleased]` is exempt on purpose. The lede is written when the release
+    is cut, which is the moment its headline is finally known.
+    """
+    text = (Path(__file__).parents[2] / "CHANGELOG.md").read_text(encoding="utf-8")
+    lines = text.splitlines()
+    headings = [
+        (index, match.group(1))
+        for index, line in enumerate(lines)
+        if (match := re.match(r"^## \[([^\]]+)\]", line))
+    ]
+
+    missing = []
+    for position, (line_index, version) in enumerate(headings):
+        if version == "Unreleased":
+            continue
+        end = headings[position + 1][0] if position + 1 < len(headings) else len(lines)
+        body = [line for line in lines[line_index + 1 : end] if line.strip()]
+        if not body or body[0].startswith(("###", "-", "*")):
+            missing.append(version)
+
+    assert missing == [], (
+        "these released sections open on a category or a bullet rather than a "
+        f"sentence saying what the release is for: {missing}"
+    )
