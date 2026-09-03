@@ -229,15 +229,27 @@ API_KEY_HEADER = "X-API-Key"
 def api_key_from_headers(authorization: str, api_key_header: str | None) -> str | None:
     """The caller's API key, from whichever header carried it.
 
-    `Authorization` wins when both are present, so nothing about local
-    behavior changes and the documented header stays the primary one. Shared
-    rather than duplicated because the REST routes and the MCP mount extract
-    this in different files, and two copies of an auth rule is one too many.
+    `X-API-Key` wins when both are present, because `Authorization` is not
+    always the caller's to spend. A private Cloud Run service requires a
+    Google identity token in `Authorization`, so preferring that header made
+    authentication impossible on exactly the deployment `docs/deploy-gcp.md`
+    describes: the identity token shadowed the key and every request came
+    back 401 `invalid_key`. An explicit `X-API-Key` is a caller stating which
+    credential it means; `Authorization` may have been set by infrastructure.
+
+    Callers that send only `Authorization: Bearer <key>`, which is every local
+    and single-header client, are unaffected.
+
+    Shared rather than duplicated because the REST routes and the MCP mount
+    extract this in different files, and two copies of an auth rule is one too
+    many.
     """
+    if api_key_header:
+        return api_key_header
     scheme, token = get_authorization_scheme_param(authorization or "")
     if scheme.lower() == "bearer" and token:
         return token
-    return api_key_header or None
+    return None
 
 
 def require_scopes(*scopes: str):  # type: ignore[no-untyped-def]

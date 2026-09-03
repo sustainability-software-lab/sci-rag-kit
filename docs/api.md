@@ -9,7 +9,7 @@ Run `sci-rag serve` to expose the REST and MCP interfaces backed by the shared s
 
 ## Authentication
 
-Send `Authorization: Bearer <key>`. If an upstream service claims that header, send `X-API-Key: <key>` instead. Cloud Run's frontend inspects `Authorization: Bearer` for its own identity tokens before the container receives the request, so deployed Cloud Run clients use `X-API-Key`. `Authorization` wins when both are sent.
+Send `Authorization: Bearer <key>`. If an upstream service claims that header, send `X-API-Key: <key>` instead. Cloud Run's frontend inspects `Authorization: Bearer` for its own identity tokens before the container receives the request, so deployed Cloud Run clients use `X-API-Key`. `X-API-Key` wins when both are sent, because the header a caller sets deliberately outranks one the surrounding infrastructure may have filled in.
 
 The operator configures keys as a JSON map in `SCI_RAG_API_KEYS`:
 
