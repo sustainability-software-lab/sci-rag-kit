@@ -19,7 +19,7 @@ Sci RAG Kit does not currently publish an archival DOI or a `CITATION.cff`. Cite
   title   = {Sci RAG Kit: Retrieval-augmented generation, built around your
              scientific domain},
   year    = {2026},
-  version = {0.4.1},
+  version = {0.5.0},
   url     = {https://github.com/sustainability-software-lab/sci-rag-kit},
   license = {BSD-3-Clause}
 }
