@@ -156,3 +156,70 @@ jobs:
           name: dist
           path: dist/
       - uses: pypa/gh-action-pypi-publish@release/v1
+
+  # The tag was already the release, so the Releases page fell three versions
+  # behind PyPI without anything failing: v0.4.0, v0.4.1, and v0.5.0 all
+  # published while the page still offered v0.3.0 as "Latest". Someone landing
+  # there saw a current-looking answer that was months of work out of date,
+  # which is the same failure the version-claim tests guard inside the repo.
+  #
+  # Last, and only after `pypi` succeeds. A release page is an announcement,
+  # and announcing an artifact that did not publish is worse than announcing
+  # nothing. Ordering it here also means the manual approval on `pypi` still
+  # gates everything downstream of it.
+  github_release:
+    needs: pypi
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+
+      # The changelog is written for people and this page is read by people,
+      # so it gets that prose rather than a generated commit list. The script
+      # exits non-zero when the section is absent or empty, which fails the
+      # job instead of publishing a blank page.
+      - name: Take the notes from the changelog
+        run: |
+          python3 scripts/changelog_release_notes.py \
+            --version "${GITHUB_REF_NAME}" > "$RUNNER_TEMP/notes.md"
+          echo "--- notes for ${GITHUB_REF_NAME} ---"
+          cat "$RUNNER_TEMP/notes.md"
+
+      # `--verify-tag` refuses to invent a tag if the ref went missing.
+      #
+      # An existing release is left alone rather than overwritten, because its
+      # notes may have been edited by hand and a rerun of an already-published
+      # tag should not quietly discard that.
+      #
+      # `--prerelease` is added only when it applies, rather than passed a
+      # boolean. A prerelease must not take the "Latest" badge: `sci-rag-new`
+      # resolves its template at its own tag rather than at whatever GitHub
+      # calls latest, so this is presentation, but the page is what a person
+      # reads before they read anything else.
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" > /dev/null 2>&1; then
+            echo "release ${GITHUB_REF_NAME} already exists; leaving it as it is"
+            exit 0
+          fi
+
+          KIND=()
+          if printf '%s' "${GITHUB_REF_NAME#v}" | grep -qE '(a|b|rc)[0-9]+$'; then
+            echo "${GITHUB_REF_NAME} looks like a prerelease"
+            KIND=(--prerelease)
+          fi
+
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            --verify-tag \
+            "${KIND[@]}" \
+            dist/*
