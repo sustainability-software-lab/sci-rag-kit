@@ -315,11 +315,11 @@ PROFILES: dict[str, RunnerProfile] = {
         sync_command="conda env create -f environment.yml",
         manifest="environment.yml",
         lockfile=None,
-        ci_setup_action="conda-incubator/setup-miniconda@v3",
+        ci_setup_action="conda-incubator/setup-miniconda@v4",
         ci_setup_inputs=(
             ("environment-file", "environment.yml"),
             ("python-version", "$PYTHON"),
-            ("auto-activate-base", "false"),
+            ("auto-activate", "false"),
         ),
         devcontainer_feature="ghcr.io/devcontainers/features/conda:1",
         tool_run_prefix="conda run -n $SLUG",

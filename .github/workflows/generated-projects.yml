@@ -263,7 +263,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v4
         if: matrix.manager == 'conda'
         with:
-          auto-activate-base: true
+          auto-activate: true
           activate-environment: ""
 
       - name: Install the generated project and run its own checks
