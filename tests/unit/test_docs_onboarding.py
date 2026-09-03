@@ -215,8 +215,18 @@ def test_current_records_describe_the_main_command_and_compatibility_alias() -> 
     assert "main `sci-rag new` command" in roadmap
 
 
-def test_unreleased_changelog_records_the_guided_onboarding_batch() -> None:
-    unreleased = _read("CHANGELOG.md").partition("## [Unreleased]")[2].partition("## [0.3.0]")[0]
+def test_the_changelog_records_the_guided_onboarding_batch() -> None:
+    """Anchored to the entries, not to the heading they sit under.
+
+    This read from `## [Unreleased]` to `## [0.3.0]`, so it passed only while
+    the batch was unreleased. Cutting 0.5.0 renamed that heading, the partition
+    returned nothing, and every assertion below failed at once, describing a
+    missing feature rather than a moved heading.
+
+    The batch is what has to stay recorded. Which released section carries it
+    is the release process's business.
+    """
+    unreleased = _read("CHANGELOG.md").partition("## [0.3.0]")[0]
 
     assert "`sci-rag new`" in unreleased
     assert "Quick and Advanced" in unreleased

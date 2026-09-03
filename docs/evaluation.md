@@ -14,7 +14,7 @@ and whether the answer is correct.
   <div><strong>You'll need</strong>An ingested corpus and seed questions</div>
   <div><strong>Time</strong>About 20 minutes for the first run</div>
   <div><strong>Credentials</strong>Required for judged answers</div>
-  <div><strong>Tested with</strong>v0.4</div>
+  <div><strong>Tested with</strong>v0.5</div>
 </div>
 
 ## Before you start
