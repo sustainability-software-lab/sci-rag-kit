@@ -260,10 +260,10 @@ jobs:
           manifest-path: ${{ runner.temp }}/generated/pyproject.toml
           cache: false
 
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: conda-incubator/setup-miniconda@v4
         if: matrix.manager == 'conda'
         with:
-          auto-activate-base: true
+          auto-activate: true
           activate-environment: ""
 
       - name: Install the generated project and run its own checks

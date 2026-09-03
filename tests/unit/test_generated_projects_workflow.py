@@ -15,6 +15,8 @@ from typing import Any
 
 import yaml
 
+from sci_rag.scaffold.runners import get_runner
+
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github" / "workflows" / "generated-projects.yml"
 DOCKER_FREE = ROOT / ".github" / "workflows" / "docker-free-postgres.yml"
@@ -32,6 +34,24 @@ def _generate_steps() -> list[dict[str, Any]]:
     workflow = _load_workflow(WORKFLOW)
     steps: list[dict[str, Any]] = workflow["jobs"]["generate"]["steps"]
     return steps
+
+
+def test_the_conda_harness_matches_the_scaffold_profile() -> None:
+    conda = get_runner("conda")
+    matches = [
+        step
+        for step in _generate_steps()
+        if str(step.get("uses", "")).startswith("conda-incubator/setup-miniconda@")
+    ]
+
+    assert len(matches) == 1, f"expected one conda setup step, found {len(matches)}"
+    assert matches[0]["uses"] == conda.ci_setup_action
+    assert matches[0]["with"] == {
+        "auto-activate": "true",
+        "activate-environment": "",
+    }
+    assert ("auto-activate", "false") in conda.ci_setup_inputs
+    assert all(name != "auto-activate-base" for name, _ in conda.ci_setup_inputs)
 
 
 def _doctor_step() -> dict[str, Any]:
@@ -225,8 +245,11 @@ def test_codeql_has_security_permissions_and_all_three_triggers() -> None:
     assert workflow["permissions"]["security-events"] == "write"
 
     uses = [step.get("uses", "") for step in workflow["jobs"]["analyze"]["steps"]]
-    assert "github/codeql-action/init@v3" in uses
-    assert "github/codeql-action/analyze@v3" in uses
+    codeql_uses = [use for use in uses if use.startswith("github/codeql-action/")]
+    assert codeql_uses == [
+        "github/codeql-action/init@v4",
+        "github/codeql-action/analyze@v4",
+    ]
 
 
 def test_external_link_checks_never_run_on_pull_requests() -> None:
