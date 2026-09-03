@@ -15,7 +15,7 @@ Source files and the manifest stay under `data/`; concepts, prompts, and questio
   <div><strong>You'll need</strong>Documents on disk and a finished quickstart</div>
   <div><strong>Time</strong>Depends on corpus size and review</div>
   <div><strong>Credentials</strong>Needed for the graph and cited answers; every other step has an offline route</div>
-  <div><strong>Tested with</strong>v0.4</div>
+  <div><strong>Tested with</strong>v0.5</div>
 </div>
 
 The worked example throughout is a group that studies membrane materials for water treatment and has 60 PDFs of papers, theses, and technical reports.

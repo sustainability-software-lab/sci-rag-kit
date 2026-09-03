@@ -17,3 +17,11 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    ignore:
+      # Python feature releases change the supported runtime contract. Keep
+      # patch refreshes automatic, but review minor and major lines together
+      # with CI, containers, generated projects, metadata, and documentation.
+      - dependency-name: "python"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-major"

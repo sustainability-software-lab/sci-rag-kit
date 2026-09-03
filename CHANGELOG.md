@@ -4,7 +4,7 @@ Notable changes to sci-rag-kit. The format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [Semantic Versioning](https://semver.org/) once past 1.0.
 
-## [Unreleased]
+## [0.5.0] - 2026-09-03
 
 ### Added
 
@@ -64,6 +64,41 @@ Notable changes to sci-rag-kit. The format follows
   Three pages fewer, and every remaining page explains a term where it is
   first used.
 
+
+### Fixed
+
+- **A private Cloud Run deployment could not authenticate at all.** Cloud Run's
+  frontend requires a Google identity token in `Authorization`, which is why
+  the deploy guide tells you to send the kit key in `X-API-Key`. The server
+  preferred `Authorization`, read the identity token as the kit key, and
+  answered every authenticated request with `401 invalid_key`. No header
+  combination worked. `X-API-Key` now wins when both are present: it is the
+  caller naming the credential it means, while `Authorization` may have been
+  set by the infrastructure in front of the app. Clients that send only
+  `Authorization: Bearer <key>` are unaffected.
+- **A deployed graph build reported success and wrote nothing.** The Terraform
+  module set the app's `SCI_RAG_GCP_LOCATION` to the deployment region, but the
+  default generation model is served from `global`. Every extraction batch
+  returned `404`, the job exited without surfacing it, and `stats` showed zero
+  entities against a fully ingested corpus. The module now exposes
+  `model_location`, defaulting to `global`, separate from the `region` that
+  places infrastructure.
+- **`terraform destroy` could strand the Cloud SQL instance.** Deleting a Cloud
+  Run service returns before its instances stop holding Postgres sessions, so
+  the `DROP DATABASE` that followed raced them and failed. Terraform had
+  already removed everything else, leaving the most expensive resource running
+  behind an error that named the database rather than the survivor. Deleting
+  the instance removes its databases and roles anyway, so that separate drop
+  was redundant; it is gone.
+- **The deploy guide's prerequisites missed `storage.googleapis.com`**, which
+  the corpus staging step needs, so a reader starting from an empty project
+  failed partway. The guide also pointed at a bare `terraform destroy` that
+  contradicted its own reviewed teardown, ran `terraform init -upgrade` in a
+  way that rewrote the tracked lockfile, and did not mention that Terraform
+  reads `deletion_protection`, `force_destroy`, and `deletion_policy` from
+  stored state rather than from the variables passed to a destroy.
+- **`docs/extend.md` said `us-central1` "serves Gemini."** It does not serve
+  the kit's own default generation model, which answers only from `global`.
 
 ## [0.4.1] - 2026-08-31
 

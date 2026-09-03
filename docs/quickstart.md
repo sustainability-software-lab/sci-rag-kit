@@ -14,7 +14,7 @@ Once the demo works, replace it with your own documents.
   <div><strong>You'll need</strong>Python, pipx, uv, and a way to run PostgreSQL</div>
   <div><strong>Time</strong>About 10 minutes</div>
   <div><strong>Credentials</strong>Optional; the answer step needs LLM provider credentials</div>
-  <div><strong>Tested with</strong>v0.4</div>
+  <div><strong>Tested with</strong>v0.5</div>
 </div>
 
 ## Before you start

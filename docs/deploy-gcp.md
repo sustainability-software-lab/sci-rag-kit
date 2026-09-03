@@ -14,7 +14,7 @@ and remove it through reviewed protection-update and destroy plans.
   <div><strong>You'll need</strong>A Google Cloud project and billing enabled</div>
   <div><strong>Time</strong>Depends on provisioning and organization policy</div>
   <div><strong>Cost</strong>Varies by region and selected resource tiers; charges continue until teardown</div>
-  <div><strong>Tested with</strong>v0.4</div>
+  <div><strong>Tested with</strong>v0.5</div>
 </div>
 
 !!! note "Terraform is optional"

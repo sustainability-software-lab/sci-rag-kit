@@ -13,7 +13,7 @@ retrieval. Sci RAG Kit does not use a plug-in registry.
   <div><strong>You'll build</strong>A new parser, collector, reranker, provider, or auth backend</div>
   <div><strong>You'll need</strong>A working checkout and its test suite</div>
   <div><strong>Time</strong>An hour to a day, depending on the extension</div>
-  <div><strong>Tested with</strong>v0.4</div>
+  <div><strong>Tested with</strong>v0.5</div>
 </div>
 
 ## Before you start
